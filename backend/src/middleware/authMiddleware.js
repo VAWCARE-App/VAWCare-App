@@ -18,13 +18,37 @@ const protect = asyncHandler(async (req, res, next) => {
         // Verify token with Firebase Admin
         const decodedToken = await admin.auth().verifyIdToken(token);
         
-        // Add user info to request object
+        // Get the Firebase user
+        const firebaseUser = await admin.auth().getUser(decodedToken.uid);
+
+        // Check authentication method
+        const authMethods = {
+            emailPassword: !!firebaseUser.email && !firebaseUser.providerData.some(p => p.providerId === 'google.com'),
+            google: firebaseUser.providerData.some(p => p.providerId === 'google.com'),
+            phone: !!firebaseUser.phoneNumber,
+            anonymous: firebaseUser.providerData.length === 0
+        };
+
+        // Add enhanced user info to request object
         req.user = {
             uid: decodedToken.uid,
             email: decodedToken.email,
-            role: decodedToken.role || 'victim', // Default to victim if no role claim
-            isAnonymous: decodedToken.isAnonymous || false
+            role: decodedToken.role || 'victim',
+            isAnonymous: decodedToken.isAnonymous || false,
+            phoneNumber: firebaseUser.phoneNumber,
+            authMethods: authMethods,
+            emailVerified: firebaseUser.emailVerified,
+            multiFactor: firebaseUser.multiFactor || null
         };
+
+        // Check if user needs additional verification
+        if (req.user.role === 'admin' || req.user.role === 'official') {
+            // For admin and official roles, require email verification
+            if (!req.user.emailVerified) {
+                res.status(401);
+                throw new Error('Email verification required');
+            }
+        }
 
         next();
     } catch (error) {

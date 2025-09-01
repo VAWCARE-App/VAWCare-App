@@ -4,6 +4,81 @@ const Victim = require('../models/Victims');
 const BarangayOfficial = require('../models/BarangayOfficials');
 const asyncHandler = require('express-async-handler');
 
+// @desc    Setup Multi-Factor Authentication for admin
+// @route   POST /api/admin/setup-mfa
+// @access  Private (Admin only)
+const setupMFA = asyncHandler(async (req, res) => {
+    try {
+        const uid = req.user.uid; // Get Firebase UID from auth middleware
+
+        // Get the user's session cookie
+        const sessionCookie = req.cookies.session || '';
+
+        // Verify the session cookie
+        const decodedClaims = await admin.auth().verifySessionCookie(sessionCookie, true);
+
+        if (!decodedClaims) {
+            res.status(401);
+            throw new Error('Unauthorized - Invalid session');
+        }
+
+        // Generate a multi-factor auth enrollment session
+        const multiFactorSession = await admin.auth().generateMultiFactorAuthenticationSession(uid, {
+            factorId: 'phone'
+        });
+
+        res.status(200).json({
+            success: true,
+            data: {
+                multiFactorSession: multiFactorSession,
+                phoneNumber: req.body.phoneNumber // Phone number provided in request
+            }
+        });
+    } catch (error) {
+        res.status(400);
+        throw new Error(error.message);
+    }
+});
+
+// @desc    Verify Multi-Factor Authentication for admin
+// @route   POST /api/admin/verify-mfa
+// @access  Private (Admin only)
+const verifyMFA = asyncHandler(async (req, res) => {
+    try {
+        const { verificationCode, multiFactorSession } = req.body;
+        const uid = req.user.uid;
+
+        // Verify the MFA code
+        const mfaVerification = await admin.auth().verifyMultiFactorAuth(uid, {
+            code: verificationCode,
+            session: multiFactorSession
+        });
+
+        if (!mfaVerification.success) {
+            res.status(400);
+            throw new Error('Invalid verification code');
+        }
+
+        // Update the admin document to mark MFA as enabled
+        await Admin.findOneAndUpdate(
+            { firebaseUid: uid },
+            { mfaEnabled: true },
+            { new: true }
+        );
+
+        res.status(200).json({
+            success: true,
+            message: 'MFA verification successful',
+            data: {
+                mfaEnabled: true
+            }
+        });
+    } catch (error) {
+        res.status(400);
+        throw new Error(error.message);
+    }
+});
+
 // @desc    Register a new admin
 // @route   POST /api/admin/register
 // @access  Public
@@ -481,3 +556,78 @@ exports.hardDeleteOfficial = async (req, res) => {
         });
     }
 };
+
+// @desc    Setup Multi-Factor Authentication for admin
+// @route   POST /api/admin/setup-mfa
+// @access  Private (Admin only)
+exports.setupMFA = asyncHandler(async (req, res) => {
+    try {
+        const uid = req.user.uid; // Get Firebase UID from auth middleware
+
+        // Get the user's session cookie
+        const sessionCookie = req.cookies.session || '';
+
+        // Verify the session cookie
+        const decodedClaims = await admin.auth().verifySessionCookie(sessionCookie, true);
+
+        if (!decodedClaims) {
+            res.status(401);
+            throw new Error('Unauthorized - Invalid session');
+        }
+
+        // Generate a multi-factor auth enrollment session
+        const multiFactorSession = await admin.auth().generateMultiFactorAuthenticationSession(uid, {
+            factorId: 'phone'
+        });
+
+        res.status(200).json({
+            success: true,
+            data: {
+                multiFactorSession: multiFactorSession,
+                phoneNumber: req.body.phoneNumber // Phone number provided in request
+            }
+        });
+    } catch (error) {
+        res.status(400);
+        throw new Error(error.message);
+    }
+});
+
+// @desc    Verify Multi-Factor Authentication for admin
+// @route   POST /api/admin/verify-mfa
+// @access  Private (Admin only)
+exports.verifyMFA = asyncHandler(async (req, res) => {
+    try {
+        const { verificationCode, multiFactorSession } = req.body;
+        const uid = req.user.uid;
+
+        // Verify the MFA code
+        const mfaVerification = await admin.auth().verifyMultiFactorAuth(uid, {
+            code: verificationCode,
+            session: multiFactorSession
+        });
+
+        if (!mfaVerification.success) {
+            res.status(400);
+            throw new Error('Invalid verification code');
+        }
+
+        // Update the admin document to mark MFA as enabled
+        await Admin.findOneAndUpdate(
+            { firebaseUid: uid },
+            { mfaEnabled: true },
+            { new: true }
+        );
+
+        res.status(200).json({
+            success: true,
+            message: 'MFA verification successful',
+            data: {
+                mfaEnabled: true
+            }
+        });
+    } catch (error) {
+        res.status(400);
+        throw new Error(error.message);
+    }
+});

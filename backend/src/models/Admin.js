@@ -19,7 +19,21 @@ const adminSchema = new mongoose.Schema({
     adminRole: {
         type: String,
         required: [true, 'Admin role is required'],
-        trim: true
+        enum: {
+            values: ['backend', 'fullstack', 'frontend1', 'frontend2', 'documentation'],
+            message: 'Invalid admin role. Must be one of: backend, fullstack, frontend1, frontend2, documentation'
+        },
+        trim: true,
+        unique: true // Ensures only one admin per role
+    },
+    isDeleted: {
+        type: Boolean,
+        default: false
+    },
+    status: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'pending'
     },
     firstName: {
         type: String,

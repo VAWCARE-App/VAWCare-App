@@ -1,44 +1,33 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 
 const victimSchema = new mongoose.Schema({
-    victimID: {
+    firebaseUid: {
         type: String,
-        required: [true, 'Victim ID is required'],
-        unique: true,
-        trim: true
+        required: true,
+        unique: true
     },
-    victimAccount: {
+    accountType: {
         type: String,
-        required: [true, 'Account type is required'],
-        enum: {
-            values: ['Registered User', 'Anonymous'],
-            message: 'Account type must be either Registered User or Anonymous'
-        }
+        required: true,
+        enum: ['Registered', 'Anonymous'],
+        default: 'Registered'
     },
     victimType: {
         type: String,
-        required: [true, 'Victim type is required'],
-        enum: {
-            values: ['Child', 'Woman'],
-            message: 'Victim type must be either Child or Woman'
-        }
+        required: true,
+        enum: ['Child', 'Woman']
     },
-    victimUsername: {
+    email: {
         type: String,
-        required: [true, 'Username is required'],
+        required: true,
         unique: true,
-        trim: true
-    },
-    victimEmail: {
-        type: String,
         trim: true,
         lowercase: true,
         match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email address']
     },
     firstName: {
         type: String,
-        default: 'Anonymous',
+        required: true,
         trim: true
     },
     middleInitial: {
@@ -47,11 +36,12 @@ const victimSchema = new mongoose.Schema({
     },
     lastName: {
         type: String,
-        default: 'User',
+        required: true,
         trim: true
     },
     address: {
         type: String,
+        required: true,
         trim: true
     },
     location: {
@@ -64,73 +54,60 @@ const victimSchema = new mongoose.Schema({
     },
     contactNumber: {
         type: String,
+        required: true,
         trim: true
     },
-    victimPassword: {
-        type: String,
-        required: [true, 'Password is required'],
-        minlength: [8, 'Password must be at least 8 characters long'],
-        validate: {
-            validator: function(password) {
-                // Regex pattern to check for:
-                // - At least one uppercase letter (?=.*[A-Z])
-                // - At least one lowercase letter (?=.*[a-z])
-                // - At least one number (?=.*\d)
-                // - At least one special character (?=.*[!@#$%^&*(),.?":{}|<>])
-                // - Minimum 8 characters .{8,}
-                return /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/.test(password);
-            },
-            message: 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
-        }
-    },
     emergencyContacts: [{
-        name: String,
-        relationship: String,
-        contactNumber: String,
-        address: String
+        name: {
+            type: String,
+            required: true
+        },
+        relationship: {
+            type: String,
+            required: true
+        },
+        contactNumber: {
+            type: String,
+            required: true
+        },
+        address: {
+            type: String,
+            required: true
+        }
     }],
     isAnonymous: {
         type: Boolean,
-        required: [true, 'Anonymous status is required'],
         default: false
     },
     createdAt: {
         type: Date,
-        default: Date.now,
-        required: true
+        default: Date.now
+    },
+    updatedAt: {
+        type: Date,
+        default: Date.now
     }
 });
 
-// Pre-save middleware to hash password before saving
-victimSchema.pre('save', async function(next) {
-    if (!this.isModified('victimPassword')) return next();
-    
-    try {
-        const salt = await bcrypt.genSalt(10);
-        this.victimPassword = await bcrypt.hash(this.victimPassword, salt);
-        next();
-    } catch (error) {
-        next(error);
-    }
+// Pre-save middleware to update timestamps
+victimSchema.pre('save', function(next) {
+    this.updatedAt = Date.now();
+    next();
 });
 
 // Pre-save middleware to handle anonymous users
 victimSchema.pre('save', function(next) {
     if (this.isAnonymous) {
+        this.accountType = 'Anonymous';
         this.firstName = 'Anonymous';
         this.lastName = 'User';
-        this.victimEmail = undefined;
-        this.address = undefined;
-        this.contactNumber = undefined;
+        this.email = `${this.firebaseUid}@anonymous.vawcare.com`;
+        this.address = 'Anonymous';
+        this.contactNumber = 'Anonymous';
         this.emergencyContacts = [];
     }
     next();
 });
-
-// Method to compare passwords for login
-victimSchema.methods.comparePassword = async function(candidatePassword) {
-    return await bcrypt.compare(candidatePassword, this.victimPassword);
-};
 
 const Victim = mongoose.model('Victim', victimSchema);
 

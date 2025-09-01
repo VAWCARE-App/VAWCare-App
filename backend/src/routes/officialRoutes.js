@@ -14,9 +14,4 @@ router.post('/verify-phone', protect, officialController.verifyPhone);
 router.get('/profile', protect, requireEmailVerification, officialController.getProfile);
 router.put('/profile', protect, requireEmailVerification, officialController.updateProfile);
 
-// Routes requiring both email and phone verification
-router.get('/reports', protect, requireEmailVerification, requirePhoneVerification, officialController.getReports);
-router.put('/reports/:id', protect, requireEmailVerification, requirePhoneVerification, officialController.updateReport);
-router.post('/respond', protect, requireEmailVerification, requirePhoneVerification, officialController.respondToAlert);
-
 module.exports = router;

@@ -169,9 +169,70 @@ const updateProfile = asyncHandler(async (req, res) => {
     }
 });
 
+// @desc    Verify official's email
+// @route   POST /api/officials/verify-email
+// @access  Private
+const verifyEmail = asyncHandler(async (req, res) => {
+    try {
+        const uid = req.user.uid;
+        
+        // Generate email verification link
+        const emailVerificationLink = await admin.auth().generateEmailVerificationLink(req.user.email);
+        
+        // Update official's email verification status
+        await BarangayOfficial.findOneAndUpdate(
+            { firebaseUid: uid },
+            { emailVerified: true }
+        );
+
+        res.status(200).json({
+            success: true,
+            message: 'Email verification link generated',
+            data: {
+                verificationLink: emailVerificationLink
+            }
+        });
+    } catch (error) {
+        res.status(400);
+        throw new Error(error.message);
+    }
+});
+
+// @desc    Verify official's phone number
+// @route   POST /api/officials/verify-phone
+// @access  Private
+const verifyPhone = asyncHandler(async (req, res) => {
+    try {
+        const { phoneNumber, verificationCode } = req.body;
+        const uid = req.user.uid;
+
+        // Verify the phone number using Firebase
+        await admin.auth().updateUser(uid, {
+            phoneNumber: phoneNumber,
+            // You might need to implement actual SMS verification logic here
+        });
+
+        // Update official's phone verification status
+        await BarangayOfficial.findOneAndUpdate(
+            { firebaseUid: uid },
+            { phoneVerified: true }
+        );
+
+        res.status(200).json({
+            success: true,
+            message: 'Phone number verified successfully'
+        });
+    } catch (error) {
+        res.status(400);
+        throw new Error(error.message);
+    }
+});
+
 module.exports = {
     registerOfficial,
     loginOfficial,
     getProfile,
-    updateProfile
+    updateProfile,
+    verifyEmail,
+    verifyPhone
 };

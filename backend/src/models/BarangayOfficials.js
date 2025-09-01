@@ -39,6 +39,11 @@ const barangayOfficialSchema = new mongoose.Schema({
             message: 'Please enter a valid position'
         }
     },
+    status: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'pending'
+    },
     adminPassword: {
         type: String,
         required: [true, 'Password is required'],

@@ -4,10 +4,12 @@ npm-debug.log
 yarn-debug.log
 yarn-error.log
 
-# Environment variables
+# Environment variables and secrets
 .env
 .env.local
 .env.*.local
+src/config/serviceAccountKey.json
+serviceAccountKey.json
 
 # Build output
 dist/

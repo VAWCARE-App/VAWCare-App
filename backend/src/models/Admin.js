@@ -70,7 +70,9 @@ const adminSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
         required: true
-    }
+    },
+    resetToken: String,
+    resetTokenExpiry: Date
 });
 
 // Pre-save middleware to hash password before saving

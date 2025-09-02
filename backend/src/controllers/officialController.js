@@ -8,19 +8,22 @@ const asyncHandler = require('express-async-handler');
 const registerOfficial = asyncHandler(async (req, res) => {
     const {
         officialID,
-        email,
-        password,
+        officialEmail,
+        adminPassword,
         firstName,
         middleInitial,
         lastName,
         position,
-        contactNumber
+        contactNumber,
+        barangay,
+        city,
+        province
     } = req.body;
 
     // Check if official exists
     const existingOfficial = await BarangayOfficial.findOne({ 
         $or: [
-            { officialEmail: email },
+            { officialEmail: officialEmail },
             { officialID: officialID }
         ]
     });
@@ -33,32 +36,33 @@ const registerOfficial = asyncHandler(async (req, res) => {
     try {
         // Create official in MongoDB with pending status
         const official = await BarangayOfficial.create({
-            officialID,
-            officialEmail: email,
-            firstName,
-            middleInitial,
-            lastName,
-            position,
-            adminPassword: password, // Will be hashed by the model's pre-save middleware
-            contactNumber
+            officialID: officialID,
+            officialEmail: officialEmail,
+            firstName: firstName,
+            middleInitial: middleInitial,
+            lastName: lastName,
+            position: position,
+            adminPassword: adminPassword, // Will be hashed by the model's pre-save middleware
+            contactNumber: contactNumber,
+            barangay: barangay,
+            city: city,
+            province: province,
+            status: 'pending'
         });
 
-        // Create custom token for initial sign-in
-        const customToken = await admin.auth().createCustomToken(userRecord.uid);
-
+        // Don't create Firebase user yet - will be created upon approval
         res.status(201).json({
             success: true,
-            message: 'Barangay Official registered successfully',
+            message: 'Barangay Official registered successfully. Pending admin approval.',
             data: {
-                token: customToken,
                 official: {
                     id: official._id,
-                    firebaseUid: official.firebaseUid,
                     officialID: official.officialID,
-                    email: official.officialEmail,
+                    officialEmail: official.officialEmail,
                     firstName: official.firstName,
                     lastName: official.lastName,
-                    position: official.position
+                    position: official.position,
+                    status: official.status
                 }
             }
         });
@@ -228,11 +232,54 @@ const verifyPhone = asyncHandler(async (req, res) => {
     }
 });
 
+// @desc    Send password reset email via Firebase
+// @route   POST /api/officials/forgot-password
+// @access  Public
+const sendPasswordResetEmail = asyncHandler(async (req, res) => {
+    const { officialEmail } = req.body;
+
+    try {
+        // First check if the official exists and is approved
+        const official = await BarangayOfficial.findOne({ 
+            officialEmail: officialEmail,
+            status: 'approved' 
+        });
+
+        if (!official || !official.firebaseUid) {
+            // Don't reveal if email exists or not
+            return res.status(200).json({
+                success: true,
+                message: 'If an account exists, you will receive a password reset email'
+            });
+        }
+
+        // Generate password reset link
+        const resetLink = await admin.auth().generatePasswordResetLink(officialEmail);
+
+        // Send password reset email through Firebase
+        // Firebase will automatically send the email
+        await admin.auth().generatePasswordResetLink(officialEmail);
+
+        res.status(200).json({
+            success: true,
+            message: 'Password reset email sent'
+        });
+    } catch (error) {
+        console.error('Password reset error:', error);
+        // Still return 200 to not reveal if email exists
+        res.status(200).json({
+            success: true,
+            message: 'If an account exists, you will receive a password reset email'
+        });
+    }
+});
+
 module.exports = {
     registerOfficial,
     loginOfficial,
     getProfile,
     updateProfile,
     verifyEmail,
-    verifyPhone
+    verifyPhone,
+    sendPasswordResetEmail
 };

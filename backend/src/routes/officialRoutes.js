@@ -5,8 +5,9 @@ const { protect, adminOnly } = require('../middleware/authMiddleware');
 const { requirePhoneVerification, requireEmailVerification } = require('../middleware/securityMiddleware');
 
 // Auth routes
-router.post('/register', protect, adminOnly, officialController.registerOfficial); // Only admin can register officials
+router.post('/register', officialController.registerOfficial); // Anyone can register, but starts as pending
 router.post('/login', officialController.loginOfficial);
+router.post('/forgot-password', officialController.sendPasswordResetEmail); // Firebase password reset
 router.post('/verify-email', protect, officialController.verifyEmail);
 router.post('/verify-phone', protect, officialController.verifyPhone);
 

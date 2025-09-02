@@ -79,6 +79,88 @@ const verifyMFA = asyncHandler(async (req, res) => {
     }
 });
 
+// Request password reset (step 1)
+exports.requestPasswordReset = async (req, res) => {
+    try {
+        const { email } = req.body;
+        
+        const admin = await Admin.findOne({ adminEmail: email });
+        if (!admin) {
+            return res.status(200).json({
+                success: true,
+                message: 'If an account exists, a reset link will be sent to your email'
+            });
+        }
+
+        // Generate a reset token that expires in 1 hour
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const resetTokenExpiry = Date.now() + 3600000; // 1 hour
+
+        admin.resetToken = resetToken;
+        admin.resetTokenExpiry = resetTokenExpiry;
+        await admin.save();
+
+        // TODO: Send reset email with token
+        // For now, we'll return the token in response (only for development)
+        res.status(200).json({
+            success: true,
+            message: 'Reset instructions sent to email',
+            token: resetToken // Remove this in production
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error requesting password reset',
+            error: error.message
+        });
+    }
+};
+
+// Reset password with token (step 2)
+exports.resetAdminPassword = async (req, res) => {
+    try {
+        const { token, newPassword, confirmPassword } = req.body;
+        
+        // Check if passwords match
+        if (newPassword !== confirmPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'Passwords do not match'
+            });
+        }
+
+        // Find admin with valid reset token
+        const admin = await Admin.findOne({
+            resetToken: token,
+            resetTokenExpiry: { $gt: Date.now() }
+        });
+
+        if (!admin) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or expired reset token'
+            });
+        }
+
+        // Update password and clear reset token
+        admin.adminPassword = newPassword;
+        admin.resetToken = undefined;
+        admin.resetTokenExpiry = undefined;
+        await admin.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Password reset successful'
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error resetting password',
+            error: error.message
+        });
+    }
+};
+
 // @desc    Register a new admin
 // @route   POST /api/admin/register
 // @access  Public
@@ -161,18 +243,33 @@ exports.registerAdmin = async (req, res) => {
             });
         }
 
-        // Create new admin
-        const admin = new Admin({
+        // Create user in Firebase first
+        const userRecord = await admin.auth().createUser({
+            email: adminEmail,
+            password: adminPassword,
+            displayName: `${firstName} ${lastName}`,
+            emailVerified: false
+        });
+
+        // Set custom claims for admin role
+        await admin.auth().setCustomUserClaims(userRecord.uid, {
+            role: 'admin',
+            adminRole: adminRole
+        });
+
+        // Create new admin in MongoDB
+        const adminUser = new Admin({
             adminID,
             adminEmail,
             adminRole,
             firstName,
             middleInitial,
             lastName,
-            adminPassword
+            adminPassword,
+            firebaseUid: userRecord.uid // Store Firebase UID
         });
 
-        await admin.save();
+        await adminUser.save();
 
         res.status(201).json({
             success: true,
@@ -192,14 +289,53 @@ exports.registerAdmin = async (req, res) => {
     }
 };
 
+// Generate JWT Token
+const generateToken = async (adminUser) => {
+    try {
+        // If the admin has a Firebase UID, create a custom token
+        if (adminUser.firebaseUid) {
+            return await admin.auth().createCustomToken(adminUser.firebaseUid);
+        }
+        
+        // If no Firebase UID, try to get the user by email first
+        try {
+            const firebaseUser = await admin.auth().getUserByEmail(adminUser.adminEmail);
+            // Found existing Firebase user, update admin document with UID
+            adminUser.firebaseUid = firebaseUser.uid;
+            await adminUser.save();
+            return await admin.auth().createCustomToken(firebaseUser.uid);
+        } catch (error) {
+            // If user doesn't exist in Firebase, create new one
+            if (error.code === 'auth/user-not-found') {
+                const newFirebaseUser = await admin.auth().createUser({
+                    email: adminUser.adminEmail,
+                    displayName: `${adminUser.firstName} ${adminUser.lastName}`,
+                    emailVerified: false
+                });
+
+                // Update the admin document with the new Firebase UID
+                adminUser.firebaseUid = newFirebaseUser.uid;
+                await adminUser.save();
+
+                // Create custom token
+                return await admin.auth().createCustomToken(newFirebaseUser.uid);
+            }
+            throw error;
+        }
+    } catch (error) {
+        console.error('Error generating token:', error);
+        throw new Error(`Error generating authentication token: ${error.message}`);
+    }
+};
+
 // Admin Login
 exports.loginAdmin = async (req, res) => {
     try {
         const { adminEmail, adminPassword } = req.body;
 
         // Find admin
-        const admin = await Admin.findOne({ adminEmail, isDeleted: false });
-        if (!admin) {
+        const adminUser = await Admin.findOne({ adminEmail, isDeleted: false });
+        if (!adminUser) {
             return res.status(401).json({
                 success: false,
                 message: 'Invalid email or password'
@@ -207,7 +343,7 @@ exports.loginAdmin = async (req, res) => {
         }
 
         // Check password
-        const isMatch = await admin.comparePassword(adminPassword);
+        const isMatch = await adminUser.comparePassword(adminPassword);
         if (!isMatch) {
             return res.status(401).json({
                 success: false,
@@ -215,23 +351,26 @@ exports.loginAdmin = async (req, res) => {
             });
         }
 
-        // Generate token
-        const token = generateToken(admin);
+        // Generate Firebase custom token
+        const customToken = await generateToken(adminUser);
 
         res.status(200).json({
             success: true,
             message: 'Login successful',
             data: {
-                token,
+                token: customToken,
                 admin: {
-                    id: admin._id,
-                    adminID: admin.adminID,
-                    email: admin.adminEmail,
-                    role: admin.adminRole
+                    id: adminUser._id,
+                    adminID: adminUser.adminID,
+                    email: adminUser.adminEmail,
+                    role: adminUser.adminRole,
+                    firstName: adminUser.firstName,
+                    lastName: adminUser.lastName
                 }
             }
         });
     } catch (error) {
+        console.error('Login error:', error);
         res.status(500).json({
             success: false,
             message: 'Error logging in',
@@ -240,25 +379,64 @@ exports.loginAdmin = async (req, res) => {
     }
 };
 
-// Get all admins (backend admin only)
+// Get all admins
 exports.getAllAdmins = async (req, res) => {
     try {
-        if (req.admin.adminRole !== 'backend') {
-            return res.status(403).json({
-                success: false,
-                message: 'Access denied. Only backend admin can view all admins'
-            });
-        }
-
-        const admins = await Admin.find({}, '-adminPassword');
+        const admins = await Admin.find({ isDeleted: false }, '-adminPassword')
+            .select('adminID adminEmail adminRole firstName lastName contactNumber createdAt');
+        
         res.status(200).json({
             success: true,
+            count: admins.length,
             data: admins
         });
     } catch (error) {
+        console.error('Error fetching admins:', error);
         res.status(500).json({
             success: false,
             message: 'Error fetching admins',
+            error: error.message
+        });
+    }
+};
+
+// Get all victims
+exports.getAllVictims = async (req, res) => {
+    try {
+        const victims = await Victim.find({ isDeleted: false })
+            .select('victimID firstName lastName email contactNumber address createdAt status');
+        
+        res.status(200).json({
+            success: true,
+            count: victims.length,
+            data: victims
+        });
+    } catch (error) {
+        console.error('Error fetching victims:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching victims',
+            error: error.message
+        });
+    }
+};
+
+// Get all barangay officials
+exports.getAllOfficials = async (req, res) => {
+    try {
+        const officials = await BarangayOfficial.find({ isDeleted: false })
+            .select('officialID firstName lastName email contactNumber position barangay createdAt');
+        
+        res.status(200).json({
+            success: true,
+            count: officials.length,
+            data: officials
+        });
+    } catch (error) {
+        console.error('Error fetching officials:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching barangay officials',
             error: error.message
         });
     }
@@ -364,6 +542,7 @@ exports.restoreAdmin = async (req, res) => {
         }
 
         admin.isDeleted = false;
+        admin.status = req.body.status || "approved"; // Add status update
         await admin.save();
 
         res.status(200).json({
@@ -382,12 +561,13 @@ exports.restoreAdmin = async (req, res) => {
 // Get all victims (backend admin only)
 exports.getAllVictims = async (req, res) => {
     try {
-        if (req.admin.adminRole !== 'backend') {
+        // Temporarily commented out admin role check
+        /*if (req.admin.adminRole !== 'backend') {
             return res.status(403).json({
                 success: false,
                 message: 'Access denied. Only backend admin can view victims'
             });
-        }
+        }*/
 
         const victims = await Victim.find({}, '-victimPassword');
         res.status(200).json({
@@ -471,12 +651,13 @@ exports.hardDeleteVictim = async (req, res) => {
 // Get all barangay officials (backend admin only)
 exports.getAllOfficials = async (req, res) => {
     try {
-        if (req.admin.adminRole !== 'backend') {
+        // Temporarily commented out admin role check
+        /*if (req.admin.adminRole !== 'backend') {
             return res.status(403).json({
                 success: false,
                 message: 'Access denied. Only backend admin can view officials'
             });
-        }
+        }*/
 
         const officials = await BarangayOfficial.find({}, '-adminPassword');
         res.status(200).json({

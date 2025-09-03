@@ -6,6 +6,9 @@ const asyncHandler = require('express-async-handler');
 // @route   POST /api/victims/register
 // @access  Public
 const registerVictim = asyncHandler(async (req, res) => {
+    console.log('\n=== Starting Victim Registration Process ===');
+    console.log('Request Body:', JSON.stringify(req.body, null, 2));
+
     const {
         victimAccount,
         victimUsername,
@@ -20,94 +23,156 @@ const registerVictim = asyncHandler(async (req, res) => {
         location
     } = req.body;
 
+    console.log(`\nAttempting to register new ${victimAccount} victim:`);
+    console.log('- Username:', victimUsername);
+    console.log('- Account Type:', victimAccount);
+    console.log('- Email:', victimEmail || 'Not provided');
+    console.log('- Victim Type:', victimType || 'Not specified');
+
     // Check if victim username already exists
     const existingVictim = await Victim.findOne({ victimUsername });
     if (existingVictim) {
+        console.log(`Registration failed: Username ${victimUsername} already exists`);
         res.status(400);
         throw new Error('Username already exists');
     }
 
-    try {
-        // Create user in Firebase (both regular and anonymous)
-        let firebaseUid = null;
-        if (victimAccount === 'regular' && victimEmail) {
-            // Create regular user in Firebase
-            const userRecord = await admin.auth().createUser({
-                email: victimEmail,
-                password: victimPassword,
-                displayName: `${firstName} ${lastName}`,
-                emailVerified: false
-            });
-            firebaseUid = userRecord.uid;
-
-            // Set custom claims for regular user
-            await admin.auth().setCustomUserClaims(userRecord.uid, {
-                role: 'victim',
-                isAnonymous: false
-            });
-        } else if (victimAccount === 'anonymous') {
-            // Create anonymous user in Firebase
-            const userRecord = await admin.auth().createUser({
-                // No email for anonymous users
-                password: victimPassword,
-                displayName: `Anonymous-${victimUsername}`,
-            });
-            firebaseUid = userRecord.uid;
-
-            // Set custom claims for anonymous user
-            await admin.auth().setCustomUserClaims(userRecord.uid, {
-                role: 'victim',
-                isAnonymous: true,
-                victimUsername: victimUsername // Store username in claims for identification
-            });
+    // For regular accounts, validate email if provided
+    if (victimAccount === 'regular' && victimEmail) {
+        const existingEmail = await Victim.findOne({ victimEmail });
+        if (existingEmail) {
+            console.log(`Registration failed: Email ${victimEmail} already exists`);
+            res.status(400);
+            throw new Error('Email already exists');
         }
+    }
 
-        // Create victim in MongoDB
-        const victim = new Victim({
+    try {
+        console.log('\nCreating victim document with the following data:');
+        const victimData = {
             victimAccount,
             victimUsername,
-            victimPassword,
-            victimEmail: victimEmail || '',
-            victimType: victimAccount === 'anonymous' ? 'Child' : victimType, // Default to Child for anonymous
+            victimPassword: '***HIDDEN***',
+            victimEmail: victimAccount === 'anonymous' ? undefined : victimEmail,
+            victimType: victimAccount === 'anonymous' ? undefined : victimType,
             firstName: victimAccount === 'anonymous' ? 'Anonymous' : firstName,
             middleInitial: victimAccount === 'anonymous' ? '' : middleInitial,
-            lastName: victimAccount === 'anonymous' ? '' : lastName,
-            address: address || '',
-            contactNumber: contactNumber || '',
+            lastName: victimAccount === 'anonymous' ? 'User' : lastName,
+            address: victimAccount === 'anonymous' ? '' : (address || ''),
+            contactNumber: victimAccount === 'anonymous' ? '' : (contactNumber || ''),
             location: location || { lat: 0, lng: 0 },
-            firebaseUid: firebaseUid || null // Ensure firebaseUid is explicitly set
-        });
+            firebaseUid: null
+        };
+        console.log(JSON.stringify(victimData, null, 2));
+
+        // First create victim in MongoDB
+        const victim = new Victim(victimData);
+
+        console.log(`Creating new ${victimAccount} victim record...`);
         
         // Save the victim - this will trigger the pre-save middleware to hash the password
         await victim.save();
+        console.log('\nMongoDB Registration Success:');
+        console.log('- Victim ID:', victim._id);
+        console.log('- VictimID:', victim.victimID);
+        console.log('- Username:', victim.victimUsername);
+        console.log('- Account Type:', victim.victimAccount);
 
+        // Now create Firebase user after successful MongoDB registration
+        console.log('\nAttempting Firebase user creation...');
+        let firebaseUid = null;
         let customToken = null;
-        // Create custom token only for regular accounts
-        if (firebaseUid) {
+
+        try {
+            if (victimAccount === 'regular' && victimEmail) {
+                // Create regular user in Firebase
+                const userRecord = await admin.auth().createUser({
+                    email: victimEmail,
+                    password: victimPassword,
+                    displayName: `${firstName} ${lastName}`,
+                    emailVerified: false
+                });
+                firebaseUid = userRecord.uid;
+
+                // Set custom claims for regular user
+                await admin.auth().setCustomUserClaims(userRecord.uid, {
+                    role: 'victim',
+                    isAnonymous: false
+                });
+            } else {
+                // For anonymous users, create a Firebase user without email
+                const userRecord = await admin.auth().createUser({
+                    displayName: `Anonymous User`,
+                    password: victimPassword // Still use their password for authentication
+                });
+                firebaseUid = userRecord.uid;
+
+                // Set custom claims for anonymous user
+                await admin.auth().setCustomUserClaims(userRecord.uid, {
+                    role: 'victim',
+                    isAnonymous: true,
+                    victimUsername: victimUsername // Store username in claims for anonymous users
+                });
+            }
+
+            // Generate custom token for both regular and anonymous users
             customToken = await admin.auth().createCustomToken(firebaseUid);
+
+            // Update the victim with firebaseUid
+            victim.firebaseUid = firebaseUid;
+            await victim.save();
+
+            console.log('\nFirebase User Created Successfully:');
+            console.log('- Firebase UID:', firebaseUid);
+            console.log('- Custom Token Generated:', customToken ? 'Yes' : 'No');
+        } catch (firebaseError) {
+            console.log('\nFirebase Error:', firebaseError.message);
+            console.log('Continuing without Firebase - MongoDB user is still valid');
         }
+
+        console.log('\n=== Registration Complete ===');
+        console.log('Final victim state:', {
+            id: victim._id,
+            victimID: victim.victimID,
+            username: victim.victimUsername,
+            accountType: victim.victimAccount,
+            firebaseUid: victim.firebaseUid || 'Not created'
+        });
 
         res.status(201).json({
             success: true,
             message: 'Victim registered successfully',
             data: {
-                token: customToken, // Will be null for anonymous accounts
+                token: customToken,
                 victim: {
                     id: victim._id,
+                    victimID: victim.victimID,
                     victimAccount: victim.victimAccount,
                     victimUsername: victim.victimUsername,
                     victimType: victim.victimType,
-                    firebaseUid: victim.firebaseUid, // Will be null for anonymous accounts
+                    firebaseUid: victim.firebaseUid,
                     victimEmail: victim.victimEmail,
                     firstName: victim.firstName
                 }
             }
         });
     } catch (error) {
+        console.log('\n=== Registration Error ===');
+        console.log('Error Code:', error.code || 'No error code');
+        console.log('Error Message:', error.message);
+        console.log('Error Stack:', error.stack);
+
         if (error.code === 'auth/email-already-exists') {
             res.status(400);
             throw new Error('Email already registered');
         }
+
+        // Check for MongoDB duplicate key error
+        if (error.code === 11000) {
+            console.log('Duplicate Key Details:', error.keyPattern);
+            console.log('Duplicate Key Value:', error.keyValue);
+        }
+
         throw error;
     }
 });

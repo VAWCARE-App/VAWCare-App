@@ -6,7 +6,7 @@ const options = {
     info: {
       title: 'VAWCare API Documentation',
       version: '1.0.0',
-      description: 'API documentation for VAWCare Application - User Management System',
+      description: 'API documentation for VAWCare Application - User Management System. Note: victimID is auto-generated and should not be included in registration requests.',
       contact: {
         name: 'VAWCare Support',
         email: 'support@vawcare.com'
@@ -22,6 +22,8 @@ const options = {
       schemas: {
         VictimRegistration: {
           type: 'object',
+          description: 'Schema for victim registration. Note: victimID is auto-generated, do not include it in the request.',
+          additionalProperties: false,
           properties: {
             victimAccount: {
               type: 'string',
@@ -194,10 +196,7 @@ const options = {
           bearerFormat: 'JWT'
         }
       }
-    },
-    security: [{
-      bearerAuth: []
-    }]
+    }
   },
   apis: ['./src/routes/*.js'] // Path to the API routes
 };

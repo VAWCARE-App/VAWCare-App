@@ -1,14 +1,17 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
+const counterSchema = new mongoose.Schema({
+    _id: { type: String, required: true },
+    seq: { type: Number, default: 0 }
+});
+
+const Counter = mongoose.model('Counter', counterSchema);
+
 const victimSchema = new mongoose.Schema({
     victimID: {
         type: String,
-        required: function() {
-            return this.victimAccount === 'regular';
-        },
-        unique: true,
-        sparse: true
+        unique: true
     },
     victimAccount: {
         type: String,
@@ -23,6 +26,10 @@ const victimSchema = new mongoose.Schema({
         },
         enum: ['Child', 'Woman']
     },
+    isDeleted: {
+        type: Boolean,
+        default: false
+    },
     victimUsername: {
         type: String,
         required: true,
@@ -34,9 +41,23 @@ const victimSchema = new mongoose.Schema({
         type: String,
         trim: true,
         lowercase: true,
-        match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email address'],
-        unique: true,
-        sparse: true  // Optional for all users
+        validate: {
+            validator: function(v) {
+                // Skip validation for anonymous accounts
+                if (this.victimAccount === 'anonymous') {
+                    return true;
+                }
+                // For regular accounts, require valid email
+                if (!v) return false;
+                return /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v);
+            },
+            message: 'Please enter a valid email address'
+        },
+        required: function() {
+            // Only required for regular accounts
+            return this.victimAccount === 'regular';
+        },
+        sparse: true // Allow undefined values
     },
     firstName: {
         type: String,
@@ -121,11 +142,9 @@ const victimSchema = new mongoose.Schema({
 // Pre-validate middleware to check required fields based on account type
 victimSchema.pre('validate', function(next) {
     if (this.victimAccount === 'anonymous') {
-        // For anonymous accounts, only username and password are required
-        // All other fields should be cleared
-        this.victimID = undefined;
+        // For anonymous accounts, set default values
         this.victimType = undefined;
-        this.victimEmail = null;
+        this.victimEmail = undefined; // Set to undefined instead of null
         this.firstName = 'Anonymous';
         this.lastName = 'User';
         this.address = '';
@@ -143,10 +162,41 @@ victimSchema.virtual('loginIdentifier').get(function() {
     return this.victimEmail ? [this.victimUsername, this.victimEmail] : this.victimUsername;
 });
 
-// Index for email and account type combination
-victimSchema.index({ victimEmail: 1, victimAccount: 1 });
+// Create a compound index for email and account type
+// This enforces uniqueness only for regular accounts
+victimSchema.index(
+    { victimEmail: 1, victimAccount: 1 },
+    { 
+        unique: true,
+        sparse: true,
+        partialFilterExpression: { victimAccount: 'regular' }
+    }
+);
 
-// Pre-save middleware to hash password before saving
+// Pre-save middleware to auto-generate victimID and hash password
+victimSchema.pre('save', async function(next) {
+    try {
+        // Generate victimID if not set
+        if (!this.victimID) {
+            const counter = await Counter.findByIdAndUpdate(
+                'victimId',
+                { $inc: { seq: 1 } },
+                { new: true, upsert: true }
+            );
+            this.victimID = `VIC${counter.seq.toString().padStart(3, '0')}`;
+        }
+
+        // Hash password if modified
+        if (this.isModified('victimPassword')) {
+            const salt = await bcrypt.genSalt(10);
+            this.victimPassword = await bcrypt.hash(this.victimPassword, salt);
+        }
+        
+        next();
+    } catch (error) {
+        next(error);
+    }
+});
 victimSchema.pre('save', async function(next) {
     if (!this.isModified('victimPassword')) {
         return next();
@@ -169,6 +219,16 @@ victimSchema.methods.comparePassword = async function(candidatePassword) {
         throw new Error('Error comparing passwords');
     }
 };
+
+// Create a compound index for email that only applies to regular accounts
+victimSchema.index(
+    { victimEmail: 1 }, 
+    { 
+        unique: true,
+        sparse: true,
+        partialFilterExpression: { victimAccount: 'regular' }
+    }
+);
 
 const Victim = mongoose.model('Victim', victimSchema);
 

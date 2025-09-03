@@ -1,10 +1,31 @@
 const admin = require('../config/firebase-config');
 const BarangayOfficial = require('../models/BarangayOfficials');
+const Victim = require('../models/Victims');
 const asyncHandler = require('express-async-handler');
 
 // @desc    Register a new barangay official
 // @route   POST /api/officials/register
 // @access  Admin only
+// @desc    Get all victims
+// @route   GET /api/officials/victims
+// @access  Private (Officials only)
+const getAllVictims = asyncHandler(async (req, res) => {
+    try {
+        const victims = await Victim.find();
+        
+        res.status(200).json({
+            success: true,
+            data: {
+                victims,
+                total: victims.length
+            }
+        });
+    } catch (error) {
+        res.status(500);
+        throw new Error('Error retrieving victims: ' + error.message);
+    }
+});
+
 const registerOfficial = asyncHandler(async (req, res) => {
     const {
         officialID,
@@ -381,5 +402,6 @@ module.exports = {
     updateProfile,
     verifyEmail,
     verifyPhone,
-    sendPasswordResetEmail
+    sendPasswordResetEmail,
+    getAllVictims
 };

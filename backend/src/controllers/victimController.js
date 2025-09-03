@@ -7,71 +7,99 @@ const asyncHandler = require('express-async-handler');
 // @access  Public
 const registerVictim = asyncHandler(async (req, res) => {
     const {
-        email,
-        password,
+        victimAccount,
+        victimUsername,
+        victimPassword,
+        victimEmail,
+        victimType,
         firstName,
         middleInitial,
         lastName,
         address,
         contactNumber,
-        victimType,
-        isAnonymous,
-        emergencyContacts,
         location
     } = req.body;
 
-    // Check if victim exists
-    const existingVictim = await Victim.findOne({ email });
+    // Check if victim username already exists
+    const existingVictim = await Victim.findOne({ victimUsername });
     if (existingVictim) {
         res.status(400);
-        throw new Error('Victim already exists');
+        throw new Error('Username already exists');
     }
 
     try {
-        // Create user in Firebase
-        const userRecord = await admin.auth().createUser({
-            email: email,
-            password: password,
-            displayName: `${firstName} ${lastName}`,
-            emailVerified: false // They'll need to verify their email
-        });
+        // Create user in Firebase (both regular and anonymous)
+        let firebaseUid = null;
+        if (victimAccount === 'regular' && victimEmail) {
+            // Create regular user in Firebase
+            const userRecord = await admin.auth().createUser({
+                email: victimEmail,
+                password: victimPassword,
+                displayName: `${firstName} ${lastName}`,
+                emailVerified: false
+            });
+            firebaseUid = userRecord.uid;
 
-        // Create custom claims for the user
-        await admin.auth().setCustomUserClaims(userRecord.uid, {
-            role: 'victim',
-            isAnonymous: isAnonymous || false
-        });
+            // Set custom claims for regular user
+            await admin.auth().setCustomUserClaims(userRecord.uid, {
+                role: 'victim',
+                isAnonymous: false
+            });
+        } else if (victimAccount === 'anonymous') {
+            // Create anonymous user in Firebase
+            const userRecord = await admin.auth().createUser({
+                // No email for anonymous users
+                password: victimPassword,
+                displayName: `Anonymous-${victimUsername}`,
+            });
+            firebaseUid = userRecord.uid;
+
+            // Set custom claims for anonymous user
+            await admin.auth().setCustomUserClaims(userRecord.uid, {
+                role: 'victim',
+                isAnonymous: true,
+                victimUsername: victimUsername // Store username in claims for identification
+            });
+        }
 
         // Create victim in MongoDB
-        const victim = await Victim.create({
-            firebaseUid: userRecord.uid,
-            email,
-            firstName,
-            middleInitial,
-            lastName,
-            address,
-            contactNumber,
-            victimType,
-            isAnonymous: isAnonymous || false,
-            emergencyContacts: emergencyContacts || [],
-            location
+        const victim = new Victim({
+            victimAccount,
+            victimUsername,
+            victimPassword,
+            victimEmail: victimEmail || '',
+            victimType: victimAccount === 'anonymous' ? 'Child' : victimType, // Default to Child for anonymous
+            firstName: victimAccount === 'anonymous' ? 'Anonymous' : firstName,
+            middleInitial: victimAccount === 'anonymous' ? '' : middleInitial,
+            lastName: victimAccount === 'anonymous' ? '' : lastName,
+            address: address || '',
+            contactNumber: contactNumber || '',
+            location: location || { lat: 0, lng: 0 },
+            firebaseUid: firebaseUid || null // Ensure firebaseUid is explicitly set
         });
+        
+        // Save the victim - this will trigger the pre-save middleware to hash the password
+        await victim.save();
 
-        // Create custom token for initial sign-in
-        const customToken = await admin.auth().createCustomToken(userRecord.uid);
+        let customToken = null;
+        // Create custom token only for regular accounts
+        if (firebaseUid) {
+            customToken = await admin.auth().createCustomToken(firebaseUid);
+        }
 
         res.status(201).json({
             success: true,
             message: 'Victim registered successfully',
             data: {
-                token: customToken,
+                token: customToken, // Will be null for anonymous accounts
                 victim: {
                     id: victim._id,
-                    firebaseUid: victim.firebaseUid,
-                    email: victim.email,
-                    firstName: victim.firstName,
-                    lastName: victim.lastName,
-                    isAnonymous: victim.isAnonymous
+                    victimAccount: victim.victimAccount,
+                    victimUsername: victim.victimUsername,
+                    victimType: victim.victimType,
+                    firebaseUid: victim.firebaseUid, // Will be null for anonymous accounts
+                    victimEmail: victim.victimEmail,
+                    firstName: victim.firstName
                 }
             }
         });
@@ -88,18 +116,70 @@ const registerVictim = asyncHandler(async (req, res) => {
 // @route   POST /api/victims/login
 // @access  Public
 const loginVictim = asyncHandler(async (req, res) => {
-    const { email, password } = req.body;
+    const { identifier, password } = req.body;  // identifier can be email or username
 
     try {
-        // Firebase client SDK should handle the authentication
-        // This endpoint is just for compatibility and should return instructions
+        // First try to find user by username (for anonymous users)
+        let victim = await Victim.findOne({ victimUsername: identifier });
+        
+        // If not found by username, try email (for regular users)
+        if (!victim) {
+            victim = await Victim.findOne({ victimEmail: identifier });
+        }
+
+        if (!victim) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid credentials'
+            });
+        }
+
+        // Check password
+        const isMatch = await victim.comparePassword(password);
+        if (!isMatch) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid credentials'
+            });
+        }
+
+        let customToken = null;
+        
+        // Only try Firebase operations if we have a firebaseUid
+        if (victim.firebaseUid) {
+            try {
+                // Get Firebase user
+                const firebaseUser = await admin.auth().getUser(victim.firebaseUid);
+
+                // Create custom token
+                customToken = await admin.auth().createCustomToken(victim.firebaseUid, {
+                    role: 'victim',
+                    isAnonymous: victim.victimAccount === 'anonymous',
+                    victimUsername: victim.victimUsername
+                });
+            } catch (error) {
+                console.error('Firebase operation error:', error);
+                // Continue without Firebase token
+            }
+        }
+
         res.status(200).json({
             success: true,
-            message: 'Please use Firebase client SDK for authentication'
+            data: {
+                token: customToken,
+                victim: {
+                    id: victim._id,
+                    victimAccount: victim.victimAccount,
+                    victimUsername: victim.victimUsername,
+                    victimType: victim.victimType,
+                    firstName: victim.victimAccount === 'anonymous' ? 'Anonymous' : victim.firstName
+                }
+            }
         });
     } catch (error) {
+        console.error('Login error:', error);
         res.status(401);
-        throw new Error('Invalid email or password');
+        throw new Error('Invalid credentials');
     }
 });
 
@@ -366,4 +446,4 @@ module.exports = {
     sendAnonymousAlert,
     getReports,
     updateReport
-};
+}

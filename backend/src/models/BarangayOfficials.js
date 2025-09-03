@@ -71,7 +71,57 @@ const barangayOfficialSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
         required: true
+    },
+    firebaseUid: {
+        type: String,
+        sparse: true
     }
+});
+
+// Middleware to create Firebase account when status changes to approved
+barangayOfficialSchema.pre('save', async function(next) {
+    const official = this;
+    
+    // If status is being changed to approved and no Firebase account exists
+    if (official.isModified('status') && 
+        official.status === 'approved' && 
+        !official.firebaseUid) {
+        
+        try {
+            const admin = require('../config/firebase-config');
+            
+            // Create Firebase user
+            const userRecord = await admin.auth().createUser({
+                email: official.officialEmail,
+                password: official.adminPassword, // Note: This should be the original password, not the hashed one
+                displayName: `${official.firstName} ${official.lastName}`,
+                emailVerified: false
+            });
+
+            // Set custom claims for the user
+            await admin.auth().setCustomUserClaims(userRecord.uid, {
+                role: 'barangay_official',
+                position: official.position,
+                officialId: official.officialID
+            });
+
+            // Set the firebaseUid
+            official.firebaseUid = userRecord.uid;
+        } catch (error) {
+            console.error('Error creating Firebase account:', error);
+            next(error);
+            return;
+        }
+    }
+    next();
+});
+
+// Store original password before hashing for Firebase account creation
+barangayOfficialSchema.pre('save', function(next) {
+    if (this.isModified('adminPassword')) {
+        this._plainPassword = this.adminPassword;
+    }
+    next();
 });
 
 // Pre-save middleware to hash password before saving
@@ -89,7 +139,26 @@ barangayOfficialSchema.pre('save', async function(next) {
 
 // Method to compare passwords for login
 barangayOfficialSchema.methods.comparePassword = async function(candidatePassword) {
-    return await bcrypt.compare(candidatePassword, this.adminPassword);
+    try {
+        console.log('Password comparison details:', {
+            hashedPasswordExists: !!this.adminPassword,
+            hashedPasswordLength: this.adminPassword?.length,
+            candidatePasswordExists: !!candidatePassword,
+            candidatePasswordLength: candidatePassword?.length
+        });
+
+        if (!candidatePassword || !this.adminPassword) {
+            console.error('Missing password for comparison');
+            return false;
+        }
+
+        const isMatch = await bcrypt.compare(candidatePassword, this.adminPassword);
+        console.log('Bcrypt comparison result:', isMatch);
+        return isMatch;
+    } catch (error) {
+        console.error('Error in password comparison:', error);
+        throw new Error('Error comparing passwords');
+    }
 };
 
 const BarangayOfficial = mongoose.model('BarangayOfficial', barangayOfficialSchema);

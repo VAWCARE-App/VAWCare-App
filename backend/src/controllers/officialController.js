@@ -34,6 +34,29 @@ const registerOfficial = asyncHandler(async (req, res) => {
     }
 
     try {
+        console.log('Creating official with password:', {
+            passwordExists: !!adminPassword,
+            passwordLength: adminPassword?.length
+        });
+
+        // Create Firebase user first
+        const userRecord = await admin.auth().createUser({
+            email: officialEmail,
+            password: adminPassword,
+            displayName: `${firstName} ${lastName}`,
+            emailVerified: false
+        });
+
+        // Set custom claims for initial access
+        await admin.auth().setCustomUserClaims(userRecord.uid, {
+            role: 'barangay_official',
+            position: position,
+            status: 'pending'
+        });
+
+        // Generate custom token
+        const customToken = await admin.auth().createCustomToken(userRecord.uid);
+
         // Create official in MongoDB with pending status
         const official = await BarangayOfficial.create({
             officialID: officialID,
@@ -47,14 +70,15 @@ const registerOfficial = asyncHandler(async (req, res) => {
             barangay: barangay,
             city: city,
             province: province,
-            status: 'pending'
+            status: 'pending',
+            firebaseUid: userRecord.uid
         });
 
-        // Don't create Firebase user yet - will be created upon approval
         res.status(201).json({
             success: true,
             message: 'Barangay Official registered successfully. Pending admin approval.',
             data: {
+                token: customToken,
                 official: {
                     id: official._id,
                     officialID: official.officialID,
@@ -79,18 +103,94 @@ const registerOfficial = asyncHandler(async (req, res) => {
 // @route   POST /api/officials/login
 // @access  Public
 const loginOfficial = asyncHandler(async (req, res) => {
-    const { email, password } = req.body;
+    const { officialEmail, password } = req.body;
+    console.log('Login attempt with:', { officialEmail, passwordLength: password?.length });
 
     try {
-        // Firebase client SDK should handle the authentication
-        // This endpoint is just for compatibility and should return instructions
+        // First find the official in MongoDB
+        console.log('Searching for official with email:', officialEmail);
+        const official = await BarangayOfficial.findOne({ officialEmail });
+        
+        if (!official) {
+            console.log('Official not found with email:', officialEmail);
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid credentials'
+            });
+        }
+
+        console.log('Found official:', {
+            id: official._id,
+            email: official.officialEmail,
+            status: official.status,
+            hasFirebaseUid: !!official.firebaseUid,
+            hasPassword: !!official.adminPassword,
+            passwordLength: official.adminPassword?.length
+        });
+
+        // Check if the account is approved
+        if (official.status !== 'approved') {
+            console.log('Official not approved. Current status:', official.status);
+            return res.status(401).json({
+                success: false,
+                message: 'Your account is pending approval. Please contact the administrator.'
+            });
+        }
+
+        // Verify password
+        console.log('Attempting password comparison');
+        const isMatch = await official.comparePassword(password);
+        console.log('Password comparison result:', isMatch);
+        
+        if (!isMatch) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid credentials'
+            });
+        }
+
+        // Get Firebase user and verify their existence
+        let firebaseUser;
+        try {
+            firebaseUser = await admin.auth().getUser(official.firebaseUid);
+        } catch (error) {
+            console.error('Error getting Firebase user:', error);
+            if (error.code === 'auth/user-not-found') {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Account configuration error. Please contact administrator.'
+                });
+            }
+            throw error;
+        }
+
+        // Create custom token for approved official with updated claims
+        const customToken = await admin.auth().createCustomToken(official.firebaseUid, {
+            role: 'barangay_official',
+            position: official.position,
+            status: official.status
+        });
+
+        console.log('Login successful, returning token');
         res.status(200).json({
             success: true,
-            message: 'Please use Firebase client SDK for authentication'
+            data: {
+                token: customToken,
+                official: {
+                    id: official._id,
+                    officialID: official.officialID,
+                    officialEmail: official.officialEmail,
+                    firstName: official.firstName,
+                    lastName: official.lastName,
+                    position: official.position,
+                    status: official.status
+                }
+            }
         });
     } catch (error) {
+        console.error('Login error:', error);
         res.status(401);
-        throw new Error('Invalid email or password');
+        throw new Error('Invalid credentials');
     }
 });
 

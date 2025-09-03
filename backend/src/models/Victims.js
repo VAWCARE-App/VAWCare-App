@@ -151,12 +151,7 @@ victimSchema.pre('validate', function(next) {
     next();
 });
 
-// Virtual for login identifier
-victimSchema.virtual('loginIdentifier').get(function() {
-    return this.victimEmail ? [this.victimUsername, this.victimEmail] : this.victimUsername;
-});
-
-// MAIN FIX: Single pre-save middleware (remove the duplicate that was causing double-hashing)
+// SINGLE pre-save middleware (MAIN FIX - removed duplicate that caused double hashing)
 victimSchema.pre('save', async function(next) {
     try {
         // Generate victimID if not set
@@ -169,7 +164,7 @@ victimSchema.pre('save', async function(next) {
             this.victimID = `VIC${counter.seq.toString().padStart(3, '0')}`;
         }
 
-        // Hash password if modified (ONLY ONCE)
+        // Hash password ONLY if modified (ONLY ONCE)
         if (this.isModified('victimPassword')) {
             const salt = await bcrypt.genSalt(10);
             this.victimPassword = await bcrypt.hash(this.victimPassword, salt);
@@ -193,15 +188,6 @@ victimSchema.methods.comparePassword = async function(candidatePassword) {
 // Indexes
 victimSchema.index(
     { victimEmail: 1, victimAccount: 1 },
-    { 
-        unique: true,
-        sparse: true,
-        partialFilterExpression: { victimAccount: 'regular' }
-    }
-);
-
-victimSchema.index(
-    { victimEmail: 1 }, 
     { 
         unique: true,
         sparse: true,

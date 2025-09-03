@@ -24,14 +24,26 @@ export default function Login() {
   const onFinish = async (values) => {
     try {
       setLoading(true);
-      // FIXED: Use correct API endpoint
+      console.log('Login attempt with:', values);
+      
       const { data } = await api.post("/api/victims/login", values);
-      // FIXED: Access token from correct path
-      if (!data?.data?.token) throw new Error("No token returned by backend");
-      saveToken(data.data.token);
-      message.success("Welcome back!");
-      navigate("/dashboard");
+      console.log('Login response:', data);
+      
+      if (data.success) {
+        // Save token if available (Firebase token)
+        if (data.data.token) {
+          saveToken(data.data.token);
+        }
+        // Store user info for the app
+        localStorage.setItem('user', JSON.stringify(data.data.victim));
+        
+        message.success(`Welcome back, ${data.data.victim.firstName}!`);
+        navigate("/dashboard");
+      } else {
+        throw new Error(data.message || "Login failed");
+      }
     } catch (err) {
+      console.error('Login error:', err);
       message.error(err?.response?.data?.message || err.message || "Login failed");
     } finally {
       setLoading(false);
@@ -84,12 +96,19 @@ export default function Login() {
           </Typography.Paragraph>
 
           <Form layout="vertical" onFinish={onFinish} initialValues={{ identifier: "", password: "" }}>
-            {/* FIXED: Use 'identifier' field instead of 'email' */}
-            <Form.Item name="identifier" label="Username or Email" rules={[{ required: true }]}>
+            <Form.Item 
+              name="identifier" 
+              label="Username or Email" 
+              rules={[{ required: true, message: "Please enter your username or email" }]}
+            >
               <Input placeholder="Username or email" size={screens.md ? "large" : "middle"} />
             </Form.Item>
 
-            <Form.Item name="password" label="Password" rules={[{ required: true }]}>
+            <Form.Item 
+              name="password" 
+              label="Password" 
+              rules={[{ required: true, message: "Please enter your password" }]}
+            >
               <Input.Password placeholder="••••••••" size={screens.md ? "large" : "middle"} />
             </Form.Item>
 

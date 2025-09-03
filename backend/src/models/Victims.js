@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 const victimSchema = new mongoose.Schema({
     victimID: {
@@ -24,7 +25,7 @@ const victimSchema = new mongoose.Schema({
     },
     victimUsername: {
         type: String,
-        required: true, // Required for both anonymous and regular
+        required: true,
         unique: true,
         trim: true,
         minlength: [4, 'Username must be at least 4 characters long']
@@ -77,7 +78,8 @@ const victimSchema = new mongoose.Schema({
         required: function() {
             return this.victimAccount === 'regular';
         },
-        trim: true
+        trim: true,
+        match: [/^(\+63|0)[0-9]{10}$/, 'Please enter a valid Philippine phone number (e.g., +639123456789 or 09123456789)']
     },
     victimPassword: {
         type: String,
@@ -109,6 +111,10 @@ const victimSchema = new mongoose.Schema({
     createdAt: {
         type: Date,
         default: Date.now
+    },
+    firebaseUid: {
+        type: String,
+        sparse: true  // Allow null for victims who don't use Firebase
     }
 });
 
@@ -139,6 +145,30 @@ victimSchema.virtual('loginIdentifier').get(function() {
 
 // Index for email and account type combination
 victimSchema.index({ victimEmail: 1, victimAccount: 1 });
+
+// Pre-save middleware to hash password before saving
+victimSchema.pre('save', async function(next) {
+    if (!this.isModified('victimPassword')) {
+        return next();
+    }
+    
+    try {
+        const salt = await bcrypt.genSalt(10);
+        this.victimPassword = await bcrypt.hash(this.victimPassword, salt);
+        next();
+    } catch (error) {
+        next(error);
+    }
+});
+
+// Method to compare passwords for login
+victimSchema.methods.comparePassword = async function(candidatePassword) {
+    try {
+        return await bcrypt.compare(candidatePassword, this.victimPassword);
+    } catch (error) {
+        throw new Error('Error comparing passwords');
+    }
+};
 
 const Victim = mongoose.model('Victim', victimSchema);
 

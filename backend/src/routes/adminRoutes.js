@@ -14,6 +14,9 @@ router.post('/reset-password', adminController.resetAdminPassword);
 router.post('/setup-mfa', protect, adminOnly, adminController.setupMFA);
 router.post('/verify-mfa', protect, adminOnly, adminController.verifyMFA);
 
+// Get all users route
+router.get('/users', /*protect, adminOnly,*/ adminController.getAllUsers);
+
 // Admin management routes (backend admin only)
 router.get('/admins', /*protect, backendAdminOnly, requireEmailVerification,*/ adminController.getAllAdmins);
 router.put('/admins/soft-delete/:id', protect, backendAdminOnly, requireEmailVerification, requirePhoneVerification, requireMultiFactorAuth, adminController.softDeleteAdmin);
@@ -29,5 +32,6 @@ router.delete('/victims/:id', protect, backendAdminOnly, adminController.hardDel
 router.get('/officials', /*protect, backendAdminOnly,*/ adminController.getAllOfficials);
 router.put('/officials/soft-delete/:id', protect, backendAdminOnly, adminController.softDeleteOfficial);
 router.delete('/officials/:id', protect, backendAdminOnly, adminController.hardDeleteOfficial);
+router.put('/officials/:id/status', /*protect, backendAdminOnly,*/ adminController.updateOfficialStatus);
 
 module.exports = router;

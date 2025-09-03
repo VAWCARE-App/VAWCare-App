@@ -8,6 +8,8 @@ import {
   Typography,
   Flex,
   Grid,
+  Radio,
+  Select,
 } from "antd";
 import { api, saveToken } from "../lib/api";
 import { useNavigate, Link } from "react-router-dom";
@@ -22,14 +24,102 @@ export default function Signup() {
   const maxWidth = screens.xl ? 520 : screens.lg ? 480 : screens.md ? 420 : 360;
   const cardPadding = screens.md ? 24 : 16;
 
+  const [userType, setUserType] = useState('victim');
+  const [form] = Form.useForm();
+
+  // Admin roles for select input
+  const adminRoles = [
+    'backend',
+    'fullstack',
+    'frontend1',
+    'frontend2',
+    'documentation'
+  ];
+
+  // Official positions for select input
+  const officialPositions = [
+    'Barangay Captain',
+    'Kagawad',
+    'Secretary',
+    'Treasurer',
+    'SK Chairman',
+    'Chief Tanod'
+  ];
+
   const onFinish = async (values) => {
     try {
       setLoading(true);
       const { confirmPassword, ...payload } = values;
-      const { data } = await api.post("/api/auth/signup", payload);
+      
+      let endpoint;
+      switch(userType) {
+        case 'admin':
+          endpoint = '/api/admin/register';
+          break;
+        case 'official':
+          endpoint = '/api/officials/register';
+          break;
+        case 'victim':
+          endpoint = '/api/victims/register';
+          break;
+        default:
+          throw new Error('Invalid user type');
+      }
+
+      // Format the registration payload according to your backend expectations
+      let registrationPayload;
+      
+      switch(userType) {
+        case 'admin':
+          registrationPayload = {
+            adminEmail: payload.email,
+            adminPassword: payload.password,
+            adminRole: payload.role,
+            firstName: payload.firstName,
+            middleInitial: payload.middleInitial,
+            lastName: payload.lastName
+          };
+          break;
+          
+        case 'official':
+          registrationPayload = {
+            officialEmail: payload.email,
+            adminPassword: payload.password,
+            firstName: payload.firstName,
+            middleInitial: payload.middleInitial,
+            lastName: payload.lastName,
+            position: payload.position,
+            contactNumber: payload.contactNumber
+          };
+          break;
+          
+        case 'victim':
+          registrationPayload = {
+            victimEmail: payload.email,
+            password: payload.password,
+            victimUsername: payload.username,
+            victimAccount: payload.accountType,
+            ...(payload.accountType === 'regular' && {
+              firstName: payload.firstName,
+              middleInitial: payload.middleInitial,
+              lastName: payload.lastName,
+              address: payload.address,
+              contactNumber: payload.contactNumber
+            })
+          };
+          break;
+          
+        default:
+          throw new Error('Invalid user type');
+      }
+
+      // Make the API request
+      const { data } = await api.post(endpoint, registrationPayload);
       const token = data?.token;
+      
       if (token) {
         saveToken(token);
+        localStorage.setItem('userType', userType);
         message.success("Account created!");
         navigate("/dashboard");
       } else {
@@ -89,17 +179,122 @@ export default function Signup() {
           </Typography.Paragraph>
 
           <Form layout="vertical" onFinish={onFinish}>
-            <Form.Item name="name" label="Full name" rules={[{ required: true }]}>
-              <Input placeholder="Juan Dela Cruz" size={screens.md ? "large" : "middle"} />
+            <Form.Item label="User Type">
+              <Radio.Group value={userType} onChange={e => setUserType(e.target.value)} size={screens.md ? "large" : "middle"}>
+                <Radio.Button value="victim">Victim</Radio.Button>
+                <Radio.Button value="official">Official</Radio.Button>
+                <Radio.Button value="admin">Admin</Radio.Button>
+              </Radio.Group>
             </Form.Item>
 
-            <Form.Item
-              name="email"
-              label="Email"
-              rules={[{ required: true, type: "email" }]}
-            >
-              <Input placeholder="you@example.com" size={screens.md ? "large" : "middle"} />
+            <Form.Item name="firstName" label="First Name" rules={[{ required: true }]}>
+              <Input placeholder="Juan" size={screens.md ? "large" : "middle"} />
             </Form.Item>
+
+            <Form.Item name="middleInitial" label="Middle Initial" rules={[{ max: 1 }]}>
+              <Input placeholder="M" maxLength={1} size={screens.md ? "large" : "middle"} />
+            </Form.Item>
+
+            <Form.Item name="lastName" label="Last Name" rules={[{ required: true }]}>
+              <Input placeholder="Dela Cruz" size={screens.md ? "large" : "middle"} />
+            </Form.Item>
+
+            {userType === 'admin' && (
+              <Form.Item name="role" label="Role" rules={[{ required: true }]}>
+                <Select placeholder="Select role" size={screens.md ? "large" : "middle"}>
+                  {adminRoles.map(role => (
+                    <Select.Option key={role} value={role}>
+                      {role}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            )}
+
+            {userType === 'official' && (
+              <>
+                <Form.Item name="position" label="Position" rules={[{ required: true }]}>
+                  <Select placeholder="Select position" size={screens.md ? "large" : "middle"}>
+                    {officialPositions.map(position => (
+                      <Select.Option key={position} value={position}>
+                        {position}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+                <Form.Item name="contactNumber" label="Contact Number" rules={[{ required: true }]}>
+                  <Input placeholder="09XX XXX XXXX" size={screens.md ? "large" : "middle"} />
+                </Form.Item>
+              </>
+            )}
+
+            {userType === 'victim' && (
+              <>
+                <Form.Item name="accountType" label="Account Type" rules={[{ required: true }]}>
+                  <Radio.Group 
+                    size={screens.md ? "large" : "middle"}
+                    onChange={(e) => {
+                      // Reset form when switching account types
+                      form.resetFields();
+                      // Set the account type after reset
+                      form.setFieldsValue({ accountType: e.target.value });
+                    }}
+                  >
+                    <Radio.Button value="regular">Regular User</Radio.Button>
+                    <Radio.Button value="anonymous">Anonymous User</Radio.Button>
+                  </Radio.Group>
+                </Form.Item>
+
+                <Form.Item 
+                  name="username" 
+                  label="Username" 
+                  rules={[{ required: true }]}
+                  tooltip={Form.useWatch('accountType', form) === 'anonymous' ? 
+                    "Only username and password are required for anonymous accounts" : 
+                    "Your username will be visible to others. Choose wisely."}
+                >
+                  <Input placeholder="Choose a username" size={screens.md ? "large" : "middle"} />
+                </Form.Item>
+
+                {Form.useWatch('accountType', form) === 'regular' && (
+                  <>
+                    <Form.Item name="firstName" label="First Name" rules={[{ required: true }]}>
+                      <Input placeholder="Juan" size={screens.md ? "large" : "middle"} />
+                    </Form.Item>
+
+                    <Form.Item name="middleInitial" label="Middle Initial" rules={[{ max: 1 }]}>
+                      <Input placeholder="M" maxLength={1} size={screens.md ? "large" : "middle"} />
+                    </Form.Item>
+
+                    <Form.Item name="lastName" label="Last Name" rules={[{ required: true }]}>
+                      <Input placeholder="Dela Cruz" size={screens.md ? "large" : "middle"} />
+                    </Form.Item>
+
+                    <Form.Item name="address" label="Address" rules={[{ required: true }]}>
+                      <Input.TextArea 
+                        placeholder="Complete address" 
+                        size={screens.md ? "large" : "middle"}
+                        rows={2} 
+                      />
+                    </Form.Item>
+
+                    <Form.Item name="contactNumber" label="Contact Number" rules={[{ required: true }]}>
+                      <Input placeholder="09XX XXX XXXX" size={screens.md ? "large" : "middle"} />
+                    </Form.Item>
+                  </>
+                )}
+              </>
+            )}
+
+            {(userType !== 'victim' || Form.useWatch('accountType', form) === 'regular') && (
+              <Form.Item
+                name="email"
+                label="Email"
+                rules={[{ required: true, type: "email" }]}
+              >
+                <Input placeholder="you@example.com" size={screens.md ? "large" : "middle"} />
+              </Form.Item>
+            )}
 
             <Form.Item
               name="password"

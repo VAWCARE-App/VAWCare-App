@@ -24,9 +24,11 @@ export default function Login() {
   const onFinish = async (values) => {
     try {
       setLoading(true);
-      const { data } = await api.post("/api/auth/login", values);
-      if (!data?.token) throw new Error("No token returned by backend");
-      saveToken(data.token);
+      // FIXED: Use correct API endpoint
+      const { data } = await api.post("/api/victims/login", values);
+      // FIXED: Access token from correct path
+      if (!data?.data?.token) throw new Error("No token returned by backend");
+      saveToken(data.data.token);
       message.success("Welcome back!");
       navigate("/dashboard");
     } catch (err) {
@@ -44,14 +46,13 @@ export default function Login() {
         minHeight: "100vh",
         maxWidth: "100%",
         width: "100vw",
-        backgroundColor: "#fff0f5", // light pink
-        // padding: screens.md ? 24 : 16,
+        backgroundColor: "#fff0f5",
       }}
     >
       <Card
         style={{
           width: "100%",
-          maxWidth ,              
+          maxWidth,              
           borderRadius: 14,
           border: "1px solid #ffc0cb",
           boxShadow: "0 20px 34px rgba(0,0,0,0.06)",
@@ -82,9 +83,10 @@ export default function Login() {
             Enter your credentials to continue.
           </Typography.Paragraph>
 
-          <Form layout="vertical" onFinish={onFinish} initialValues={{ email: "", password: "" }}>
-            <Form.Item name="email" label="Email" rules={[{ required: true, type: "email" }]}>
-              <Input placeholder="you@example.com" size={screens.md ? "large" : "middle"} />
+          <Form layout="vertical" onFinish={onFinish} initialValues={{ identifier: "", password: "" }}>
+            {/* FIXED: Use 'identifier' field instead of 'email' */}
+            <Form.Item name="identifier" label="Username or Email" rules={[{ required: true }]}>
+              <Input placeholder="Username or email" size={screens.md ? "large" : "middle"} />
             </Form.Item>
 
             <Form.Item name="password" label="Password" rules={[{ required: true }]}>

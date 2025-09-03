@@ -2,6 +2,8 @@ const express = require('express');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const cors = require('cors');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpecs = require('./swagger/swagger');
 
 // Load environment variables silently
 dotenv.config({ silent: true });
@@ -15,6 +17,9 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
+
+// Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
 // Routes
 const victimRoutes = require('./routes/victimRoutes');
@@ -40,4 +45,6 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
     console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+    console.log('\x1b[36m%s\x1b[0m', `Swagger documentation available at: http://localhost:${PORT}/api-docs`);
+    console.log('\x1b[36m%s\x1b[0m', '-----------------------------------------------------------');
 });

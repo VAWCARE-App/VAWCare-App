@@ -1,130 +1,138 @@
-const admin = require('../config/firebase-config');
-const Victim = require('../models/Victims');
 const asyncHandler = require('express-async-handler');
+const Victim = require('../models/Victims');
+const admin = require('../config/firebase-config');
 
-// @desc    Register a new victim
-// @route   POST /api/victims/register
+// @desc    Register victim
+// @route   POST /api/victims/register  
 // @access  Public
 const registerVictim = asyncHandler(async (req, res) => {
-    console.log('\n=== Starting Victim Registration Process ===');
-    console.log('Request Body:', JSON.stringify(req.body, null, 2));
-
     const {
-        victimAccount,
         victimUsername,
         victimPassword,
-        victimEmail,
+        victimAccount = 'anonymous',
         victimType,
+        victimEmail,
         firstName,
         middleInitial,
         lastName,
         address,
         contactNumber,
+        emergencyContacts,
         location
     } = req.body;
 
-    console.log(`\nAttempting to register new ${victimAccount} victim:`);
-    console.log('- Username:', victimUsername);
-    console.log('- Account Type:', victimAccount);
-    console.log('- Email:', victimEmail || 'Not provided');
-    console.log('- Victim Type:', victimType || 'Not specified');
-
-    // Check if victim username already exists
-    const existingVictim = await Victim.findOne({ victimUsername });
-    if (existingVictim) {
-        console.log(`Registration failed: Username ${victimUsername} already exists`);
-        res.status(400);
-        throw new Error('Username already exists');
-    }
-
-    // For regular accounts, validate email if provided
-    if (victimAccount === 'regular' && victimEmail) {
-        const existingEmail = await Victim.findOne({ victimEmail });
-        if (existingEmail) {
-            console.log(`Registration failed: Email ${victimEmail} already exists`);
-            res.status(400);
-            throw new Error('Email already exists');
-        }
-    }
+    console.log('\n=== Starting Victim Registration Process ===');
+    console.log('Request Body:', {
+        victimUsername,
+        victimPassword: '***HIDDEN***',
+        victimAccount,
+        victimType,
+        victimEmail,
+        firstName
+    });
 
     try {
-        console.log('\nCreating victim document with the following data:');
+        // Check if username already exists
+        const existingVictim = await Victim.findOne({ victimUsername });
+        if (existingVictim) {
+            console.log(`Registration failed: Username ${victimUsername} already exists`);
+            res.status(400);
+            throw new Error('Username already exists');
+        }
+
+        // For regular accounts, check if email already exists
+        if (victimAccount === 'regular' && victimEmail) {
+            const existingEmail = await Victim.findOne({ victimEmail });
+            if (existingEmail) {
+                console.log(`Registration failed: Email ${victimEmail} already exists`);
+                res.status(400);
+                throw new Error('Email already registered');
+            }
+        }
+
+        console.log(`Attempting to register new ${victimAccount} victim:`);
+        console.log('- Username:', victimUsername);
+        console.log('- Account Type:', victimAccount);
+        console.log('- Email:', victimEmail || 'Not provided');
+        console.log('- Victim Type:', victimType || 'Not specified');
+
+        // Create victim data object
         const victimData = {
             victimAccount,
             victimUsername,
-            victimPassword: '***HIDDEN***',
-            victimEmail: victimAccount === 'anonymous' ? undefined : victimEmail,
-            victimType: victimAccount === 'anonymous' ? undefined : victimType,
-            firstName: victimAccount === 'anonymous' ? 'Anonymous' : firstName,
-            middleInitial: victimAccount === 'anonymous' ? '' : middleInitial,
-            lastName: victimAccount === 'anonymous' ? 'User' : lastName,
-            address: victimAccount === 'anonymous' ? '' : (address || ''),
-            contactNumber: victimAccount === 'anonymous' ? '' : (contactNumber || ''),
+            victimPassword, // This will be hashed by the pre-save middleware
+            firstName: firstName || (victimAccount === 'anonymous' ? 'Anonymous' : undefined),
+            middleInitial: middleInitial || '',
+            lastName: lastName || (victimAccount === 'anonymous' ? 'User' : undefined),
+            address: address || (victimAccount === 'anonymous' ? '' : undefined),
+            contactNumber: contactNumber || (victimAccount === 'anonymous' ? '' : undefined),
             location: location || { lat: 0, lng: 0 },
             firebaseUid: null
         };
-        console.log(JSON.stringify(victimData, null, 2));
 
-        // First create victim in MongoDB
-        const victim = new Victim(victimData);
+        // Add optional fields for regular accounts
+        if (victimAccount === 'regular') {
+            victimData.victimType = victimType;
+            victimData.victimEmail = victimEmail;
+            victimData.emergencyContacts = emergencyContacts || [];
+        }
+
+        console.log('Creating victim document with the following data:');
+        console.log(JSON.stringify({...victimData, victimPassword: '***HIDDEN***'}, null, 2));
 
         console.log(`Creating new ${victimAccount} victim record...`);
-        
-        // Save the victim - this will trigger the pre-save middleware to hash the password
-        await victim.save();
+        const victim = new Victim(victimData);
+        await victim.save(); // This triggers the pre-save middleware for password hashing
+
         console.log('\nMongoDB Registration Success:');
         console.log('- Victim ID:', victim._id);
         console.log('- VictimID:', victim.victimID);
         console.log('- Username:', victim.victimUsername);
         console.log('- Account Type:', victim.victimAccount);
 
-        // Now create Firebase user after successful MongoDB registration
+        // Try Firebase user creation (optional)
         console.log('\nAttempting Firebase user creation...');
         let firebaseUid = null;
         let customToken = null;
 
         try {
-            if (victimAccount === 'regular' && victimEmail) {
-                // Create regular user in Firebase
-                const userRecord = await admin.auth().createUser({
-                    email: victimEmail,
-                    password: victimPassword,
-                    displayName: `${firstName} ${lastName}`,
-                    emailVerified: false
-                });
-                firebaseUid = userRecord.uid;
+            if (admin && admin.auth) {
+                if (victimAccount === 'regular' && victimEmail) {
+                    const userRecord = await admin.auth().createUser({
+                        email: victimEmail,
+                        password: victimPassword,
+                        displayName: `${firstName} ${lastName}`,
+                        emailVerified: false
+                    });
+                    firebaseUid = userRecord.uid;
 
-                // Set custom claims for regular user
-                await admin.auth().setCustomUserClaims(userRecord.uid, {
-                    role: 'victim',
-                    isAnonymous: false
-                });
-            } else {
-                // For anonymous users, create a Firebase user without email
-                const userRecord = await admin.auth().createUser({
-                    displayName: `Anonymous User`,
-                    password: victimPassword // Still use their password for authentication
-                });
-                firebaseUid = userRecord.uid;
+                    await admin.auth().setCustomUserClaims(userRecord.uid, {
+                        role: 'victim',
+                        isAnonymous: false
+                    });
+                } else {
+                    const userRecord = await admin.auth().createUser({
+                        displayName: `Anonymous User`,
+                        password: victimPassword
+                    });
+                    firebaseUid = userRecord.uid;
 
-                // Set custom claims for anonymous user
-                await admin.auth().setCustomUserClaims(userRecord.uid, {
-                    role: 'victim',
-                    isAnonymous: true,
-                    victimUsername: victimUsername // Store username in claims for anonymous users
-                });
+                    await admin.auth().setCustomUserClaims(userRecord.uid, {
+                        role: 'victim',
+                        isAnonymous: true,
+                        victimUsername: victimUsername
+                    });
+                }
+
+                customToken = await admin.auth().createCustomToken(firebaseUid);
+
+                victim.firebaseUid = firebaseUid;
+                await victim.save();
+
+                console.log('\nFirebase User Created Successfully:');
+                console.log('- Firebase UID:', firebaseUid);
+                console.log('- Custom Token Generated:', customToken ? 'Yes' : 'No');
             }
-
-            // Generate custom token for both regular and anonymous users
-            customToken = await admin.auth().createCustomToken(firebaseUid);
-
-            // Update the victim with firebaseUid
-            victim.firebaseUid = firebaseUid;
-            await victim.save();
-
-            console.log('\nFirebase User Created Successfully:');
-            console.log('- Firebase UID:', firebaseUid);
-            console.log('- Custom Token Generated:', customToken ? 'Yes' : 'No');
         } catch (firebaseError) {
             console.log('\nFirebase Error:', firebaseError.message);
             console.log('Continuing without Firebase - MongoDB user is still valid');
@@ -149,9 +157,7 @@ const registerVictim = asyncHandler(async (req, res) => {
                     victimID: victim.victimID,
                     victimAccount: victim.victimAccount,
                     victimUsername: victim.victimUsername,
-                    victimType: victim.victimType,
                     firebaseUid: victim.firebaseUid,
-                    victimEmail: victim.victimEmail,
                     firstName: victim.firstName
                 }
             }
@@ -160,14 +166,12 @@ const registerVictim = asyncHandler(async (req, res) => {
         console.log('\n=== Registration Error ===');
         console.log('Error Code:', error.code || 'No error code');
         console.log('Error Message:', error.message);
-        console.log('Error Stack:', error.stack);
 
         if (error.code === 'auth/email-already-exists') {
             res.status(400);
             throw new Error('Email already registered');
         }
 
-        // Check for MongoDB duplicate key error
         if (error.code === 11000) {
             console.log('Duplicate Key Details:', error.keyPattern);
             console.log('Duplicate Key Value:', error.keyValue);
@@ -181,10 +185,13 @@ const registerVictim = asyncHandler(async (req, res) => {
 // @route   POST /api/victims/login
 // @access  Public
 const loginVictim = asyncHandler(async (req, res) => {
-    const { identifier, password } = req.body;  // identifier can be email or username
+    const { identifier, password } = req.body;
+
+    console.log('\n=== Starting Victim Login Process ===');
+    console.log('Login attempt for identifier:', identifier);
 
     try {
-        // First try to find user by username (for anonymous users)
+        // First try to find user by username
         let victim = await Victim.findOne({ victimUsername: identifier });
         
         // If not found by username, try email (for regular users)
@@ -193,15 +200,25 @@ const loginVictim = asyncHandler(async (req, res) => {
         }
 
         if (!victim) {
+            console.log('Login failed: User not found');
             return res.status(401).json({
                 success: false,
                 message: 'Invalid credentials'
             });
         }
 
-        // Check password
+        console.log('Found user:', {
+            id: victim._id,
+            username: victim.victimUsername,
+            accountType: victim.victimAccount
+        });
+
+        // Check password using comparePassword method
         const isMatch = await victim.comparePassword(password);
+        console.log('Password comparison result:', isMatch);
+
         if (!isMatch) {
+            console.log('Login failed: Invalid password');
             return res.status(401).json({
                 success: false,
                 message: 'Invalid credentials'
@@ -210,30 +227,33 @@ const loginVictim = asyncHandler(async (req, res) => {
 
         let customToken = null;
         
-        // Only try Firebase operations if we have a firebaseUid
+        // Try Firebase operations if firebaseUid exists
         if (victim.firebaseUid) {
             try {
-                // Get Firebase user
-                const firebaseUser = await admin.auth().getUser(victim.firebaseUid);
-
-                // Create custom token
-                customToken = await admin.auth().createCustomToken(victim.firebaseUid, {
-                    role: 'victim',
-                    isAnonymous: victim.victimAccount === 'anonymous',
-                    victimUsername: victim.victimUsername
-                });
+                if (admin && admin.auth) {
+                    const firebaseUser = await admin.auth().getUser(victim.firebaseUid);
+                    customToken = await admin.auth().createCustomToken(victim.firebaseUid, {
+                        role: 'victim',
+                        isAnonymous: victim.victimAccount === 'anonymous',
+                        victimUsername: victim.victimUsername
+                    });
+                    console.log('Firebase token created successfully');
+                }
             } catch (error) {
-                console.error('Firebase operation error:', error);
-                // Continue without Firebase token
+                console.error('Firebase operation error:', error.message);
             }
         }
 
+        console.log('\n=== Login Successful ===');
+
         res.status(200).json({
             success: true,
+            message: 'Login successful',
             data: {
                 token: customToken,
                 victim: {
                     id: victim._id,
+                    victimID: victim.victimID,
                     victimAccount: victim.victimAccount,
                     victimUsername: victim.victimUsername,
                     victimType: victim.victimType,
@@ -242,7 +262,7 @@ const loginVictim = asyncHandler(async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Login error:', error);
+        console.error('Login error:', error.message);
         res.status(401);
         throw new Error('Invalid credentials');
     }
@@ -259,8 +279,9 @@ const getProfile = asyncHandler(async (req, res) => {
             success: true,
             data: {
                 id: victim._id,
+                victimID: victim.victimID,
                 firebaseUid: victim.firebaseUid,
-                email: victim.email,
+                victimEmail: victim.victimEmail,
                 firstName: victim.firstName,
                 middleInitial: victim.middleInitial,
                 lastName: victim.lastName,
@@ -275,63 +296,6 @@ const getProfile = asyncHandler(async (req, res) => {
     } else {
         res.status(404);
         throw new Error('Victim not found');
-    }
-});
-
-// @desc    Verify email address
-// @route   POST /api/victims/verify-email
-// @access  Private
-const verifyEmail = asyncHandler(async (req, res) => {
-    const { code } = req.body;
-    
-    try {
-        // Get the current user from Firebase
-        const firebaseUser = await admin.auth().getUser(req.user.uid);
-        
-        // Verify the email verification code
-        // This would typically be handled by Firebase's email verification flow
-        // Here we're just demonstrating the concept
-        await admin.auth().updateUser(req.user.uid, {
-            emailVerified: true
-        });
-
-        res.status(200).json({
-            success: true,
-            message: 'Email verified successfully'
-        });
-    } catch (error) {
-        res.status(400);
-        throw new Error('Email verification failed');
-    }
-});
-
-// @desc    Verify phone number
-// @route   POST /api/victims/verify-phone
-// @access  Private
-const verifyPhone = asyncHandler(async (req, res) => {
-    const { phoneNumber, code } = req.body;
-    
-    try {
-        // This would typically use Firebase Phone Auth
-        // For now, we'll update the user's phone number directly
-        await admin.auth().updateUser(req.user.uid, {
-            phoneNumber: phoneNumber
-        });
-
-        // Update the victim in MongoDB
-        await Victim.findOneAndUpdate(
-            { firebaseUid: req.user.uid },
-            { contactNumber: phoneNumber },
-            { new: true }
-        );
-
-        res.status(200).json({
-            success: true,
-            message: 'Phone number verified successfully'
-        });
-    } catch (error) {
-        res.status(400);
-        throw new Error('Phone verification failed');
     }
 });
 
@@ -358,6 +322,60 @@ const updateProfile = asyncHandler(async (req, res) => {
     });
 });
 
+// @desc    Verify email address
+// @route   POST /api/victims/verify-email
+// @access  Private
+const verifyEmail = asyncHandler(async (req, res) => {
+    const { code } = req.body;
+    
+    try {
+        if (admin && admin.auth) {
+            const firebaseUser = await admin.auth().getUser(req.user.uid);
+            
+            await admin.auth().updateUser(req.user.uid, {
+                emailVerified: true
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Email verified successfully'
+        });
+    } catch (error) {
+        res.status(400);
+        throw new Error('Email verification failed');
+    }
+});
+
+// @desc    Verify phone number
+// @route   POST /api/victims/verify-phone
+// @access  Private
+const verifyPhone = asyncHandler(async (req, res) => {
+    const { phoneNumber, code } = req.body;
+    
+    try {
+        if (admin && admin.auth) {
+            await admin.auth().updateUser(req.user.uid, {
+                phoneNumber: phoneNumber
+            });
+        }
+
+        await Victim.findOneAndUpdate(
+            { firebaseUid: req.user.uid },
+            { contactNumber: phoneNumber },
+            { new: true }
+        );
+
+        res.status(200).json({
+            success: true,
+            message: 'Phone number verified successfully'
+        });
+    } catch (error) {
+        res.status(400);
+        throw new Error('Phone verification failed');
+    }
+});
+
 // @desc    Submit anonymous report
 // @route   POST /api/victims/anonymous/report
 // @access  Public
@@ -365,26 +383,26 @@ const submitAnonymousReport = asyncHandler(async (req, res) => {
     const { incident, location, description } = req.body;
 
     try {
-        // Create anonymous user in Firebase
-        const anonymousUser = await admin.auth().createUser({
-            disabled: false,
-            emailVerified: false
-        });
+        let anonymousUser;
+        
+        if (admin && admin.auth) {
+            anonymousUser = await admin.auth().createUser({
+                disabled: false,
+                emailVerified: false
+            });
 
-        // Set anonymous custom claims
-        await admin.auth().setCustomUserClaims(anonymousUser.uid, {
-            role: 'victim',
-            isAnonymous: true
-        });
+            await admin.auth().setCustomUserClaims(anonymousUser.uid, {
+                role: 'victim',
+                isAnonymous: true
+            });
+        }
 
-        // Create anonymous victim record
         const victim = await Victim.create({
-            firebaseUid: anonymousUser.uid,
+            firebaseUid: anonymousUser?.uid || null,
             isAnonymous: true,
             location: location || {}
         });
 
-        // Create the report
         const report = {
             victimId: victim._id,
             incident,
@@ -393,9 +411,6 @@ const submitAnonymousReport = asyncHandler(async (req, res) => {
             isAnonymous: true,
             submittedAt: new Date()
         };
-
-        // Here you would save the report to your reports collection
-        // const newReport = await Report.create(report);
 
         res.status(201).json({
             success: true,
@@ -418,19 +433,12 @@ const sendAnonymousAlert = asyncHandler(async (req, res) => {
     const { location, alertType } = req.body;
 
     try {
-        // Create anonymous alert
         const alert = {
             location,
             alertType,
             isAnonymous: true,
             timestamp: new Date()
         };
-
-        // Here you would save the alert to your alerts collection
-        // const newAlert = await Alert.create(alert);
-
-        // Notify relevant authorities (you would implement this based on your requirements)
-        // await notifyAuthorities(alert);
 
         res.status(200).json({
             success: true,
@@ -457,9 +465,7 @@ const getReports = asyncHandler(async (req, res) => {
             throw new Error('Victim not found');
         }
 
-        // Here you would fetch reports from your Report model
-        // const reports = await Report.find({ victimId: victim._id });
-        const reports = []; // Placeholder until Report model is implemented
+        const reports = [];
 
         res.status(200).json({
             success: true,
@@ -482,14 +488,6 @@ const updateReport = asyncHandler(async (req, res) => {
             throw new Error('Victim not found');
         }
 
-        // Here you would update the report in your Report model
-        // const report = await Report.findOneAndUpdate(
-        //     { _id: req.params.id, victimId: victim._id },
-        //     req.body,
-        //     { new: true }
-        // );
-
-        // Placeholder response until Report model is implemented
         res.status(200).json({
             success: true,
             message: 'Report updated successfully'
@@ -511,4 +509,4 @@ module.exports = {
     sendAnonymousAlert,
     getReports,
     updateReport
-}
+};

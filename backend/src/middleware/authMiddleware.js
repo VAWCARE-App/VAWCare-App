@@ -41,14 +41,14 @@ const protect = asyncHandler(async (req, res, next) => {
             multiFactor: firebaseUser.multiFactor || null
         };
 
-        // Check if user needs additional verification
-        if (req.user.role === 'admin' || req.user.role === 'official') {
-            // For admin and official roles, require email verification
-            if (!req.user.emailVerified) {
-                res.status(401);
-                throw new Error('Email verification required');
-            }
-        }
+                // // Check if user needs additional verification
+        // if (req.user.role === 'admin' || req.user.role === 'official') {
+        //     // For admin and official roles, require email verification
+        //     if (!req.user.emailVerified) {
+        //         res.status(401);
+        //         throw new Error('Email verification required');
+        //     }
+        // }
 
         next();
     } catch (error) {
@@ -59,28 +59,31 @@ const protect = asyncHandler(async (req, res, next) => {
 
 // Admin only middleware - checks for admin role in custom claims
 const adminOnly = asyncHandler(async (req, res, next) => {
-    if (!req.user || req.user.role !== 'admin') {
-        res.status(403);
-        throw new Error('Access denied. Admin only.');
-    }
+    // // Original admin permission check
+    // if (!req.user || req.user.role !== 'admin') {
+    //     res.status(403);
+    //     throw new Error('Access denied. Admin only.');
+    // }
     next();
 });
 
 // Backend admin only middleware - checks for backend admin role in custom claims
 const backendAdminOnly = asyncHandler(async (req, res, next) => {
-    if (!req.user || req.user.role !== 'admin' || req.user.adminRole !== 'backend') {
-        res.status(403);
-        throw new Error('Access denied. Backend admin only.');
-    }
+    // // Original backend admin permission check
+    // if (!req.user || req.user.role !== 'admin' || req.user.adminRole !== 'backend') {
+    //     res.status(403);
+    //     throw new Error('Access denied. Backend admin only.');
+    // }
     next();
 });
 
 // Victim only middleware - checks for victim role in custom claims
 const victimOnly = asyncHandler(async (req, res, next) => {
-    if (!req.user || req.user.role !== 'victim') {
-        res.status(403);
-        throw new Error('Access denied. Victim only.');
-    }
+    // // Original victim permission check
+    // if (!req.user || req.user.role !== 'victim') {
+    //     res.status(403);
+    //     throw new Error('Access denied. Victim only.');
+    // }
     next();
 });
 

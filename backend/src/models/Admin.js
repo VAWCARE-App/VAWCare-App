@@ -93,6 +93,28 @@ adminSchema.methods.comparePassword = async function(candidatePassword) {
     return await bcrypt.compare(candidatePassword, this.adminPassword);
 };
 
+// Pre-save middleware to hash password before saving
+adminSchema.pre('save', async function(next) {
+    if (!this.isModified('adminPassword')) return next();
+    
+    try {
+        const salt = await bcrypt.genSalt(10);
+        this.adminPassword = await bcrypt.hash(this.adminPassword, salt);
+        next();
+    } catch (error) {
+        next(error);
+    }
+});
+
+// Method to compare passwords for login
+adminSchema.methods.comparePassword = async function(candidatePassword) {
+    try {
+        return await bcrypt.compare(candidatePassword, this.adminPassword);
+    } catch (error) {
+        throw new Error('Error comparing passwords');
+    }
+};
+
 const Admin = mongoose.model('Admin', adminSchema);
 
 module.exports = Admin;

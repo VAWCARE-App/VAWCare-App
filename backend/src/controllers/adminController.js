@@ -4,6 +4,36 @@ const Victim = require('../models/Victims');
 const BarangayOfficial = require('../models/BarangayOfficials');
 const asyncHandler = require('express-async-handler');
 
+// @desc    Get all users (admins, victims, and officials)
+// @route   GET /api/admin/users
+// @access  Private (Admin only)
+exports.getAllUsers = asyncHandler(async (req, res) => {
+    try {
+        // Get all users from each collection
+        const admins = await Admin.find({ isDeleted: false })
+            .select('adminID adminEmail adminRole firstName lastName contactNumber createdAt');
+        
+        const victims = await Victim.find({ isDeleted: false })
+            .select('victimID firstName lastName email contactNumber address createdAt');
+            
+        const officials = await BarangayOfficial.find({ isDeleted: false })
+            .select('officialID firstName lastName email contactNumber address createdAt');
+
+        res.status(200).json({
+            success: true,
+            data: {
+                admins,
+                victims,
+                officials,
+                total: admins.length + victims.length + officials.length
+            }
+        });
+    } catch (error) {
+        res.status(500);
+        throw new Error('Error retrieving users: ' + error.message);
+    }
+});
+
 // @desc    Setup Multi-Factor Authentication for admin
 // @route   POST /api/admin/setup-mfa
 // @access  Private (Admin only)
@@ -115,6 +145,102 @@ exports.requestPasswordReset = async (req, res) => {
         });
     }
 };
+
+// @desc    Update Barangay Official status
+// @route   PUT /api/admin/officials/:id/status
+// @access  Admin only
+exports.updateOfficialStatus = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    try {
+        // Find the official
+        const official = await BarangayOfficial.findById(id);
+        if (!official) {
+            res.status(404);
+            throw new Error('Official not found');
+        }
+
+        // Update the status
+        official.status = status;
+
+        // If approving, update Firebase claims
+        if (status === 'approved') {
+            try {
+                // Get existing Firebase user
+                let firebaseUser;
+                try {
+                    firebaseUser = await admin.auth().getUser(official.firebaseUid);
+                } catch (error) {
+                    if (error.code === 'auth/user-not-found') {
+                        // If Firebase user doesn't exist, something went wrong during registration
+                        res.status(500);
+                        throw new Error('Firebase user not found. Please contact system administrator.');
+                    }
+                    throw error;
+                }
+
+                // Update custom claims
+                await admin.auth().setCustomUserClaims(official.firebaseUid, {
+                    role: 'barangay_official',
+                    position: official.position,
+                    officialId: official.officialID,
+                    status: 'approved'
+                });
+
+                // Generate new custom token with updated claims
+                const customToken = await admin.auth().createCustomToken(official.firebaseUid);
+
+                // Save the changes
+                await official.save();
+
+                // Return success with token
+                return res.status(200).json({
+                    success: true,
+                    message: 'Official approved and Firebase account created',
+                    data: {
+                        official: {
+                            id: official._id,
+                            officialID: official.officialID,
+                            officialEmail: official.officialEmail,
+                            firstName: official.firstName,
+                            lastName: official.lastName,
+                            position: official.position,
+                            status: official.status
+                        },
+                        token: customToken
+                    }
+                });
+            } catch (error) {
+                console.error('Firebase account creation error:', error);
+                res.status(500);
+                throw new Error('Error creating Firebase account');
+            }
+        }
+
+        // Save changes if not approved
+        await official.save();
+
+        res.status(200).json({
+            success: true,
+            message: `Official status updated to ${status}`,
+            data: {
+                official: {
+                    id: official._id,
+                    officialID: official.officialID,
+                    officialEmail: official.officialEmail,
+                    firstName: official.firstName,
+                    lastName: official.lastName,
+                    position: official.position,
+                    status: official.status
+                }
+            }
+        });
+    } catch (error) {
+        res.status(500);
+        throw new Error(`Error updating official status: ${error.message}`);
+    }
+});
 
 // Reset password with token (step 2)
 exports.resetAdminPassword = async (req, res) => {
@@ -257,6 +383,9 @@ exports.registerAdmin = async (req, res) => {
             adminRole: adminRole
         });
 
+        // Generate custom token
+        const customToken = await admin.auth().createCustomToken(userRecord.uid);
+
         // Create new admin in MongoDB
         const adminUser = new Admin({
             adminID,
@@ -266,18 +395,24 @@ exports.registerAdmin = async (req, res) => {
             middleInitial,
             lastName,
             adminPassword,
-            firebaseUid: userRecord.uid // Store Firebase UID
+            firebaseUid: userRecord.uid, // Store Firebase UID
+            status: 'pending' // Set initial status as pending
         });
 
         await adminUser.save();
 
         res.status(201).json({
             success: true,
-            message: 'Admin registered successfully',
+            message: 'Admin registered successfully. Pending approval.',
             data: {
-                adminID: admin.adminID,
-                email: admin.adminEmail,
-                role: admin.adminRole
+                token: customToken,
+                admin: {
+                    id: adminUser._id,
+                    adminID: adminUser.adminID,
+                    email: adminUser.adminEmail,
+                    role: adminUser.adminRole,
+                    status: adminUser.status
+                }
             }
         });
     } catch (error) {
@@ -331,10 +466,30 @@ const generateToken = async (adminUser) => {
 // Admin Login
 exports.loginAdmin = async (req, res) => {
     try {
-        const { adminEmail, adminPassword } = req.body;
+        // Log the full request body to see what we're receiving
+        console.log('Full request body:', req.body);
+        
+        // Accept either adminPassword or password from the request body
+        const { adminEmail, adminPassword, password } = req.body;
+        const passwordToUse = adminPassword || password;
+
+        console.log('Login attempt:', { 
+            adminEmail, 
+            hasAdminPassword: !!adminPassword,
+            hasPassword: !!password,
+            passwordToUse,
+            adminPasswordLength: adminPassword ? adminPassword.length : 0,
+            passwordLength: password ? password.length : 0
+        });
 
         // Find admin
         const adminUser = await Admin.findOne({ adminEmail, isDeleted: false });
+        console.log('Found admin:', { 
+            found: !!adminUser, 
+            email: adminEmail,
+            storedPasswordLength: adminUser ? adminUser.adminPassword.length : 0 
+        });
+
         if (!adminUser) {
             return res.status(401).json({
                 success: false,
@@ -342,8 +497,20 @@ exports.loginAdmin = async (req, res) => {
             });
         }
 
+        // Check if account is approved
+        if (adminUser.status !== 'approved') {
+            return res.status(401).json({
+                success: false,
+                message: 'Your account is pending approval. Please contact the system administrator.'
+            });
+        }
+
         // Check password
-        const isMatch = await adminUser.comparePassword(adminPassword);
+        console.log('About to compare password');
+        console.log('Input password to compare:', passwordToUse);
+        console.log('Stored hashed password:', adminUser.adminPassword);
+        const isMatch = await adminUser.comparePassword(passwordToUse);
+        console.log('Password match result:', isMatch);
         if (!isMatch) {
             return res.status(401).json({
                 success: false,
@@ -445,12 +612,13 @@ exports.getAllOfficials = async (req, res) => {
 // Soft delete admin (backend admin only)
 exports.softDeleteAdmin = async (req, res) => {
     try {
-        if (req.admin.adminRole !== 'backend') {
-            return res.status(403).json({
-                success: false,
-                message: 'Access denied. Only backend admin can delete admins'
-            });
-        }
+        // // Backend admin role check - temporarily commented out
+        // if (req.admin.adminRole !== 'backend') {
+        //     return res.status(403).json({
+        //         success: false,
+        //         message: 'Access denied. Only backend admin can delete admins'
+        //     });
+        // }
 
         const admin = await Admin.findById(req.params.id);
         if (!admin) {

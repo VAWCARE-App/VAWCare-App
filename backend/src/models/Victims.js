@@ -34,11 +34,8 @@ const victimSchema = new mongoose.Schema({
         trim: true,
         lowercase: true,
         match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email address'],
-        required: function() {
-            return this.victimAccount === 'regular';
-        },
         unique: true,
-        sparse: true
+        sparse: true  // Optional for all users
     },
     firstName: {
         type: String,
@@ -133,12 +130,11 @@ victimSchema.pre('validate', function(next) {
     next();
 });
 
-// Virtual for login identifier - allows login with either username or email for regular users
+// Virtual for login identifier - allows login with username for all users and email for those who provided it
 victimSchema.virtual('loginIdentifier').get(function() {
-    if (this.victimAccount === 'regular') {
-        return this.victimUsername || this.victimEmail;
-    }
-    return this.victimUsername; // Anonymous users can only use username
+    // Both regular and anonymous users can use username
+    // If email exists (for any user type), it can also be used
+    return this.victimEmail ? [this.victimUsername, this.victimEmail] : this.victimUsername;
 });
 
 // Index for email and account type combination

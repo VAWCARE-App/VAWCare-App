@@ -10,8 +10,13 @@ import {
   Table,
   Tag,
   Typography,
+  Layout,
+  Grid,
 } from "antd";
 import { api } from "../lib/api";
+import Sidebar from "../components/Sidebar";
+
+const { Header, Content } = Layout;
 
 export default function UserManagement() {
   const { message, modal, notification } = AntApp.useApp();
@@ -20,11 +25,17 @@ export default function UserManagement() {
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(null);
   const [form] = Form.useForm();
+  const [collapsed, setCollapsed] = useState(false);
+  const screens = Grid.useBreakpoint();
+
+  const PINK = "#e91e63";
+  const LIGHT_PINK = "#fff0f5";
+  const SOFT_PINK = "#ffd1dc";
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get("/api/users"); // Expect [{ id, name, email, role, createdAt, active }]
+      const { data } = await api.get("/api/users");
       setUsers(Array.isArray(data) ? data : data?.items || []);
     } catch (err) {
       message.error(err?.response?.data?.message || "Failed to load users");
@@ -108,7 +119,7 @@ export default function UserManagement() {
         { text: "user", value: "user" },
       ],
       onFilter: (v, r) => r.role === v,
-      render: (role) => <Tag>{role || "user"}</Tag>,
+      render: (role) => <Tag color={PINK}>{role || "user"}</Tag>,
     },
     {
       title: "Status",
@@ -129,7 +140,7 @@ export default function UserManagement() {
       key: "actions",
       render: (_, record) => (
         <Space>
-          <Button onClick={() => openEdit(record)}>Edit</Button>
+          <Button onClick={() => openEdit(record)} style={{ borderColor: PINK, color: PINK }}>Edit</Button>
           <Button danger onClick={() => confirmDelete(record)}>Delete</Button>
         </Space>
       ),
@@ -137,57 +148,88 @@ export default function UserManagement() {
   ];
 
   return (
-    <Card title="User Management" extra={
-      <Space>
-        <Input.Search
-          allowClear
-          placeholder="Search users"
-          style={{ width: 260 }}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <Button type="primary" onClick={openCreate}>New User</Button>
-      </Space>
-    }>
-      <Table
-        rowKey={(r) => String(r.id)}
-        columns={columns}
-        dataSource={filtered}
-        loading={loading}
-        pagination={{ pageSize: 10, showSizeChanger: false }}
-      />
-
-      <Modal
-        open={!!editing}
-        onCancel={() => setEditing(null)}
-        onOk={submitForm}
-        title={editing?.id === "new" ? "Create User" : "Edit User"}
-        okText={editing?.id === "new" ? "Create" : "Save"}
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item name="name" label="Name" rules={[{ required: true }]}>
-            <Input placeholder="Full name" />
-          </Form.Item>
-          <Form.Item name="email" label="Email" rules={[{ required: true, type: "email" }]}>
-            <Input placeholder="you@example.com" />
-          </Form.Item>
-          <Form.Item name="role" label="Role" rules={[{ required: true }]}>
-            <Input list="roleOptions" placeholder="admin / staff / user" />
-            <datalist id="roleOptions">
-              <option value="admin" />
-              <option value="staff" />
-              <option value="user" />
-            </datalist>
-          </Form.Item>
-          <Form.Item name="active" label="Active" rules={[{ required: true }]}>
-            <Input list="activeOptions" placeholder="true / false" />
-            <datalist id="activeOptions">
-              <option value="true" />
-              <option value="false" />
-            </datalist>
-          </Form.Item>
-        </Form>
-      </Modal>
-    </Card>
+    <Layout style={{ minHeight: "100vh", width:"100vw", background: LIGHT_PINK }}>
+      <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
+      <Layout>
+        <Header
+          style={{
+            background: "#fff",
+            borderBottom: `1px solid ${SOFT_PINK}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingInline: 16,
+          }}
+        >
+          <Typography.Title level={4} style={{ margin: 0, color: PINK }}>
+            User Management
+          </Typography.Title>
+          <Space>
+            <Input.Search
+              allowClear
+              placeholder="Search users"
+              style={{ width: 260, paddingTop: 16, paddingRight: 10
+               }}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <Button type="primary" style={{ background: PINK, borderColor: PINK, borderRadius: 10, fontWeight: 600 }} onClick={openCreate}>
+              New User
+            </Button>
+          </Space>
+        </Header>
+        <Content style={{ padding: 16 }}>
+          <Card
+            style={{
+              border: `1px solid ${SOFT_PINK}`,
+              borderRadius: 12,
+              background: "#fff",
+              boxShadow: "0 20px 34px rgba(0,0,0,0.06)",
+            }}
+            bodyStyle={{ padding: 0 }}
+          >
+            <Table
+              rowKey={(r) => String(r.id)}
+              columns={columns}
+              dataSource={filtered}
+              loading={loading}
+              pagination={{ pageSize: 10, showSizeChanger: false }}
+              style={{ padding: 16 }}
+            />
+          </Card>
+          <Modal
+            open={!!editing}
+            onCancel={() => setEditing(null)}
+            onOk={submitForm}
+            title={editing?.id === "new" ? "Create User" : "Edit User"}
+            okText={editing?.id === "new" ? "Create" : "Save"}
+          >
+            <Form form={form} layout="vertical">
+              <Form.Item name="name" label="Name" rules={[{ required: true }]}>
+                <Input placeholder="Full name" />
+              </Form.Item>
+              <Form.Item name="email" label="Email" rules={[{ required: true, type: "email" }]}>
+                <Input placeholder="you@example.com" />
+              </Form.Item>
+              <Form.Item name="role" label="Role" rules={[{ required: true }]}>
+                <Input list="roleOptions" placeholder="admin / staff / user" />
+                <datalist id="roleOptions">
+                  <option value="admin" />
+                  <option value="staff" />
+                  <option value="user" />
+                </datalist>
+              </Form.Item>
+              <Form.Item name="active" label="Active" rules={[{ required: true }]}>
+                <Input list="activeOptions" placeholder="true / false" />
+                <datalist id="activeOptions">
+                  <option value="true" />
+                  <option value="false" />
+                </datalist>
+              </Form.Item>
+            </Form>
+          </Modal>
+        </Content>
+      </Layout>
+    </Layout>
   );
 }

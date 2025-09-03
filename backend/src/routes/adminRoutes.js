@@ -25,12 +25,18 @@ router.put('/admins/restore/:id', protect, backendAdminOnly, requireEmailVerific
 
 // Victim management routes (backend admin only)
 router.get('/victims', /*protect, backendAdminOnly,*/ adminController.getAllVictims);
+router.post('/victims/register', protect, backendAdminOnly, adminController.registerVictim);
+router.put('/victims/:id', protect, backendAdminOnly, adminController.updateVictim);
 router.put('/victims/soft-delete/:id', protect, backendAdminOnly, adminController.softDeleteVictim);
+router.put('/victims/restore/:id', protect, backendAdminOnly, adminController.restoreVictim);
 router.delete('/victims/:id', protect, backendAdminOnly, adminController.hardDeleteVictim);
 
 // Barangay Official management routes (backend admin only)
 router.get('/officials', /*protect, backendAdminOnly,*/ adminController.getAllOfficials);
+router.post('/officials/register', protect, backendAdminOnly, adminController.registerOfficial);
+router.put('/officials/:id', protect, backendAdminOnly, adminController.updateOfficial);
 router.put('/officials/soft-delete/:id', protect, backendAdminOnly, adminController.softDeleteOfficial);
+router.put('/officials/restore/:id', protect, backendAdminOnly, adminController.restoreOfficial);
 router.delete('/officials/:id', protect, backendAdminOnly, adminController.hardDeleteOfficial);
 router.put('/officials/:id/status', /*protect, backendAdminOnly,*/ adminController.updateOfficialStatus);
 

@@ -15,4 +15,7 @@ router.post('/verify-phone', protect, officialController.verifyPhone);
 router.get('/profile', protect, requireEmailVerification, officialController.getProfile);
 router.put('/profile', protect, requireEmailVerification, officialController.updateProfile);
 
+// Protected routes for victim management
+router.get('/victims', protect, requireEmailVerification, officialController.getAllVictims);
+
 module.exports = router;

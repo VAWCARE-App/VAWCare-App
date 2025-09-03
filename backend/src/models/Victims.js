@@ -43,21 +43,18 @@ const victimSchema = new mongoose.Schema({
         lowercase: true,
         validate: {
             validator: function(v) {
-                // Skip validation for anonymous accounts
                 if (this.victimAccount === 'anonymous') {
                     return true;
                 }
-                // For regular accounts, require valid email
                 if (!v) return false;
                 return /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v);
             },
             message: 'Please enter a valid email address'
         },
         required: function() {
-            // Only required for regular accounts
             return this.victimAccount === 'regular';
         },
-        sparse: true // Allow undefined values
+        sparse: true
     },
     firstName: {
         type: String,
@@ -135,16 +132,15 @@ const victimSchema = new mongoose.Schema({
     },
     firebaseUid: {
         type: String,
-        sparse: true  // Allow null for victims who don't use Firebase
+        sparse: true
     }
 });
 
-// Pre-validate middleware to check required fields based on account type
+// Pre-validate middleware
 victimSchema.pre('validate', function(next) {
     if (this.victimAccount === 'anonymous') {
-        // For anonymous accounts, set default values
         this.victimType = undefined;
-        this.victimEmail = undefined; // Set to undefined instead of null
+        this.victimEmail = undefined;
         this.firstName = 'Anonymous';
         this.lastName = 'User';
         this.address = '';
@@ -155,25 +151,12 @@ victimSchema.pre('validate', function(next) {
     next();
 });
 
-// Virtual for login identifier - allows login with username for all users and email for those who provided it
+// Virtual for login identifier
 victimSchema.virtual('loginIdentifier').get(function() {
-    // Both regular and anonymous users can use username
-    // If email exists (for any user type), it can also be used
     return this.victimEmail ? [this.victimUsername, this.victimEmail] : this.victimUsername;
 });
 
-// Create a compound index for email and account type
-// This enforces uniqueness only for regular accounts
-victimSchema.index(
-    { victimEmail: 1, victimAccount: 1 },
-    { 
-        unique: true,
-        sparse: true,
-        partialFilterExpression: { victimAccount: 'regular' }
-    }
-);
-
-// Pre-save middleware to auto-generate victimID and hash password
+// MAIN FIX: Single pre-save middleware (remove the duplicate that was causing double-hashing)
 victimSchema.pre('save', async function(next) {
     try {
         // Generate victimID if not set
@@ -186,25 +169,12 @@ victimSchema.pre('save', async function(next) {
             this.victimID = `VIC${counter.seq.toString().padStart(3, '0')}`;
         }
 
-        // Hash password if modified
+        // Hash password if modified (ONLY ONCE)
         if (this.isModified('victimPassword')) {
             const salt = await bcrypt.genSalt(10);
             this.victimPassword = await bcrypt.hash(this.victimPassword, salt);
         }
         
-        next();
-    } catch (error) {
-        next(error);
-    }
-});
-victimSchema.pre('save', async function(next) {
-    if (!this.isModified('victimPassword')) {
-        return next();
-    }
-    
-    try {
-        const salt = await bcrypt.genSalt(10);
-        this.victimPassword = await bcrypt.hash(this.victimPassword, salt);
         next();
     } catch (error) {
         next(error);
@@ -220,7 +190,16 @@ victimSchema.methods.comparePassword = async function(candidatePassword) {
     }
 };
 
-// Create a compound index for email that only applies to regular accounts
+// Indexes
+victimSchema.index(
+    { victimEmail: 1, victimAccount: 1 },
+    { 
+        unique: true,
+        sparse: true,
+        partialFilterExpression: { victimAccount: 'regular' }
+    }
+);
+
 victimSchema.index(
     { victimEmail: 1 }, 
     { 

@@ -39,6 +39,10 @@ const barangayOfficialSchema = new mongoose.Schema({
             message: 'Please enter a valid position'
         }
     },
+    isDeleted: {
+        type: Boolean,
+        default: false
+    },
     status: {
         type: String,
         enum: ['pending', 'approved', 'rejected'],

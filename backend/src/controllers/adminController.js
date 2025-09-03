@@ -7,17 +7,114 @@ const asyncHandler = require('express-async-handler');
 // @desc    Get all users (admins, victims, and officials)
 // @route   GET /api/admin/users
 // @access  Private (Admin only)
+// @desc    Soft delete a victim
+// @route   PUT /api/admin/victims/:id/soft-delete
+// @access  Private (Admin only)
+exports.softDeleteVictim = asyncHandler(async (req, res) => {
+    try {
+        const victim = await Victim.findById(req.params.id);
+        
+        if (!victim) {
+            res.status(404);
+            throw new Error('Victim not found');
+        }
+
+        victim.isDeleted = true;
+        await victim.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Victim soft deleted successfully'
+        });
+    } catch (error) {
+        res.status(500);
+        throw new Error('Error soft deleting victim: ' + error.message);
+    }
+});
+
+// @desc    Restore a soft-deleted victim
+// @route   PUT /api/admin/victims/:id/restore
+// @access  Private (Admin only)
+exports.restoreVictim = asyncHandler(async (req, res) => {
+    try {
+        const victim = await Victim.findById(req.params.id);
+        
+        if (!victim) {
+            res.status(404);
+            throw new Error('Victim not found');
+        }
+
+        victim.isDeleted = false;
+        await victim.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Victim restored successfully'
+        });
+    } catch (error) {
+        res.status(500);
+        throw new Error('Error restoring victim: ' + error.message);
+    }
+});
+
+// @desc    Soft delete an official
+// @route   PUT /api/admin/officials/:id/soft-delete
+// @access  Private (Admin only)
+exports.softDeleteOfficial = asyncHandler(async (req, res) => {
+    try {
+        const official = await BarangayOfficial.findById(req.params.id);
+        
+        if (!official) {
+            res.status(404);
+            throw new Error('Official not found');
+        }
+
+        official.isDeleted = true;
+        await official.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Official soft deleted successfully'
+        });
+    } catch (error) {
+        res.status(500);
+        throw new Error('Error soft deleting official: ' + error.message);
+    }
+});
+
+// @desc    Restore a soft-deleted official
+// @route   PUT /api/admin/officials/:id/restore
+// @access  Private (Admin only)
+exports.restoreOfficial = asyncHandler(async (req, res) => {
+    try {
+        const official = await BarangayOfficial.findById(req.params.id);
+        
+        if (!official) {
+            res.status(404);
+            throw new Error('Official not found');
+        }
+
+        official.isDeleted = false;
+        await official.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Official restored successfully'
+        });
+    } catch (error) {
+        res.status(500);
+        throw new Error('Error restoring official: ' + error.message);
+    }
+});
+
 exports.getAllUsers = asyncHandler(async (req, res) => {
     try {
-        // Get all users from each collection
-        const admins = await Admin.find({ isDeleted: false })
-            .select('adminID adminEmail adminRole firstName lastName contactNumber createdAt');
+        // Get all non-deleted users from each collection
+        const admins = await Admin.find();
         
-        const victims = await Victim.find({ isDeleted: false })
-            .select('victimID firstName lastName email contactNumber address createdAt');
+        const victims = await Victim.find({ isDeleted: false });
             
-        const officials = await BarangayOfficial.find({ isDeleted: false })
-            .select('officialID firstName lastName email contactNumber address createdAt');
+        const officials = await BarangayOfficial.find({ isDeleted: false });
 
         res.status(200).json({
             success: true,
@@ -31,6 +128,174 @@ exports.getAllUsers = asyncHandler(async (req, res) => {
     } catch (error) {
         res.status(500);
         throw new Error('Error retrieving users: ' + error.message);
+    }
+});
+
+// @desc    Register a new victim
+// @route   POST /api/admin/victims/register
+// @access  Private (Admin only)
+exports.registerVictim = asyncHandler(async (req, res) => {
+    try {
+        const {
+            firstName,
+            middleInitial,
+            lastName,
+            email,
+            phoneNumber,
+            address,
+            dateOfBirth,
+            gender
+        } = req.body;
+
+        console.log(`Attempting to register new victim: ${firstName} ${lastName}`);
+
+        // Check if victim with email already exists
+        const existingVictim = await Victim.findOne({ email });
+        if (existingVictim) {
+            console.log(`Registration failed: Victim with email ${email} already exists`);
+            res.status(400);
+            throw new Error('Victim with this email already exists');
+        }
+
+        console.log('Creating new victim record...');
+        // Create new victim
+        const victim = await Victim.create({
+            firstName,
+            middleInitial,
+            lastName,
+            email,
+            phoneNumber,
+            address,
+            dateOfBirth,
+            gender,
+            isDeleted: false
+        });
+
+        console.log(`Successfully registered new victim with ID: ${victim._id}`);
+
+        res.status(201).json({
+            success: true,
+            data: victim,
+            message: 'Victim registered successfully'
+        });
+    } catch (error) {
+        res.status(500);
+        throw new Error('Error registering victim: ' + error.message);
+    }
+});
+
+// @desc    Update victim details
+// @route   PUT /api/admin/victims/:id
+// @access  Private (Admin only)
+exports.updateVictim = asyncHandler(async (req, res) => {
+    try {
+        const victim = await Victim.findById(req.params.id);
+        
+        if (!victim) {
+            res.status(404);
+            throw new Error('Victim not found');
+        }
+
+        const updatedVictim = await Victim.findByIdAndUpdate(
+            req.params.id,
+            { ...req.body, isDeleted: victim.isDeleted }, // Preserve isDeleted status
+            { new: true, runValidators: true }
+        );
+
+        res.status(200).json({
+            success: true,
+            data: updatedVictim,
+            message: 'Victim updated successfully'
+        });
+    } catch (error) {
+        res.status(500);
+        throw new Error('Error updating victim: ' + error.message);
+    }
+});
+
+// @desc    Register a new barangay official
+// @route   POST /api/admin/officials/register
+// @access  Private (Admin only)
+exports.registerOfficial = asyncHandler(async (req, res) => {
+    try {
+        const {
+            officialID,
+            officialEmail,
+            firstName,
+            middleInitial,
+            lastName,
+            position
+        } = req.body;
+
+        console.log(`Attempting to register new official: ${firstName} ${lastName} (${position})`);
+
+        // Check if official with email or ID already exists
+        const existingOfficial = await BarangayOfficial.findOne({
+            $or: [{ officialEmail }, { officialID }]
+        });
+
+        if (existingOfficial) {
+            console.log(`Registration failed: Official with email ${officialEmail} or ID ${officialID} already exists`);
+            res.status(400);
+            throw new Error('Official with this email or ID already exists');
+        }
+
+        console.log('Creating new official record...');
+        // Create new official
+        const official = await BarangayOfficial.create({
+            officialID,
+            officialEmail,
+            firstName,
+            middleInitial,
+            lastName,
+            position,
+            status: 'pending', // Default status
+            isDeleted: false
+        });
+
+        console.log(`Successfully registered new official with ID: ${official._id} and officialID: ${officialID}`);
+
+        res.status(201).json({
+            success: true,
+            data: official,
+            message: 'Official registered successfully'
+        });
+    } catch (error) {
+        res.status(500);
+        throw new Error('Error registering official: ' + error.message);
+    }
+});
+
+// @desc    Update official details
+// @route   PUT /api/admin/officials/:id
+// @access  Private (Admin only)
+exports.updateOfficial = asyncHandler(async (req, res) => {
+    try {
+        const official = await BarangayOfficial.findById(req.params.id);
+        
+        if (!official) {
+            res.status(404);
+            throw new Error('Official not found');
+        }
+
+        const updatedOfficial = await BarangayOfficial.findByIdAndUpdate(
+            req.params.id,
+            { 
+                ...req.body, 
+                isDeleted: official.isDeleted, // Preserve isDeleted status
+                status: req.body.status || official.status // Preserve status if not updated
+            },
+            { new: true, runValidators: true }
+        );
+
+        res.status(200).json({
+            success: true,
+            data: updatedOfficial,
+            message: 'Official updated successfully'
+        });
+    } catch (error) {
+        res.status(500);
+        throw new Error('Error updating official: ' + error.message);
     }
 });
 
@@ -359,16 +624,20 @@ const registerAdmin = asyncHandler(async (req, res) => {
 exports.registerAdmin = async (req, res) => {
     try {
         const { adminID, adminEmail, adminRole, firstName, middleInitial, lastName, adminPassword } = req.body;
+        
+        console.log(`Attempting to register new admin: ${firstName} ${lastName} (${adminRole})`);
 
         // Check if role is already taken
         const existingRole = await Admin.findOne({ adminRole });
         if (existingRole) {
+            console.log(`Registration failed: Admin role ${adminRole} is already taken`);
             return res.status(400).json({
                 success: false,
                 message: `An admin with role ${adminRole} already exists`
             });
         }
 
+        console.log('Creating user in Firebase...');
         // Create user in Firebase first
         const userRecord = await admin.auth().createUser({
             email: adminEmail,
@@ -400,6 +669,8 @@ exports.registerAdmin = async (req, res) => {
         });
 
         await adminUser.save();
+        
+        console.log(`Successfully registered admin with ID: ${adminUser._id}, Firebase UID: ${userRecord.uid}`);
 
         res.status(201).json({
             success: true,

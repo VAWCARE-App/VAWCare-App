@@ -1,84 +1,147 @@
 import React from "react";
-import { Layout, Menu, Button, Grid } from "antd";
+import { Layout, Menu, Button, Typography } from "antd";
 import {
-  HomeOutlined,
+  DashboardOutlined,
   UserOutlined,
+  TeamOutlined,
   FileTextOutlined,
-  PieChartOutlined,
   SettingOutlined,
   LogoutOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
 } from "@ant-design/icons";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { clearToken } from "../lib/api";
 
 const { Sider } = Layout;
-
-const PINK = "#e91e63";
-const SOFT_PINK = "#ffd1dc";
+const { Text } = Typography;
 
 export default function Sidebar({ collapsed, setCollapsed }) {
-  const screens = Grid.useBreakpoint();
-  const location = useLocation();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const items = [
-    { key: "/dashboard", icon: <HomeOutlined />, label: <Link to="/dashboard">Dashboard</Link> },
-    { key: "/users", icon: <UserOutlined />, label: <Link to="/users">Users</Link> },
-    { key: "/cases", icon: <FileTextOutlined />, label: <span>Cases</span> },
-    { key: "/reports", icon: <PieChartOutlined />, label: <span>Reports</span> },
-    { type: "divider" },
-    { key: "/settings", icon: <SettingOutlined />, label: <span>Settings</span> },
+  const handleLogout = () => {
+    clearToken();
+    localStorage.removeItem('user');
+    localStorage.removeItem('userType');
+    navigate("/login");
+  };
+
+  // Get current user info
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const userType = localStorage.getItem('userType') || 'victim';
+
+  const menuItems = [
+    {
+      key: '/dashboard',
+      icon: <DashboardOutlined />,
+      label: 'Dashboard',
+    },
+    {
+      key: '/users',
+      icon: <UserOutlined />,
+      label: 'User Management',
+      // Only show for admins
+      style: userType !== 'admin' ? { display: 'none' } : {}
+    },
+    {
+      key: '/reports',
+      icon: <FileTextOutlined />,
+      label: 'Reports',
+    },
+    {
+      key: '/cases',
+      icon: <TeamOutlined />,
+      label: 'Cases',
+    },
+    {
+      key: '/settings',
+      icon: <SettingOutlined />,
+      label: 'Settings',
+    },
   ];
 
-  const selectedKey = items.find(i => i.key && location.pathname.startsWith(i.key))?.key || "/dashboard";
+  const filteredMenuItems = menuItems.filter(item => !item.style?.display);
 
   return (
-    <Sider
-      breakpoint="lg"
-      collapsedWidth={screens.xs ? 0 : 64}
-      collapsible
+    <Sider 
+      trigger={null} 
+      collapsible 
       collapsed={collapsed}
-      onCollapse={setCollapsed}
-      width={240}
-      theme="light"
       style={{
-        borderRight: `1px solid ${SOFT_PINK}`,
         background: "#fff",
-        minHeight: "100vh",
+        borderRight: "1px solid #ffd1dc",
       }}
     >
-      <div
-        style={{
-          padding: 16,
-          fontWeight: 800,
-          color: PINK,
-          fontSize: 18,
-          textAlign: "center",
-          borderBottom: `1px solid ${SOFT_PINK}`,
-        }}
-      >
-        VAWCare
-      </div>
-      <Menu
-        mode="inline"
-        selectedKeys={[selectedKey]}
-        items={items}
-        style={{ borderRight: 0 }}
-      />
-      <div style={{ marginTop: "auto", padding: 12 }}>
-        <Button
-          icon={<LogoutOutlined />}
-          block
-          onClick={() => {
-            clearToken();
-            navigate("/login");
-          }}
-          style={{
-            borderColor: PINK,
-            color: PINK,
+      <div style={{ 
+        padding: collapsed ? "16px 8px" : "16px", 
+        borderBottom: "1px solid #ffd1dc",
+        textAlign: "center"
+      }}>
+        <Typography.Title 
+          level={collapsed ? 5 : 4} 
+          style={{ 
+            margin: 0, 
+            color: "#e91e63",
+            fontSize: collapsed ? "14px" : "18px"
           }}
         >
-          Log out
+          {collapsed ? "VAW" : "VAWCare"}
+        </Typography.Title>
+        {!collapsed && currentUser.firstName && (
+          <Text type="secondary" style={{ fontSize: "12px" }}>
+            Welcome, {currentUser.firstName}
+          </Text>
+        )}
+      </div>
+
+      <div style={{ 
+        position: "absolute", 
+        top: 16, 
+        right: 16, 
+        zIndex: 1 
+      }}>
+        <Button
+          type="text"
+          icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+          onClick={() => setCollapsed(!collapsed)}
+          style={{
+            fontSize: "16px",
+            width: 32,
+            height: 32,
+            color: "#e91e63"
+          }}
+        />
+      </div>
+
+      <Menu
+        mode="inline"
+        selectedKeys={[location.pathname]}
+        style={{ 
+          border: "none",
+          marginTop: "48px" // Account for the toggle button
+        }}
+        items={filteredMenuItems}
+        onClick={({ key }) => navigate(key)}
+      />
+
+      <div style={{ 
+        position: "absolute", 
+        bottom: 16, 
+        left: collapsed ? 8 : 16, 
+        right: collapsed ? 8 : 16 
+      }}>
+        <Button
+          type="text"
+          icon={<LogoutOutlined />}
+          onClick={handleLogout}
+          style={{
+            width: "100%",
+            color: "#e91e63",
+            border: "1px solid #ffd1dc",
+          }}
+        >
+          {!collapsed && "Logout"}
         </Button>
       </div>
     </Sider>

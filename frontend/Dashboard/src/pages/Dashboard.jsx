@@ -13,7 +13,7 @@ import {
   Button,
 } from "antd";
 import { api } from "../lib/api";
-import Sidebar from "../components/Sidebar"; // Import the Sidebar component
+import Sidebar from "../components/Sidebar";
 
 const { Header, Content } = Layout;
     
@@ -79,7 +79,6 @@ export default function Dashboard() {
             Refresh
           </Button>
         </Header>
-
         <Content style={{ padding: 16 }}>
           <Row gutter={[16, 16]}>
             <Col xs={24} md={8}>
@@ -97,7 +96,6 @@ export default function Dashboard() {
                 </Typography.Title>
               </Card>
             </Col>
-
             <Col xs={24} md={8}>
               <Card
                 style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}
@@ -113,7 +111,6 @@ export default function Dashboard() {
                 </Typography.Title>
               </Card>
             </Col>
-
             <Col xs={24} md={8}>
               <Card
                 style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}
@@ -129,7 +126,6 @@ export default function Dashboard() {
                 </Typography.Title>
               </Card>
             </Col>
-
             <Col span={24}>
               <Card
                 title={<span style={{ color: PINK }}>Recent Activity</span>}

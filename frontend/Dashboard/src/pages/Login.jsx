@@ -8,36 +8,117 @@ import {
   Typography,
   Flex,
   Grid,
+  Select,
+  Divider,
 } from "antd";
+import { UserOutlined, SafetyOutlined, TeamOutlined } from "@ant-design/icons";
 import { api, saveToken } from "../lib/api";
 import { useNavigate, Link } from "react-router-dom";
+
+const { Option } = Select;
 
 export default function Login() {
   const { message } = AntApp.useApp();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [userType, setUserType] = useState('victim');
   const screens = Grid.useBreakpoint(); 
 
   const maxWidth = screens.x2 ? 520 : screens.lg ? 480 : screens.md ? 420 : 360;
   const cardPadding = screens.md ? 24 : 16;
 
+  const getUserTypeInfo = (type) => {
+    switch(type) {
+      case 'victim':
+        return { icon: <UserOutlined />, label: "Victim", color: "#e91e63" };
+      case 'admin':
+        return { icon: <SafetyOutlined />, label: "Administrator", color: "#1890ff" };
+      case 'official':
+        return { icon: <TeamOutlined />, label: "Barangay Official", color: "#52c41a" };
+      default:
+        return { icon: <UserOutlined />, label: "User", color: "#e91e63" };
+    }
+  };
+
+  const getApiEndpoint = (type) => {
+    switch(type) {
+      case 'victim':
+        return '/api/victims/login';
+      case 'admin':
+        return '/api/admin/login';
+      case 'official':
+        return '/api/officials/login';
+      default:
+        return '/api/victims/login';
+    }
+  };
+
+  const formatLoginData = (values, type) => {
+    switch(type) {
+      case 'victim':
+        return {
+          identifier: values.identifier,
+          password: values.password
+        };
+      case 'admin':
+        return {
+          adminEmail: values.identifier,
+          adminPassword: values.password
+        };
+      case 'official':
+        return {
+          officialEmail: values.identifier,
+          adminPassword: values.password
+        };
+      default:
+        return values;
+    }
+  };
+
   const onFinish = async (values) => {
     try {
       setLoading(true);
-      console.log('Login attempt with:', values);
+      console.log('Login attempt:', { userType, identifier: values.identifier });
       
-      const { data } = await api.post("/api/victims/login", values);
+      const endpoint = getApiEndpoint(userType);
+      const loginData = formatLoginData(values, userType);
+      
+      const { data } = await api.post(endpoint, loginData);
       console.log('Login response:', data);
       
       if (data.success) {
-        // Save token if available (Firebase token)
-        if (data.data.token) {
+        // Save token if available
+        if (data.data?.token) {
           saveToken(data.data.token);
         }
-        // Store user info for the app
-        localStorage.setItem('user', JSON.stringify(data.data.victim));
         
-        message.success(`Welcome back, ${data.data.victim.firstName}!`);
+        // Store user info based on user type
+        let userInfo = {};
+        if (userType === 'victim') {
+          userInfo = {
+            ...data.data.victim,
+            userType: 'victim',
+            role: 'victim'
+          };
+        } else if (userType === 'admin') {
+          userInfo = {
+            ...data.data.admin,
+            userType: 'admin',
+            role: 'admin'
+          };
+        } else if (userType === 'official') {
+          userInfo = {
+            ...data.data.official,
+            userType: 'official',
+            role: 'official'
+          };
+        }
+        
+        localStorage.setItem('user', JSON.stringify(userInfo));
+        localStorage.setItem('userType', userType);
+        
+        const userName = userInfo.firstName || userInfo.victimUsername || userInfo.adminEmail || userInfo.officialEmail || 'User';
+        message.success(`Welcome back, ${userName}!`);
         navigate("/dashboard");
       } else {
         throw new Error(data.message || "Login failed");
@@ -49,6 +130,8 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  const currentUserType = getUserTypeInfo(userType);
 
   return (
     <Flex
@@ -78,11 +161,11 @@ export default function Login() {
             style={{
               marginBottom: 8,
               textAlign: "center",
-              color: "#e91e63",
+              color: currentUserType.color,
               lineHeight: 1.2,
             }}
           >
-            Sign in
+            {currentUserType.icon} VAWCare Sign In
           </Typography.Title>
 
           <Typography.Paragraph
@@ -92,16 +175,50 @@ export default function Login() {
               color: "#666",
             }}
           >
-            Enter your credentials to continue.
+            Choose your account type and sign in to continue.
           </Typography.Paragraph>
 
           <Form layout="vertical" onFinish={onFinish} initialValues={{ identifier: "", password: "" }}>
             <Form.Item 
-              name="identifier" 
-              label="Username or Email" 
-              rules={[{ required: true, message: "Please enter your username or email" }]}
+              name="userType" 
+              label="Account Type"
+              initialValue="victim"
             >
-              <Input placeholder="Username or email" size={screens.md ? "large" : "middle"} />
+              <Select 
+                value={userType}
+                onChange={setUserType}
+                size={screens.md ? "large" : "middle"}
+                style={{ width: '100%' }}
+              >
+                <Option value="victim">
+                  <UserOutlined style={{ marginRight: 8, color: "#e91e63" }} />
+                  Victim
+                </Option>
+                <Option value="admin">
+                  <SafetyOutlined style={{ marginRight: 8, color: "#1890ff" }} />
+                  Administrator
+                </Option>
+                <Option value="official">
+                  <TeamOutlined style={{ marginRight: 8, color: "#52c41a" }} />
+                  Barangay Official
+                </Option>
+              </Select>
+            </Form.Item>
+
+            <Divider style={{ margin: '16px 0' }} />
+
+            <Form.Item 
+              name="identifier" 
+              label={userType === 'victim' ? "Username or Email" : "Email Address"}
+              rules={[{ 
+                required: true, 
+                message: `Please enter your ${userType === 'victim' ? 'username or email' : 'email address'}` 
+              }]}
+            >
+              <Input 
+                placeholder={userType === 'victim' ? "Username or email" : "Email address"}
+                size={screens.md ? "large" : "middle"} 
+              />
             </Form.Item>
 
             <Form.Item 
@@ -119,23 +236,25 @@ export default function Login() {
               loading={loading}
               size={screens.md ? "large" : "middle"}
               style={{
-                backgroundColor: "#e91e63",
-                borderColor: "#e91e63",
+                backgroundColor: currentUserType.color,
+                borderColor: currentUserType.color,
                 borderRadius: 10,
                 fontWeight: 600,
               }}
             >
-              Sign in
+              Sign in as {currentUserType.label}
             </Button>
 
-            <div style={{ marginTop: 12, textAlign: "center" }}>
-              <Typography.Text style={{ color: "#888" }}>
-                No account?{" "}
-                <Link style={{ color: "#e91e63" }} to="/signup">
-                  Create one
-                </Link>
-              </Typography.Text>
-            </div>
+            {userType === 'victim' && (
+              <div style={{ marginTop: 12, textAlign: "center" }}>
+                <Typography.Text style={{ color: "#888" }}>
+                  No account?{" "}
+                  <Link style={{ color: "#e91e63" }} to="/signup">
+                    Create one
+                  </Link>
+                </Typography.Text>
+              </div>
+            )}
           </Form>
         </div>
       </Card>

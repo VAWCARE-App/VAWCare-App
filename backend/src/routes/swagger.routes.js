@@ -152,4 +152,153 @@
  *         description: Unauthorized
  *       403:
  *         description: Forbidden - Admin access required
+ *
+ * /api/admin/admins/{id}:
+ *   put:
+ *     summary: Update an admin
+ *     tags: [Admins]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Admin document _id
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *               lastName:
+ *                 type: string
+ *               adminEmail:
+ *                 type: string
+ *                 format: email
+ *               adminRole:
+ *                 type: string
+ *             required: []
+ *     responses:
+ *       200:
+ *         description: Admin updated successfully
+ *       400:
+ *         description: Validation error
+ *       403:
+ *         description: Forbidden - backend admin only
+ *
+ * /api/admin/admins/soft-delete/{id}:
+ *   put:
+ *     summary: Soft-delete an admin (mark isDeleted=true)
+ *     tags: [Admins]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Admin document _id
+ *     responses:
+ *       200:
+ *         description: Admin soft-deleted successfully
+ *       403:
+ *         description: Forbidden - backend admin only
+ *
+ * /api/admin/victims/{id}:
+ *   put:
+ *     summary: Update a victim
+ *     tags: [Admins]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Victim document _id
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *               lastName:
+ *                 type: string
+ *               victimEmail:
+ *                 type: string
+ *                 format: email
+ *             required: []
+ *     responses:
+ *       200:
+ *         description: Victim updated successfully
+ *       400:
+ *         description: Validation error
+ *
+ * /api/admin/victims/soft-delete/{id}:
+ *   put:
+ *     summary: Soft-delete a victim (mark isDeleted=true)
+ *     tags: [Admins]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Victim document _id
+ *     responses:
+ *       200:
+ *         description: Victim soft-deleted successfully
+ *
+ * /api/admin/officials/{id}:
+ *   put:
+ *     summary: Update a barangay official
+ *     tags: [Admins]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Official document _id
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *               lastName:
+ *                 type: string
+ *               officialEmail:
+ *                 type: string
+ *                 format: email
+ *               position:
+ *                 type: string
+ *             required: []
+ *     responses:
+ *       200:
+ *         description: Official updated successfully
+ *       400:
+ *         description: Validation error
+ *
+ * /api/admin/officials/soft-delete/{id}:
+ *   put:
+ *     summary: Soft-delete a barangay official (mark isDeleted=true)
+ *     tags: [Admins]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Official document _id
+ *     responses:
+ *       200:
+ *         description: Official soft-deleted successfully
  */

@@ -21,6 +21,7 @@ router.get('/users', /*protect, adminOnly,*/ adminController.getAllUsers);
 router.get('/admins', /*protect, backendAdminOnly, requireEmailVerification,*/ adminController.getAllAdmins);
 router.put('/admins/soft-delete/:id', /*protect, backendAdminOnly,*/ requireEmailVerification, requirePhoneVerification, requireMultiFactorAuth, adminController.softDeleteAdmin);
 router.delete('/admins/:id', /*protect, backendAdminOnly,*/ requireEmailVerification, requirePhoneVerification, requireMultiFactorAuth, adminController.hardDeleteAdmin);
+router.put('/admins/:id', /*protect, backendAdminOnly,*/ adminController.updateAdmin);
 router.put('/admins/restore/:id', /*protect, backendAdminOnly,*/ requireEmailVerification, requirePhoneVerification, requireMultiFactorAuth, adminController.restoreAdmin);
 
 // Victim management routes (backend admin only)

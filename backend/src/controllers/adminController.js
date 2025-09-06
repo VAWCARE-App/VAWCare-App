@@ -196,20 +196,30 @@ exports.updateVictim = asyncHandler(async (req, res) => {
             throw new Error('Victim not found');
         }
 
-        const updatedVictim = await Victim.findByIdAndUpdate(
-            req.params.id,
-            { ...req.body, isDeleted: victim.isDeleted }, // Preserve isDeleted status
-            { new: true, runValidators: true }
-        );
+        try {
+            const updatedVictim = await Victim.findByIdAndUpdate(
+                req.params.id,
+                { ...req.body, isDeleted: victim.isDeleted }, // Preserve isDeleted status
+                { new: true, runValidators: true }
+            );
 
-        res.status(200).json({
-            success: true,
-            data: updatedVictim,
-            message: 'Victim updated successfully'
-        });
+            res.status(200).json({
+                success: true,
+                data: updatedVictim,
+                message: 'Victim updated successfully'
+            });
+        } catch (err) {
+            if (err.name === 'ValidationError') {
+                return res.status(400).json({ success: false, message: err.message });
+            }
+            if (err.code === 11000) {
+                return res.status(409).json({ success: false, message: 'Duplicate field value violates unique constraint' });
+            }
+            throw err;
+        }
     } catch (error) {
-        res.status(500);
-        throw new Error('Error updating victim: ' + error.message);
+    console.error('Error in updateVictim:', error);
+    res.status(500).json({ success: false, message: 'Error updating victim', error: error.message });
     }
 });
 
@@ -278,24 +288,36 @@ exports.updateOfficial = asyncHandler(async (req, res) => {
             throw new Error('Official not found');
         }
 
-        const updatedOfficial = await BarangayOfficial.findByIdAndUpdate(
-            req.params.id,
-            { 
-                ...req.body, 
-                isDeleted: official.isDeleted, // Preserve isDeleted status
-                status: req.body.status || official.status // Preserve status if not updated
-            },
-            { new: true, runValidators: true }
-        );
+        try {
+            const updatedOfficial = await BarangayOfficial.findByIdAndUpdate(
+                req.params.id,
+                { 
+                    ...req.body, 
+                    isDeleted: official.isDeleted, // Preserve isDeleted status
+                    status: req.body.status || official.status // Preserve status if not updated
+                },
+                { new: true, runValidators: true }
+            );
 
-        res.status(200).json({
-            success: true,
-            data: updatedOfficial,
-            message: 'Official updated successfully'
-        });
+            res.status(200).json({
+                success: true,
+                data: updatedOfficial,
+                message: 'Official updated successfully'
+            });
+        } catch (err) {
+            if (err.name === 'ValidationError') {
+        console.error('Validation error in updateOfficial:', err);
+        return res.status(400).json({ success: false, message: err.message });
+            }
+            if (err.code === 11000) {
+        console.error('Duplicate key error in updateOfficial:', err);
+        return res.status(409).json({ success: false, message: 'Duplicate field value violates unique constraint' });
+            }
+            throw err;
+        }
     } catch (error) {
-        res.status(500);
-        throw new Error('Error updating official: ' + error.message);
+    console.error('Error in updateOfficial (outer):', error);
+    res.status(500).json({ success: false, message: 'Error updating official', error: error.message });
     }
 });
 
@@ -922,6 +944,44 @@ exports.softDeleteAdmin = async (req, res) => {
     }
 };
 
+// @desc    Update admin details
+// @route   PUT /api/admin/admins/:id
+// @access  Admin only (temporarily unprotected in routes)
+exports.updateAdmin = asyncHandler(async (req, res) => {
+    try {
+        const adminUser = await Admin.findById(req.params.id);
+        if (!adminUser) {
+            res.status(404);
+            throw new Error('Admin not found');
+        }
+
+        try {
+            const updated = await Admin.findByIdAndUpdate(
+                req.params.id,
+                { ...req.body, isDeleted: adminUser.isDeleted },
+                { new: true, runValidators: true }
+            );
+
+            res.status(200).json({
+                success: true,
+                data: updated,
+                message: 'Admin updated successfully'
+            });
+        } catch (err) {
+            if (err.name === 'ValidationError') {
+                return res.status(400).json({ success: false, message: err.message });
+            }
+            if (err.code === 11000) {
+                return res.status(409).json({ success: false, message: 'Duplicate field value violates unique constraint' });
+            }
+            throw err;
+        }
+    } catch (error) {
+        res.status(500);
+        throw new Error('Error updating admin: ' + error.message);
+    }
+});
+
 // Hard delete admin (backend admin only)
 exports.hardDeleteAdmin = async (req, res) => {
     try {
@@ -1025,7 +1085,7 @@ exports.getAllVictims = async (req, res) => {
 // Soft delete victim (backend admin only)
 exports.softDeleteVictim = async (req, res) => {
     try {
-        if (req.admin.adminRole !== 'backend') {
+        if (req.admin && req.admin.adminRole !== 'backend') {
             return res.status(403).json({
                 success: false,
                 message: 'Access denied. Only backend admin can delete victims'
@@ -1048,10 +1108,12 @@ exports.softDeleteVictim = async (req, res) => {
             message: 'Victim soft deleted successfully'
         });
     } catch (error) {
+        console.error('Error in hardDeleteVictim:', error);
         res.status(500).json({
             success: false,
             message: 'Error deleting victim',
-            error: error.message
+            error: error.message,
+            stack: error.stack
         });
     }
 };
@@ -1059,7 +1121,7 @@ exports.softDeleteVictim = async (req, res) => {
 // Hard delete victim (backend admin only)
 exports.hardDeleteVictim = async (req, res) => {
     try {
-        if (req.admin.adminRole !== 'backend') {
+        if (req.admin && req.admin.adminRole !== 'backend') {
             return res.status(403).json({
                 success: false,
                 message: 'Access denied. Only backend admin can permanently delete victims'
@@ -1115,7 +1177,7 @@ exports.getAllOfficials = async (req, res) => {
 // Soft delete barangay official (backend admin only)
 exports.softDeleteOfficial = async (req, res) => {
     try {
-        if (req.admin.adminRole !== 'backend') {
+        if (req.admin && req.admin.adminRole !== 'backend') {
             return res.status(403).json({
                 success: false,
                 message: 'Access denied. Only backend admin can delete officials'
@@ -1149,7 +1211,7 @@ exports.softDeleteOfficial = async (req, res) => {
 // Hard delete barangay official (backend admin only)
 exports.hardDeleteOfficial = async (req, res) => {
     try {
-        if (req.admin.adminRole !== 'backend') {
+        if (req.admin && req.admin.adminRole !== 'backend') {
             return res.status(403).json({
                 success: false,
                 message: 'Access denied. Only backend admin can permanently delete officials'

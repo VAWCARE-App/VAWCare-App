@@ -12,6 +12,8 @@ import {
   Space,
   Tooltip,
   Avatar,
+  Modal,
+  Form,
   Row,
   Col,
 } from "antd";
@@ -22,7 +24,8 @@ import {
   SearchOutlined,
   ReloadOutlined,
   EyeOutlined,
-  EditOutlined
+  EditOutlined,
+  DeleteOutlined
 } from "@ant-design/icons";
 import { api } from "../lib/api";
 import Sidebar from "../components/Sidebar";
@@ -39,6 +42,10 @@ export default function UserManagement() {
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchText, setSearchText] = useState('');
   const [filterType, setFilterType] = useState('all');
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [form] = Form.useForm();
+  const [isViewMode, setIsViewMode] = useState(false);
 
   const fetchAllUsers = async () => {
     try {
@@ -120,6 +127,126 @@ export default function UserManagement() {
   useEffect(() => {
     fetchAllUsers();
   }, []);
+
+  // Helpers to build API path for user type
+  const getApiPath = (userType) => {
+    if (userType === 'admin') return 'admins';
+    if (userType === 'official') return 'officials';
+    return 'victims';
+  };
+
+  const handleViewUser = (record) => {
+    // For now, reuse edit modal for viewing details (read-only)
+    setEditingUser(record);
+    const nameParts = record.name.split(' ');
+    form.setFieldsValue({
+      firstName: nameParts[0] || '',
+      lastName: nameParts.slice(1).join(' ') || '',
+      email: record.email === 'N/A' ? '' : record.email,
+      role: record.role,
+      status: record.status
+    });
+    setIsViewMode(true);
+    setEditModalVisible(true);
+  };
+
+  const handleEditUser = (record) => {
+    setEditingUser(record);
+    // split name into first/last for editing convenience
+    const nameParts = record.name.split(' ');
+    form.setFieldsValue({
+      firstName: nameParts[0] || '',
+      lastName: nameParts.slice(1).join(' ') || '',
+      email: record.email === 'N/A' ? '' : record.email,
+      role: record.role,
+      status: record.status
+    });
+  setIsViewMode(false);
+  setEditModalVisible(true);
+  };
+
+  const handleDeleteUser = async (record) => {
+    try {
+      setLoading(true);
+      const path = getApiPath(record.userType);
+      // Use soft-delete endpoint instead of hard delete
+      const res = await api.put(`/api/admin/${path}/soft-delete/${record.id}`);
+      if (res && res.data && res.data.success) {
+        message.success('User soft-deleted');
+      } else {
+        console.error('Soft-delete response:', res);
+        message.error('Failed to delete user: ' + (res.data?.message || 'Unknown error'));
+      }
+      fetchAllUsers();
+    } catch (err) {
+      console.error('Soft-delete failed', err.response || err);
+      const errMsg = err.response?.data?.message || err.message || 'Failed to delete user';
+      message.error(errMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateUser = async (values) => {
+    try {
+      setLoading(true);
+      const record = editingUser;
+      const path = getApiPath(record.userType);
+
+      // Build payload depending on user type
+      let payload = {};
+      if (record.userType === 'admin') {
+        payload = {
+          firstName: values.firstName,
+          lastName: values.lastName,
+          adminEmail: values.email,
+          adminRole: values.role
+        };
+      } else if (record.userType === 'official') {
+        payload = {
+          firstName: values.firstName,
+          lastName: values.lastName,
+          officialEmail: values.email,
+          position: values.role
+        };
+      } else {
+        // victim
+        payload = {
+          firstName: values.firstName,
+          lastName: values.lastName
+        };
+        if (values.email && values.email.trim() !== '') {
+          payload.victimEmail = values.email;
+        }
+      }
+
+      // Remove any undefined or empty string fields to avoid validation failures
+      Object.keys(payload).forEach(k => {
+        if (payload[k] === undefined || (typeof payload[k] === 'string' && payload[k].trim() === '')) {
+          delete payload[k];
+        }
+      });
+
+      const res = await api.put(`/api/admin/${path}/${record.id}`, payload);
+      if (res && res.data && res.data.success) {
+        message.success('User updated');
+        setEditModalVisible(false);
+        setEditingUser(null);
+      } else {
+        console.error('Update response:', res);
+        message.error('Failed to update user: ' + (res.data?.message || 'Unknown error'));
+      }
+      setEditModalVisible(false);
+      setEditingUser(null);
+      fetchAllUsers();
+    } catch (err) {
+      console.error('Update failed', err.response || err);
+      const errMsg = err.response?.data?.message || err.message || 'Failed to update user';
+      message.error(errMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     let filtered = allUsers;
@@ -233,10 +360,13 @@ export default function UserManagement() {
       render: (_, record) => (
         <Space>
           <Tooltip title="View Details">
-            <Button type="link" icon={<EyeOutlined />} size="small" />
+            <Button type="link" icon={<EyeOutlined />} size="small" onClick={() => handleViewUser(record)} />
           </Tooltip>
           <Tooltip title="Edit User">
-            <Button type="link" icon={<EditOutlined />} size="small" />
+            <Button type="link" icon={<EditOutlined />} size="small" onClick={() => handleEditUser(record)} />
+          </Tooltip>
+          <Tooltip title="Edit User">
+            <Button type="link" icon={<DeleteOutlined />} size="small" danger onClick={() => handleDeleteUser(record)} />
           </Tooltip>
         </Space>
       ),
@@ -357,6 +487,37 @@ export default function UserManagement() {
               }}
               scroll={{ x: 800 }}
             />
+            <Modal
+              title={editingUser ? `${isViewMode ? 'View' : 'Edit'} ${editingUser.userType} - ${editingUser.name}` : 'Edit User'}
+              open={editModalVisible}
+              onCancel={() => { setEditModalVisible(false); setEditingUser(null); setIsViewMode(false); }}
+              footer={isViewMode ? [
+                <Button key="close" onClick={() => { setEditModalVisible(false); setEditingUser(null); setIsViewMode(false); }}>Close</Button>
+              ] : undefined}
+              okText="Save"
+              onOk={() => { form.validateFields().then(vals => handleUpdateUser(vals)); }}
+            >
+              <Form form={form} layout="vertical">
+                <Form.Item name="firstName" label="First name" rules={[{ required: true }]}>
+                  <Input disabled={isViewMode} />
+                </Form.Item>
+                <Form.Item name="lastName" label="Last name" rules={[{ required: true }]}>
+                  <Input disabled={isViewMode} />
+                </Form.Item>
+                <Form.Item name="email" label="Email">
+                  <Input disabled={isViewMode} />
+                </Form.Item>
+                <Form.Item name="role" label="Role/Position">
+                  <Input disabled={isViewMode} />
+                </Form.Item>
+                <Form.Item name="status" label="Status">
+                  <Select disabled={isViewMode}>
+                    <Option value="approved">Approved</Option>
+                    <Option value="pending">Pending</Option>
+                  </Select>
+                </Form.Item>
+              </Form>
+            </Modal>
           </Card>
         </Content>
       </Layout>

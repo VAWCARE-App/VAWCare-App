@@ -63,6 +63,9 @@ export default function UserManagement() {
               key: `admin_${admin._id}`,
               id: admin._id,
               userType: 'admin',
+              firstName: admin.firstName,
+              middleInitial: admin.middleInitial,
+              lastName: admin.lastName,
               name: `${admin.firstName} ${admin.middleInitial ? admin.middleInitial + ' ' : ''}${admin.lastName}`,
               email: admin.adminEmail,
               username: admin.adminID,
@@ -82,6 +85,9 @@ export default function UserManagement() {
               key: `victim_${victim._id}`,
               id: victim._id,
               userType: 'victim',
+              firstName: victim.firstName,
+              middleInitial: victim.middleInitial,
+              lastName: victim.lastName,
               name: `${victim.firstName} ${victim.middleInitial ? victim.middleInitial + ' ' : ''}${victim.lastName}`,
               email: victim.victimEmail || 'N/A',
               username: victim.victimUsername,
@@ -101,6 +107,9 @@ export default function UserManagement() {
               key: `official_${official._id}`,
               id: official._id,
               userType: 'official',
+              firstName: official.firstName,
+              middleInitial: official.middleInitial,
+              lastName: official.lastName,
               name: `${official.firstName} ${official.middleInitial ? official.middleInitial + ' ' : ''}${official.lastName}`,
               email: official.officialEmail,
               username: official.officialID,
@@ -138,10 +147,11 @@ export default function UserManagement() {
   const handleViewUser = (record) => {
     // For now, reuse edit modal for viewing details (read-only)
     setEditingUser(record);
-    const nameParts = record.name.split(' ');
+    // Prefer explicit fields if present (avoids splitting errors)
     form.setFieldsValue({
-      firstName: nameParts[0] || '',
-      lastName: nameParts.slice(1).join(' ') || '',
+      firstName: record.firstName || record.name.split(' ')[0] || '',
+      middleInitial: record.middleInitial || '',
+      lastName: record.lastName || record.name.split(' ').slice(1).join(' ') || '',
       email: record.email === 'N/A' ? '' : record.email,
       role: record.role,
       status: record.status
@@ -153,10 +163,11 @@ export default function UserManagement() {
   const handleEditUser = (record) => {
     setEditingUser(record);
     // split name into first/last for editing convenience
-    const nameParts = record.name.split(' ');
+    // Prefer explicit fields if present (avoids splitting errors)
     form.setFieldsValue({
-      firstName: nameParts[0] || '',
-      lastName: nameParts.slice(1).join(' ') || '',
+      firstName: record.firstName || record.name.split(' ')[0] || '',
+      middleInitial: record.middleInitial || '',
+      lastName: record.lastName || record.name.split(' ').slice(1).join(' ') || '',
       email: record.email === 'N/A' ? '' : record.email,
       role: record.role,
       status: record.status
@@ -200,14 +211,16 @@ export default function UserManagement() {
           firstName: values.firstName,
           lastName: values.lastName,
           adminEmail: values.email,
-          adminRole: values.role
+          adminRole: values.role,
+          status: values.status
         };
       } else if (record.userType === 'official') {
         payload = {
           firstName: values.firstName,
           lastName: values.lastName,
           officialEmail: values.email,
-          position: values.role
+          position: values.role,
+          status: values.status
         };
       } else {
         // victim

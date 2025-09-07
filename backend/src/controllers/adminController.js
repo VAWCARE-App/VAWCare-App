@@ -109,12 +109,12 @@ exports.restoreOfficial = asyncHandler(async (req, res) => {
 
 exports.getAllUsers = asyncHandler(async (req, res) => {
     try {
-        // Get all non-deleted users from each collection
-        const admins = await Admin.find();
+    // Get all non-deleted users from each collection, excluding password fields
+    const admins = await Admin.find({}, '-adminPassword');
         
-        const victims = await Victim.find({ isDeleted: false });
+    const victims = await Victim.find({ isDeleted: false }, '-victimPassword');
             
-        const officials = await BarangayOfficial.find({ isDeleted: false });
+    const officials = await BarangayOfficial.find({ isDeleted: false }, '-officialPassword');
 
         res.status(200).json({
             success: true,
@@ -289,12 +289,25 @@ exports.updateOfficial = asyncHandler(async (req, res) => {
         }
 
         try {
+            // Sanitize incoming name fields to avoid stray characters
+            const body = { ...req.body };
+            if (body.middleInitial !== undefined) {
+                body.middleInitial = String(body.middleInitial || '').trim();
+            }
+            if (body.lastName) {
+                let ln = String(body.lastName).trim();
+                if (ln.length > 1 && ln.endsWith('C') && !ln.endsWith(' C')) {
+                    ln = ln.slice(0, -1);
+                }
+                body.lastName = ln;
+            }
+
             const updatedOfficial = await BarangayOfficial.findByIdAndUpdate(
                 req.params.id,
                 { 
-                    ...req.body, 
+                    ...body, 
                     isDeleted: official.isDeleted, // Preserve isDeleted status
-                    status: req.body.status || official.status // Preserve status if not updated
+                    status: body.status || official.status // Preserve status if not updated
                 },
                 { new: true, runValidators: true }
             );
@@ -595,23 +608,9 @@ const registerAdmin = asyncHandler(async (req, res) => {
     }
 
     try {
-        // Create user in Firebase
-        const userRecord = await admin.auth().createUser({
-            email: email,
-            password: password,
-            displayName: `${firstName} ${lastName}`,
-            emailVerified: false
-        });
-
-        // Create custom claims for the user
-        await admin.auth().setCustomUserClaims(userRecord.uid, {
-            role: 'admin',
-            adminRole: adminRole
-        });
-
-        // Create admin in MongoDB
+        // Create admin in MongoDB first (without firebaseUid)
         const newAdmin = await Admin.create({
-            firebaseUid: userRecord.uid,
+            firebaseUid: null,
             email,
             firstName,
             lastName,
@@ -619,8 +618,39 @@ const registerAdmin = asyncHandler(async (req, res) => {
             adminRole
         });
 
-        // Create custom token for initial sign-in
-        const customToken = await admin.auth().createCustomToken(userRecord.uid);
+        // Now attempt to create Firebase user and attach UID to the created admin
+        let customToken = null;
+        try {
+            const userRecord = await admin.auth().createUser({
+                email: email,
+                password: password,
+                displayName: `${firstName} ${lastName}`,
+                emailVerified: false
+            });
+
+            // Create custom claims for the user
+            await admin.auth().setCustomUserClaims(userRecord.uid, {
+                role: 'admin',
+                adminRole: adminRole
+            });
+
+            // Save firebaseUid on the admin record
+            newAdmin.firebaseUid = userRecord.uid;
+            await newAdmin.save();
+
+            // Create custom token for initial sign-in
+            customToken = await admin.auth().createCustomToken(userRecord.uid);
+        } catch (firebaseErr) {
+            // Rollback MongoDB admin if Firebase creation fails
+            console.error('Firebase creation failed for admin, rolling back MongoDB record:', firebaseErr);
+            try {
+                await Admin.findByIdAndDelete(newAdmin._id);
+            } catch (delErr) {
+                console.error('Failed to delete admin after Firebase error:', delErr);
+            }
+            res.status(500);
+            throw new Error('Error creating Firebase account: ' + firebaseErr.message);
+        }
 
         res.status(201).json({
             success: true,
@@ -659,25 +689,8 @@ exports.registerAdmin = async (req, res) => {
             });
         }
 
-        console.log('Creating user in Firebase...');
-        // Create user in Firebase first
-        const userRecord = await admin.auth().createUser({
-            email: adminEmail,
-            password: adminPassword,
-            displayName: `${firstName} ${lastName}`,
-            emailVerified: false
-        });
-
-        // Set custom claims for admin role
-        await admin.auth().setCustomUserClaims(userRecord.uid, {
-            role: 'admin',
-            adminRole: adminRole
-        });
-
-        // Generate custom token
-        const customToken = await admin.auth().createCustomToken(userRecord.uid);
-
-        // Create new admin in MongoDB
+        console.log('Creating new admin record in MongoDB...');
+        // Create new admin in MongoDB first (without firebaseUid)
         const adminUser = new Admin({
             adminID,
             adminEmail,
@@ -686,13 +699,47 @@ exports.registerAdmin = async (req, res) => {
             middleInitial,
             lastName,
             adminPassword,
-            firebaseUid: userRecord.uid, // Store Firebase UID
+            firebaseUid: null, // Will set after Firebase creation
             status: 'pending' // Set initial status as pending
         });
 
         await adminUser.save();
-        
-        console.log(`Successfully registered admin with ID: ${adminUser._id}, Firebase UID: ${userRecord.uid}`);
+
+        // Now create Firebase user and attach UID
+        let customToken = null;
+        try {
+            console.log('Creating user in Firebase...');
+            const userRecord = await admin.auth().createUser({
+                email: adminEmail,
+                password: adminPassword,
+                displayName: `${firstName} ${lastName}`,
+                emailVerified: false
+            });
+
+            // Set custom claims for admin role
+            await admin.auth().setCustomUserClaims(userRecord.uid, {
+                role: 'admin',
+                adminRole: adminRole
+            });
+
+            // Generate custom token
+            customToken = await admin.auth().createCustomToken(userRecord.uid);
+
+            // store uid on admin record
+            adminUser.firebaseUid = userRecord.uid;
+            await adminUser.save();
+        } catch (firebaseErr) {
+            console.error('Firebase creation failed for admin, rolling back MongoDB record:', firebaseErr);
+            try {
+                await Admin.findByIdAndDelete(adminUser._id);
+            } catch (delErr) {
+                console.error('Failed to delete admin after Firebase error:', delErr);
+            }
+            res.status(500).json({ success: false, message: 'Error creating Firebase account', error: firebaseErr.message });
+            return;
+        }
+
+        console.log(`Successfully registered admin with ID: ${adminUser._id}, Firebase UID: ${adminUser.firebaseUid}`);
 
         res.status(201).json({
             success: true,

@@ -3,8 +3,10 @@ import { App as AntApp, Layout, ConfigProvider, Button } from "antd";
 import { BrowserRouter, Routes, Route, Navigate, Link, useNavigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-import Dashboard from "./pages/Dashboard";
+import Dashboard from "./pages/Dashboards/AdminDashboard";
 import UserManagement from "./pages/UserManagement";
+import VictimDashboard from "./pages/Dashboards/VictimDashboard";
+import OfficialDashboard from "./pages/Dashboards/OfficialDashboard";
 import { isAuthed, clearToken } from "./lib/api";
 
 function Protected({ children }) {
@@ -28,6 +30,12 @@ export default function App() {
             <Route
               path="/dashboard"
               element={<Protected><Dashboard /></Protected>}
+            />
+            {/* Victim dashboard (test) is intentionally unprotected for local testing of login flow */}
+            <Route path="/victim-test" element={<VictimDashboard />} />
+            <Route
+              path="/official-dashboard"
+              element={<Protected><OfficialDashboard /></Protected>}
             />
             <Route
               path="/users"

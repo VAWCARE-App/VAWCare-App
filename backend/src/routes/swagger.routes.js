@@ -128,11 +128,11 @@
  *               officialEmail:
  *                 type: string
  *                 format: email
- *               password:
+ *               officialpassword:
  *                 type: string
  *             required:
  *               - officialEmail
- *               - password
+ *               - officialpassword
  *     responses:
  *       200:
  *         description: Successfully logged in

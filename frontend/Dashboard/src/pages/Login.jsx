@@ -15,6 +15,7 @@ import {
 import { UserOutlined, SafetyOutlined, TeamOutlined } from "@ant-design/icons";
 import { api, saveToken } from "../lib/api";
 import { useNavigate, Link } from "react-router-dom";
+import logo from "../assets/logo1.svg";
 
 const { Option } = Select;
 
@@ -25,13 +26,13 @@ export default function Login() {
   const [userType, setUserType] = useState('victim');
   const [errorModalVisible, setErrorModalVisible] = useState(false);
   const [errorModalMessage, setErrorModalMessage] = useState('');
-  const screens = Grid.useBreakpoint(); 
+  const screens = Grid.useBreakpoint();
 
   const maxWidth = screens.x2 ? 520 : screens.lg ? 480 : screens.md ? 420 : 360;
   const cardPadding = screens.md ? 24 : 16;
 
   const getUserTypeInfo = (type) => {
-    switch(type) {
+    switch (type) {
       case 'victim':
         return { icon: <UserOutlined />, label: "Victim", color: "#e91e63" };
       case 'admin':
@@ -44,7 +45,7 @@ export default function Login() {
   };
 
   const getApiEndpoint = (type) => {
-    switch(type) {
+    switch (type) {
       case 'victim':
         return '/api/victims/login';
       case 'admin':
@@ -57,7 +58,7 @@ export default function Login() {
   };
 
   const formatLoginData = (values, type) => {
-    switch(type) {
+    switch (type) {
       case 'victim':
         return {
           identifier: values.identifier,
@@ -69,10 +70,10 @@ export default function Login() {
           adminPassword: values.password
         };
       case 'official':
-          return {
-            officialEmail: values.identifier,
-            password: values.password
-          };
+        return {
+          officialEmail: values.identifier,
+          password: values.password
+        };
       default:
         return values;
     }
@@ -82,14 +83,14 @@ export default function Login() {
     try {
       setLoading(true);
       console.log('Login attempt:', { userType, identifier: values.identifier });
-      
+
       const endpoint = getApiEndpoint(userType);
       const loginData = formatLoginData(values, userType);
-      
+
       const { data } = await api.post(endpoint, loginData);
       console.log('Login response:', data);
-      
-        if (data.success) {
+
+      if (data.success) {
         // Save token if available, otherwise set a short-lived test token so Protected routes work for testing
         if (data.data?.token) {
           saveToken(data.data.token);
@@ -97,7 +98,7 @@ export default function Login() {
           // set a dummy token for frontend-only testing; remove when real auth is enforced
           saveToken('victim-test-token');
         }
-        
+
         // Store user info based on user type
         let userInfo = {};
         if (userType === 'victim') {
@@ -119,10 +120,10 @@ export default function Login() {
             role: 'official'
           };
         }
-        
+
         localStorage.setItem('user', JSON.stringify(userInfo));
         localStorage.setItem('userType', userType);
-        
+
         const userName = userInfo.firstName || userInfo.victimUsername || userInfo.adminEmail || userInfo.officialEmail || 'User';
         message.success(`Welcome back, ${userName}!`);
         // Redirect victims to a simple test page so we can confirm login works.
@@ -138,10 +139,10 @@ export default function Login() {
       }
     } catch (err) {
       console.error('Login error:', err);
-  // Show a modal with the server error (prevents page refresh and gives clearer prompt)
-  const msg = err?.response?.data?.message || err.message || "Login failed";
-  setErrorModalMessage(msg);
-  setErrorModalVisible(true);
+      // Show a modal with the server error (prevents page refresh and gives clearer prompt)
+      const msg = err?.response?.data?.message || err.message || "Login failed";
+      setErrorModalMessage(msg);
+      setErrorModalVisible(true);
     } finally {
       setLoading(false);
     }
@@ -163,7 +164,7 @@ export default function Login() {
       <Card
         style={{
           width: "100%",
-          maxWidth,              
+          maxWidth,
           borderRadius: 14,
           border: "1px solid #ffc0cb",
           boxShadow: "0 20px 34px rgba(0,0,0,0.06)",
@@ -172,6 +173,7 @@ export default function Login() {
         bodyStyle={{ padding: 0 }}
       >
         <div style={{ padding: cardPadding }}>
+          <img src={logo} alt="VAWCare Logo" style={{ display: 'block', margin: '0 auto 8px', maxWidth: '75px' }} />
           <Typography.Title
             level={3}
             style={{
@@ -181,7 +183,7 @@ export default function Login() {
               lineHeight: 1.2,
             }}
           >
-            {currentUserType.icon} VAWCare Sign In
+            VAWCare Sign In
           </Typography.Title>
 
           <Typography.Paragraph
@@ -195,12 +197,12 @@ export default function Login() {
           </Typography.Paragraph>
 
           <Form layout="vertical" onFinish={onFinish} initialValues={{ identifier: "", password: "" }}>
-            <Form.Item 
-              name="userType" 
+            <Form.Item
+              name="userType"
               label="Account Type"
               initialValue="victim"
             >
-              <Select 
+              <Select
                 value={userType}
                 onChange={setUserType}
                 size={screens.md ? "large" : "middle"}
@@ -223,23 +225,23 @@ export default function Login() {
 
             <Divider style={{ margin: '16px 0' }} />
 
-            <Form.Item 
-              name="identifier" 
+            <Form.Item
+              name="identifier"
               label={userType === 'victim' ? "Username or Email" : "Email Address"}
-              rules={[{ 
-                required: true, 
-                message: `Please enter your ${userType === 'victim' ? 'username or email' : 'email address'}` 
+              rules={[{
+                required: true,
+                message: `Please enter your ${userType === 'victim' ? 'username or email' : 'email address'}`
               }]}
             >
-              <Input 
+              <Input
                 placeholder={userType === 'victim' ? "Username or email" : "Email address"}
-                size={screens.md ? "large" : "middle"} 
+                size={screens.md ? "large" : "middle"}
               />
             </Form.Item>
 
-            <Form.Item 
-              name="password" 
-              label="Password" 
+            <Form.Item
+              name="password"
+              label="Password"
               rules={[{ required: true, message: "Please enter your password" }]}
             >
               <Input.Password placeholder="••••••••" size={screens.md ? "large" : "middle"} />

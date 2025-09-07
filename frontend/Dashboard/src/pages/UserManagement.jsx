@@ -398,9 +398,9 @@ export default function UserManagement() {
   };
 
   return (
-    <Layout style={{ minHeight: "100vh", width: "100vw", background: LIGHT_PINK }}>
+    <Layout style={{ minHeight: "100vh", background: LIGHT_PINK }}>
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
-      <Layout>
+      <Layout style={{ minHeight: "100vh", width: "100%", background: LIGHT_PINK }}>
         <Header
           style={{
             background: "#fff",
@@ -423,7 +423,7 @@ export default function UserManagement() {
           </Button>
         </Header>
 
-        <Content style={{ padding: 16 }}>
+        <Content style={{ padding: 16, overflowX: "hidden" }}>
           {/* Summary Cards */}
           <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
             <Col xs={12} md={6}>
@@ -500,7 +500,7 @@ export default function UserManagement() {
                   `${range[0]}-${range[1]} of ${total} users`,
               }}
               // Set a fixed vertical height for the table body so it doesn't extend the page
-              scroll={{ x: 800, y: 480 }}
+              scroll={{ x: "max-content", y: 480 }}
             />
             <Modal
               title={editingUser ? `${isViewMode ? 'View' : 'Edit'} ${editingUser.userType} - ${editingUser.name}` : 'Edit User'}

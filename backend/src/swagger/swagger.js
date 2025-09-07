@@ -81,11 +81,12 @@ const options = {
           },
           required: ['victimUsername', 'victimPassword'],
           // Default inline example: use the regular registration format so anonymous users may omit fields
+          // Default example used by Swagger UI 'Try it out' (matches frontend shape)
           example: {
             victimAccount: 'anonymous',
             victimUsername: '',
             victimPassword: '',
-            victimType: '',
+            victimType: 'Woman',
             victimEmail: '',
             firstName: '',
             lastName: '',
@@ -102,7 +103,10 @@ const options = {
                 victimAccount: 'anonymous',
                 victimUsername: 'anonymous001',
                 victimPassword: 'Victim@123',
-                victimType: 'Woman'
+                victimType: 'Woman',
+                firstName: '',
+                lastName: '',
+                victimEmail: ''
               }
             },
             regular: {

@@ -502,7 +502,7 @@ module.exports = {
     registerVictim,
     loginVictim,
     getProfile,
-    verifyEmail,
+    verifyEmail,    
     verifyPhone,
     updateProfile,
     submitAnonymousReport,

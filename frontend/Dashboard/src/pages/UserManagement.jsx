@@ -491,14 +491,16 @@ export default function UserManagement() {
               columns={columns}
               dataSource={filteredUsers}
               loading={loading}
+              // Keep table area fixed: show 6 rows per page and allow vertical scrolling
               pagination={{
-                pageSize: 10,
-                showSizeChanger: true,
+                pageSize: 6,
+                showSizeChanger: false,
                 showQuickJumper: true,
                 showTotal: (total, range) => 
                   `${range[0]}-${range[1]} of ${total} users`,
               }}
-              scroll={{ x: 800 }}
+              // Set a fixed vertical height for the table body so it doesn't extend the page
+              scroll={{ x: 800, y: 480 }}
             />
             <Modal
               title={editingUser ? `${isViewMode ? 'View' : 'Edit'} ${editingUser.userType} - ${editingUser.name}` : 'Edit User'}

@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate, Link, useNavigate } from "react
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboards/AdminDashboard";
+import Admin from "./layouts/AdminLayout";
 import UserManagement from "./pages/UserManagement";
 import VictimDashboard from "./pages/Dashboards/VictimDashboard";
 import OfficialDashboard from "./pages/Dashboards/OfficialDashboard";
@@ -42,6 +43,10 @@ export default function App() {
               element={<Protected><UserManagement /></Protected>}
             />
             <Route path="*" element={<Navigate to="/" replace />} />
+
+            {/* <Route path="/" element={<Admin />}>
+              <Route index element={<Protected><UserManagement /></Protected>} />
+            </Route> */}
           </Routes>
         </BrowserRouter>
       </AntApp>

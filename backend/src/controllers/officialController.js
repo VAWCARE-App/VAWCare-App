@@ -30,7 +30,7 @@ const registerOfficial = asyncHandler(async (req, res) => {
     const {
         officialID,
         officialEmail,
-        adminPassword,
+        officialPassword,
         firstName,
         middleInitial,
         lastName,
@@ -56,44 +56,62 @@ const registerOfficial = asyncHandler(async (req, res) => {
 
     try {
         console.log('Creating official with password:', {
-            passwordExists: !!adminPassword,
-            passwordLength: adminPassword?.length
+            passwordExists: !!officialPassword,
+            passwordLength: officialPassword?.length
         });
 
         // Create Firebase user first
-        const userRecord = await admin.auth().createUser({
-            email: officialEmail,
-            password: adminPassword,
-            displayName: `${firstName} ${lastName}`,
-            emailVerified: false
-        });
+            // Create official in MongoDB first (without firebaseUid)
+            const official = await BarangayOfficial.create({
+                officialID: officialID,
+                officialEmail: officialEmail,
+                firstName: firstName,
+                middleInitial: middleInitial,
+                lastName: lastName,
+                position: position,
+                officialPassword: officialPassword, // Will be hashed by the model's pre-save middleware
+                contactNumber: contactNumber,
+                barangay: barangay,
+                city: city,
+                province: province,
+                status: 'pending',
+                firebaseUid: null
+            });
 
-        // Set custom claims for initial access
-        await admin.auth().setCustomUserClaims(userRecord.uid, {
-            role: 'barangay_official',
-            position: position,
-            status: 'pending'
-        });
+            // Now attempt to create Firebase user and attach UID to the created official
+            let customToken = null;
+            try {
+                const userRecord = await admin.auth().createUser({
+                    email: officialEmail,
+                    password: officialPassword,
+                    displayName: `${firstName} ${lastName}`,
+                    emailVerified: false
+                });
 
-        // Generate custom token
-        const customToken = await admin.auth().createCustomToken(userRecord.uid);
+                // Set custom claims for initial access
+                await admin.auth().setCustomUserClaims(userRecord.uid, {
+                    role: 'barangay_official',
+                    position: position,
+                    status: 'pending'
+                });
 
-        // Create official in MongoDB with pending status
-        const official = await BarangayOfficial.create({
-            officialID: officialID,
-            officialEmail: officialEmail,
-            firstName: firstName,
-            middleInitial: middleInitial,
-            lastName: lastName,
-            position: position,
-            adminPassword: adminPassword, // Will be hashed by the model's pre-save middleware
-            contactNumber: contactNumber,
-            barangay: barangay,
-            city: city,
-            province: province,
-            status: 'pending',
-            firebaseUid: userRecord.uid
-        });
+                // Generate custom token
+                customToken = await admin.auth().createCustomToken(userRecord.uid);
+
+                // Save firebaseUid on the official record
+                official.firebaseUid = userRecord.uid;
+                await official.save();
+            } catch (firebaseErr) {
+                // If Firebase creation fails, rollback the MongoDB document to avoid partial registration
+                console.error('Firebase creation failed for official, rolling back MongoDB record:', firebaseErr);
+                try {
+                    await BarangayOfficial.findByIdAndDelete(official._id);
+                } catch (delErr) {
+                    console.error('Failed to delete official after Firebase error:', delErr);
+                }
+                res.status(500);
+                throw new Error('Error creating Firebase account: ' + firebaseErr.message);
+            }
 
         res.status(201).json({
             success: true,
@@ -145,8 +163,8 @@ const loginOfficial = asyncHandler(async (req, res) => {
             email: official.officialEmail,
             status: official.status,
             hasFirebaseUid: !!official.firebaseUid,
-            hasPassword: !!official.adminPassword,
-            passwordLength: official.adminPassword?.length
+            hasPassword: !!official.officialPassword,
+            passwordLength: official.officialPassword?.length
         });
 
         // Check if the account is approved
@@ -249,9 +267,21 @@ const updateProfile = asyncHandler(async (req, res) => {
     const official = await BarangayOfficial.findOne({ firebaseUid: req.user.uid });
 
     if (official) {
-        official.firstName = req.body.firstName || official.firstName;
-        official.middleInitial = req.body.middleInitial || official.middleInitial;
-        official.lastName = req.body.lastName || official.lastName;
+        // Sanitize name fields: trim and prevent stray single-character 'C' being appended
+        if (req.body.firstName) official.firstName = String(req.body.firstName).trim();
+        if (req.body.middleInitial !== undefined) {
+            const mi = String(req.body.middleInitial || '').trim();
+            official.middleInitial = mi === 'C' ? mi : mi; // keep as-is but trimmed
+        }
+        if (req.body.lastName) {
+            let ln = String(req.body.lastName).trim();
+            // If lastName ends with an accidental single uppercase 'C' separated by no space, remove it
+            if (ln.length > 1 && ln.endsWith('C') && !ln.endsWith(' C')) {
+                // Only remove if the trailing 'C' appears out of place (e.g., "SmithC")
+                ln = ln.slice(0, -1);
+            }
+            official.lastName = ln;
+        }
         official.contactNumber = req.body.contactNumber || official.contactNumber;
 
         // If email is being updated, update in Firebase too
@@ -268,7 +298,7 @@ const updateProfile = asyncHandler(async (req, res) => {
             await admin.auth().updateUser(req.user.uid, {
                 password: req.body.password
             });
-            official.adminPassword = req.body.password;
+            official.officialPassword = req.body.password;
         }
 
         const updatedOfficial = await official.save();

@@ -2,13 +2,15 @@ import React from "react";
 import { Layout, Menu, Button, Typography } from "antd";
 import {
   DashboardOutlined,
-  UserOutlined,
-  TeamOutlined,
   FileTextOutlined,
+  TeamOutlined,
   SettingOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  RobotOutlined,
+  AlertOutlined,
+  HomeOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { clearToken } from "../lib/api";
@@ -32,7 +34,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
   const userType = localStorage.getItem('userType') || 'victim';
 
-  const menuItems = [
+  // Menu items for different user types
+  const adminMenu = [
     {
       key: '/dashboard',
       icon: <DashboardOutlined />,
@@ -40,10 +43,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     },
     {
       key: '/users',
-      icon: <UserOutlined />,
+      icon: <TeamOutlined />,
       label: 'User Management',
-      // Only show for admins
-      style: userType !== 'admin' ? { display: 'none' } : {}
     },
     {
       key: '/reports',
@@ -62,7 +63,67 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     },
   ];
 
-  const filteredMenuItems = menuItems.filter(item => !item.style?.display);
+  const officialMenu = [
+    {
+      key: '/official-dashboard',
+      icon: <DashboardOutlined />,
+      label: 'Dashboard',
+    },
+    {
+      key: '/official-reports',
+      icon: <FileTextOutlined />,
+      label: 'Reports',
+    },
+    {
+      key: '/official-cases',
+      icon: <TeamOutlined />,
+      label: 'Cases',
+    },
+    {
+      key: '/official-settings',
+      icon: <SettingOutlined />,
+      label: 'Settings',
+    },
+  ];
+
+  // Victim sidebar with extra features
+  const victimMenu = [
+    {
+      key: '/dashboard',
+      icon: <DashboardOutlined />,
+      label: 'Dashboard',
+    },
+    {
+      key: '/victim-cases',
+      icon: <TeamOutlined />,
+      label: 'My Cases',
+    },
+    {
+      key: '/victim-chatbot',
+      icon: <RobotOutlined />,
+      label: 'VAWCare Chatbot',
+    },
+    {
+      key: '/victim-emergency',
+      icon: <AlertOutlined />,
+      label: 'Emergency Alert',
+    },
+    {
+      key: '/victim-barangay',
+      icon: <HomeOutlined />,
+      label: 'Barangay Details',
+    },
+    {
+      key: '/victim-settings',
+      icon: <SettingOutlined />,
+      label: 'Settings',
+    },
+  ];
+
+  // Choose menu based on userType
+  let menuItems = adminMenu;
+  if (userType === "official") menuItems = officialMenu;
+  else if (userType === "victim") menuItems = victimMenu;
 
   return (
     <Sider
@@ -72,8 +133,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       style={{
         background: "#fff",
         borderRight: "1px solid #ffd1dc",
-        display: "flex",            // 👈 make Sider a flex container
-        flexDirection: "column",    // 👈 vertical layout
+        display: "flex",
+        flexDirection: "column",
       }}
     >
       <div style={{
@@ -119,7 +180,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           border: "none",
           marginTop: "48px" // Account for the toggle button
         }}
-        items={filteredMenuItems}
+        items={menuItems}
         onClick={({ key }) => navigate(key)}
       />
 

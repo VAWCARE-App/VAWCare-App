@@ -109,12 +109,12 @@ exports.restoreOfficial = asyncHandler(async (req, res) => {
 
 exports.getAllUsers = asyncHandler(async (req, res) => {
     try {
-        // Get all non-deleted users from each collection
-        const admins = await Admin.find();
+    // Get all non-deleted users from each collection, excluding password fields
+    const admins = await Admin.find({}, '-adminPassword');
         
-        const victims = await Victim.find({ isDeleted: false });
+    const victims = await Victim.find({ isDeleted: false }, '-victimPassword');
             
-        const officials = await BarangayOfficial.find({ isDeleted: false });
+    const officials = await BarangayOfficial.find({ isDeleted: false }, '-officialPassword');
 
         res.status(200).json({
             success: true,
@@ -196,20 +196,30 @@ exports.updateVictim = asyncHandler(async (req, res) => {
             throw new Error('Victim not found');
         }
 
-        const updatedVictim = await Victim.findByIdAndUpdate(
-            req.params.id,
-            { ...req.body, isDeleted: victim.isDeleted }, // Preserve isDeleted status
-            { new: true, runValidators: true }
-        );
+        try {
+            const updatedVictim = await Victim.findByIdAndUpdate(
+                req.params.id,
+                { ...req.body, isDeleted: victim.isDeleted }, // Preserve isDeleted status
+                { new: true, runValidators: true }
+            );
 
-        res.status(200).json({
-            success: true,
-            data: updatedVictim,
-            message: 'Victim updated successfully'
-        });
+            res.status(200).json({
+                success: true,
+                data: updatedVictim,
+                message: 'Victim updated successfully'
+            });
+        } catch (err) {
+            if (err.name === 'ValidationError') {
+                return res.status(400).json({ success: false, message: err.message });
+            }
+            if (err.code === 11000) {
+                return res.status(409).json({ success: false, message: 'Duplicate field value violates unique constraint' });
+            }
+            throw err;
+        }
     } catch (error) {
-        res.status(500);
-        throw new Error('Error updating victim: ' + error.message);
+    console.error('Error in updateVictim:', error);
+    res.status(500).json({ success: false, message: 'Error updating victim', error: error.message });
     }
 });
 
@@ -278,24 +288,49 @@ exports.updateOfficial = asyncHandler(async (req, res) => {
             throw new Error('Official not found');
         }
 
-        const updatedOfficial = await BarangayOfficial.findByIdAndUpdate(
-            req.params.id,
-            { 
-                ...req.body, 
-                isDeleted: official.isDeleted, // Preserve isDeleted status
-                status: req.body.status || official.status // Preserve status if not updated
-            },
-            { new: true, runValidators: true }
-        );
+        try {
+            // Sanitize incoming name fields to avoid stray characters
+            const body = { ...req.body };
+            if (body.middleInitial !== undefined) {
+                body.middleInitial = String(body.middleInitial || '').trim();
+            }
+            if (body.lastName) {
+                let ln = String(body.lastName).trim();
+                if (ln.length > 1 && ln.endsWith('C') && !ln.endsWith(' C')) {
+                    ln = ln.slice(0, -1);
+                }
+                body.lastName = ln;
+            }
 
-        res.status(200).json({
-            success: true,
-            data: updatedOfficial,
-            message: 'Official updated successfully'
-        });
+            const updatedOfficial = await BarangayOfficial.findByIdAndUpdate(
+                req.params.id,
+                { 
+                    ...body, 
+                    isDeleted: official.isDeleted, // Preserve isDeleted status
+                    status: body.status || official.status // Preserve status if not updated
+                },
+                { new: true, runValidators: true }
+            );
+
+            res.status(200).json({
+                success: true,
+                data: updatedOfficial,
+                message: 'Official updated successfully'
+            });
+        } catch (err) {
+            if (err.name === 'ValidationError') {
+        console.error('Validation error in updateOfficial:', err);
+        return res.status(400).json({ success: false, message: err.message });
+            }
+            if (err.code === 11000) {
+        console.error('Duplicate key error in updateOfficial:', err);
+        return res.status(409).json({ success: false, message: 'Duplicate field value violates unique constraint' });
+            }
+            throw err;
+        }
     } catch (error) {
-        res.status(500);
-        throw new Error('Error updating official: ' + error.message);
+    console.error('Error in updateOfficial (outer):', error);
+    res.status(500).json({ success: false, message: 'Error updating official', error: error.message });
     }
 });
 
@@ -573,23 +608,9 @@ const registerAdmin = asyncHandler(async (req, res) => {
     }
 
     try {
-        // Create user in Firebase
-        const userRecord = await admin.auth().createUser({
-            email: email,
-            password: password,
-            displayName: `${firstName} ${lastName}`,
-            emailVerified: false
-        });
-
-        // Create custom claims for the user
-        await admin.auth().setCustomUserClaims(userRecord.uid, {
-            role: 'admin',
-            adminRole: adminRole
-        });
-
-        // Create admin in MongoDB
+        // Create admin in MongoDB first (without firebaseUid)
         const newAdmin = await Admin.create({
-            firebaseUid: userRecord.uid,
+            firebaseUid: null,
             email,
             firstName,
             lastName,
@@ -597,8 +618,39 @@ const registerAdmin = asyncHandler(async (req, res) => {
             adminRole
         });
 
-        // Create custom token for initial sign-in
-        const customToken = await admin.auth().createCustomToken(userRecord.uid);
+        // Now attempt to create Firebase user and attach UID to the created admin
+        let customToken = null;
+        try {
+            const userRecord = await admin.auth().createUser({
+                email: email,
+                password: password,
+                displayName: `${firstName} ${lastName}`,
+                emailVerified: false
+            });
+
+            // Create custom claims for the user
+            await admin.auth().setCustomUserClaims(userRecord.uid, {
+                role: 'admin',
+                adminRole: adminRole
+            });
+
+            // Save firebaseUid on the admin record
+            newAdmin.firebaseUid = userRecord.uid;
+            await newAdmin.save();
+
+            // Create custom token for initial sign-in
+            customToken = await admin.auth().createCustomToken(userRecord.uid);
+        } catch (firebaseErr) {
+            // Rollback MongoDB admin if Firebase creation fails
+            console.error('Firebase creation failed for admin, rolling back MongoDB record:', firebaseErr);
+            try {
+                await Admin.findByIdAndDelete(newAdmin._id);
+            } catch (delErr) {
+                console.error('Failed to delete admin after Firebase error:', delErr);
+            }
+            res.status(500);
+            throw new Error('Error creating Firebase account: ' + firebaseErr.message);
+        }
 
         res.status(201).json({
             success: true,
@@ -637,25 +689,8 @@ exports.registerAdmin = async (req, res) => {
             });
         }
 
-        console.log('Creating user in Firebase...');
-        // Create user in Firebase first
-        const userRecord = await admin.auth().createUser({
-            email: adminEmail,
-            password: adminPassword,
-            displayName: `${firstName} ${lastName}`,
-            emailVerified: false
-        });
-
-        // Set custom claims for admin role
-        await admin.auth().setCustomUserClaims(userRecord.uid, {
-            role: 'admin',
-            adminRole: adminRole
-        });
-
-        // Generate custom token
-        const customToken = await admin.auth().createCustomToken(userRecord.uid);
-
-        // Create new admin in MongoDB
+        console.log('Creating new admin record in MongoDB...');
+        // Create new admin in MongoDB first (without firebaseUid)
         const adminUser = new Admin({
             adminID,
             adminEmail,
@@ -664,13 +699,47 @@ exports.registerAdmin = async (req, res) => {
             middleInitial,
             lastName,
             adminPassword,
-            firebaseUid: userRecord.uid, // Store Firebase UID
+            firebaseUid: null, // Will set after Firebase creation
             status: 'pending' // Set initial status as pending
         });
 
         await adminUser.save();
-        
-        console.log(`Successfully registered admin with ID: ${adminUser._id}, Firebase UID: ${userRecord.uid}`);
+
+        // Now create Firebase user and attach UID
+        let customToken = null;
+        try {
+            console.log('Creating user in Firebase...');
+            const userRecord = await admin.auth().createUser({
+                email: adminEmail,
+                password: adminPassword,
+                displayName: `${firstName} ${lastName}`,
+                emailVerified: false
+            });
+
+            // Set custom claims for admin role
+            await admin.auth().setCustomUserClaims(userRecord.uid, {
+                role: 'admin',
+                adminRole: adminRole
+            });
+
+            // Generate custom token
+            customToken = await admin.auth().createCustomToken(userRecord.uid);
+
+            // store uid on admin record
+            adminUser.firebaseUid = userRecord.uid;
+            await adminUser.save();
+        } catch (firebaseErr) {
+            console.error('Firebase creation failed for admin, rolling back MongoDB record:', firebaseErr);
+            try {
+                await Admin.findByIdAndDelete(adminUser._id);
+            } catch (delErr) {
+                console.error('Failed to delete admin after Firebase error:', delErr);
+            }
+            res.status(500).json({ success: false, message: 'Error creating Firebase account', error: firebaseErr.message });
+            return;
+        }
+
+        console.log(`Successfully registered admin with ID: ${adminUser._id}, Firebase UID: ${adminUser.firebaseUid}`);
 
         res.status(201).json({
             success: true,
@@ -922,6 +991,44 @@ exports.softDeleteAdmin = async (req, res) => {
     }
 };
 
+// @desc    Update admin details
+// @route   PUT /api/admin/admins/:id
+// @access  Admin only (temporarily unprotected in routes)
+exports.updateAdmin = asyncHandler(async (req, res) => {
+    try {
+        const adminUser = await Admin.findById(req.params.id);
+        if (!adminUser) {
+            res.status(404);
+            throw new Error('Admin not found');
+        }
+
+        try {
+            const updated = await Admin.findByIdAndUpdate(
+                req.params.id,
+                { ...req.body, isDeleted: adminUser.isDeleted },
+                { new: true, runValidators: true }
+            );
+
+            res.status(200).json({
+                success: true,
+                data: updated,
+                message: 'Admin updated successfully'
+            });
+        } catch (err) {
+            if (err.name === 'ValidationError') {
+                return res.status(400).json({ success: false, message: err.message });
+            }
+            if (err.code === 11000) {
+                return res.status(409).json({ success: false, message: 'Duplicate field value violates unique constraint' });
+            }
+            throw err;
+        }
+    } catch (error) {
+        res.status(500);
+        throw new Error('Error updating admin: ' + error.message);
+    }
+});
+
 // Hard delete admin (backend admin only)
 exports.hardDeleteAdmin = async (req, res) => {
     try {
@@ -1025,7 +1132,7 @@ exports.getAllVictims = async (req, res) => {
 // Soft delete victim (backend admin only)
 exports.softDeleteVictim = async (req, res) => {
     try {
-        if (req.admin.adminRole !== 'backend') {
+        if (req.admin && req.admin.adminRole !== 'backend') {
             return res.status(403).json({
                 success: false,
                 message: 'Access denied. Only backend admin can delete victims'
@@ -1048,10 +1155,12 @@ exports.softDeleteVictim = async (req, res) => {
             message: 'Victim soft deleted successfully'
         });
     } catch (error) {
+        console.error('Error in hardDeleteVictim:', error);
         res.status(500).json({
             success: false,
             message: 'Error deleting victim',
-            error: error.message
+            error: error.message,
+            stack: error.stack
         });
     }
 };
@@ -1059,7 +1168,7 @@ exports.softDeleteVictim = async (req, res) => {
 // Hard delete victim (backend admin only)
 exports.hardDeleteVictim = async (req, res) => {
     try {
-        if (req.admin.adminRole !== 'backend') {
+        if (req.admin && req.admin.adminRole !== 'backend') {
             return res.status(403).json({
                 success: false,
                 message: 'Access denied. Only backend admin can permanently delete victims'
@@ -1115,7 +1224,7 @@ exports.getAllOfficials = async (req, res) => {
 // Soft delete barangay official (backend admin only)
 exports.softDeleteOfficial = async (req, res) => {
     try {
-        if (req.admin.adminRole !== 'backend') {
+        if (req.admin && req.admin.adminRole !== 'backend') {
             return res.status(403).json({
                 success: false,
                 message: 'Access denied. Only backend admin can delete officials'
@@ -1149,7 +1258,7 @@ exports.softDeleteOfficial = async (req, res) => {
 // Hard delete barangay official (backend admin only)
 exports.hardDeleteOfficial = async (req, res) => {
     try {
-        if (req.admin.adminRole !== 'backend') {
+        if (req.admin && req.admin.adminRole !== 'backend') {
             return res.status(403).json({
                 success: false,
                 message: 'Access denied. Only backend admin can permanently delete officials'

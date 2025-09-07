@@ -83,8 +83,13 @@ adminSchema.methods.comparePassword = async function(candidatePassword) {
 // Pre-save middleware to hash password before saving
 adminSchema.pre('save', async function(next) {
     if (!this.isModified('adminPassword')) return next();
-    
+
     try {
+        // If the password already looks like a bcrypt hash, skip hashing.
+        if (typeof this.adminPassword === 'string' && this.adminPassword.startsWith('$2') && this.adminPassword.length === 60) {
+            return next();
+        }
+
         const salt = await bcrypt.genSalt(10);
         this.adminPassword = await bcrypt.hash(this.adminPassword, salt);
         next();

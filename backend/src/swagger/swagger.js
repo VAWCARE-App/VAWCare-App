@@ -79,7 +79,49 @@ const options = {
               }
             }
           },
-          required: ['victimUsername', 'victimPassword']
+          required: ['victimUsername', 'victimPassword'],
+          // Default inline example: use the regular registration format so anonymous users may omit fields
+          example: {
+            victimAccount: 'anonymous',
+            victimUsername: '',
+            victimPassword: '',
+            victimType: '',
+            victimEmail: '',
+            firstName: '',
+            lastName: '',
+            middleInitial: '',
+            address: '',
+            contactNumber: '',
+            location: { lat: 0, lng: 0 }
+          },
+          // Named examples: Swagger UI will show these in the Try it out editor
+          examples: {
+            anonymous: {
+              summary: 'Anonymous account example',
+              value: {
+                victimAccount: 'anonymous',
+                victimUsername: 'anonymous001',
+                victimPassword: 'Victim@123',
+                victimType: 'Woman'
+              }
+            },
+            regular: {
+              summary: 'Regular account example',
+              value: {
+                victimAccount: 'regular',
+                victimUsername: 'jdoe',
+                victimPassword: 'SecurePass!23',
+                victimType: 'Woman',
+                victimEmail: 'jane.doe@example.com',
+                firstName: 'Jane',
+                lastName: 'Doe',
+                middleInitial: 'A',
+                address: '123 Main St, Barangay X',
+                contactNumber: '+639123456789',
+                location: { lat: 14.5995, lng: 120.9842 }
+              }
+            }
+          }
         },
         VictimLogin: {
           type: 'object',
@@ -176,7 +218,7 @@ const options = {
               enum: ['Barangay Captain', 'Kagawad', 'Secretary', 'Treasurer', 'SK Chairman', 'Chief Tanod'],
               description: 'Official position'
             },
-            adminPassword: {
+            officialPassword: {
               type: 'string',
               minLength: 8,
               description: 'Official password'
@@ -186,7 +228,7 @@ const options = {
               description: 'Official contact number'
             }
           },
-          required: ['officialID', 'officialEmail', 'firstName', 'lastName', 'position', 'adminPassword', 'contactNumber']
+          required: ['officialID', 'officialEmail', 'firstName', 'lastName', 'position', 'officialPassword', 'contactNumber']
         }
       },
       securitySchemes: {

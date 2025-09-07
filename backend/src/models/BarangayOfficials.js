@@ -48,7 +48,7 @@ const barangayOfficialSchema = new mongoose.Schema({
         enum: ['pending', 'approved', 'rejected'],
         default: 'pending'
     },
-    adminPassword: {
+    officialPassword: {
         type: String,
         required: [true, 'Password is required'],
         minlength: [8, 'Password must be at least 8 characters long'],
@@ -82,59 +82,19 @@ const barangayOfficialSchema = new mongoose.Schema({
     }
 });
 
-// Middleware to create Firebase account when status changes to approved
-barangayOfficialSchema.pre('save', async function(next) {
-    const official = this;
-    
-    // If status is being changed to approved and no Firebase account exists
-    if (official.isModified('status') && 
-        official.status === 'approved' && 
-        !official.firebaseUid) {
-        
-        try {
-            const admin = require('../config/firebase-config');
-            
-            // Create Firebase user
-            const userRecord = await admin.auth().createUser({
-                email: official.officialEmail,
-                password: official.adminPassword, // Note: This should be the original password, not the hashed one
-                displayName: `${official.firstName} ${official.lastName}`,
-                emailVerified: false
-            });
-
-            // Set custom claims for the user
-            await admin.auth().setCustomUserClaims(userRecord.uid, {
-                role: 'barangay_official',
-                position: official.position,
-                officialId: official.officialID
-            });
-
-            // Set the firebaseUid
-            official.firebaseUid = userRecord.uid;
-        } catch (error) {
-            console.error('Error creating Firebase account:', error);
-            next(error);
-            return;
-        }
-    }
-    next();
-});
-
-// Store original password before hashing for Firebase account creation
-barangayOfficialSchema.pre('save', function(next) {
-    if (this.isModified('adminPassword')) {
-        this._plainPassword = this.adminPassword;
-    }
-    next();
-});
-
 // Pre-save middleware to hash password before saving
 barangayOfficialSchema.pre('save', async function(next) {
-    if (!this.isModified('adminPassword')) return next();
-    
+    if (!this.isModified('officialPassword')) return next();
+
     try {
+        // If the password already looks like a bcrypt hash, skip hashing to prevent double-hash
+        if (typeof this.officialPassword === 'string' && this.officialPassword.startsWith('$2') && this.officialPassword.length === 60) {
+            console.log('Skipping hashing for officialPassword: looks already bcrypt-hashed');
+            return next();
+        }
+
         const salt = await bcrypt.genSalt(10);
-        this.adminPassword = await bcrypt.hash(this.adminPassword, salt);
+        this.officialPassword = await bcrypt.hash(this.officialPassword, salt);
         next();
     } catch (error) {
         next(error);
@@ -145,18 +105,18 @@ barangayOfficialSchema.pre('save', async function(next) {
 barangayOfficialSchema.methods.comparePassword = async function(candidatePassword) {
     try {
         console.log('Password comparison details:', {
-            hashedPasswordExists: !!this.adminPassword,
-            hashedPasswordLength: this.adminPassword?.length,
+            hashedPasswordExists: !!this.officialPassword,
+            hashedPasswordLength: this.officialPassword?.length,
             candidatePasswordExists: !!candidatePassword,
             candidatePasswordLength: candidatePassword?.length
         });
 
-        if (!candidatePassword || !this.adminPassword) {
+        if (!candidatePassword || !this.officialPassword) {
             console.error('Missing password for comparison');
             return false;
         }
 
-        const isMatch = await bcrypt.compare(candidatePassword, this.adminPassword);
+        const isMatch = await bcrypt.compare(candidatePassword, this.officialPassword);
         console.log('Bcrypt comparison result:', isMatch);
         return isMatch;
     } catch (error) {

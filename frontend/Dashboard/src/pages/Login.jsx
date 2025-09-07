@@ -10,6 +10,7 @@ import {
   Grid,
   Select,
   Divider,
+  Modal,
 } from "antd";
 import { UserOutlined, SafetyOutlined, TeamOutlined } from "@ant-design/icons";
 import { api, saveToken } from "../lib/api";
@@ -22,6 +23,8 @@ export default function Login() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [userType, setUserType] = useState('victim');
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState('');
   const screens = Grid.useBreakpoint(); 
 
   const maxWidth = screens.x2 ? 520 : screens.lg ? 480 : screens.md ? 420 : 360;
@@ -66,10 +69,10 @@ export default function Login() {
           adminPassword: values.password
         };
       case 'official':
-        return {
-          officialEmail: values.identifier,
-          adminPassword: values.password
-        };
+          return {
+            officialEmail: values.identifier,
+            password: values.password
+          };
       default:
         return values;
     }
@@ -86,10 +89,13 @@ export default function Login() {
       const { data } = await api.post(endpoint, loginData);
       console.log('Login response:', data);
       
-      if (data.success) {
-        // Save token if available
+        if (data.success) {
+        // Save token if available, otherwise set a short-lived test token so Protected routes work for testing
         if (data.data?.token) {
           saveToken(data.data.token);
+        } else if (userType === 'victim') {
+          // set a dummy token for frontend-only testing; remove when real auth is enforced
+          saveToken('victim-test-token');
         }
         
         // Store user info based on user type
@@ -119,13 +125,23 @@ export default function Login() {
         
         const userName = userInfo.firstName || userInfo.victimUsername || userInfo.adminEmail || userInfo.officialEmail || 'User';
         message.success(`Welcome back, ${userName}!`);
-        navigate("/dashboard");
+        // Redirect victims to a simple test page so we can confirm login works.
+        if (userType === 'victim') {
+          navigate('/victim-test');
+        } else if (userType === 'official') {
+          navigate('/official-dashboard');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         throw new Error(data.message || "Login failed");
       }
     } catch (err) {
       console.error('Login error:', err);
-      message.error(err?.response?.data?.message || err.message || "Login failed");
+  // Show a modal with the server error (prevents page refresh and gives clearer prompt)
+  const msg = err?.response?.data?.message || err.message || "Login failed";
+  setErrorModalMessage(msg);
+  setErrorModalVisible(true);
     } finally {
       setLoading(false);
     }
@@ -257,6 +273,15 @@ export default function Login() {
             )}
           </Form>
         </div>
+        <Modal
+          title="Login Error"
+          visible={errorModalVisible}
+          onOk={() => setErrorModalVisible(false)}
+          onCancel={() => setErrorModalVisible(false)}
+          okText="OK"
+        >
+          <Typography.Paragraph>{errorModalMessage}</Typography.Paragraph>
+        </Modal>
       </Card>
     </Flex>
   );

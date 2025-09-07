@@ -12,12 +12,12 @@ import {
   Grid,
   Button,
 } from "antd";
-import { api } from "../lib/api";
-import Sidebar from "../components/Sidebar";
+import { api } from "../../lib/api";
+import Sidebar from "../../components/Sidebar";
 
 const { Header, Content } = Layout;
     
-export default function Dashboard() {
+export default function AdminDashboard() {
   const { message } = AntApp.useApp();
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(false);

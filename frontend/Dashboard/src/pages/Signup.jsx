@@ -64,8 +64,8 @@ export default function Signup() {
         // Store user info
         localStorage.setItem('user', JSON.stringify(data.data.victim));
         
-        message.success("Account created successfully!");
-        navigate("/dashboard");
+  message.success("Account created successfully!");
+  navigate("/victim-test");
       } else {
         throw new Error(data.message || "Registration failed");
       }

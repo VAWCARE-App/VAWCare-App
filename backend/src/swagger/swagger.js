@@ -176,7 +176,7 @@ const options = {
               enum: ['Barangay Captain', 'Kagawad', 'Secretary', 'Treasurer', 'SK Chairman', 'Chief Tanod'],
               description: 'Official position'
             },
-            adminPassword: {
+            officialPassword: {
               type: 'string',
               minLength: 8,
               description: 'Official password'
@@ -186,7 +186,7 @@ const options = {
               description: 'Official contact number'
             }
           },
-          required: ['officialID', 'officialEmail', 'firstName', 'lastName', 'position', 'adminPassword', 'contactNumber']
+          required: ['officialID', 'officialEmail', 'firstName', 'lastName', 'position', 'officialPassword', 'contactNumber']
         }
       },
       securitySchemes: {

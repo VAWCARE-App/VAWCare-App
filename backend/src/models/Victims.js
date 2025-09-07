@@ -166,6 +166,11 @@ victimSchema.pre('save', async function(next) {
 
         // Hash password ONLY if modified (ONLY ONCE)
         if (this.isModified('victimPassword')) {
+            // If the password already looks like a bcrypt hash, skip hashing.
+            if (typeof this.victimPassword === 'string' && this.victimPassword.startsWith('$2') && this.victimPassword.length === 60) {
+                return next();
+            }
+
             const salt = await bcrypt.genSalt(10);
             this.victimPassword = await bcrypt.hash(this.victimPassword, salt);
         }

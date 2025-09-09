@@ -64,6 +64,11 @@ const incidentReportSchema = new mongoose.Schema({
     timestamps: true // This will add createdAt and updatedAt timestamps
 });
 
+// Explicit createdAt field (kept for clarity; timestamps:true will also manage this value)
+incidentReportSchema.add({
+    createdAt: { type: Date, default: Date.now }
+});
+
 // Create indexes for faster querying
 incidentReportSchema.index({ reportID: 1 }, { unique: true });
 incidentReportSchema.index({ victimID: 1 });

@@ -50,7 +50,6 @@ const incidentReportSchema = new mongoose.Schema({
         type: String,
         required: false,
         trim: true,
-        description: 'Default assigned officer name'
     },
     riskLevel: {
         type: String,

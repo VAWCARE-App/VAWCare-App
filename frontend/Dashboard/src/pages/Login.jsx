@@ -16,6 +16,7 @@ import { UserOutlined, SafetyOutlined, TeamOutlined } from "@ant-design/icons";
 import { api, saveToken } from "../lib/api";
 import { useNavigate, Link } from "react-router-dom";
 import logo from "../assets/logo1.svg";
+import Logo from "../assets/logo1.svg?react";
 
 const { Option } = Select;
 
@@ -173,7 +174,9 @@ export default function Login() {
         bodyStyle={{ padding: 0 }}
       >
         <div style={{ padding: cardPadding }}>
-          <img src={logo} alt="VAWCare Logo" style={{ display: 'block', margin: '0 auto 8px', maxWidth: '75px' }} />
+          <div style={{ textAlign: "center", marginBottom: 16 }}>
+            <Logo style={{ width: "80px", color: currentUserType.color }} />
+          </div>
           <Typography.Title
             level={3}
             style={{

@@ -82,7 +82,7 @@ const options = {
             "description": "Victim reports an assault near Barangay Hall at night; suspect unknown.",
             "location": "Barangay Hall, Street 5, Barangay X",
             "riskLevel": "High",
-            "assignedOfficer": "Vangelyne Alcantara"
+            "assignedOfficer": "Vangelyne V. Alcantara"
           }
           ,
           examples: {
@@ -94,7 +94,7 @@ const options = {
                 "description": "Victim reports an assault near Barangay Hall at night; suspect unknown.",
                 "location": "Barangay Hall, Street 5, Barangay X",
                 "riskLevel": "High",
-                "assignedOfficer": "Vangelyne Alcantara"
+                "assignedOfficer": "Vangelyne V. Alcantara"
               }
             }
           }

@@ -47,9 +47,11 @@ const incidentReportSchema = new mongoose.Schema({
         trim: true
     },
     assignedOfficer: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'VAWCOfficer',
-        required: [true, 'Assigned officer is required']
+        type: String,
+        required: false,
+        default: 'Vangelyn V. Alcantara',
+        trim: true,
+        description: 'Default assigned officer name'
     },
     riskLevel: {
         type: String,

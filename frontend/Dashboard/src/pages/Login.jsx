@@ -140,13 +140,20 @@ export default function Login() {
       }
     } catch (err) {
       console.error('Login error:', err);
-      // Show a modal with the server error (prevents page refresh and gives clearer prompt)
-      const msg = err?.response?.data?.message || err.message || "Login failed";
+
+      // Friendly fallback error message
+      const msg = err?.response?.data?.message || "Invalid username or password";
+
+      // Show a toast as fallback (so user gets instant feedback)
+      message.error(msg);
+
+      // Also show modal for clarity
       setErrorModalMessage(msg);
       setErrorModalVisible(true);
     } finally {
       setLoading(false);
     }
+
   };
 
   const currentUserType = getUserTypeInfo(userType);
@@ -280,7 +287,7 @@ export default function Login() {
         </div>
         <Modal
           title="Login Error"
-          visible={errorModalVisible}
+          open={errorModalVisible}
           onOk={() => setErrorModalVisible(false)}
           onCancel={() => setErrorModalVisible(false)}
           okText="OK"

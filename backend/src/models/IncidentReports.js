@@ -49,7 +49,6 @@ const incidentReportSchema = new mongoose.Schema({
     assignedOfficer: {
         type: String,
         required: false,
-        default: 'Vangelyn V. Alcantara',
         trim: true,
         description: 'Default assigned officer name'
     },

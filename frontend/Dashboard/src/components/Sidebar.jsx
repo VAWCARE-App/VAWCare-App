@@ -72,8 +72,13 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       style={{
         background: "#fff",
         borderRight: "1px solid #ffd1dc",
-        display: "flex",            // 👈 make Sider a flex container
-        flexDirection: "column",    // 👈 vertical layout
+        display: "flex",
+        flexDirection: "column",
+        position: "sticky",
+        top: 0,
+        height: "100vh",
+        overflow: "auto",
+        zIndex: 10
       }}
     >
       <div style={{
@@ -101,7 +106,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       <div style={{ padding: "8px 8px" }}>
         <Button
           type="text"
-          icon={collapsed ? <MenuUnfoldOutlined /> :  <MenuFoldOutlined />}
+          icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
           onClick={() => setCollapsed(!collapsed)}
           style={{
             fontSize: "16px",
@@ -112,36 +117,39 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         />
       </div>
 
-      <Menu
-        mode="inline"
-        selectedKeys={[location.pathname]}
-        style={{
-          border: "none",
-          marginTop: "48px" // Account for the toggle button
-        }}
-        items={filteredMenuItems}
-        onClick={({ key }) => navigate(key)}
-      />
+    <Menu
+    mode="inline"
+    selectedKeys={[location.pathname]}
+    style={{
+      border: "none",
+      marginTop: "48px",
+      flex: 1, // 👈 allow menu to expand and push logout down
+      overflowY: "auto", // 👈 scroll if too many items
+    }}
+    items={filteredMenuItems}
+    onClick={({ key }) => navigate(key)}
+  />
 
-      <div style={{
-        position: "absolute",
-        bottom: 16,
-        left: collapsed ? 8 : 16,
-        right: collapsed ? 8 : 16
-      }}>
-        <Button
-          type="text"
-          icon={<LogoutOutlined />}
-          onClick={handleLogout}
-          style={{
-            width: "100%",
-            color: "#e91e63",
-            border: "1px solid #ffd1dc",
-          }}
-        >
-          {!collapsed && "Logout"}
-        </Button>
-      </div>
+  {/* Logout pinned at bottom */}
+  <div
+    style={{
+      padding: "16px 8px",
+      borderTop: "1px solid #ffd1dc",
+    }}
+  >
+    <Button
+      type="text"
+      icon={<LogoutOutlined />}
+      onClick={handleLogout}
+      style={{
+        width: "100%",
+        color: "#e91e63",
+        border: "1px solid #ffd1dc",
+      }}
+    >
+      {!collapsed && "Logout"}
+    </Button>
+  </div>
     </Sider>
   );
 }

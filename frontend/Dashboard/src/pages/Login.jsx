@@ -181,7 +181,7 @@ export default function Login() {
         bodyStyle={{ padding: 0 }}
       >
         <div style={{ padding: cardPadding }}>
-          <div style={{ textAlign: "center", marginBottom: 16 }}>
+          <div style={{ textAlign: "center", marginBottom: -20 }}>
             <Logo style={{ width: "80px", color: currentUserType.color }} />
           </div>
           <Typography.Title

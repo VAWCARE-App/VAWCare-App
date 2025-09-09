@@ -8,6 +8,7 @@ import Admin from "./layouts/AdminLayout";
 import UserManagement from "./pages/UserManagement";
 import VictimDashboard from "./pages/Dashboards/VictimDashboard";
 import OfficialDashboard from "./pages/Dashboards/OfficialDashboard";
+import Test from "./pages/Test";
 import { isAuthed, clearToken } from "./lib/api";
 
 function Protected({ children }) {
@@ -24,29 +25,18 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route
-              path="/"
-              element={<Protected><Dashboard /></Protected>}
-            />
-            <Route
-              path="/dashboard"
-              element={<Protected><Dashboard /></Protected>}
-            />
-            {/* Victim dashboard (test) is intentionally unprotected for local testing of login flow */}
-            <Route path="/victim-test" element={<VictimDashboard />} />
-            <Route
-              path="/official-dashboard"
-              element={<Protected><OfficialDashboard /></Protected>}
-            />
-            <Route
-              path="/users"
-              element={<Protected><UserManagement /></Protected>}
-            />
+            <Route path="/" element={<Admin />}>
+              <Route index element={<Protected><Dashboard /></Protected>} />
+              <Route path="victim-test" element={<VictimDashboard />} />
+              <Route path="official-dashboard" element={<Protected><OfficialDashboard /></Protected>} />
+              <Route path="users" element={<Protected><UserManagement /></Protected>} />
+            </Route>
+          
             <Route path="*" element={<Navigate to="/" replace />} />
 
-            {/* <Route path="/" element={<Admin />}>
-              <Route index element={<Protected><UserManagement /></Protected>} />
-            </Route> */}
+            <Route path="/test" element={<Admin />}>
+              <Route index element={<Test />} />
+            </Route>
           </Routes>
         </BrowserRouter>
       </AntApp>

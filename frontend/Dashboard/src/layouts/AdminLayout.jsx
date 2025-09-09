@@ -18,12 +18,12 @@ export default function AdminLayout() {
   return (
     <Layout style={{ minHeight: "100vh" }}>
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
-      <Layout>
+      <Layout style={{ flex: 1, minWidth: 0 }}>
         <Content
           style={{
-            background: "#fefefe",
-            minHeight: "100vh",
-            padding: "20px",
+            background: "#fff",
+            overflow: "auto",
+            flex: 1,
           }}
         >
           <Outlet />

@@ -25,11 +25,13 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 const victimRoutes = require('./routes/victimRoutes');
 const officialRoutes = require('./routes/officialRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 
 // Use routes
 app.use('/api/victims', victimRoutes);
 app.use('/api/officials', officialRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

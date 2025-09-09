@@ -12,6 +12,47 @@ const options = {
         email: 'support@vawcare.com'
       }
     },
+    paths: {
+      '/api/reports': {
+        get: {
+          security: [{ bearerAuth: [] }],
+          tags: ['Reports'],
+          summary: 'Get all incident reports',
+          description: 'Returns all incident reports. No query parameters are required to retrieve all reports. This endpoint is protected and requires a bearer token with admin or barangay_official role.',
+          responses: {
+            '200': { description: 'List of reports', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/IncidentReport' } } } } },
+            '401': { description: 'Unauthorized' },
+            '403': { description: 'Forbidden' }
+          }
+        },
+        post: {
+          tags: ['Reports'],
+          summary: 'Create an incident report',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ReportCreate' }
+              }
+            }
+          },
+          responses: {
+            '201': { description: 'Report created', content: { 'application/json': { schema: { $ref: '#/components/schemas/IncidentReport' } } } },
+            '400': { description: 'Bad request' }
+          }
+        }
+      },
+      '/api/reports/{id}': {
+        put: {
+          security: [{ bearerAuth: [] }],
+          tags: ['Reports'],
+          summary: 'Update a report (status, assignedOfficer, riskLevel)',
+          parameters: [ { name: 'id', in: 'path', required: true, schema: { type: 'string' } } ],
+          requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/ReportUpdate' } } } },
+          responses: { '200': { description: 'Report updated', content: { 'application/json': { schema: { $ref: '#/components/schemas/IncidentReport' } } } }, '404': { description: 'Not found' } }
+        }
+      }
+    },
     servers: [
       {
         url: 'http://localhost:5000',
@@ -20,6 +61,76 @@ const options = {
     ],
     components: {
       schemas: {
+        // Incident report schemas for Swagger
+        ReportCreate: {
+          type: 'object',
+          description: 'Create a new incident report. Do not include reportID — the server generates it automatically.',
+          properties: {
+            victimID: { type: 'string', description: 'Victim object id (required if not authenticated)' },
+            incidentType: { type: 'string', enum: ['Physical', 'Sexual', 'Psychological'] },
+            description: { type: 'string' },
+            location: { type: 'string' },
+            dateReported: { type: 'string', format: 'date-time' },
+            status: { type: 'string', enum: ['Pending', 'Under Investigation', 'Resolved'] },
+            assignedOfficer: { type: 'string', description: 'Officer id to assign (optional)' },
+            riskLevel: { type: 'string', enum: ['Low', 'Medium', 'High'] }
+          },
+          required: ['incidentType', 'description', 'location'],
+          example: {
+            "victimID": "",
+            "incidentType": "Physical",
+            "description": "Victim reports an assault near Barangay Hall at night; suspect unknown.",
+            "location": "Barangay Hall, Street 5, Barangay X",
+            "riskLevel": "High",
+            "assignedOfficer": "Vangelyne V. Alcantara"
+          }
+          ,
+          examples: {
+            withVictim: {
+              summary: 'Example including victimID',
+              value: {
+                "victimID": "64b1f3a0e9d1f2a6c4b12345",
+                "incidentType": "Physical",
+                "description": "Victim reports an assault near Barangay Hall at night; suspect unknown.",
+                "location": "Barangay Hall, Street 5, Barangay X",
+                "riskLevel": "High",
+                "assignedOfficer": "Vangelyne V. Alcantara"
+              }
+            }
+          }
+        },
+        ReportUpdate: {
+          type: 'object',
+          properties: {
+            status: { type: 'string', enum: ['Pending', 'Under Investigation', 'Resolved'] },
+            assignedOfficer: { type: 'string' },
+            riskLevel: { type: 'string', enum: ['Low', 'Medium', 'High'] },
+            description: { type: 'string' },
+            location: { type: 'string' }
+          }
+          ,
+          example: {
+            "status": "Under Investigation",
+            "assignedOfficer": "Vangelyne Alcantara",
+            "riskLevel": "High"
+          }
+        },
+        IncidentReport: {
+          type: 'object',
+          properties: {
+            reportID: { type: 'string' },
+            victimID: { type: 'string' },
+            incidentType: { type: 'string' },
+            description: { type: 'string' },
+            location: { type: 'string' },
+            dateReported: { type: 'string', format: 'date-time' },
+            status: { type: 'string' },
+            assignedOfficer: { type: 'string' },
+            riskLevel: { type: 'string' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
         VictimRegistration: {
           type: 'object',
           description: 'Schema for victim registration. Note: victimID is auto-generated, do not include it in the request.',

@@ -373,7 +373,7 @@ export default function UserManagement() {
       title: 'Created',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (date) => new Date(date).toLocaleDateString(),
+      render: (date) => new Date(date).toLocaleString(),
     },
     {
       title: 'Actions',

@@ -26,6 +26,11 @@ const incidentReportSchema = new mongoose.Schema({
         required: [true, 'Description is required'],
         trim: true
     },
+    perpetrator: {
+        type: String,
+        trim: true,
+        default: ''
+    },
     location: {
         type: String,
         required: [true, 'Location is required'],

@@ -4,6 +4,8 @@ const ReportService = require('../services/reportService');
 // Create a new incident report (victim submits)
 const createReport = asyncHandler(async (req, res) => {
   const payload = req.body;
+  // Pass perpetrator field if present
+  if (req.body.perpetrator) payload.perpetrator = req.body.perpetrator;
   // attach victim reference if available (authenticated)
   if (req.user && req.user.uid) {
     payload.firebaseUid = req.user.uid;

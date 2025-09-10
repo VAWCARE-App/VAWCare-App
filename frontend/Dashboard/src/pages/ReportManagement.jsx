@@ -1,0 +1,424 @@
+import React, { useEffect, useState } from "react";
+import {
+  App as AntApp,
+  Card,
+  Table,
+  Typography,
+  Tag,
+  Layout,
+  Button,
+  Input,
+  Select,
+  Space,
+  Tooltip,
+  Modal,
+  Form,
+  Row,
+  Col,
+} from "antd";
+import {
+  SearchOutlined,
+  ReloadOutlined,
+  EyeOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  AlertOutlined,
+  ExclamationCircleOutlined,
+  EnvironmentOutlined
+} from "@ant-design/icons";
+import { api } from "../lib/api";
+
+const { Header, Content } = Layout;
+const { Search } = Input;
+const { Option } = Select;
+
+export default function ReportManagement() {
+  const { message } = AntApp.useApp();
+  const [loading, setLoading] = useState(true);
+  const [allReports, setAllReports] = useState([]);
+  const [filteredReports, setFilteredReports] = useState([]);
+  const [searchText, setSearchText] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingReport, setEditingReport] = useState(null);
+  const [isViewMode, setIsViewMode] = useState(false);
+  const [form] = Form.useForm();
+
+  const fetchAllReports = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get("/api/reports");
+
+      if (data.success) {
+        const formattedReports = data.data.map((r) => ({
+          key: r.reportID,
+          reportID: r.reportID,
+          victimID: r.victimID,
+          incidentType: r.incidentType,
+          description: r.description,
+          location: r.location,
+          dateReported: r.dateReported,
+          status: r.status,
+          assignedOfficer: r.assignedOfficer,
+          riskLevel: r.riskLevel,
+          createdAt: r.createdAt,
+          updatedAt: r.updatedAt,
+        }));
+
+        setAllReports(formattedReports);
+        setFilteredReports(formattedReports);
+      }
+    } catch (err) {
+      console.error("Error fetching reports:", err);
+      message.error("Failed to load reports");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllReports();
+  }, []);
+
+  const handleViewReport = (record) => {
+    setEditingReport(record);
+    form.setFieldsValue(record);
+    setIsViewMode(true);
+    setEditModalVisible(true);
+  };
+
+  const handleEditReport = (record) => {
+    setEditingReport(record);
+    form.setFieldsValue(record);
+    setIsViewMode(false);
+    setEditModalVisible(true);
+  };
+
+  const handleDeleteReport = async (record) => {
+    try {
+      setLoading(true);
+      const res = await api.delete(`/api/reports/${record.reportID}`);
+      if (res?.data?.success) {
+        message.success("Report deleted");
+      } else {
+        message.error("Failed to delete report");
+      }
+      fetchAllReports();
+    } catch (err) {
+      console.error("Delete failed", err.response || err);
+      message.error("Failed to delete report");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateReport = async (values) => {
+    try {
+      setLoading(true);
+      const res = await api.put(`/api/reports/${editingReport.reportID}`, values);
+      if (res?.data?.success) {
+        message.success("Report updated");
+        setEditModalVisible(false);
+        setEditingReport(null);
+      } else {
+        message.error("Failed to update report");
+      }
+      fetchAllReports();
+    } catch (err) {
+      console.error("Update failed", err.response || err);
+      message.error("Failed to update report");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let filtered = allReports;
+
+    if (filterType !== "all") {
+      filtered = filtered.filter((r) => r.status === filterType);
+    }
+
+    if (searchText) {
+      filtered = filtered.filter(
+        (r) =>
+          r.reportID.toLowerCase().includes(searchText.toLowerCase()) ||
+          r.incidentType.toLowerCase().includes(searchText.toLowerCase()) ||
+          r.assignedOfficer?.toLowerCase().includes(searchText.toLowerCase())
+      );
+    }
+
+    setFilteredReports(filtered);
+  }, [allReports, searchText, filterType]);
+
+  const getStatusColor = (status) => {
+    switch (status.toLowerCase()) {
+      case "open": return "orange";
+      case "in-progress": return "blue";
+      case "resolved": return "green";
+      case "closed": return "red";
+      default: return "default";
+    }
+  };
+
+  const getRiskColor = (level) => {
+    switch (level.toLowerCase()) {
+      case "low": return "green";
+      case "medium": return "orange";
+      case "high": return "red";
+      default: return "default";
+    }
+  };
+
+  const columns = [
+    {
+      title: "Report ID",
+      dataIndex: "reportID",
+      key: "reportID",
+      render: (text) => <Tag icon={<AlertOutlined />} color="blue">{text}</Tag>,
+    },
+    {
+      title: "Incident Type",
+      dataIndex: "incidentType",
+      key: "incidentType",
+    },
+    {
+      title: "Location",
+      dataIndex: "location",
+      key: "location",
+      render: (loc) => <Tag icon={<EnvironmentOutlined />} color="geekblue">{loc}</Tag>
+    },
+    {
+      title: "Risk Level",
+      dataIndex: "riskLevel",
+      key: "riskLevel",
+      render: (risk) => <Tag color={getRiskColor(risk)}>{risk}</Tag>,
+    },
+    {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      render: (status) => (
+        <Tag icon={<ExclamationCircleOutlined />} color={getStatusColor(status)}>
+          {status}
+        </Tag>
+      ),
+    },
+    {
+      title: "Assigned Officer",
+      dataIndex: "assignedOfficer",
+      key: "assignedOfficer",
+    },
+    {
+      title: "Date Reported",
+      dataIndex: "dateReported",
+      key: "dateReported",
+      render: (date) => new Date(date).toLocaleString(),
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      render: (_, record) => (
+        <Space>
+          <Tooltip title="View Details">
+            <Button type="link" icon={<EyeOutlined />} size="small" onClick={() => handleViewReport(record)} />
+          </Tooltip>
+          <Tooltip title="Edit Report">
+            <Button type="link" icon={<EditOutlined />} size="small" onClick={() => handleEditReport(record)} />
+          </Tooltip>
+          <Tooltip title="Delete Report">
+            <Button type="link" icon={<DeleteOutlined />} size="small" danger onClick={() => handleDeleteReport(record)} />
+          </Tooltip>
+        </Space>
+      ),
+    },
+  ];
+
+  const PINK = "#e91e63";
+  const LIGHT_PINK = "#fff0f5";
+  const SOFT_PINK = "#ffd1dc";
+
+  const reportCounts = {
+    total: allReports.length,
+    open: allReports.filter((r) => r.status === "open").length,
+    inProgress: allReports.filter((r) => r.status === "in-progress").length,
+    resolved: allReports.filter((r) => r.status === "resolved").length,
+  };
+
+  return (
+    <Layout style={{ minHeight: "100vh", width: "100%", background: LIGHT_PINK }}>
+      <Header
+        style={{
+          background: "#fff",
+          borderBottom: `1px solid ${SOFT_PINK}`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingInline: 16,
+        }}
+      >
+        <Typography.Title level={4} style={{ margin: 0, color: PINK }}>
+          Report Management
+        </Typography.Title>
+        <Button
+          onClick={fetchAllReports}
+          icon={<ReloadOutlined />}
+          style={{ borderColor: PINK, color: PINK }}
+        >
+          Refresh
+        </Button>
+      </Header>
+
+      <Content style={{ padding: 16, overflowX: "hidden" }}>
+        {/* Summary Cards */}
+        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+          <Col xs={12} md={6}>
+            <Card style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}>
+              <Typography.Text type="secondary">Total Reports</Typography.Text>
+              <Typography.Title level={2} style={{ margin: 0, color: PINK }}>
+                {reportCounts.total}
+              </Typography.Title>
+            </Card>
+          </Col>
+          <Col xs={12} md={6}>
+            <Card style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}>
+              <Typography.Text type="secondary">Open</Typography.Text>
+              <Typography.Title level={2} style={{ margin: 0, color: "orange" }}>
+                {reportCounts.open}
+              </Typography.Title>
+            </Card>
+          </Col>
+          <Col xs={12} md={6}>
+            <Card style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}>
+              <Typography.Text type="secondary">In-Progress</Typography.Text>
+              <Typography.Title level={2} style={{ margin: 0, color: "blue" }}>
+                {reportCounts.inProgress}
+              </Typography.Title>
+            </Card>
+          </Col>
+          <Col xs={12} md={6}>
+            <Card style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}>
+              <Typography.Text type="secondary">Resolved</Typography.Text>
+              <Typography.Title level={2} style={{ margin: 0, color: "green" }}>
+                {reportCounts.resolved}
+              </Typography.Title>
+            </Card>
+          </Col>
+        </Row>
+
+        {/* Reports Table */}
+        <Card
+          title="All Reports"
+          style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}
+          extra={
+            <Space>
+              <Search
+                placeholder="Search reports..."
+                allowClear
+                enterButton={<SearchOutlined />}
+                style={{ width: 250 }}
+                onSearch={setSearchText}
+                onChange={(e) => setSearchText(e.target.value)}
+              />
+              <Select
+                value={filterType}
+                onChange={setFilterType}
+                style={{ width: 150 }}
+              >
+                <Option value="all">All Status</Option>
+                <Option value="open">Open</Option>
+                <Option value="in-progress">In-Progress</Option>
+                <Option value="resolved">Resolved</Option>
+                <Option value="closed">Closed</Option>
+              </Select>
+            </Space>
+          }
+        >
+          <Table
+            columns={columns}
+            dataSource={filteredReports}
+            loading={loading}
+            pagination={{
+              pageSize: 6,
+              showSizeChanger: false,
+              showQuickJumper: true,
+              showTotal: (total, range) =>
+                `${range[0]}-${range[1]} of ${total} reports`,
+            }}
+            scroll={{ x: "max-content", y: 480 }}
+          />
+
+          <Modal
+            title={
+              editingReport
+                ? `${isViewMode ? "View" : "Edit"} Report - ${editingReport.reportID}`
+                : "Edit Report"
+            }
+            open={editModalVisible}
+            onCancel={() => {
+              setEditModalVisible(false);
+              setEditingReport(null);
+              setIsViewMode(false);
+            }}
+            footer={
+              isViewMode
+                ? [
+                    <Button
+                      key="close"
+                      onClick={() => {
+                        setEditModalVisible(false);
+                        setEditingReport(null);
+                        setIsViewMode(false);
+                      }}
+                    >
+                      Close
+                    </Button>,
+                  ]
+                : undefined
+            }
+            okText="Save"
+            onOk={() => {
+              form.validateFields().then((vals) => handleUpdateReport(vals));
+            }}
+          >
+            <Form
+              form={form}
+              layout="horizontal"
+              labelCol={{ flex: "120px" }}
+              wrapperCol={{ flex: 1 }}
+              labelAlign="left"
+            >
+              <Form.Item name="incidentType" label="Incident Type" rules={[{ required: true }]} style={{ marginBottom: 12, marginTop: 20 }}>
+                <Input disabled={isViewMode} />
+              </Form.Item>
+              <Form.Item name="location" label="Location" rules={[{ required: true }]} style={{ marginBottom: 12 }}>
+                <Input disabled={isViewMode} />
+              </Form.Item>
+              <Form.Item name="description" label="Description" style={{ marginBottom: 12 }}>
+                <Input.TextArea rows={3} disabled={isViewMode} />
+              </Form.Item>
+              <Form.Item name="assignedOfficer" label="Assigned Officer" style={{ marginBottom: 12 }}>
+                <Input disabled={isViewMode} />
+              </Form.Item>
+              <Form.Item name="riskLevel" label="Risk Level" style={{ marginBottom: 12 }}>
+                <Select disabled={isViewMode}>
+                  <Option value="low">Low</Option>
+                  <Option value="medium">Medium</Option>
+                  <Option value="high">High</Option>
+                </Select>
+              </Form.Item>
+              <Form.Item name="status" label="Status" style={{ marginBottom: 12 }}>
+                <Select disabled={isViewMode}>
+                  <Option value="open">Open</Option>
+                  <Option value="in-progress">In-Progress</Option>
+                  <Option value="resolved">Resolved</Option>
+                  <Option value="closed">Closed</Option>
+                </Select>
+              </Form.Item>
+            </Form>
+          </Modal>
+        </Card>
+      </Content>
+    </Layout>
+  );
+}

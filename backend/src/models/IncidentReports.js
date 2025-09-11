@@ -28,8 +28,8 @@ const incidentReportSchema = new mongoose.Schema({
     },
     perpetrator: {
         type: String,
-        trim: true,
-        default: ''
+        required: false,
+        trim: true
     },
     location: {
         type: String,
@@ -75,7 +75,7 @@ incidentReportSchema.add({
 });
 
 // Create indexes for faster querying
-incidentReportSchema.index({ reportID: 1 }, { unique: true });
+// reportID already has `unique: true` on the field definition; avoid duplicate index declaration
 incidentReportSchema.index({ victimID: 1 });
 incidentReportSchema.index({ status: 1 });
 incidentReportSchema.index({ riskLevel: 1 });

@@ -46,7 +46,8 @@ async function createReport(payload) {
 }
 
 async function getReportById(id) {
-	return IncidentReport.findOne({ reportID: id }).populate('victimID');
+	// Exclude victim.location to avoid leaking lat/lng in API responses
+	return IncidentReport.findOne({ reportID: id }).populate('victimID', '-location');
 }
 
 async function listReports(filters = {}) {
@@ -56,7 +57,8 @@ async function listReports(filters = {}) {
 	if (filters.riskLevel) query.riskLevel = filters.riskLevel;
 	if (filters.victimID) query.victimID = filters.victimID;
 
-	return IncidentReport.find(query).sort({ dateReported: -1 }).populate('victimID');
+	// Exclude victim.location when returning list of reports
+	return IncidentReport.find(query).sort({ dateReported: -1 }).populate('victimID', '-location');
 }
 
 async function updateReport(id, updates) {

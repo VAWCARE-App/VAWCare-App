@@ -16,7 +16,7 @@ const incidentReportSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Incident type is required'],
         enum: {
-            values: ['Physical', 'Sexual', 'Psychological'],
+            values: ['Physical', 'Sexual', 'Psychological', 'Economic'],
             message: 'Please enter a valid incident type'
         },
         trim: true

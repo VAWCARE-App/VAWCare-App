@@ -71,7 +71,7 @@ const options = {
             description: { type: 'string' },
             location: { type: 'string' },
             dateReported: { type: 'string', format: 'date-time' },
-            status: { type: 'string', enum: ['Pending', 'Under Investigation', 'Resolved'] },
+            status: { type: 'string', enum: ['Pending', 'Open' , 'Under Investigation', 'Resolved'] },
             assignedOfficer: { type: 'string', description: 'Officer id to assign (optional)' },
             riskLevel: { type: 'string', enum: ['Low', 'Medium', 'High'] },
             perpetrator: { type: 'string', description: 'Name or description of perpetrator (optional)' }
@@ -105,7 +105,7 @@ const options = {
         ReportUpdate: {
           type: 'object',
           properties: {
-            status: { type: 'string', enum: ['Pending', 'Under Investigation', 'Resolved'] },
+            status: { type: 'string', enum: ['Pending', 'Open' , 'Under Investigation', 'Resolved'] },
             assignedOfficer: { type: 'string' },
             riskLevel: { type: 'string', enum: ['Low', 'Medium', 'High'] },
             description: { type: 'string' },

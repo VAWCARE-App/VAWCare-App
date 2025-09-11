@@ -65,7 +65,8 @@ export default function VictimDashboard() {
     <Layout style={{ minHeight: "100vh", width:"100vw", background: LIGHT_PINK }}>
   
       <Layout>
-        <Header
+        <Header 
+        
           style={{
             background: "#fff",
             borderBottom: `1px solid ${SOFT_PINK}`,

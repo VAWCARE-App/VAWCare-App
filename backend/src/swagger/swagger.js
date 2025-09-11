@@ -81,9 +81,10 @@ const options = {
             "victimID": "",
             "incidentType": "Physical",
             "description": "Victim reports an assault near Barangay Hall at night; suspect unknown.",
+            "perpetrator": "Unknown",
             "location": "Barangay Hall, Street 5, Barangay X",
             "riskLevel": "High",
-            "assignedOfficer": "Vangelyne V. Alcantara"
+            "assignedOfficer": "Vangelyne V. Alcantara",
           }
           ,
           examples: {
@@ -93,6 +94,7 @@ const options = {
                 "victimID": "64b1f3a0e9d1f2a6c4b12345",
                 "incidentType": "Physical",
                 "description": "Victim reports an assault near Barangay Hall at night; suspect unknown.",
+                "perpetrator": "Unknown",
                 "location": "Barangay Hall, Street 5, Barangay X",
                 "riskLevel": "High",
                 "assignedOfficer": "Vangelyne V. Alcantara"
@@ -114,7 +116,8 @@ const options = {
           example: {
             "status": "Under Investigation",
             "assignedOfficer": "Vangelyne Alcantara",
-            "riskLevel": "High"
+            "riskLevel": "High",
+            "perpetrator": "John Doe"
           }
         },
         IncidentReport: {

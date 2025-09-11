@@ -6,6 +6,7 @@ import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboards/AdminDashboard";
 import Admin from "./layouts/AdminLayout";
 import UserManagement from "./pages/UserManagement";
+import ReportManagement from "./pages/ReportManagement";
 import VictimDashboard from "./pages/Dashboards/VictimDashboard";
 import OfficialDashboard from "./pages/Dashboards/OfficialDashboard";
 import Test from "./pages/Test";
@@ -30,6 +31,7 @@ export default function App() {
               <Route path="victim-test" element={<VictimDashboard />} />
               <Route path="official-dashboard" element={<Protected><OfficialDashboard /></Protected>} />
               <Route path="users" element={<Protected><UserManagement /></Protected>} />
+              <Route path="reports" element={<Protected><ReportManagement /></Protected>} />
             </Route>
           
             <Route path="*" element={<Navigate to="/" replace />} />

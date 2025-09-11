@@ -34,6 +34,7 @@ async function createReport(payload) {
 		incidentType: payload.incidentType,
 		description: payload.description,
 		location: payload.location,
+		perpetrator: payload.perpetrator,
 		dateReported: payload.dateReported || Date.now(),
 		status: payload.status || 'Pending',
 		assignedOfficer: payload.assignedOfficer || 'Vangelyn V. Alcantara',
@@ -62,7 +63,7 @@ async function updateReport(id, updates) {
 	const report = await IncidentReport.findOne({ reportID: id });
 	if (!report) return null;
 
-	const allowed = ['status', 'assignedOfficer', 'riskLevel', 'description', 'location'];
+	const allowed = ['status', 'assignedOfficer', 'riskLevel', 'description', 'location', 'perpetrator'];
 	allowed.forEach((k) => {
 		if (updates[k] !== undefined) report[k] = updates[k];
 	});

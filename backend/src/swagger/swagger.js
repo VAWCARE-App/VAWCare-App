@@ -73,16 +73,18 @@ const options = {
             dateReported: { type: 'string', format: 'date-time' },
             status: { type: 'string', enum: ['Pending', 'Under Investigation', 'Resolved'] },
             assignedOfficer: { type: 'string', description: 'Officer id to assign (optional)' },
-            riskLevel: { type: 'string', enum: ['Low', 'Medium', 'High'] }
+            riskLevel: { type: 'string', enum: ['Low', 'Medium', 'High'] },
+            perpetrator: { type: 'string', description: 'Name or description of perpetrator (optional)' }
           },
           required: ['incidentType', 'description', 'location'],
           example: {
             "victimID": "",
             "incidentType": "Physical",
             "description": "Victim reports an assault near Barangay Hall at night; suspect unknown.",
+            "perpetrator": "Unknown",
             "location": "Barangay Hall, Street 5, Barangay X",
             "riskLevel": "High",
-            "assignedOfficer": "Vangelyne V. Alcantara"
+            "assignedOfficer": "Vangelyne V. Alcantara",
           }
           ,
           examples: {
@@ -92,6 +94,7 @@ const options = {
                 "victimID": "64b1f3a0e9d1f2a6c4b12345",
                 "incidentType": "Physical",
                 "description": "Victim reports an assault near Barangay Hall at night; suspect unknown.",
+                "perpetrator": "Unknown",
                 "location": "Barangay Hall, Street 5, Barangay X",
                 "riskLevel": "High",
                 "assignedOfficer": "Vangelyne V. Alcantara"
@@ -106,13 +109,15 @@ const options = {
             assignedOfficer: { type: 'string' },
             riskLevel: { type: 'string', enum: ['Low', 'Medium', 'High'] },
             description: { type: 'string' },
-            location: { type: 'string' }
+            perpetrator: { type: 'string', description: 'Name or description of perpetrator (optional)' },
+            location: { type: 'string' },
           }
           ,
           example: {
             "status": "Under Investigation",
             "assignedOfficer": "Vangelyne Alcantara",
-            "riskLevel": "High"
+            "riskLevel": "High",
+            "perpetrator": "John Doe"
           }
         },
         IncidentReport: {
@@ -122,6 +127,7 @@ const options = {
             victimID: { type: 'string' },
             incidentType: { type: 'string' },
             description: { type: 'string' },
+            perpetrator: { type: 'string', description: 'Name or description of perpetrator (optional)' },
             location: { type: 'string' },
             dateReported: { type: 'string', format: 'date-time' },
             status: { type: 'string' },

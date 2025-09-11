@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   App as AntApp,
   Card,
@@ -9,20 +9,32 @@ import {
   List,
   Tag,
   Layout,
-  Grid,
   Button,
+  Statistic,
+  Progress,
+  Empty,
+  Space,
+  Grid,
 } from "antd";
+import {
+  UserOutlined,
+  FileTextOutlined,
+  FolderOpenOutlined,
+  ReloadOutlined,
+  TeamOutlined,
+  SettingOutlined,
+} from "@ant-design/icons";
 import { api } from "../../lib/api";
-import Sidebar from "../../components/Sidebar";
 
 const { Header, Content } = Layout;
-    
+const { Title, Text } = Typography;
+
 export default function AdminDashboard() {
   const { message } = AntApp.useApp();
-  const [loading, setLoading] = useState(true);
-  const [collapsed, setCollapsed] = useState(false);
   const screens = Grid.useBreakpoint();
 
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [metrics, setMetrics] = useState({
     totalUsers: 0,
     totalCases: 0,
@@ -30,114 +42,326 @@ export default function AdminDashboard() {
     recentActivities: [],
   });
 
-  const fetchMetrics = async () => {
+  const BRAND = {
+    pink: "#e91e63",
+    light: "#fff5f8",
+    soft: "#ffd1dc",
+  };
+
+  const donutSize =
+    screens.xxl ? 220 : screens.xl ? 200 : screens.lg ? 180 : screens.md ? 160 : 140;
+
+  const resolvedCases = Math.max(metrics.totalCases - metrics.openCases, 0);
+  const openPercent = useMemo(() => {
+    const total = Math.max(metrics.totalCases, 1);
+    return Math.round((metrics.openCases / total) * 100);
+  }, [metrics]);
+
+  const loadMetrics = async (withSpinner = true) => {
     try {
-      setLoading(true);
+      if (withSpinner) setLoading(true);
       const { data } = await api.get("/api/metrics");
       setMetrics({
         totalUsers: data?.totalUsers ?? 0,
         totalCases: data?.totalCases ?? 0,
         openCases: data?.openCases ?? 0,
-        recentActivities: Array.isArray(data?.recentActivities) ? data.recentActivities : [],
+        recentActivities: Array.isArray(data?.recentActivities)
+          ? data.recentActivities
+          : [],
       });
     } catch (err) {
       message.error(err?.response?.data?.message || "Failed to load metrics");
     } finally {
-      setLoading(false);
+      if (withSpinner) setLoading(false);
     }
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadMetrics(false);
+    setRefreshing(false);
+    message.success("Dashboard refreshed");
+  };
+
   useEffect(() => {
-    fetchMetrics();
+    loadMetrics(true);
   }, []);
 
-  const PINK = "#e91e63";
-  const LIGHT_PINK = "#fff0f5";
-  const SOFT_PINK = "#ffd1dc";
-
-  return (
-    <Layout style={{ minHeight: "100vh", width: "100vw", background: LIGHT_PINK }}>
-      <Layout>
-        <Header
+  const KpiCard = ({ icon, label, value, delay = 0 }) => (
+    <Card
+      bordered
+      className="fade-in-card"
+      style={{
+        borderRadius: 14,
+        borderColor: BRAND.soft,
+        height: "100%",
+        animationDelay: `${delay}ms`,
+      }}
+      bodyStyle={{ padding: 16, display: "flex", flexDirection: "column", gap: 8 }}
+    >
+      <Space align="center">
+        <div
           style={{
-            background: "#fff",
-            borderBottom: `1px solid ${SOFT_PINK}`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            paddingInline: 16,
+            width: 38,
+            height: 38,
+            borderRadius: 10,
+            background: "#fff0f5",
+            display: "grid",
+            placeItems: "center",
+            border: `1px solid ${BRAND.soft}`,
           }}
         >
-          <Typography.Title level={4} style={{ margin: 0, color: PINK }}>
-            Dashboard
-          </Typography.Title>
-          <Button
-            onClick={fetchMetrics}
-            style={{ borderColor: PINK, color: PINK }}
+          {icon}
+        </div>
+        <Text type="secondary" style={{ fontSize: 13 }}>
+          {label}
+        </Text>
+      </Space>
+      {loading ? (
+        <Skeleton.Input active size="small" style={{ width: 100 }} />
+      ) : (
+        <Statistic
+          value={value}
+          valueStyle={{ color: BRAND.pink, fontSize: "clamp(20px,3.4vw,28px)" }}
+        />
+      )}
+    </Card>
+  );
+
+  return (
+    <Layout style={{ minHeight: "100vh", width: "100%", background: BRAND.light }}>
+      {/* Sticky header */}
+      <Header
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 5,
+          background: `linear-gradient(180deg, ${BRAND.light} 0%, #ffffff 60%)`,
+          borderBottom: `1px solid ${BRAND.soft}`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingInline: 16,
+          paddingBlock: screens.md ? 12 : 10,
+          height: "auto",
+          lineHeight: 1.2,
+        }}
+      >
+        <Space direction="vertical" size={0}>
+          <Title
+            level={screens.md ? 4 : 5}
+            style={{
+              margin: 0,
+              color: BRAND.pink,
+              fontSize: "clamp(18px,2.2vw,22px)",
+            }}
           >
-            Refresh
-          </Button>
-        </Header>
-        <Content style={{ padding: 16 }}>
+            Admin Dashboard
+          </Title>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            Users, cases, and recent activity
+          </Text>
+        </Space>
+
+        <Button
+          icon={<ReloadOutlined />}
+          onClick={handleRefresh}
+          loading={refreshing}
+          style={{ borderColor: BRAND.pink, color: BRAND.pink }}
+          size={screens.md ? "middle" : "small"}
+        >
+          Refresh
+        </Button>
+      </Header>
+
+      <Content
+        style={{
+          padding: screens.md ? 16 : 12,
+          display: "flex",
+          justifyContent: "center",
+          overflow: "auto",
+          paddingBottom: "max(16px, env(safe-area-inset-bottom))",
+        }}
+      >
+        <div style={{ width: "100%", maxWidth: 1280 }}>
           <Row gutter={[16, 16]}>
-            <Col xs={24} md={8}>
+            {/* KPIs with stagger animation */}
+            <Col xs={24} sm={12} lg={8}>
+              <KpiCard
+                icon={<UserOutlined style={{ color: BRAND.pink, fontSize: 18 }} />}
+                label="Total Users"
+                value={metrics.totalUsers}
+                delay={100}
+              />
+            </Col>
+            <Col xs={24} sm={12} lg={8}>
+              <KpiCard
+                icon={<FileTextOutlined style={{ color: BRAND.pink, fontSize: 18 }} />}
+                label="Total Cases"
+                value={metrics.totalCases}
+                delay={200}
+              />
+            </Col>
+            <Col xs={24} sm={12} lg={8}>
+              <KpiCard
+                icon={<FolderOpenOutlined style={{ color: BRAND.pink, fontSize: 18 }} />}
+                label="Open Cases"
+                value={metrics.openCases}
+                delay={300}
+              />
+            </Col>
+
+            {/* Donut Chart */}
+            <Col xs={24} md={12} lg={8}>
               <Card
-                style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}
-                bodyStyle={{ padding: 16 }}
+                className="fade-in-card"
+                title={<span style={{ color: BRAND.pink }}>Open vs Total</span>}
+                bordered
+                style={{
+                  borderRadius: 14,
+                  borderColor: BRAND.soft,
+                  height: "100%",
+                  animationDelay: "400ms",
+                }}
+                bodyStyle={{ padding: 16, display: "grid", placeItems: "center" }}
               >
-                <Typography.Text type="secondary">Total Users</Typography.Text>
-                <Typography.Title level={2} style={{ margin: 0, color: PINK }}>
-                  {loading ? (
-                    <Skeleton.Input active size="small" style={{ width: 80 }} />
-                  ) : (
-                    metrics.totalUsers
-                  )}
-                </Typography.Title>
+                {loading ? (
+                  <Skeleton active />
+                ) : (
+                  <div style={{ textAlign: "center" }}>
+                    <Progress
+                      type="dashboard"
+                      percent={openPercent}
+                      strokeColor={BRAND.pink}
+                      trailColor="#ffe6ef"
+                      size={donutSize}
+                      format={(p) => `${p}% Open`}
+                    />
+                    <Space
+                      style={{
+                        marginTop: 12,
+                        flexWrap: "wrap",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Tag color={BRAND.pink} style={{ color: "#fff" }}>
+                        Open: {metrics.openCases}
+                      </Tag>
+                      <Tag color="#52c41a">Total: {metrics.totalCases}</Tag>
+                    </Space>
+                  </div>
+                )}
               </Card>
             </Col>
-            <Col xs={24} md={8}>
+
+            {/* Quick Actions */}
+            <Col xs={24} md={12} lg={8}>
               <Card
-                style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}
-                bodyStyle={{ padding: 16 }}
+                className="fade-in-card"
+                title={<span style={{ color: BRAND.pink }}>Quick Actions</span>}
+                bordered
+                style={{
+                  borderRadius: 14,
+                  borderColor: BRAND.soft,
+                  height: "100%",
+                  animationDelay: "500ms",
+                }}
+                bodyStyle={{
+                  padding: 16,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                }}
               >
-                <Typography.Text type="secondary">Total Cases</Typography.Text>
-                <Typography.Title level={2} style={{ margin: 0, color: PINK }}>
-                  {loading ? (
-                    <Skeleton.Input active size="small" style={{ width: 80 }} />
-                  ) : (
-                    metrics.totalCases
-                  )}
-                </Typography.Title>
+                <Button
+                  type="primary"
+                  icon={<TeamOutlined />}
+                  block
+                  style={{
+                    background: BRAND.pink,
+                    borderColor: BRAND.pink,
+                    height: 44,
+                    fontWeight: 600,
+                  }}
+                  href="/users"
+                >
+                  Manage Users
+                </Button>
+                <Button
+                  icon={<FileTextOutlined />}
+                  block
+                  style={{
+                    borderColor: BRAND.pink,
+                    color: BRAND.pink,
+                    height: 44,
+                    fontWeight: 600,
+                  }}
+                  href="/reports"
+                >
+                  Review Reports
+                </Button>
+                <Button
+                  icon={<FolderOpenOutlined />}
+                  block
+                  style={{
+                    borderColor: BRAND.pink,
+                    color: BRAND.pink,
+                    height: 44,
+                    fontWeight: 600,
+                  }}
+                  href="/cases"
+                >
+                  Manage Cases
+                </Button>
+                <Button
+                  icon={<SettingOutlined />}
+                  block
+                  style={{
+                    borderColor: BRAND.pink,
+                    color: BRAND.pink,
+                    height: 44,
+                    fontWeight: 600,
+                  }}
+                  href="/settings"
+                >
+                  Settings
+                </Button>
               </Card>
             </Col>
-            <Col xs={24} md={8}>
+
+            {/* Recent Activity */}
+            <Col xs={24} lg={8}>
               <Card
-                style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}
-                bodyStyle={{ padding: 16 }}
-              >
-                <Typography.Text type="secondary">Open Cases</Typography.Text>
-                <Typography.Title level={2} style={{ margin: 0, color: PINK }}>
-                  {loading ? (
-                    <Skeleton.Input active size="small" style={{ width: 80 }} />
-                  ) : (
-                    metrics.openCases
-                  )}
-                </Typography.Title>
-              </Card>
-            </Col>
-            <Col span={24}>
-              <Card
-                title={<span style={{ color: PINK }}>Recent Activity</span>}
-                style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}
-                bodyStyle={{ padding: 0 }}
+                className="fade-in-card"
+                title={<span style={{ color: BRAND.pink }}>Recent Activity</span>}
+                bordered
+                style={{
+                  borderRadius: 14,
+                  borderColor: BRAND.soft,
+                  height: "100%",
+                  animationDelay: "600ms",
+                }}
+                bodyStyle={{
+                  padding: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  minHeight: 200,
+                }}
               >
                 {loading ? (
                   <div style={{ padding: 16 }}>
                     <Skeleton active />
                   </div>
+                ) : metrics.recentActivities.length === 0 ? (
+                  <Empty
+                    description={
+                      <span style={{ color: "#999" }}>No recent activity yet</span>
+                    }
+                    style={{ padding: 24 }}
+                  />
                 ) : (
                   <List
-                    style={{ padding: 8 }}
+                    style={{ padding: 8, flex: 1, overflowY: "auto" }}
                     dataSource={metrics.recentActivities}
                     renderItem={(item) => (
                       <List.Item key={item.id} style={{ paddingInline: 12 }}>
@@ -146,13 +370,22 @@ export default function AdminDashboard() {
                             <span>
                               {item.title}{" "}
                               {item.type && (
-                                <Tag color={PINK} style={{ color: "#fff" }}>
+                                <Tag
+                                  color={BRAND.pink}
+                                  style={{ color: "#fff" }}
+                                >
                                   {item.type}
                                 </Tag>
                               )}
                             </span>
                           }
-                          description={new Date(item.createdAt).toLocaleString()}
+                          description={
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              {item.createdAt
+                                ? new Date(item.createdAt).toLocaleString()
+                                : ""}
+                            </Text>
+                          }
                         />
                       </List.Item>
                     )}
@@ -161,8 +394,30 @@ export default function AdminDashboard() {
               </Card>
             </Col>
           </Row>
-        </Content>
-      </Layout>
+        </div>
+      </Content>
+
+      {/* Animations */}
+      <style>{`
+        .fade-in-card {
+          opacity: 0;
+          transform: translateY(30px);
+          animation: fadeUp 0.7s ease forwards;
+        }
+        @keyframes fadeUp {
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .ant-card {
+          transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .ant-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 12px 28px rgba(0,0,0,0.08);
+        }
+      `}</style>
     </Layout>
   );
 }

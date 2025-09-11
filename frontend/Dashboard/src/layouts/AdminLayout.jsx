@@ -16,16 +16,26 @@ export default function AdminLayout() {
   }, [collapsed]);
 
   return (
-    <Layout style={{ minHeight: "100vh" }}>
+    <Layout
+      style={{
+        height: "100vh",          // lock viewport height
+        minHeight: "100dvh",      // mobile safe height
+        width: "100%",
+        overflow: "hidden",       // prevent double scrollbars
+        background: "#fff5f8",    // light pink
+      }}
+      hasSider
+    >
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
-      <Layout style={{ flex: 1, minWidth: 0 }}>
+      <Layout style={{ minWidth: 0, display: "flex", flexDirection: "column" }}>
         <Content
           style={{
-            background: "#fff",
-            overflow: "auto",
             flex: 1,
+            overflow: "auto",      // <-- content scrolls here
+            padding: 0,
           }}
         >
+          {/* Your pages (AdminDashboard, VictimDashboard, etc.) */}
           <Outlet />
         </Content>
       </Layout>

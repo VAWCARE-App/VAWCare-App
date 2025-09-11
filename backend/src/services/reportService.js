@@ -2,92 +2,114 @@ const mongoose = require('mongoose');
 const IncidentReport = require('../models/IncidentReports');
 const Victim = require('../models/Victims');
 
+function normalizeStatus(value) {
+  if (!value) return undefined;
+  const s = String(value).trim().toLowerCase();
+  if (s === 'open') return 'Open';
+  if (s === 'in-progress' || s === 'in progress' || s === 'under investigation') return 'Under Investigation';
+  if (s === 'pending') return 'Pending';
+  if (s === 'resolved' || s === 'closed') return 'Resolved';
+  return undefined;
+}
+
+function normalizeRisk(value) {
+  if (!value) return undefined;
+  const r = String(value).trim().toLowerCase();
+  if (r === 'low') return 'Low';
+  if (r === 'medium') return 'Medium';
+  if (r === 'high') return 'High';
+  return undefined;
+}
+
+async function resolveVictimIdOnPayload(payload) {
+  // If caller provided firebaseUid, resolve to victimID
+  if (payload.firebaseUid) {
+    const v = await Victim.findOne({ firebaseUid: payload.firebaseUid });
+    if (v) payload.victimID = v._id;
+    delete payload.firebaseUid;
+  }
+
+  // If a victimID string like 'VIC001' is provided, resolve it to the Victim._id
+  if (payload.victimID) {
+    if (mongoose.Types.ObjectId.isValid(payload.victimID)) {
+      // already ObjectId string
+    } else {
+      const found = await Victim.findOne({ victimID: payload.victimID });
+      if (!found) {
+        const err = new Error('Provided victimID not found');
+        err.statusCode = 400;
+        throw err;
+      }
+      payload.victimID = found._id;
+    }
+  }
+}
+
 async function createReport(payload) {
-	// If caller provided firebaseUid, resolve to victimID
-	if (payload.firebaseUid) {
-		const v = await Victim.findOne({ firebaseUid: payload.firebaseUid });
-		if (v) payload.victimID = v._id;
-		delete payload.firebaseUid;
-	}
-	// If a victimID string like 'VIC001' is provided, resolve it to the Victim._id
-	if (payload.victimID) {
-		// If it's already a valid ObjectId, keep it
-		if (mongoose.Types.ObjectId.isValid(payload.victimID)) {
-			// nothing to do
-		} else {
-			// Try to find by victimID field (e.g., VIC001)
-			const found = await Victim.findOne({ victimID: payload.victimID });
-			if (!found) {
-				const err = new Error('Provided victimID not found');
-				err.statusCode = 400;
-				throw err;
-			}
-			payload.victimID = found._id;
-		}
-	}
+  await resolveVictimIdOnPayload(payload);
 
-	if (!payload.reportID) payload.reportID = `RPT${Date.now().toString().slice(-6)}`;
+  if (!payload.reportID) {
+    payload.reportID = `RPT${Date.now().toString().slice(-6)}`;
+  }
 
-	const doc = new IncidentReport({
-		reportID: payload.reportID,
-		victimID: payload.victimID,
-		incidentType: payload.incidentType,
-		description: payload.description,
-		location: payload.location,
-		perpetrator: payload.perpetrator,
-		dateReported: payload.dateReported || Date.now(),
-		status: payload.status || 'Pending',
-		assignedOfficer: payload.assignedOfficer || 'Vangelyn V. Alcantara',
-		riskLevel: payload.riskLevel || 'Low'
-	});
+  const doc = new IncidentReport({
+    reportID: payload.reportID,
+    victimID: payload.victimID,
+    incidentType: payload.incidentType,
+    description: payload.description,
+    location: payload.location,
+    perpetrator: payload.perpetrator,
+    dateReported: payload.dateReported || Date.now(),
+    status: normalizeStatus(payload.status) || 'Pending',
+    assignedOfficer: payload.assignedOfficer || 'Unassigned',
+    riskLevel: normalizeRisk(payload.riskLevel) || 'Low',
+  });
 
-	await doc.save();
-	return doc;
+  await doc.save();
+  // Only populate victim (do NOT try to populate a string)
+  return doc.populate('victimID');
 }
 
 async function getReportById(id) {
-	// Exclude victim.location to avoid leaking lat/lng in API responses
-	return IncidentReport.findOne({ reportID: id }).populate('victimID', '-location');
+  const query = mongoose.Types.ObjectId.isValid(id)
+    ? { $or: [{ reportID: id }, { _id: id }] }
+    : { reportID: id };
+
+  return IncidentReport.findOne(query).populate('victimID', '-location');
 }
 
 async function listReports(filters = {}) {
-	// If no filters provided, return all reports
-	const query = {};
-	if (filters.status) query.status = filters.status;
-	if (filters.riskLevel) query.riskLevel = filters.riskLevel;
-	if (filters.victimID) query.victimID = filters.victimID;
+  const query = {};
+  if (filters.status) query.status = normalizeStatus(filters.status) || filters.status;
+  if (filters.riskLevel) query.riskLevel = normalizeRisk(filters.riskLevel) || filters.riskLevel;
+  if (filters.victimID) query.victimID = filters.victimID;
 
-	// Exclude victim.location when returning list of reports
-	return IncidentReport.find(query).sort({ dateReported: -1 }).populate('victimID', '-location');
+  return IncidentReport.find(query)
+    .sort({ dateReported: -1 })
+    .populate('victimID', '-location');
 }
 
 async function updateReport(id, updates) {
-	const report = await IncidentReport.findOne({ reportID: id });
-	if (!report) return null;
+  const findQuery = mongoose.Types.ObjectId.isValid(id)
+    ? { $or: [{ reportID: id }, { _id: id }] }
+    : { reportID: id };
 
-	// Normalize common frontend values to backend enum values
-	if (updates.status && typeof updates.status === 'string') {
-		const s = updates.status.trim().toLowerCase();
-		if (s === 'open') updates.status = 'Open';
-		else if (s === 'in-progress' || s === 'in progress' || s === 'under investigation') updates.status = 'Under Investigation';
-		else if (s === 'pending') updates.status = 'Pending';
-		else if (s === 'resolved' || s === 'closed') updates.status = 'Resolved';
-	}
+  const report = await IncidentReport.findOne(findQuery);
+  if (!report) return null;
 
-	if (updates.riskLevel && typeof updates.riskLevel === 'string') {
-		const r = updates.riskLevel.trim().toLowerCase();
-		if (r === 'low') updates.riskLevel = 'Low';
-		else if (r === 'medium') updates.riskLevel = 'Medium';
-		else if (r === 'high') updates.riskLevel = 'High';
-	}
+  const normalized = { ...updates };
+  const ns = normalizeStatus(updates.status);
+  const nr = normalizeRisk(updates.riskLevel);
+  if (ns) normalized.status = ns;
+  if (nr) normalized.riskLevel = nr;
 
-	const allowed = ['status', 'assignedOfficer', 'riskLevel', 'description', 'location', 'perpetrator'];
-	allowed.forEach((k) => {
-		if (updates[k] !== undefined) report[k] = updates[k];
-	});
+  const allowed = ['status', 'assignedOfficer', 'riskLevel', 'description', 'location', 'perpetrator'];
+  allowed.forEach((k) => {
+    if (normalized[k] !== undefined) report[k] = normalized[k];
+  });
 
-	await report.save();
-	return report;
+  await report.save();
+  return report.populate('victimID', '-location');
 }
 
 module.exports = { createReport, getReportById, listReports, updateReport };

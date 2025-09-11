@@ -1,5 +1,5 @@
-import React from "react";
-import { Layout, Menu, Button, Typography } from "antd";
+import React, { useMemo } from "react";
+import { Layout, Menu, Button, Typography, Avatar, Badge, Divider } from "antd";
 import {
   DashboardOutlined,
   FileTextOutlined,
@@ -11,10 +11,15 @@ import {
   RobotOutlined,
   AlertOutlined,
   HomeOutlined,
+  ExclamationCircleOutlined,
+  FileAddOutlined,
+  UserSwitchOutlined,
+  MessageOutlined,
+  InfoCircleOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { clearToken } from "../lib/api";
-import logo from '../assets/logo1.png';
+import logo from "../assets/logo1.png";
 
 const { Sider } = Layout;
 const { Text } = Typography;
@@ -23,104 +28,58 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const BRAND = {
+    primary: "#e91e63",
+    primarySoft: "#ffd1dc",
+    bgGrad: "linear-gradient(180deg, #ffffff 0%, #fff5f8 60%, #ffe6ef 100%)",
+    border: "#ffd1dc",
+    muted: "#7a7a7a",
+  };
+
   const handleLogout = () => {
     clearToken();
-    localStorage.removeItem('user');
-    localStorage.removeItem('userType');
+    localStorage.removeItem("user");
+    localStorage.removeItem("userType");
     navigate("/login");
   };
 
-  // Get current user info
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-  const userType = localStorage.getItem('userType') || 'victim';
+  const currentUser = useMemo(
+    () => JSON.parse(localStorage.getItem("user") || "{}"),
+    []
+  );
+  const userType = localStorage.getItem("userType") || "victim";
+  const initials = useMemo(() => {
+    const a = (currentUser.firstName || "").charAt(0);
+    const b = (currentUser.lastName || "").charAt(0);
+    return (a + b || "U").toUpperCase();
+  }, [currentUser]);
 
-  // Menu items for different user types
+  // MENU SETS
   const adminMenu = [
-    {
-      key: '/dashboard',
-      icon: <DashboardOutlined />,
-      label: 'Dashboard',
-    },
-    {
-      key: '/users',
-      icon: <TeamOutlined />,
-      label: 'User Management',
-    },
-    {
-      key: '/reports',
-      icon: <FileTextOutlined />,
-      label: 'Reports',
-    },
-    {
-      key: '/cases',
-      icon: <TeamOutlined />,
-      label: 'Cases',
-    },
-    {
-      key: '/settings',
-      icon: <SettingOutlined />,
-      label: 'Settings',
-    },
+    { key: "/dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
+    { key: "/users", icon: <TeamOutlined />, label: "User Management" },
+    { key: "/reports", icon: <FileTextOutlined />, label: "Reports" },
+    { key: "/cases", icon: <TeamOutlined />, label: "Cases" },
+    { key: "/settings", icon: <SettingOutlined />, label: "Settings" },
   ];
 
   const officialMenu = [
-    {
-      key: '/official-dashboard',
-      icon: <DashboardOutlined />,
-      label: 'Dashboard',
-    },
-    {
-      key: '/official-reports',
-      icon: <FileTextOutlined />,
-      label: 'Reports',
-    },
-    {
-      key: '/official-cases',
-      icon: <TeamOutlined />,
-      label: 'Cases',
-    },
-    {
-      key: '/official-settings',
-      icon: <SettingOutlined />,
-      label: 'Settings',
-    },
+    { key: "/official-dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
+    { key: "/reports", icon: <FileTextOutlined />, label: "Reports" },
+    { key: "/official-cases", icon: <TeamOutlined />, label: "Cases" },
+    { key: "/official-settings", icon: <SettingOutlined />, label: "Settings" },
   ];
 
-  // Victim sidebar with extra features
   const victimMenu = [
-    {
-      key: '/dashboard',
-      icon: <DashboardOutlined />,
-      label: 'Dashboard',
-    },
-    {
-      key: '/victim-cases',
-      icon: <TeamOutlined />,
-      label: 'My Cases',
-    },
-    {
-      key: '/victim-chatbot',
-      icon: <RobotOutlined />,
-      label: 'VAWCare Chatbot',
-    },
-    {
-      key: '/victim-emergency',
-      icon: <AlertOutlined />,
-      label: 'Emergency Alert',
-    },
-    {
-      key: '/victim-barangay',
-      icon: <HomeOutlined />,
-      label: 'Barangay Details',
-    },
-    {
-      key: '/victim-settings',
-      icon: <SettingOutlined />,
-      label: 'Settings',
-    },
+    { key: "/victim-test", icon: <DashboardOutlined />, label: "Dashboard" },
+    { key: "/emergency", icon: <ExclamationCircleOutlined />, label: "Emergency Button" },
+    { key: "/report", icon: <FileAddOutlined />, label: "Report-Case" },
+    { key: "/victim-cases", icon: <UserSwitchOutlined />, label: "My Cases" },
+    { key: "/victim-chatbot", icon: <MessageOutlined />, label: "VAWCare Chatbot" },
+    { key: "/victim-barangay", icon: <InfoCircleOutlined />, label: "Barangay Details" },
+    { key: "/victim-settings", icon: <SettingOutlined />, label: "Settings" },
   ];
 
-  // Choose menu based on userType
   let menuItems = adminMenu;
   if (userType === "official") menuItems = officialMenu;
   else if (userType === "victim") menuItems = victimMenu;
@@ -130,79 +89,181 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       trigger={null}
       collapsible
       collapsed={collapsed}
+      width={240}
       style={{
-        background: "#fff",
-        borderRight: "1px solid #ffd1dc",
+        background: BRAND.bgGrad,
+        borderRight: `1px solid ${BRAND.border}`,
         display: "flex",
         flexDirection: "column",
+        position: "relative",
+        zIndex: 10, // stays above content
       }}
+      className="sider-modern"
     >
-      <div style={{
-        padding: collapsed ? "16px 8px" : "16px",
-        borderBottom: "1px solid #ffd1dc",
-        textAlign: "center"
-      }}>
-        <Typography.Title
-          level={collapsed ? 5 : 4}
+      {/* Brand / User card */}
+      <div
+        style={{
+          padding: collapsed ? "14px 10px" : "16px",
+          borderBottom: `1px solid ${BRAND.border}`,
+          display: "grid",
+          gridTemplateColumns: collapsed ? "1fr auto" : "48px 1fr auto",
+          alignItems: "center",
+          gap: 12,
+          backdropFilter: "saturate(140%) blur(8px)",
+        }}
+      >
+        <Avatar
+          src={!collapsed ? logo : undefined}
+          size={collapsed ? 32 : 40}
           style={{
-            margin: 0,
-            color: "#e91e63",
-            fontSize: collapsed ? "14px" : "18px"
+            background: BRAND.primarySoft,
+            color: BRAND.primary,
+            fontWeight: 700,
           }}
         >
-          {collapsed ? <img src={logo} alt="VAWCare Logo" style={{ width: "32px", height: "32px" }} /> : "VAWCare"}
-        </Typography.Title>
-        {!collapsed && currentUser.firstName && (
-          <Text type="secondary" style={{ fontSize: "12px" }}>
-            Welcome, {currentUser.firstName}
-          </Text>
-        )}
-      </div>
+          {collapsed ? (
+            <img alt="VAWCare" src={logo} style={{ width: 22, height: 22 }} />
+          ) : (
+            <img alt="VAWCare" src={logo} style={{ width: 26, height: 26 }} />
+          )}
+        </Avatar>
 
-      <div style={{ padding: "8px 8px" }}>
+        {!collapsed && (
+          <div style={{ lineHeight: 1 }}>
+            <Text style={{ color: BRAND.primary, fontWeight: 800 }}>VAWCare</Text>
+            <div style={{ marginTop: 2 }}>
+              <Badge color={BRAND.primary} dot style={{ marginRight: 6 }} />
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {currentUser.firstName ? `Hi, ${currentUser.firstName}` : "Welcome"}
+              </Text>
+            </div>
+          </div>
+        )}
+
         <Button
+          size="small"
           type="text"
-          icon={collapsed ? <MenuUnfoldOutlined /> :  <MenuFoldOutlined />}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
           onClick={() => setCollapsed(!collapsed)}
           style={{
-            fontSize: "16px",
-            width: '100%',
-            height: 32,
-            color: "#e91e63"
+            color: BRAND.primary,
+            borderRadius: 8,
           }}
         />
       </div>
 
-      <Menu
-        mode="inline"
-        selectedKeys={[location.pathname]}
-        style={{
-          border: "none",
-          marginTop: "48px" // Account for the toggle button
-        }}
-        items={menuItems}
-        onClick={({ key }) => navigate(key)}
-      />
+      {/* Menu */}
+      <div style={{ padding: collapsed ? "8px 6px" : "12px 12px", flex: 1 }}>
+        <Menu
+          mode="inline"
+          selectedKeys={[location.pathname]}
+          onClick={({ key }) => navigate(key)}
+          items={menuItems}
+          style={{
+            border: "none",
+            background: "transparent",
+          }}
+          className="menu-modern"
+        />
+      </div>
 
-      <div style={{
-        position: "absolute",
-        bottom: 16,
-        left: collapsed ? 8 : 16,
-        right: collapsed ? 8 : 16
-      }}>
+      {/* Footer / Logout */}
+      <div
+        style={{
+          borderTop: `1px solid ${BRAND.border}`,
+          padding: collapsed ? 8 : 12,
+        }}
+      >
+        {!collapsed && (
+          <>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "8px 10px",
+                background: "#ffffffa6",
+                border: `1px solid ${BRAND.border}`,
+                borderRadius: 12,
+              }}
+            >
+              <Avatar
+                style={{ background: BRAND.primary, fontWeight: 700 }}
+                size={28}
+              >
+                {initials}
+              </Avatar>
+              <div style={{ lineHeight: 1 }}>
+                <Text strong style={{ fontSize: 12 }}>
+                  {currentUser.firstName
+                    ? `${currentUser.firstName} ${currentUser.lastName || ""}`
+                    : "User"}
+                </Text>
+                <div>
+                  <Text type="secondary" style={{ fontSize: 11 }}>
+                    {userType.charAt(0).toUpperCase() + userType.slice(1)}
+                  </Text>
+                </div>
+              </div>
+            </div>
+            <Divider style={{ margin: "10px 0" }} />
+          </>
+        )}
+
         <Button
-          type="text"
           icon={<LogoutOutlined />}
           onClick={handleLogout}
+          block
           style={{
-            width: "100%",
-            color: "#e91e63",
-            border: "1px solid #ffd1dc",
+            color: BRAND.primary,
+            border: `1px solid ${BRAND.border}`,
+            background: "#fff",
+            borderRadius: 10,
+            height: 38,
+            fontWeight: 600,
           }}
         >
           {!collapsed && "Logout"}
         </Button>
       </div>
+
+      {/* Scoped styles to polish look */}
+      <style>
+        {`
+          .sider-modern .ant-menu-item {
+            margin: 6px 6px;
+            height: 40px;
+            line-height: 40px;
+            border-radius: 12px;
+            color: #444;
+            font-weight: 500;
+          }
+          .sider-modern .ant-menu-item .anticon {
+            font-size: 16px;
+          }
+          .sider-modern .ant-menu-item:hover {
+            background: #fff;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+            color: ${BRAND.primary};
+          }
+          .sider-modern .ant-menu-item-selected {
+            background: #fff;
+            color: ${BRAND.primary};
+            box-shadow: 0 10px 24px rgba(233,30,99,0.12);
+            border: 1px solid ${BRAND.border};
+          }
+          .sider-modern .ant-menu-item-selected .anticon {
+            color: ${BRAND.primary};
+          }
+          .sider-modern .ant-menu {
+            background: transparent !important;
+          }
+          .sider-modern .ant-menu-item::after {
+            display: none !important; /* remove default left bar */
+          }
+        `}
+      </style>
     </Sider>
   );
 }

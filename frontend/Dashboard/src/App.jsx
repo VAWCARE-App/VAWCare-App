@@ -11,6 +11,8 @@ import VictimDashboard from "./pages/Dashboards/VictimDashboard";
 import OfficialDashboard from "./pages/Dashboards/OfficialDashboard";
 import Test from "./pages/Test";
 import { isAuthed, clearToken } from "./lib/api";
+import ReportCase from "./pages/Victim/Report";
+import EmergencyButton from "./pages/Victim/EmergencyButton";
 
 function Protected({ children }) {
   return isAuthed() ? children : <Navigate to="/login" replace />;
@@ -32,6 +34,9 @@ export default function App() {
               <Route path="official-dashboard" element={<Protected><OfficialDashboard /></Protected>} />
               <Route path="users" element={<Protected><UserManagement /></Protected>} />
               <Route path="reports" element={<Protected><ReportManagement /></Protected>} />
+              <Route path="report" element={<Protected><ReportCase /></Protected>} />
+              <Route path="emergency" element={<Protected><EmergencyButton /></Protected>} />
+              
             </Route>
           
             <Route path="*" element={<Navigate to="/" replace />} />

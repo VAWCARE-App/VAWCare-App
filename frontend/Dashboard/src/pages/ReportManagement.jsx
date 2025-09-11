@@ -152,21 +152,35 @@ export default function ReportManagement() {
   }, [allReports, searchText, filterType]);
 
   const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
-      case "open": return "orange";
-      case "in-progress": return "blue";
-      case "resolved": return "green";
-      case "closed": return "red";
-      default: return "default";
+    const s = (status || '').toLowerCase();
+    switch (s) {
+      case 'open':
+        return 'orange';
+      case 'in-progress':
+      case 'under investigation':
+        return 'blue';
+      case 'resolved':
+        return 'green';
+      case 'closed':
+        return 'red';
+    case 'pending':
+      return 'default';
+      default:
+        return 'default';
     }
   };
 
   const getRiskColor = (level) => {
-    switch (level.toLowerCase()) {
-      case "low": return "green";
-      case "medium": return "orange";
-      case "high": return "red";
-      default: return "default";
+    const l = (level || '').toLowerCase();
+    switch (l) {
+      case 'low':
+        return 'green';
+      case 'medium':
+        return 'orange';
+      case 'high':
+        return 'red';
+      default:
+        return 'default';
     }
   };
 
@@ -240,9 +254,12 @@ export default function ReportManagement() {
 
   const reportCounts = {
     total: allReports.length,
-    open: allReports.filter((r) => r.status === "open").length,
-    inProgress: allReports.filter((r) => r.status === "in-progress").length,
-    resolved: allReports.filter((r) => r.status === "resolved").length,
+    open: allReports.filter((r) => (r.status || '').toLowerCase() === "open").length,
+    inProgress: allReports.filter((r) => {
+      const s = (r.status || '').toLowerCase();
+      return s === 'under investigation' || s === 'in-progress';
+    }).length,
+    resolved: allReports.filter((r) => (r.status || '').toLowerCase() === "resolved").length,
   };
 
   return (
@@ -326,10 +343,10 @@ export default function ReportManagement() {
                 style={{ width: 150 }}
               >
                 <Option value="all">All Status</Option>
-                <Option value="open">Open</Option>
-                <Option value="in-progress">In-Progress</Option>
-                <Option value="resolved">Resolved</Option>
-                <Option value="closed">Closed</Option>
+                <Option value="Open">Open</Option>
+                <Option value="Under Investigation">In-Progress</Option>
+                <Option value="Resolved">Resolved</Option>
+                <Option value="Closed">Closed</Option>
               </Select>
             </Space>
           }
@@ -397,24 +414,29 @@ export default function ReportManagement() {
               <Form.Item name="description" label="Description" style={{ marginBottom: 12 }}>
                 <Input.TextArea rows={3} disabled={isViewMode} />
               </Form.Item>
+              <Form.Item name="perpetrator" label="Perpetrator" style={{ marginBottom: 12 }}>
+                <Input disabled={isViewMode} />
+              </Form.Item>
               <Form.Item name="assignedOfficer" label="Assigned Officer" style={{ marginBottom: 12 }}>
                 <Input disabled={isViewMode} />
               </Form.Item>
               <Form.Item name="riskLevel" label="Risk Level" style={{ marginBottom: 12 }}>
                 <Select disabled={isViewMode}>
-                  <Option value="low">Low</Option>
-                  <Option value="medium">Medium</Option>
-                  <Option value="high">High</Option>
+                  <Option value="Low">Low</Option>
+                  <Option value="Medium">Medium</Option>
+                  <Option value="High">High</Option>
                 </Select>
               </Form.Item>
               <Form.Item name="status" label="Status" style={{ marginBottom: 12 }}>
                 <Select disabled={isViewMode}>
-                  <Option value="open">Open</Option>
-                  <Option value="in-progress">In-Progress</Option>
-                  <Option value="resolved">Resolved</Option>
-                  <Option value="closed">Closed</Option>
+                  <Option value="Pending">Pending</Option>
+                  <Option value="Open">Open</Option>
+                  <Option value="Under Investigation">In-Progress</Option>
+                  <Option value="Resolved">Resolved</Option>
+                  <Option value="Closed">Closed</Option>
                 </Select>
               </Form.Item>
+              
             </Form>
           </Modal>
         </Card>

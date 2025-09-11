@@ -43,6 +43,13 @@ const options = {
         }
       },
       '/api/reports/{id}': {
+        get: {
+          security: [{ bearerAuth: [] }],
+          tags: ['Reports'],
+          summary: 'Get a single report by reportID',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: { '200': { description: 'Report found', content: { 'application/json': { schema: { $ref: '#/components/schemas/IncidentReport' } } } }, '404': { description: 'Not found' } }
+        },
         put: {
           security: [{ bearerAuth: [] }],
           tags: ['Reports'],

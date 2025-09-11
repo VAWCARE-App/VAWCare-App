@@ -156,7 +156,6 @@ export default function ReportManagement() {
     switch (s) {
       case 'open':
         return 'orange';
-      case 'in-progress':
       case 'under investigation':
         return 'blue';
       case 'resolved':
@@ -307,7 +306,7 @@ export default function ReportManagement() {
           </Col>
           <Col xs={12} md={6}>
             <Card style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}>
-              <Typography.Text type="secondary">In-Progress</Typography.Text>
+              <Typography.Text type="secondary">Under Investigation</Typography.Text>
               <Typography.Title level={2} style={{ margin: 0, color: "blue" }}>
                 {reportCounts.inProgress}
               </Typography.Title>

@@ -12,6 +12,10 @@ router.post('/', reportController.createReport);
 // router.get('/', protect, authorizeRoles(['admin', 'barangay_official']), reportController.listReports);
 router.get('/', reportController.listReports);
 
+// Get single report by reportID (path param 'id').
+// In production this should be protected according to your auth rules.
+router.get('/:id', /* protect, */ reportController.getReport);
+
 // Update report (status, assignedOfficer, risk level) - temporarily unprotected for testing
 // router.put('/:id', protect, reportController.updateReport);
 router.put('/:id', /* protect, */ reportController.updateReport);

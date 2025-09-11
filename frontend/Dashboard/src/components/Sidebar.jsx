@@ -2,13 +2,15 @@ import React from "react";
 import { Layout, Menu, Button, Typography } from "antd";
 import {
   DashboardOutlined,
-  UserOutlined,
-  TeamOutlined,
   FileTextOutlined,
+  TeamOutlined,
   SettingOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  RobotOutlined,
+  AlertOutlined,
+  HomeOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { clearToken } from "../lib/api";
@@ -32,7 +34,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
   const userType = localStorage.getItem('userType') || 'victim';
 
-  const menuItems = [
+  // Menu items for different user types
+  const adminMenu = [
     {
       key: '/dashboard',
       icon: <DashboardOutlined />,
@@ -40,10 +43,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     },
     {
       key: '/users',
-      icon: <UserOutlined />,
+      icon: <TeamOutlined />,
       label: 'User Management',
-      // Only show for admins
-      style: userType !== 'admin' ? { display: 'none' } : {}
     },
     {
       key: '/reports',
@@ -62,7 +63,67 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     },
   ];
 
-  const filteredMenuItems = menuItems.filter(item => !item.style?.display);
+  const officialMenu = [
+    {
+      key: '/official-dashboard',
+      icon: <DashboardOutlined />,
+      label: 'Dashboard',
+    },
+    {
+      key: '/official-reports',
+      icon: <FileTextOutlined />,
+      label: 'Reports',
+    },
+    {
+      key: '/official-cases',
+      icon: <TeamOutlined />,
+      label: 'Cases',
+    },
+    {
+      key: '/official-settings',
+      icon: <SettingOutlined />,
+      label: 'Settings',
+    },
+  ];
+
+  // Victim sidebar with extra features
+  const victimMenu = [
+    {
+      key: '/dashboard',
+      icon: <DashboardOutlined />,
+      label: 'Dashboard',
+    },
+    {
+      key: '/victim-cases',
+      icon: <TeamOutlined />,
+      label: 'My Cases',
+    },
+    {
+      key: '/victim-chatbot',
+      icon: <RobotOutlined />,
+      label: 'VAWCare Chatbot',
+    },
+    {
+      key: '/victim-emergency',
+      icon: <AlertOutlined />,
+      label: 'Emergency Alert',
+    },
+    {
+      key: '/victim-barangay',
+      icon: <HomeOutlined />,
+      label: 'Barangay Details',
+    },
+    {
+      key: '/victim-settings',
+      icon: <SettingOutlined />,
+      label: 'Settings',
+    },
+  ];
+
+  // Choose menu based on userType
+  let menuItems = adminMenu;
+  if (userType === "official") menuItems = officialMenu;
+  else if (userType === "victim") menuItems = victimMenu;
 
   return (
     <Sider
@@ -74,11 +135,6 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         borderRight: "1px solid #ffd1dc",
         display: "flex",
         flexDirection: "column",
-        position: "sticky",
-        top: 0,
-        height: "100vh",
-        overflow: "auto",
-        zIndex: 10
       }}
     >
       <div style={{
@@ -106,7 +162,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       <div style={{ padding: "8px 8px" }}>
         <Button
           type="text"
-          icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+          icon={collapsed ? <MenuUnfoldOutlined /> :  <MenuFoldOutlined />}
           onClick={() => setCollapsed(!collapsed)}
           style={{
             fontSize: "16px",
@@ -117,39 +173,36 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         />
       </div>
 
-    <Menu
-    mode="inline"
-    selectedKeys={[location.pathname]}
-    style={{
-      border: "none",
-      marginTop: "48px",
-      flex: 1, // 👈 allow menu to expand and push logout down
-      overflowY: "auto", // 👈 scroll if too many items
-    }}
-    items={filteredMenuItems}
-    onClick={({ key }) => navigate(key)}
-  />
+      <Menu
+        mode="inline"
+        selectedKeys={[location.pathname]}
+        style={{
+          border: "none",
+          marginTop: "48px" // Account for the toggle button
+        }}
+        items={menuItems}
+        onClick={({ key }) => navigate(key)}
+      />
 
-  {/* Logout pinned at bottom */}
-  <div
-    style={{
-      padding: "16px 8px",
-      borderTop: "1px solid #ffd1dc",
-    }}
-  >
-    <Button
-      type="text"
-      icon={<LogoutOutlined />}
-      onClick={handleLogout}
-      style={{
-        width: "100%",
-        color: "#e91e63",
-        border: "1px solid #ffd1dc",
-      }}
-    >
-      {!collapsed && "Logout"}
-    </Button>
-  </div>
+      <div style={{
+        position: "absolute",
+        bottom: 16,
+        left: collapsed ? 8 : 16,
+        right: collapsed ? 8 : 16
+      }}>
+        <Button
+          type="text"
+          icon={<LogoutOutlined />}
+          onClick={handleLogout}
+          style={{
+            width: "100%",
+            color: "#e91e63",
+            border: "1px solid #ffd1dc",
+          }}
+        >
+          {!collapsed && "Logout"}
+        </Button>
+      </div>
     </Sider>
   );
 }

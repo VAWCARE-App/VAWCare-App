@@ -63,6 +63,22 @@ async function updateReport(id, updates) {
 	const report = await IncidentReport.findOne({ reportID: id });
 	if (!report) return null;
 
+	// Normalize common frontend values to backend enum values
+	if (updates.status && typeof updates.status === 'string') {
+		const s = updates.status.trim().toLowerCase();
+		if (s === 'open') updates.status = 'Open';
+		else if (s === 'in-progress' || s === 'in progress' || s === 'under investigation') updates.status = 'Under Investigation';
+		else if (s === 'pending') updates.status = 'Pending';
+		else if (s === 'resolved' || s === 'closed') updates.status = 'Resolved';
+	}
+
+	if (updates.riskLevel && typeof updates.riskLevel === 'string') {
+		const r = updates.riskLevel.trim().toLowerCase();
+		if (r === 'low') updates.riskLevel = 'Low';
+		else if (r === 'medium') updates.riskLevel = 'Medium';
+		else if (r === 'high') updates.riskLevel = 'High';
+	}
+
 	const allowed = ['status', 'assignedOfficer', 'riskLevel', 'description', 'location', 'perpetrator'];
 	allowed.forEach((k) => {
 		if (updates[k] !== undefined) report[k] = updates[k];

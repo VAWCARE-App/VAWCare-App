@@ -16,6 +16,7 @@ import { UserOutlined, SafetyOutlined, TeamOutlined } from "@ant-design/icons";
 import { api, saveToken } from "../lib/api";
 import { useNavigate, Link } from "react-router-dom";
 import logo from "../assets/logo1.svg";
+import Logo from "../assets/logo1.svg?react";
 
 const { Option } = Select;
 
@@ -139,13 +140,20 @@ export default function Login() {
       }
     } catch (err) {
       console.error('Login error:', err);
-      // Show a modal with the server error (prevents page refresh and gives clearer prompt)
-      const msg = err?.response?.data?.message || err.message || "Login failed";
+
+      // Friendly fallback error message
+      const msg = err?.response?.data?.message || "Invalid username or password";
+
+      // Show a toast as fallback (so user gets instant feedback)
+      message.error(msg);
+
+      // Also show modal for clarity
       setErrorModalMessage(msg);
       setErrorModalVisible(true);
     } finally {
       setLoading(false);
     }
+
   };
 
   const currentUserType = getUserTypeInfo(userType);
@@ -173,7 +181,9 @@ export default function Login() {
         bodyStyle={{ padding: 0 }}
       >
         <div style={{ padding: cardPadding }}>
-          <img src={logo} alt="VAWCare Logo" style={{ display: 'block', margin: '0 auto 8px', maxWidth: '75px' }} />
+          <div style={{ textAlign: "center", marginBottom: -20 }}>
+            <Logo style={{ width: "80px", color: currentUserType.color }} />
+          </div>
           <Typography.Title
             level={3}
             style={{
@@ -277,7 +287,7 @@ export default function Login() {
         </div>
         <Modal
           title="Login Error"
-          visible={errorModalVisible}
+          open={errorModalVisible}
           onOk={() => setErrorModalVisible(false)}
           onCancel={() => setErrorModalVisible(false)}
           okText="OK"

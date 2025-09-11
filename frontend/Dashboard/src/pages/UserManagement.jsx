@@ -17,10 +17,10 @@ import {
   Row,
   Col,
 } from "antd";
-import { 
-  UserOutlined, 
-  SafetyOutlined, 
-  TeamOutlined, 
+import {
+  UserOutlined,
+  SafetyOutlined,
+  TeamOutlined,
   SearchOutlined,
   ReloadOutlined,
   EyeOutlined,
@@ -45,17 +45,19 @@ export default function UserManagement() {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [form] = Form.useForm();
+  const currentRole = Form.useWatch("role", form);
+  const isAnonymous = currentRole === "anonymous";
   const [isViewMode, setIsViewMode] = useState(false);
 
   const fetchAllUsers = async () => {
     try {
       setLoading(true);
       const { data } = await api.get("/api/admin/users");
-      
+
       if (data.success) {
         // Combine all user types with proper formatting
         const formattedUsers = [];
-        
+
         // Add admins
         if (data.data.admins) {
           data.data.admins.forEach(admin => {
@@ -77,7 +79,7 @@ export default function UserManagement() {
             });
           });
         }
-        
+
         // Add victims
         if (data.data.victims) {
           data.data.victims.forEach(victim => {
@@ -99,7 +101,7 @@ export default function UserManagement() {
             });
           });
         }
-        
+
         // Add officials
         if (data.data.officials) {
           data.data.officials.forEach(official => {
@@ -121,7 +123,7 @@ export default function UserManagement() {
             });
           });
         }
-        
+
         setAllUsers(formattedUsers);
         setFilteredUsers(formattedUsers);
       }
@@ -172,8 +174,8 @@ export default function UserManagement() {
       role: record.role,
       status: record.status
     });
-  setIsViewMode(false);
-  setEditModalVisible(true);
+    setIsViewMode(false);
+    setEditModalVisible(true);
   };
 
   const handleDeleteUser = async (record) => {
@@ -226,17 +228,23 @@ export default function UserManagement() {
         // victim
         payload = {
           firstName: values.firstName,
-          lastName: values.lastName
+          lastName: values.lastName,
         };
-        if (values.email && values.email.trim() !== '') {
+
+        // Only include email if role is NOT anonymous and email is provided
+        if (values.role !== "anonymous" && values.email && values.email.trim() !== '') {
           payload.victimEmail = values.email;
         }
       }
 
+
       // Remove any undefined or empty string fields to avoid validation failures
       Object.keys(payload).forEach(k => {
-        if (payload[k] === undefined || (typeof payload[k] === 'string' && payload[k].trim() === '')) {
-          delete payload[k];
+        if (
+          payload[k] === undefined ||
+          (typeof payload[k] === 'string' && payload[k].trim() === '')
+        ) {
+          delete payload[k]; // removes email if left blank
         }
       });
 
@@ -263,26 +271,26 @@ export default function UserManagement() {
 
   useEffect(() => {
     let filtered = allUsers;
-    
+
     // Filter by user type
     if (filterType !== 'all') {
       filtered = filtered.filter(user => user.userType === filterType);
     }
-    
+
     // Filter by search text
     if (searchText) {
-      filtered = filtered.filter(user => 
+      filtered = filtered.filter(user =>
         user.name.toLowerCase().includes(searchText.toLowerCase()) ||
         user.email.toLowerCase().includes(searchText.toLowerCase()) ||
         user.username.toLowerCase().includes(searchText.toLowerCase())
       );
     }
-    
+
     setFilteredUsers(filtered);
   }, [allUsers, searchText, filterType]);
 
   const getUserTypeIcon = (type) => {
-    switch(type) {
+    switch (type) {
       case 'admin': return <SafetyOutlined style={{ color: '#1890ff' }} />;
       case 'official': return <TeamOutlined style={{ color: '#52c41a' }} />;
       case 'victim': return <UserOutlined style={{ color: '#e91e63' }} />;
@@ -291,7 +299,7 @@ export default function UserManagement() {
   };
 
   const getUserTypeColor = (type) => {
-    switch(type) {
+    switch (type) {
       case 'admin': return 'blue';
       case 'official': return 'green';
       case 'victim': return 'pink';
@@ -303,7 +311,7 @@ export default function UserManagement() {
     if (userType === 'victim') {
       return status === 'anonymous' ? 'orange' : 'blue';
     }
-    switch(status) {
+    switch (status) {
       case 'approved': return 'green';
       case 'pending': return 'orange';
       case 'rejected': return 'red';
@@ -365,7 +373,7 @@ export default function UserManagement() {
       title: 'Created',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (date) => new Date(date).toLocaleDateString(),
+      render: (date) => new Date(date).toLocaleString(),
     },
     {
       title: 'Actions',
@@ -398,144 +406,147 @@ export default function UserManagement() {
   };
 
   return (
-    <Layout style={{ minHeight: "100vh", background: LIGHT_PINK }}>
-      <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
-      <Layout style={{ minHeight: "100vh", width: "100%", background: LIGHT_PINK }}>
-        <Header
-          style={{
-            background: "#fff",
-            borderBottom: `1px solid ${SOFT_PINK}`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            paddingInline: 16,
-          }}
+    <Layout style={{ minHeight: "100vh", width: "100%", background: LIGHT_PINK }}>
+      <Header
+        style={{
+          background: "#fff",
+          borderBottom: `1px solid ${SOFT_PINK}`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingInline: 16,
+        }}
+      >
+        <Typography.Title level={4} style={{ margin: 0, color: PINK }}>
+          User Management
+        </Typography.Title>
+        <Button
+          onClick={fetchAllUsers}
+          icon={<ReloadOutlined />}
+          style={{ borderColor: PINK, color: PINK }}
         >
-          <Typography.Title level={4} style={{ margin: 0, color: PINK }}>
-            User Management
-          </Typography.Title>
-          <Button
-            onClick={fetchAllUsers}
-            icon={<ReloadOutlined />}
-            style={{ borderColor: PINK, color: PINK }}
-          >
-            Refresh
-          </Button>
-        </Header>
+          Refresh
+        </Button>
+      </Header>
 
-        <Content style={{ padding: 16, overflowX: "hidden" }}>
-          {/* Summary Cards */}
-          <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-            <Col xs={12} md={6}>
-              <Card style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}>
-                <Typography.Text type="secondary">Total Users</Typography.Text>
-                <Typography.Title level={2} style={{ margin: 0, color: PINK }}>
-                  {userCounts.total}
-                </Typography.Title>
-              </Card>
-            </Col>
-            <Col xs={12} md={6}>
-              <Card style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}>
-                <Typography.Text type="secondary">Administrators</Typography.Text>
-                <Typography.Title level={2} style={{ margin: 0, color: '#1890ff' }}>
-                  {userCounts.admins}
-                </Typography.Title>
-              </Card>
-            </Col>
-            <Col xs={12} md={6}>
-              <Card style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}>
-                <Typography.Text type="secondary">Officials</Typography.Text>
-                <Typography.Title level={2} style={{ margin: 0, color: '#52c41a' }}>
-                  {userCounts.officials}
-                </Typography.Title>
-              </Card>
-            </Col>
-            <Col xs={12} md={6}>
-              <Card style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}>
-                <Typography.Text type="secondary">Victims</Typography.Text>
-                <Typography.Title level={2} style={{ margin: 0, color: PINK }}>
-                  {userCounts.victims}
-                </Typography.Title>
-              </Card>
-            </Col>
-          </Row>
+      <Content style={{ padding: 16, overflowX: "hidden" }}>
+        {/* Summary Cards */}
+        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+          <Col xs={12} md={6}>
+            <Card style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}>
+              <Typography.Text type="secondary">Total Users</Typography.Text>
+              <Typography.Title level={2} style={{ margin: 0, color: PINK }}>
+                {userCounts.total}
+              </Typography.Title>
+            </Card>
+          </Col>
+          <Col xs={12} md={6}>
+            <Card style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}>
+              <Typography.Text type="secondary">Administrators</Typography.Text>
+              <Typography.Title level={2} style={{ margin: 0, color: '#1890ff' }}>
+                {userCounts.admins}
+              </Typography.Title>
+            </Card>
+          </Col>
+          <Col xs={12} md={6}>
+            <Card style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}>
+              <Typography.Text type="secondary">Officials</Typography.Text>
+              <Typography.Title level={2} style={{ margin: 0, color: '#52c41a' }}>
+                {userCounts.officials}
+              </Typography.Title>
+            </Card>
+          </Col>
+          <Col xs={12} md={6}>
+            <Card style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}>
+              <Typography.Text type="secondary">Victims</Typography.Text>
+              <Typography.Title level={2} style={{ margin: 0, color: PINK }}>
+                {userCounts.victims}
+              </Typography.Title>
+            </Card>
+          </Col>
+        </Row>
 
-          {/* Users Table */}
-          <Card
-            title="All Users"
-            style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}
-            extra={
-              <Space>
-                <Search
-                  placeholder="Search users..."
-                  allowClear
-                  enterButton={<SearchOutlined />}
-                  style={{ width: 250 }}
-                  onSearch={setSearchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                />
-                <Select
-                  value={filterType}
-                  onChange={setFilterType}
-                  style={{ width: 150 }}
-                >
-                  <Option value="all">All Types</Option>
-                  <Option value="admin">Administrators</Option>
-                  <Option value="official">Officials</Option>
-                  <Option value="victim">Victims</Option>
-                </Select>
-              </Space>
-            }
+        {/* Users Table */}
+        <Card
+          title="All Users"
+          style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}
+          extra={
+            <Space>
+              <Search
+                placeholder="Search users..."
+                allowClear
+                enterButton={<SearchOutlined />}
+                style={{ width: 250 }}
+                onSearch={setSearchText}
+                onChange={(e) => setSearchText(e.target.value)}
+              />
+              <Select
+                value={filterType}
+                onChange={setFilterType}
+                style={{ width: 150 }}
+              >
+                <Option value="all">All Types</Option>
+                <Option value="admin">Administrators</Option>
+                <Option value="official">Officials</Option>
+                <Option value="victim">Victims</Option>
+              </Select>
+            </Space>
+          }
+        >
+          <Table
+            columns={columns}
+            dataSource={filteredUsers}
+            loading={loading}
+            // Keep table area fixed: show 6 rows per page and allow vertical scrolling
+            pagination={{
+              pageSize: 6,
+              showSizeChanger: false,
+              showQuickJumper: true,
+              showTotal: (total, range) =>
+                `${range[0]}-${range[1]} of ${total} users`,
+            }}
+            // Set a fixed vertical height for the table body so it doesn't extend the page
+            scroll={{ x: "max-content", y: 480 }}
+          />
+          <Modal
+            title={editingUser ? `${isViewMode ? 'View' : 'Edit'} ${editingUser.userType} - ${editingUser.name}` : 'Edit User'}
+            open={editModalVisible}
+            onCancel={() => { setEditModalVisible(false); setEditingUser(null); setIsViewMode(false); }}
+            footer={isViewMode ? [
+              <Button key="close" onClick={() => { setEditModalVisible(false); setEditingUser(null); setIsViewMode(false); }}>Close</Button>
+            ] : undefined}
+            okText="Save"
+            onOk={() => { form.validateFields().then(vals => handleUpdateUser(vals)); }}
           >
-            <Table
-              columns={columns}
-              dataSource={filteredUsers}
-              loading={loading}
-              // Keep table area fixed: show 6 rows per page and allow vertical scrolling
-              pagination={{
-                pageSize: 6,
-                showSizeChanger: false,
-                showQuickJumper: true,
-                showTotal: (total, range) => 
-                  `${range[0]}-${range[1]} of ${total} users`,
-              }}
-              // Set a fixed vertical height for the table body so it doesn't extend the page
-              scroll={{ x: "max-content", y: 480 }}
-            />
-            <Modal
-              title={editingUser ? `${isViewMode ? 'View' : 'Edit'} ${editingUser.userType} - ${editingUser.name}` : 'Edit User'}
-              open={editModalVisible}
-              onCancel={() => { setEditModalVisible(false); setEditingUser(null); setIsViewMode(false); }}
-              footer={isViewMode ? [
-                <Button key="close" onClick={() => { setEditModalVisible(false); setEditingUser(null); setIsViewMode(false); }}>Close</Button>
-              ] : undefined}
-              okText="Save"
-              onOk={() => { form.validateFields().then(vals => handleUpdateUser(vals)); }}
+            <Form
+              form={form}
+              layout="horizontal"
+              labelCol={{ flex: "120px" }}
+              wrapperCol={{ flex: 1 }}
+              labelAlign="left"
             >
-              <Form form={form} layout="vertical">
-                <Form.Item name="firstName" label="First name" rules={[{ required: true }]}>
-                  <Input disabled={isViewMode} />
-                </Form.Item>
-                <Form.Item name="lastName" label="Last name" rules={[{ required: true }]}>
-                  <Input disabled={isViewMode} />
-                </Form.Item>
-                <Form.Item name="email" label="Email">
-                  <Input disabled={isViewMode} />
-                </Form.Item>
-                <Form.Item name="role" label="Role/Position">
-                  <Input disabled={isViewMode} />
-                </Form.Item>
-                <Form.Item name="status" label="Status">
-                  <Select disabled={isViewMode}>
-                    <Option value="approved">Approved</Option>
-                    <Option value="pending">Pending</Option>
-                  </Select>
-                </Form.Item>
-              </Form>
-            </Modal>
-          </Card>
-        </Content>
-      </Layout>
+              <Form.Item name="firstName" label="First name" rules={[{ required: true }]} style={{ marginBottom: 12, marginTop: 20 }} >
+                <Input disabled={isViewMode || isAnonymous} />
+              </Form.Item>
+              <Form.Item name="lastName" label="Last name" rules={[{ required: true }]} style={{ marginBottom: 12 }}>
+                <Input disabled={isViewMode || isAnonymous} />
+              </Form.Item>
+              <Form.Item name="email" label="Email address" style={{ marginBottom: 12 }}>
+                <Input disabled={isViewMode || isAnonymous} />
+              </Form.Item>
+              <Form.Item name="role" label="Role/Position" style={{ marginBottom: 12 }}>
+                <Input disabled={isViewMode} />
+              </Form.Item>
+              <Form.Item name="status" label="Status" style={{ marginBottom: 12 }}>
+                <Select disabled={isViewMode}>
+                  <Option value="approved">Approved</Option>
+                  <Option value="pending">Pending</Option>
+                </Select>
+              </Form.Item>
+            </Form>
+          </Modal>
+        </Card>
+      </Content>
     </Layout>
   );
 }

@@ -12,7 +12,7 @@ import {
   Button,
 } from "antd";
 import { api, clearToken } from "../../lib/api";
-import Sidebar from "../../components/Sidebar";
+// import Sidebar from "../../components/Sidebar";
 import { useNavigate } from "react-router-dom";
 
 const { Header, Content } = Layout;
@@ -65,7 +65,7 @@ export default function OfficialDashboard() {
 
   return (
     <Layout style={{ minHeight: "100vh",width:"100vw", background: LIGHT_PINK }}>
-      <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
+    
       <Layout>
         <Header
           style={{

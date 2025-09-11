@@ -57,7 +57,6 @@ export default function AdminDashboard() {
 
   return (
     <Layout style={{ minHeight: "100vh", width: "100vw", background: LIGHT_PINK }}>
-      <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
       <Layout>
         <Header
           style={{

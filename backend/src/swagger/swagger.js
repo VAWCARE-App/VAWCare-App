@@ -74,7 +74,7 @@ const options = {
           description: 'Create a new incident report. Do not include reportID — the server generates it automatically.',
           properties: {
             victimID: { type: 'string', description: 'Victim object id (required if not authenticated)' },
-            incidentType: { type: 'string', enum: ['Physical', 'Sexual', 'Psychological'] },
+            incidentType: { type: 'string', enum: ['Physical', 'Sexual', 'Psychological', 'Economic'] },
             description: { type: 'string' },
             location: { type: 'string' },
             dateReported: { type: 'string', format: 'date-time' },

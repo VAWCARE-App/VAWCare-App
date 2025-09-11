@@ -50,20 +50,31 @@ export default function ReportManagement() {
       const { data } = await api.get("/api/reports");
 
       if (data.success) {
-        const formattedReports = data.data.map((r) => ({
-          key: r.reportID,
-          reportID: r.reportID,
-          victimID: r.victimID,
-          incidentType: r.incidentType,
-          description: r.description,
-          location: r.location,
-          dateReported: r.dateReported,
-          status: r.status,
-          assignedOfficer: r.assignedOfficer,
-          riskLevel: r.riskLevel,
-          createdAt: r.createdAt,
-          updatedAt: r.updatedAt,
-        }));
+        const formattedReports = data.data.map((r) => {
+          // Strip out victim.location to avoid exposing lat/lng in the frontend mapping
+          let victim = null;
+          if (r.victimID) {
+            // copy all victim fields except `location`
+            const { location, ...victimNoLocation } = r.victimID;
+            victim = victimNoLocation;
+          }
+
+          return {
+            key: r.reportID,
+            reportID: r.reportID,
+            victimID: victim,
+            incidentType: r.incidentType,
+            description: r.description,
+            perpetrator: r.perpetrator,
+            location: r.location,
+            dateReported: r.dateReported,
+            status: r.status,
+            assignedOfficer: r.assignedOfficer,
+            riskLevel: r.riskLevel,
+            createdAt: r.createdAt,
+            updatedAt: r.updatedAt,
+          };
+        });
 
         setAllReports(formattedReports);
         setFilteredReports(formattedReports);
@@ -88,10 +99,12 @@ export default function ReportManagement() {
   };
 
   const handleEditReport = (record) => {
-    setEditingReport(record);
-    form.setFieldsValue(record);
-    setIsViewMode(false);
-    setEditModalVisible(true);
+  // Ensure perpetrator is always present in the form
+  const patchedRecord = { ...record, perpetrator: record.perpetrator || '' };
+  setEditingReport(patchedRecord);
+  form.setFieldsValue(patchedRecord);
+  setIsViewMode(false);
+  setEditModalVisible(true);
   };
 
   const handleDeleteReport = async (record) => {
@@ -115,7 +128,9 @@ export default function ReportManagement() {
   const handleUpdateReport = async (values) => {
     try {
       setLoading(true);
-      const res = await api.put(`/api/reports/${editingReport.reportID}`, values);
+      // Always send perpetrator, even if empty
+      const payload = { ...values, perpetrator: values.perpetrator || '' };
+      const res = await api.put(`/api/reports/${editingReport.reportID}`, payload);
       if (res?.data?.success) {
         message.success("Report updated");
         setEditModalVisible(false);

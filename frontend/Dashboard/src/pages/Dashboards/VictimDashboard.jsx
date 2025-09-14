@@ -5,7 +5,6 @@ import {
   Row,
   Typography,
   Skeleton,
-  List,
   Tag,
   Layout,
   Grid,
@@ -14,13 +13,18 @@ import {
   Space,
   Statistic,
   Progress,
+  List,
 } from "antd";
 import {
-  WarningOutlined,
-  FileAddOutlined,
   FileTextOutlined,
   ReloadOutlined,
   SafetyCertificateOutlined,
+  MessageOutlined,
+  FileAddOutlined,
+  WarningOutlined,
+  LogoutOutlined,
+  PhoneOutlined,
+  InfoCircleOutlined,
 } from "@ant-design/icons";
 import { api, clearToken } from "../../lib/api";
 import { useNavigate } from "react-router-dom";
@@ -34,11 +38,15 @@ export default function VictimDashboard() {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [resourcesLoading, setResourcesLoading] = useState(false);
+
   const [metrics, setMetrics] = useState({
     totalReports: 0,
     openCases: 0,
     recentActivities: [],
   });
+
+  const [resources, setResources] = useState([]);
 
   const BRAND = {
     pink: "#e91e63",
@@ -46,7 +54,8 @@ export default function VictimDashboard() {
     soft: "#ffd1dc",
   };
 
-  const donutSize = screens.xxl ? 220 : screens.xl ? 200 : screens.lg ? 180 : screens.md ? 160 : 140;
+  const donutSize =
+    screens.xxl ? 220 : screens.xl ? 200 : screens.lg ? 180 : screens.md ? 160 : 140;
 
   const openPercent = useMemo(() => {
     const total = Math.max(metrics.totalReports, 1);
@@ -63,20 +72,74 @@ export default function VictimDashboard() {
         recentActivities: Array.isArray(data?.recentActivities) ? data.recentActivities : [],
       });
     } catch {
-      // optional: toast
+      // optional toast
     } finally {
       if (withSpinner) setLoading(false);
     }
   };
 
+  // Optional: fetch safety tips/resources from backend; fall back to defaults
+  const fetchResources = async () => {
+    setResourcesLoading(true);
+    try {
+      const { data } = await api.get("/api/resources"); // if your backend has this
+      const list = Array.isArray(data?.data) ? data.data : [];
+      if (list.length) {
+        setResources(
+          list.map((r, i) => ({
+            key: r.id || i,
+            title: r.title || "Resource",
+            desc: r.description || "",
+            action: r.action || null,
+          }))
+        );
+      } else {
+        setResources(defaultResources());
+      }
+    } catch {
+      setResources(defaultResources());
+    } finally {
+      setResourcesLoading(false);
+    }
+  };
+
+  const defaultResources = () => [
+    {
+      key: "r1",
+      title: "If you’re in immediate danger",
+      desc: "Use the Emergency Button or call your local hotline immediately.",
+      action: { label: "Open Emergency Button", onClick: () => navigate("/emergency"), icon: <PhoneOutlined /> },
+    },
+    {
+      key: "r2",
+      title: "Document safely",
+      desc: "Write what happened, where and when. Only if it’s safe to do so.",
+      action: { label: "File a Report", onClick: () => navigate("/report"), icon: <FileAddOutlined /> },
+    },
+    {
+      key: "r3",
+      title: "Reach out",
+      desc: "Consider a trusted person or barangay desk for support and guidance.",
+      action: { label: "Barangay Details", onClick: () => navigate("/victim-barangay"), icon: <InfoCircleOutlined /> },
+    },
+    {
+      key: "r4",
+      title: "Chat with the assistant",
+      desc: "Ask how to file reports, track cases, or where to get support.",
+      action: { label: "Open AI Chatbot", onClick: () => navigate("/victim-chatbot"), icon: <MessageOutlined /> },
+    },
+  ];
+
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchMetrics(false);
+    await Promise.all([fetchMetrics(false), fetchResources()]);
     setRefreshing(false);
   };
 
   useEffect(() => {
     fetchMetrics(true);
+    fetchResources();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleLogout = () => {
@@ -118,19 +181,24 @@ export default function VictimDashboard() {
         >
           {icon}
         </div>
-        <Text type="secondary" style={{ fontSize: 13 }}>{label}</Text>
+        <Text type="secondary" style={{ fontSize: 13 }}>
+          {label}
+        </Text>
       </Space>
       {loading ? (
         <Skeleton.Input active size="small" style={{ width: 90 }} />
       ) : (
-        <Statistic value={value} valueStyle={{ color: BRAND.pink, fontSize: "clamp(20px,3.4vw,28px)" }} />
+        <Statistic
+          value={value}
+          valueStyle={{ color: BRAND.pink, fontSize: "clamp(20px,3.4vw,28px)" }}
+        />
       )}
     </Card>
   );
 
   return (
     <Layout style={{ minHeight: "100vh", width: "100%", background: BRAND.light }}>
-      {/* Sticky, compact header */}
+      {/* Header with Refresh + Logout */}
       <Header
         style={{
           position: "sticky",
@@ -166,7 +234,14 @@ export default function VictimDashboard() {
           >
             Refresh
           </Button>
-          
+          <Button
+            icon={<LogoutOutlined />}
+            onClick={handleLogout}
+            size={screens.md ? "middle" : "small"}
+            style={{ borderColor: BRAND.pink, color: BRAND.pink }}
+          >
+            Logout
+          </Button>
         </Space>
       </Header>
 
@@ -200,7 +275,7 @@ export default function VictimDashboard() {
               />
             </Col>
 
-            {/* Status donut */}
+            {/* Donut */}
             <Col xs={24} lg={8}>
               <Card
                 className="fade-in-card"
@@ -230,8 +305,8 @@ export default function VictimDashboard() {
                       <Tag color={BRAND.pink} style={{ color: "#fff", borderColor: BRAND.pink }}>
                         Open: {metrics.openCases}
                       </Tag>
-                      <Tag color="#52c41a">
-                        Closed: {Math.max(metrics.totalReports - metrics.openCases, 0)}
+                      <Tag color="#ff85a2" style={{ borderColor: BRAND.soft }}>
+                        Total: {metrics.totalReports}
                       </Tag>
                     </Space>
                   </div>
@@ -239,95 +314,97 @@ export default function VictimDashboard() {
               </Card>
             </Col>
 
-            {/* Quick actions */}
+            {/* Quick Actions */}
             <Col xs={24} md={12}>
               <Card
-                className="fade-in-card"
                 title={<span style={{ color: BRAND.pink }}>Quick Actions</span>}
-                style={{ borderRadius: 14, borderColor: BRAND.soft, animationDelay: "400ms" }}
-                bodyStyle={{ padding: 16, display: "flex", flexDirection: "column", gap: 10 }}
+                bordered
+                style={{ borderRadius: 14, borderColor: BRAND.soft, height: "100%" }}
+                bodyStyle={{ display: "flex", gap: 12, flexWrap: "wrap" }}
               >
                 <Button
                   type="primary"
-                  block
-                  icon={<WarningOutlined />}
-                  style={{ background: BRAND.pink, borderColor: BRAND.pink, height: 44, fontWeight: 600 }}
-                  href="/emergency"
-                >
-                  Emergency Button
-                </Button>
-                <Button
-                  block
                   icon={<FileAddOutlined />}
-                  style={{ borderColor: BRAND.pink, color: BRAND.pink, height: 44, fontWeight: 600 }}
-                  href="/report"
+                  onClick={() => navigate("/report")}
                 >
                   File a New Report
                 </Button>
-              </Card>
-            </Col>
-
-            {/* Safety resources */}
-            <Col xs={24} md={12}>
-              <Card
-                className="fade-in-card"
-                title={<span style={{ color: BRAND.pink }}>Safety Tips & Resources</span>}
-                style={{ borderRadius: 14, borderColor: BRAND.soft, animationDelay: "500ms" }}
-                bodyStyle={{ padding: 16 }}
-              >
-                <ul style={{ margin: 0, paddingLeft: 18, color: "#666" }}>
-                  <li>In immediate danger? Use the Emergency Button above.</li>
-                  <li>Share your live location with a trusted contact when traveling.</li>
-                  <li>Keep important numbers on speed dial.</li>
-                </ul>
-                <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <Tag color="magenta">Hotline</Tag>
-                  <Tag color="geekblue">Shelter</Tag>
-                  <Tag color="green">Legal Aid</Tag>
-                </div>
+                <Button
+                  danger
+                  icon={<WarningOutlined />}
+                  onClick={() => navigate("/emergency")}
+                >
+                  Emergency Button
+                </Button>
+                <Button onClick={() => navigate("/victim-chatbot")} icon={<MessageOutlined />}>
+                  Chat with AI
+                </Button>
               </Card>
             </Col>
 
             {/* Recent Activity */}
-            <Col xs={24}>
+            <Col xs={24} md={12}>
               <Card
-                className="fade-in-card"
                 title={<span style={{ color: BRAND.pink }}>Recent Activity</span>}
-                style={{ borderRadius: 14, borderColor: BRAND.soft, animationDelay: "600ms" }}
-                bodyStyle={{ padding: 0, minHeight: 200 }}
+                bordered
+                style={{ borderRadius: 14, borderColor: BRAND.soft, height: "100%" }}
+                bodyStyle={{ padding: 0 }}
               >
                 {loading ? (
                   <div style={{ padding: 16 }}>
                     <Skeleton active />
                   </div>
-                ) : metrics.recentActivities.length === 0 ? (
-                  <Empty
-                    description={<span style={{ color: "#999" }}>No recent activity yet</span>}
-                    style={{ padding: 24 }}
+                ) : metrics.recentActivities?.length ? (
+                  <List
+                    dataSource={metrics.recentActivities}
+                    renderItem={(item, idx) => (
+                      <List.Item key={idx} style={{ paddingInline: 16 }}>
+                        <Space direction="vertical" size={0}>
+                          <Text strong>{item.title || "Activity"}</Text>
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            {item.time ? new Date(item.time).toLocaleString() : "Just now"}
+                          </Text>
+                          {item.note && <Text>{item.note}</Text>}
+                        </Space>
+                      </List.Item>
+                    )}
                   />
                 ) : (
+                  <Empty description="No recent activity" style={{ margin: "24px 0" }} />
+                )}
+              </Card>
+            </Col>
+
+            {/* Safety Tips & Resources — ADDED */}
+            <Col xs={24}>
+              <Card
+                title={<span style={{ color: BRAND.pink }}>Safety Tips & Resources</span>}
+                bordered
+                style={{ borderRadius: 14, borderColor: BRAND.soft }}
+                bodyStyle={{ paddingTop: 0 }}
+              >
+                {resourcesLoading ? (
+                  <Skeleton active />
+                ) : (
                   <List
-                    style={{ padding: 8, flex: 1, overflowY: "auto" }}
-                    dataSource={metrics.recentActivities}
-                    renderItem={(item) => (
-                      <List.Item key={item.id} style={{ paddingInline: 12 }}>
-                        <List.Item.Meta
-                          title={
-                            <span>
-                              {item.title}{" "}
-                              {item.type && (
-                                <Tag color={BRAND.pink} style={{ color: "#fff", borderColor: BRAND.pink }}>
-                                  {item.type}
-                                </Tag>
-                              )}
-                            </span>
-                          }
-                          description={
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              {item.createdAt ? new Date(item.createdAt).toLocaleString() : ""}
-                            </Text>
-                          }
-                        />
+                    itemLayout="vertical"
+                    dataSource={resources}
+                    renderItem={(r) => (
+                      <List.Item key={r.key}>
+                        <Space direction="vertical" size={2}>
+                          <Text strong>{r.title}</Text>
+                          {r.desc && <Text type="secondary">{r.desc}</Text>}
+                          {r.action && (
+                            <Button
+                              size="small"
+                              icon={r.action.icon || <InfoCircleOutlined />}
+                              onClick={r.action.onClick}
+                              style={{ marginTop: 6, borderColor: BRAND.pink, color: BRAND.pink }}
+                            >
+                              {r.action.label}
+                            </Button>
+                          )}
+                        </Space>
                       </List.Item>
                     )}
                   />
@@ -338,27 +415,31 @@ export default function VictimDashboard() {
         </div>
       </Content>
 
-      {/* Animations */}
-      <style>{`
-        .fade-in-card {
-          opacity: 0;
-          transform: translateY(30px);
-          animation: fadeUp 0.7s ease forwards;
-        }
-        @keyframes fadeUp {
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .ant-card {
-          transition: transform 0.25s ease, box-shadow 0.25s ease;
-        }
-        .ant-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 12px 28px rgba(0,0,0,0.08);
-        }
-      `}</style>
+      {/* Floating “AI Chatbot” button */}
+      <button
+        onClick={() => navigate("/victim-chatbot")}
+        aria-label="Open AI Chatbot"
+        style={{
+          position: "fixed",
+          right: 16,
+          bottom: 16,
+          zIndex: 1000,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "12px 16px",
+          borderRadius: 999,
+          border: `1px solid ${BRAND.soft}`,
+          background: "#fff",
+          color: BRAND.pink,
+          boxShadow: "0 12px 24px rgba(233,30,99,0.2)",
+          fontWeight: 700,
+          cursor: "pointer",
+        }}
+      >
+        <MessageOutlined />
+        <span>AI Chatbot</span>
+      </button>
     </Layout>
   );
 }

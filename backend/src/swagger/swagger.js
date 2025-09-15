@@ -143,7 +143,7 @@ const options = {
             "description": "Victim reports an assault near Barangay Hall at night; suspect unknown.",
             "perpetrator": "Unknown",
             "location": "Barangay Hall, Street 5, Barangay X",
-            
+
           }
           ,
           examples: {
@@ -155,7 +155,7 @@ const options = {
                 "description": "Victim reports an assault near Barangay Hall at night; suspect unknown.",
                 "perpetrator": "Unknown",
                 "location": "Barangay Hall, Street 5, Barangay X",
-                
+
               }
             }
           }

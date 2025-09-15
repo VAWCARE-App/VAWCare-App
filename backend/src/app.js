@@ -26,12 +26,14 @@ const victimRoutes = require('./routes/victimRoutes');
 const officialRoutes = require('./routes/officialRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const casesRoutes = require('./routes/casesRoutes');
 
 // Use routes
 app.use('/api/victims', victimRoutes);
 app.use('/api/officials', officialRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/cases', casesRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

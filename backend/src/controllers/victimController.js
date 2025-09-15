@@ -426,6 +426,13 @@ const submitAnonymousReport = asyncHandler(async (req, res) => {
             submittedAt: new Date()
         };
 
+        // Log anonymous report submission details
+        try {
+            console.log(`Anonymous report submitted. reportId=${report._id} firebaseUid=${anonymousUser?.uid || 'N/A'} tokenProvided=${anonymousCustomToken ? 'yes' : 'no'}`);
+        } catch (logErr) {
+            console.warn('Could not log anonymous report submission:', logErr);
+        }
+
         res.status(201).json({
             success: true,
             message: 'Anonymous report submitted successfully',

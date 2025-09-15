@@ -59,6 +59,60 @@ const options = {
           responses: { '200': { description: 'Report updated', content: { 'application/json': { schema: { $ref: '#/components/schemas/IncidentReport' } } } }, '404': { description: 'Not found' } }
         }
       }
+      ,
+      '/api/cases': {
+        get: {
+          security: [{ bearerAuth: [] }],
+          tags: ['Cases'],
+          summary: 'Get all cases',
+          description: 'Returns all cases. Requires authentication.',
+          responses: {
+            '200': { description: 'List of cases', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, data: { type: 'array', items: { $ref: '#/components/schemas/Case' } } } } } } },
+            '401': { description: 'Unauthorized' }
+          }
+        },
+        post: {
+          tags: ['Cases'],
+          summary: 'Create a new case from an existing report',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/CaseCreate' }
+              }
+            }
+          },
+          responses: {
+            '201': { description: 'Case created', content: { 'application/json': { schema: { $ref: '#/components/schemas/Case' } } } },
+            '400': { description: 'Bad request' }
+          }
+        }
+      },
+      '/api/cases/{id}': {
+        get: {
+          security: [{ bearerAuth: [] }],
+          tags: ['Cases'],
+          summary: 'Get a case by caseID or _id',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: { '200': { description: 'Case found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Case' } } } }, '404': { description: 'Not found' } }
+        },
+        put: {
+          security: [{ bearerAuth: [] }],
+          tags: ['Cases'],
+          summary: 'Update a case',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/CaseUpdate' } } } },
+          responses: { '200': { description: 'Case updated', content: { 'application/json': { schema: { $ref: '#/components/schemas/Case' } } } }, '404': { description: 'Not found' } }
+        },
+        delete: {
+          security: [{ bearerAuth: [] }],
+          tags: ['Cases'],
+          summary: 'Soft-delete a case',
+          description: 'Performs a soft delete by marking the case as deleted (sets `deleted=true` and `deletedAt`). The record is not removed from the database.',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: { '200': { description: 'Case soft-deleted' }, '404': { description: 'Not found' } }
+        }
+      }
     },
     servers: [
       {
@@ -78,7 +132,7 @@ const options = {
             description: { type: 'string' },
             location: { type: 'string' },
             dateReported: { type: 'string', format: 'date-time' },
-            status: { type: 'string', enum: ['Pending', 'Open' , 'Under Investigation', 'Resolved'] },
+              status: { type: 'string', enum: ['Open' , 'Under Investigation', 'Resolved'] },
             // assignedOfficer and riskLevel removed from schema
             perpetrator: { type: 'string', description: 'Name or description of perpetrator (optional)' }
           },
@@ -110,6 +164,7 @@ const options = {
           type: 'object',
           properties: {
             status: { type: 'string', enum: ['Pending', 'Open' , 'Under Investigation', 'Resolved'] },
+              status: { type: 'string', enum: ['Open' , 'Under Investigation', 'Resolved'] },
             // assignedOfficer and riskLevel removed from update schema
             description: { type: 'string' },
             perpetrator: { type: 'string', description: 'Name or description of perpetrator (optional)' },
@@ -133,6 +188,53 @@ const options = {
             dateReported: { type: 'string', format: 'date-time' },
             status: { type: 'string' },
             // assignedOfficer and riskLevel removed from response schema
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        CaseCreate: {
+          type: 'object',
+          description: 'Create a new Case based on an existing report',
+          properties: {
+            caseID: { type: 'string' },
+            reportID: { type: 'string' },
+            victimID: { type: 'string' },
+            incidentType: { type: 'string' },
+            description: { type: 'string' },
+            perpetrator: { type: 'string' },
+            location: { type: 'string' },
+            dateReported: { type: 'string', format: 'date-time' },
+              status: { type: 'string', enum: ['Open', 'Under Investigation', 'Resolved', 'Closed'] },
+            assignedOfficer: { type: 'string' },
+            riskLevel: { type: 'string', enum: ['Low', 'Medium', 'High'] }
+          },
+          required: ['caseID','reportID','victimID','incidentType','description']
+        },
+        CaseUpdate: {
+          type: 'object',
+          properties: {
+            status: { type: 'string', enum: ['Open', 'Pending', 'Investigating', 'Closed'] },
+              status: { type: 'string', enum: ['Open', 'Under Investigation', 'Resolved', 'Closed'] },
+            assignedOfficer: { type: 'string' },
+            riskLevel: { type: 'string', enum: ['Low', 'Medium', 'High'] },
+            description: { type: 'string' }
+          }
+        },
+        Case: {
+          type: 'object',
+          properties: {
+            _id: { type: 'string' },
+            caseID: { type: 'string' },
+            reportID: { type: 'string' },
+            victimID: { type: 'string' },
+            incidentType: { type: 'string' },
+            description: { type: 'string' },
+            perpetrator: { type: 'string' },
+            location: { type: 'string' },
+            dateReported: { type: 'string', format: 'date-time' },
+              status: { type: 'string', enum: ['Open', 'Under Investigation', 'Resolved', 'Closed'] },
+            assignedOfficer: { type: 'string' },
+            riskLevel: { type: 'string' },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' }
           }

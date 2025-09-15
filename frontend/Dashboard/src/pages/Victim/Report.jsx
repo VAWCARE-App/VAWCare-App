@@ -159,7 +159,6 @@ export default function Report() {
                     </Select>
                   </Form.Item>
                 </Col>
-                {/* riskLevel removed: this field is no longer part of the report schema */}
               </Row>
 
               <Row gutter={[16, 0]}>

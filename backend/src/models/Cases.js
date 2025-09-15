@@ -43,7 +43,7 @@ const CasesSchema = new mongoose.Schema({
 	status: {
 		type: String,
 		enum: {
-			values: ['Open', 'Pending', 'Investigating', 'Closed'],
+			values: ['Open', 'Under Investigation', 'Resolved', 'Closed'],
 			message: 'Status `{VALUE}` is not valid',
 		},
 		default: 'Open',
@@ -61,6 +61,13 @@ const CasesSchema = new mongoose.Schema({
 		},
 		default: 'Low',
 		trim: true,
+	},
+	deletedAt: {
+		type: Date,
+	},
+	deleted: {
+		type: Boolean,
+		default: false,
 	},
 	createdAt: {
 			type: Date,

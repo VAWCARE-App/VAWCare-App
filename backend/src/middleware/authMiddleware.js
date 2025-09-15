@@ -1,5 +1,7 @@
 const admin = require('firebase-admin');
 const asyncHandler = require('express-async-handler');
+const AdminModel = require('../models/Admin');
+const OfficialModel = require('../models/BarangayOfficials');
 
 // Protect routes - verifies Firebase ID token
 const protect = asyncHandler(async (req, res, next) => {
@@ -40,6 +42,20 @@ const protect = asyncHandler(async (req, res, next) => {
             emailVerified: firebaseUser.emailVerified,
             multiFactor: firebaseUser.multiFactor || null
         };
+
+        // Try to attach business identifiers for admins / officials so controllers can log "by=" correctly
+        try {
+            if (req.user.role === 'admin') {
+                const adminDoc = await AdminModel.findOne({ firebaseUid: req.user.uid }).select('adminID firebaseUid');
+                if (adminDoc) req.user.adminID = adminDoc.adminID;
+            } else if (req.user.role === 'official') {
+                const officialDoc = await OfficialModel.findOne({ firebaseUid: req.user.uid }).select('officialID firebaseUid');
+                if (officialDoc) req.user.officialID = officialDoc.officialID;
+            }
+        } catch (e) {
+            // non-fatal: if DB lookup fails, continue without business IDs
+            console.warn('authMiddleware: could not lookup admin/official by firebaseUid', e.message || e);
+        }
 
                 // // Check if user needs additional verification
         // if (req.user.role === 'admin' || req.user.role === 'official') {

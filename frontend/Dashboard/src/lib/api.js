@@ -1,5 +1,6 @@
 // src/lib/api.js
 import axios from "axios";
+import { exchangeCustomTokenForIdToken } from './firebase';
 
 const baseURL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -43,3 +44,34 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Post-response handler: if backend returned a Firebase custom token in data.data.token,
+// exchange it for an ID token automatically so the stored token is verifiable by backend.
+api.interceptors.response.use(async (response) => {
+  try {
+    const maybeToken = response?.data?.data?.token;
+    const requestUrl = response.config?.url || '';
+    if (maybeToken && typeof maybeToken === 'string') {
+      // Only auto-exchange for known auth endpoints to avoid surprising behavior
+      if (requestUrl.includes('/login') || requestUrl.includes('/register') || requestUrl.includes('/anonymous/report')) {
+        try {
+          const idToken = await exchangeCustomTokenForIdToken(maybeToken);
+          saveToken(idToken);
+        } catch (ex) {
+          // If exchange fails, fall back to saving server token (keeps previous behavior)
+          console.warn('Auto token exchange failed:', ex);
+          saveToken(maybeToken);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Error in post-response token handler', e);
+  }
+  return response;
+}, (error) => {
+  if (error.response?.status === 401) {
+    clearToken();
+    window.location.href = '/login';
+  }
+  return Promise.reject(error);
+});

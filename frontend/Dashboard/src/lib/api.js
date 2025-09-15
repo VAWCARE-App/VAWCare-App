@@ -56,11 +56,21 @@ api.interceptors.response.use(async (response) => {
       if (requestUrl.includes('/login') || requestUrl.includes('/register') || requestUrl.includes('/anonymous/report')) {
         try {
           const idToken = await exchangeCustomTokenForIdToken(maybeToken);
-          saveToken(idToken);
+          // Only save the token if exchange produced an ID token
+          if (idToken && typeof idToken === 'string') {
+            saveToken(idToken);
+            console.debug('Token exchange successful, saved Firebase ID token (truncated):', idToken.slice(0, 12));
+          } else {
+            console.warn('Token exchange returned no ID token; clearing any existing token.');
+            clearToken();
+          }
         } catch (ex) {
-          // If exchange fails, fall back to saving server token (keeps previous behavior)
+          // Exchange failed — do NOT save the server custom token because server custom tokens are not
+          // accepted by Firebase Admin's verifyIdToken. Clear tokens and surface a clear warning.
           console.warn('Auto token exchange failed:', ex);
-          saveToken(maybeToken);
+          clearToken();
+          // Developers: ensure VITE_FIREBASE_* client config is set and correct so exchange can succeed.
+          console.warn('Token exchange failed. Ensure Firebase client config (VITE_FIREBASE_*) is available to the frontend.');
         }
       }
     }

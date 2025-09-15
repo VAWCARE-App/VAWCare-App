@@ -1,24 +1,30 @@
 import React from "react";
-import { App as AntApp, Layout, ConfigProvider, Button } from "antd";
-import { BrowserRouter, Routes, Route, Navigate, Link, useNavigate } from "react-router-dom";
+import { App as AntApp, ConfigProvider } from "antd";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+
 import Dashboard from "./pages/Dashboards/AdminDashboard";
 import Admin from "./layouts/AdminLayout";
+
 import UserManagement from "./pages/UserManagement";
 import ReportManagement from "./pages/ReportManagement";
 import VictimDashboard from "./pages/Dashboards/VictimDashboard";
 import OfficialDashboard from "./pages/Dashboards/OfficialDashboard";
+
 import Test from "./pages/Test";
-import { isAuthed, clearToken } from "./lib/api";
 import ReportCase from "./pages/Victim/Report";
 import EmergencyButton from "./pages/Victim/EmergencyButton";
+
+// ⬇️ NEW: demo chatbot page
+import Chatbot from "./pages/Victim/Chatbot";
+
+import { isAuthed } from "./lib/api";
 
 function Protected({ children }) {
   return isAuthed() ? children : <Navigate to="/login" replace />;
 }
-
-
 
 export default function App() {
   return (
@@ -28,27 +34,36 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+
+            {/* Shell/Layout */}
             <Route path="/" element={<Admin />}>
+              {/* Default (admin) */}
               <Route index element={<Protected><Dashboard /></Protected>} />
-              <Route path="victim-test" element={<VictimDashboard />} />
-              <Route path="official-dashboard" element={<Protected><OfficialDashboard /></Protected>} />
-              <Route path="users" element={<Protected><UserManagement /></Protected>} />
-              <Route path="reports" element={<Protected><ReportManagement /></Protected>} />
+
+              {/* Victim */}
+              <Route path="victim-test" element={<Protected><VictimDashboard /></Protected>} />
+              <Route path="victim-chatbot" element={<Protected><Chatbot /></Protected>} /> {/* ⬅️ NEW */}
               <Route path="report" element={<Protected><ReportCase /></Protected>} />
               <Route path="emergency" element={<Protected><EmergencyButton /></Protected>} />
-              
-            </Route>
-          
-            <Route path="*" element={<Navigate to="/" replace />} />
 
+              {/* Officials */}
+              <Route path="official-dashboard" element={<Protected><OfficialDashboard /></Protected>} />
+
+              {/* Admin */}
+              <Route path="users" element={<Protected><UserManagement /></Protected>} />
+              <Route path="reports" element={<Protected><ReportManagement /></Protected>} />
+            </Route>
+
+            {/* Simple test route (outside shell) */}
             <Route path="/test" element={<Admin />}>
               <Route index element={<Test />} />
             </Route>
+
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
       </AntApp>
     </ConfigProvider>
   );
 }
-
-

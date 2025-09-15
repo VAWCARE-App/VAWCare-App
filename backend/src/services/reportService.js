@@ -12,14 +12,7 @@ function normalizeStatus(value) {
   return undefined;
 }
 
-function normalizeRisk(value) {
-  if (!value) return undefined;
-  const r = String(value).trim().toLowerCase();
-  if (r === 'low') return 'Low';
-  if (r === 'medium') return 'Medium';
-  if (r === 'high') return 'High';
-  return undefined;
-}
+// riskLevel was removed from schema — no normalization needed
 
 async function resolveVictimIdOnPayload(payload) {
   // If caller provided firebaseUid, resolve to victimID
@@ -61,8 +54,7 @@ async function createReport(payload) {
     perpetrator: payload.perpetrator,
     dateReported: payload.dateReported || Date.now(),
     status: normalizeStatus(payload.status) || 'Pending',
-    assignedOfficer: payload.assignedOfficer || 'Unassigned',
-    riskLevel: normalizeRisk(payload.riskLevel) || 'Low',
+    // assignedOfficer and riskLevel removed from schema
   });
 
   await doc.save();
@@ -81,7 +73,7 @@ async function getReportById(id) {
 async function listReports(filters = {}) {
   const query = {};
   if (filters.status) query.status = normalizeStatus(filters.status) || filters.status;
-  if (filters.riskLevel) query.riskLevel = normalizeRisk(filters.riskLevel) || filters.riskLevel;
+  // riskLevel filter removed
   if (filters.victimID) query.victimID = filters.victimID;
 
   return IncidentReport.find(query)
@@ -99,11 +91,9 @@ async function updateReport(id, updates) {
 
   const normalized = { ...updates };
   const ns = normalizeStatus(updates.status);
-  const nr = normalizeRisk(updates.riskLevel);
   if (ns) normalized.status = ns;
-  if (nr) normalized.riskLevel = nr;
 
-  const allowed = ['status', 'assignedOfficer', 'riskLevel', 'description', 'location', 'perpetrator'];
+  const allowed = ['status', 'description', 'location', 'perpetrator'];
   allowed.forEach((k) => {
     if (normalized[k] !== undefined) report[k] = normalized[k];
   });

@@ -40,7 +40,11 @@ export default function CaseManagement() {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingCase, setEditingCase] = useState(null);
   const [isViewMode, setIsViewMode] = useState(false);
+  const [addModalVisible, setAddModalVisible] = useState(false);
+  const [reportsList, setReportsList] = useState([]);
+  const [selectedReport, setSelectedReport] = useState(null);
   const [form] = Form.useForm();
+  const [addForm] = Form.useForm();
 
   const fetchAllCases = async () => {
     try {
@@ -75,15 +79,182 @@ export default function CaseManagement() {
 
   useEffect(() => { fetchAllCases(); }, []);
 
+  const fetchReports = async () => {
+    try {
+      const { data } = await api.get('/api/reports');
+      if (data?.success) {
+        // mirror ReportManagement formatting: strip victim.location
+        const formatted = data.data.map((r) => {
+          let victim = null;
+          if (r.victimID) {
+            const { location, ...victimNoLocation } = r.victimID;
+            victim = victimNoLocation;
+          }
+          return {
+            key: r.reportID,
+            reportID: r.reportID,
+            victim,
+            incidentType: r.incidentType,
+            description: r.description,
+            perpetrator: r.perpetrator,
+            location: r.location,
+            dateReported: r.dateReported,
+            status: r.status,
+            createdAt: r.createdAt,
+            raw: r,
+          };
+        });
+        setReportsList(formatted);
+      }
+    } catch (err) {
+      console.error('Failed to fetch reports', err);
+    }
+  };
+
   const handleViewCase = (rec) => { setEditingCase(rec); form.setFieldsValue(rec); setIsViewMode(true); setEditModalVisible(true); };
-  const handleEditCase = (rec) => { const patched = { ...rec, perpetrator: rec.perpetrator || '' }; setEditingCase(patched); form.setFieldsValue(patched); setIsViewMode(false); setEditModalVisible(true); };
+  const handleEditCase = async (rec) => {
+    try {
+      setLoading(true);
+      // fetch latest version from server (by caseID or _id)
+      const id = rec.caseID || rec._id;
+      const res = await api.get(`/api/cases/${id}`);
+      const serverCase = res?.data?.data || res?.data;
+      const patched = { ...serverCase, perpetrator: serverCase.perpetrator || '' };
+      setEditingCase(patched);
+      form.setFieldsValue(patched);
+      setIsViewMode(false);
+      setEditModalVisible(true);
+    } catch (err) {
+      // Provide richer diagnostics for debugging
+      const status = err.response?.status;
+      const data = err.response?.data;
+      console.error('Failed to load case for edit', { status, data, err });
+      if (status) {
+        message.error(`Failed to load case for editing (${status}): ${data?.message || JSON.stringify(data)}`);
+      } else {
+        message.error('Failed to load case for editing (no response)');
+      }
+      // Fallback: open the modal with the client record so user can still edit
+      try {
+        const patched = { ...rec, perpetrator: rec.perpetrator || '' };
+        setEditingCase(patched);
+        form.setFieldsValue(patched);
+        setIsViewMode(false);
+        setEditModalVisible(true);
+      } catch (e) {
+        console.error('Fallback to client record failed', e);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openAddModal = async () => {
+    setAddModalVisible(true);
+    setSelectedReport(null);
+    addForm.resetFields();
+    await fetchReports();
+  };
+
+  const handleReportSelect = (reportID) => {
+    const rep = reportsList.find((r) => r.reportID === reportID);
+    setSelectedReport(rep || null);
+    if (rep) {
+      // prefill fields on add form
+      addForm.setFieldsValue({
+        reportID: rep.reportID,
+        incidentType: rep.incidentType,
+        description: rep.description,
+        perpetrator: rep.perpetrator || '',
+        victimName: rep.victim ? `${rep.victim.firstName || ''} ${rep.victim.lastName || ''}`.trim() : '',
+      });
+    }
+  };
+
+  const handleCreateCase = async (vals) => {
+    try {
+      setLoading(true);
+      if (!selectedReport) {
+        message.error('Please select a report to base this case on');
+        return;
+      }
+      // build payload: include reportID and fields from selected report
+      const payload = {
+        caseID: vals.caseID,
+        reportID: selectedReport.reportID,
+        victimID: selectedReport.raw.victimID?._id || selectedReport.raw.victimID || null,
+        incidentType: selectedReport.incidentType,
+        description: selectedReport.description,
+        perpetrator: selectedReport.perpetrator || '',
+        location: selectedReport.location || '',
+        dateReported: selectedReport.dateReported || new Date().toISOString(),
+        status: vals.status || 'Open',
+        assignedOfficer: vals.assignedOfficer || '',
+        riskLevel: vals.riskLevel || 'Low',
+      };
+
+      const res = await api.post('/api/cases', payload);
+      if (res?.data?.success) {
+        message.success('Case created');
+        setAddModalVisible(false);
+        addForm.resetFields();
+        fetchAllCases();
+      } else {
+        console.error('Create case response', res?.data);
+        message.error(res?.data?.message || 'Failed to create case');
+      }
+    } catch (err) {
+      console.error('Create case error', err.response || err);
+      message.error('Failed to create case');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDeleteCase = async (rec) => {
-    try { setLoading(true); const res = await api.delete(`/api/cases/${rec.caseID}`); if (res?.data) message.success('Case deleted'); fetchAllCases(); } catch (err) { console.error(err); message.error('Delete failed'); } finally { setLoading(false); }
+    try {
+      setLoading(true);
+      const id = rec.caseID || rec._id;
+      const res = await api.delete(`/api/cases/${id}`);
+      if (res?.data?.success) {
+        message.success('Case deleted');
+      } else {
+        message.error(res?.data?.message || 'Delete failed');
+      }
+      fetchAllCases();
+    } catch (err) {
+      console.error('Delete failed', err.response || err);
+      message.error(err.response?.data?.message || 'Delete failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleUpdateCase = async (vals) => {
-    try { setLoading(true); const res = await api.put(`/api/cases/${editingCase.caseID}`, vals); if (res?.data) { message.success('Case updated'); setEditModalVisible(false); setEditingCase(null); } else message.error('Failed to update'); fetchAllCases(); } catch (err) { console.error(err); message.error('Update failed'); } finally { setLoading(false); }
+    if (!editingCase) {
+      message.error('No case selected for update');
+      return;
+    }
+    try {
+      setLoading(true);
+      const id = editingCase.caseID || editingCase._id;
+      // always include perpetrator field (keep parity with reports)
+      const payload = { ...vals, perpetrator: vals.perpetrator || '' };
+      const res = await api.put(`/api/cases/${id}`, payload);
+      if (res?.data?.success) {
+        message.success('Case updated');
+        setEditModalVisible(false);
+        setEditingCase(null);
+      } else {
+        message.error(res?.data?.message || 'Failed to update case');
+      }
+      fetchAllCases();
+    } catch (err) {
+      console.error('Update failed', err.response || err);
+      message.error(err.response?.data?.message || 'Update failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -116,10 +287,13 @@ export default function CaseManagement() {
     <Layout style={{ minHeight: '100vh' }}>
       <Header style={{ background: '#fff', borderBottom: '1px solid #ffd1dc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography.Title level={4} style={{ margin: 0, color: '#e91e63' }}>Case Management</Typography.Title>
-        <Button onClick={fetchAllCases} icon={<ReloadOutlined />} style={{ borderColor: '#e91e63', color: '#e91e63' }}>Refresh</Button>
+        <Space>
+          <Button type="primary" onClick={openAddModal} style={{ background: '#e91e63', borderColor: '#e91e63' }}>Add Case</Button>
+          <Button onClick={fetchAllCases} icon={<ReloadOutlined />} style={{ borderColor: '#e91e63', color: '#e91e63' }}>Refresh</Button>
+        </Space>
       </Header>
       <Content style={{ padding: 16 }}>
-        <Card title="All Cases" extra={<Space><Search placeholder="Search cases..." style={{ width: 240 }} onChange={(e) => setSearchText(e.target.value)} /><Select value={filterType} onChange={setFilterType}><Option value="all">All</Option><Option value="Open">Open</Option><Option value="Under Investigation">In-Progress</Option><Option value="Resolved">Resolved</Option><Option value="Closed">Closed</Option></Select></Space>}>
+          <Card title="All Cases" extra={<Space><Search placeholder="Search cases..." style={{ width: 240 }} onChange={(e) => setSearchText(e.target.value)} /><Select value={filterType} onChange={setFilterType}><Option value="all">All</Option><Option value="Open">Open</Option><Option value="Under Investigation">In-Progress</Option><Option value="Resolved">Resolved</Option><Option value="Closed">Closed</Option></Select></Space>}>
           <Table columns={columns} dataSource={filteredCases} loading={loading} pagination={{ pageSize: 8 }} scroll={{ y: 480 }} />
 
           <Modal title={editingCase ? `${isViewMode ? 'View' : 'Edit'} Case - ${editingCase?.caseID}` : 'Case'} open={editModalVisible} onCancel={() => { setEditModalVisible(false); setEditingCase(null); setIsViewMode(false); }} okText="Save" onOk={() => { form.validateFields().then((v) => handleUpdateCase(v)); }}>
@@ -127,9 +301,64 @@ export default function CaseManagement() {
               <Form.Item name="incidentType" label="Incident Type" rules={[{ required: true }]}><Input disabled={isViewMode} /></Form.Item>
               <Form.Item name="location" label="Location"><Input disabled={isViewMode} /></Form.Item>
               <Form.Item name="description" label="Description"><Input.TextArea rows={3} disabled={isViewMode} /></Form.Item>
+              <Form.Item name="perpetrator" label="Perpetrator"><Input disabled={isViewMode} /></Form.Item>
               <Form.Item name="assignedOfficer" label="Assigned Officer"><Input disabled={isViewMode} /></Form.Item>
               <Form.Item name="riskLevel" label="Risk Level"><Select disabled={isViewMode}><Option value="Low">Low</Option><Option value="Medium">Medium</Option><Option value="High">High</Option></Select></Form.Item>
-              <Form.Item name="status" label="Status"><Select disabled={isViewMode}><Option value="Open">Open</Option><Option value="Pending">Pending</Option><Option value="Under Investigation">In-Progress</Option><Option value="Resolved">Resolved</Option><Option value="Closed">Closed</Option></Select></Form.Item>
+              <Form.Item name="status" label="Status"><Select disabled={isViewMode}><Option value="Open">Open</Option><Option value="Under Investigation">In-Progress</Option><Option value="Resolved">Resolved</Option><Option value="Closed">Closed</Option></Select></Form.Item>
+            </Form>
+          </Modal>
+
+          {/* Add Case Modal */}
+          <Modal title="Create Case" open={addModalVisible} onCancel={() => { setAddModalVisible(false); setSelectedReport(null); }} okText="Create" onOk={() => { addForm.validateFields().then((v) => handleCreateCase(v)); }}>
+            <Form form={addForm} layout="vertical">
+              <Form.Item name="reportID" label="Select Report" rules={[{ required: true }]}> 
+                <Select showSearch placeholder="Select a report to base case on" onChange={handleReportSelect} optionFilterProp="children">
+                  {reportsList.map((r) => (
+                    <Option key={r.reportID} value={r.reportID}>{r.reportID} — {r.incidentType} — {r.victim?.firstName || ''} {r.victim?.lastName || ''}</Option>
+                  ))}
+                </Select>
+              </Form.Item>
+
+              <Form.Item name="victimName" label="Victim Name">
+                <Input readOnly />
+              </Form.Item>
+
+              <Form.Item name="incidentType" label="Incident Type">
+                <Input readOnly />
+              </Form.Item>
+
+              <Form.Item name="description" label="Description">
+                <Input.TextArea rows={3} readOnly />
+              </Form.Item>
+
+              <Form.Item name="perpetrator" label="Perpetrator">
+                <Input readOnly />
+              </Form.Item>
+
+              <Form.Item name="caseID" label="Case ID" rules={[{ required: true }]}>
+                <Input placeholder="Enter Case ID (e.g. CASE001)" />
+              </Form.Item>
+
+              <Form.Item name="assignedOfficer" label="Assigned Officer" rules={[{ required: true }]}>
+                <Input placeholder="Officer assigned to this case" />
+              </Form.Item>
+
+              <Form.Item name="riskLevel" label="Risk Level">
+                <Select>
+                  <Option value="Low">Low</Option>
+                  <Option value="Medium">Medium</Option>
+                  <Option value="High">High</Option>
+                </Select>
+              </Form.Item>
+
+              <Form.Item name="status" label="Status">
+                <Select>
+                  <Option value="Open">Open</Option>
+                  <Option value="Under Investigation">In-Progress</Option>
+                  <Option value="Resolved">Resolved</Option>
+                  <Option value="Closed">Closed</Option>
+                </Select>
+              </Form.Item>
             </Form>
           </Modal>
         </Card>

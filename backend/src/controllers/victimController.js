@@ -397,11 +397,25 @@ const submitAnonymousReport = asyncHandler(async (req, res) => {
             });
         }
 
+        // Save the victim record and include firebaseUid
         const victim = await Victim.create({
             firebaseUid: anonymousUser?.uid || null,
             isAnonymous: true,
             location: location || {}
         });
+
+        // Generate a custom token for the anonymous Firebase user so the frontend can sign them in
+        let anonymousCustomToken = null;
+        if (anonymousUser && admin && admin.auth) {
+            try {
+                anonymousCustomToken = await admin.auth().createCustomToken(anonymousUser.uid, {
+                    role: 'victim',
+                    isAnonymous: true
+                });
+            } catch (tokenErr) {
+                console.error('Failed to create custom token for anonymous user:', tokenErr);
+            }
+        }
 
         const report = {
             victimId: victim._id,
@@ -417,7 +431,8 @@ const submitAnonymousReport = asyncHandler(async (req, res) => {
             message: 'Anonymous report submitted successfully',
             data: {
                 reportId: report._id,
-                trackingNumber: Math.random().toString(36).substring(7).toUpperCase()
+                trackingNumber: Math.random().toString(36).substring(7).toUpperCase(),
+                token: anonymousCustomToken
             }
         });
     } catch (error) {

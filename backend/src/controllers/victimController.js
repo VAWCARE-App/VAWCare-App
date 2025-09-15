@@ -193,7 +193,7 @@ const loginVictim = asyncHandler(async (req, res) => {
     try {
         // First try to find user by username
         let victim = await Victim.findOne({ victimUsername: identifier });
-        
+
         // If not found by username, try email (for regular users)
         if (!victim) {
             victim = await Victim.findOne({ victimEmail: identifier });
@@ -226,7 +226,7 @@ const loginVictim = asyncHandler(async (req, res) => {
         }
 
         let customToken = null;
-        
+
         // Try Firebase operations if firebaseUid exists
         if (victim.firebaseUid) {
             try {
@@ -327,11 +327,11 @@ const updateProfile = asyncHandler(async (req, res) => {
 // @access  Private
 const verifyEmail = asyncHandler(async (req, res) => {
     const { code } = req.body;
-    
+
     try {
         if (admin && admin.auth) {
             const firebaseUser = await admin.auth().getUser(req.user.uid);
-            
+
             await admin.auth().updateUser(req.user.uid, {
                 emailVerified: true
             });
@@ -352,7 +352,7 @@ const verifyEmail = asyncHandler(async (req, res) => {
 // @access  Private
 const verifyPhone = asyncHandler(async (req, res) => {
     const { phoneNumber, code } = req.body;
-    
+
     try {
         if (admin && admin.auth) {
             await admin.auth().updateUser(req.user.uid, {
@@ -384,7 +384,7 @@ const submitAnonymousReport = asyncHandler(async (req, res) => {
 
     try {
         let anonymousUser;
-        
+
         if (admin && admin.auth) {
             anonymousUser = await admin.auth().createUser({
                 disabled: false,
@@ -425,13 +425,6 @@ const submitAnonymousReport = asyncHandler(async (req, res) => {
             isAnonymous: true,
             submittedAt: new Date()
         };
-
-        // Log anonymous report submission details
-        try {
-            console.log(`Anonymous report submitted. reportId=${report._id} firebaseUid=${anonymousUser?.uid || 'N/A'} tokenProvided=${anonymousCustomToken ? 'yes' : 'no'}`);
-        } catch (logErr) {
-            console.warn('Could not log anonymous report submission:', logErr);
-        }
 
         res.status(201).json({
             success: true,

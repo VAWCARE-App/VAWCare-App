@@ -15,6 +15,25 @@ import {
 import { UserOutlined, SafetyOutlined, TeamOutlined } from "@ant-design/icons";
 import { api, saveToken } from "../lib/api";
 import { useNavigate, Link } from "react-router-dom";
+// Firebase client SDK (used to exchange server custom token for an ID token)
+import { initializeApp, getApps } from 'firebase/app';
+import { getAuth, signInWithCustomToken } from 'firebase/auth';
+
+// Initialize Firebase client using Vite env vars
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
+};
+
+async function exchangeCustomTokenForIdToken(customToken) {
+  if (!getApps().length) initializeApp(firebaseConfig);
+  const auth = getAuth();
+  const userCredential = await signInWithCustomToken(auth, customToken);
+  const idToken = await userCredential.user.getIdToken();
+  return idToken;
+}
 import Logo from "../assets/logo1.svg?react";
 
 const { Option } = Select;
@@ -207,7 +226,17 @@ export default function Login() {
       const { data } = await api.post(endpoint, loginData);
       if (data.success) {
         if (data.data?.token) {
-          saveToken(data.data.token);
+          // Backend issues a Firebase custom token. Exchange it for an ID token so backend.verifyIdToken accepts it.
+          try {
+            const idToken = await exchangeCustomTokenForIdToken(data.data.token);
+            saveToken(idToken);
+          } catch (ex) {
+            // Exchange failed (likely missing/invalid Firebase client config). Fall back to saving the server token
+            // to avoid completely blocking login for non-protected flows, but note this may cause 401s on protected routes.
+            console.warn('Failed to exchange custom token for ID token:', ex);
+            saveToken(data.data.token);
+            message.warning('Logged in but Firebase client exchange failed. If protected requests fail, ensure VITE_FIREBASE_* are set and restart the dev server.');
+          }
         } else if (userType === "victim") {
           saveToken("victim-test-token");
         }

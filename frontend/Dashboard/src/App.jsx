@@ -10,6 +10,7 @@ import Admin from "./layouts/AdminLayout";
 
 import UserManagement from "./pages/UserManagement";
 import ReportManagement from "./pages/ReportManagement";
+import CaseManagement from "./pages/CaseManagement";
 import VictimDashboard from "./pages/Dashboards/VictimDashboard";
 import OfficialDashboard from "./pages/Dashboards/OfficialDashboard";
 
@@ -48,10 +49,12 @@ export default function App() {
 
               {/* Officials */}
               <Route path="official-dashboard" element={<Protected><OfficialDashboard /></Protected>} />
+              <Route path="official-cases" element={<Protected><CaseManagement /></Protected>} />
 
               {/* Admin */}
               <Route path="users" element={<Protected><UserManagement /></Protected>} />
               <Route path="reports" element={<Protected><ReportManagement /></Protected>} />
+              <Route path="cases" element={<Protected><CaseManagement /></Protected>} />
             </Route>
 
             {/* Simple test route (outside shell) */}

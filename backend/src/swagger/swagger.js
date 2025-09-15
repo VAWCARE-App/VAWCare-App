@@ -79,8 +79,7 @@ const options = {
             location: { type: 'string' },
             dateReported: { type: 'string', format: 'date-time' },
             status: { type: 'string', enum: ['Pending', 'Open' , 'Under Investigation', 'Resolved'] },
-            assignedOfficer: { type: 'string', description: 'Officer id to assign (optional)' },
-            riskLevel: { type: 'string', enum: ['Low', 'Medium', 'High'] },
+            // assignedOfficer and riskLevel removed from schema
             perpetrator: { type: 'string', description: 'Name or description of perpetrator (optional)' }
           },
           required: ['incidentType', 'description', 'location'],
@@ -90,8 +89,7 @@ const options = {
             "description": "Victim reports an assault near Barangay Hall at night; suspect unknown.",
             "perpetrator": "Unknown",
             "location": "Barangay Hall, Street 5, Barangay X",
-            "riskLevel": "High",
-            "assignedOfficer": "Vangelyne V. Alcantara",
+            
           }
           ,
           examples: {
@@ -103,8 +101,7 @@ const options = {
                 "description": "Victim reports an assault near Barangay Hall at night; suspect unknown.",
                 "perpetrator": "Unknown",
                 "location": "Barangay Hall, Street 5, Barangay X",
-                "riskLevel": "High",
-                "assignedOfficer": "Vangelyne V. Alcantara"
+                
               }
             }
           }
@@ -113,8 +110,7 @@ const options = {
           type: 'object',
           properties: {
             status: { type: 'string', enum: ['Pending', 'Open' , 'Under Investigation', 'Resolved'] },
-            assignedOfficer: { type: 'string' },
-            riskLevel: { type: 'string', enum: ['Low', 'Medium', 'High'] },
+            // assignedOfficer and riskLevel removed from update schema
             description: { type: 'string' },
             perpetrator: { type: 'string', description: 'Name or description of perpetrator (optional)' },
             location: { type: 'string' },
@@ -122,8 +118,6 @@ const options = {
           ,
           example: {
             "status": "Under Investigation",
-            "assignedOfficer": "Vangelyne Alcantara",
-            "riskLevel": "High",
             "perpetrator": "John Doe"
           }
         },
@@ -138,8 +132,7 @@ const options = {
             location: { type: 'string' },
             dateReported: { type: 'string', format: 'date-time' },
             status: { type: 'string' },
-            assignedOfficer: { type: 'string' },
-            riskLevel: { type: 'string' },
+            // assignedOfficer and riskLevel removed from response schema
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' }
           }

@@ -119,8 +119,9 @@ export default function CaseManagement() {
       const id = rec.caseID || rec._id;
       const res = await api.get(`/api/cases/${id}`);
       const serverCase = res?.data?.data || res?.data;
-      const patched = { ...serverCase, perpetrator: serverCase.perpetrator || '' };
+      const patched = { ...serverCase, perpetrator: serverCase.perpetrator || '', victimName: serverCase.victimName || '' };
       setEditingCase(patched);
+      // Ensure the form has victimName available
       form.setFieldsValue(patched);
       setIsViewMode(false);
       setEditModalVisible(true);
@@ -136,7 +137,7 @@ export default function CaseManagement() {
       }
       // Fallback: open the modal with the client record so user can still edit
       try {
-        const patched = { ...rec, perpetrator: rec.perpetrator || '' };
+        const patched = { ...rec, perpetrator: rec.perpetrator || '', victimName: rec.victimName || '' };
         setEditingCase(patched);
         form.setFieldsValue(patched);
         setIsViewMode(false);
@@ -161,12 +162,21 @@ export default function CaseManagement() {
     setSelectedReport(rep || null);
     if (rep) {
       // prefill fields on add form
+      // Compose full name from parts, prefer first + middle initial + last
+      const nameParts = [];
+      if (rep.victim) {
+        if (rep.victim.firstName) nameParts.push(rep.victim.firstName);
+        if (rep.victim.middleInitial) nameParts.push(rep.victim.middleInitial);
+        if (rep.victim.lastName) nameParts.push(rep.victim.lastName);
+      }
+      const composedName = nameParts.length ? nameParts.join(' ').trim() : (rep.victim?.victimID || '');
+
       addForm.setFieldsValue({
         reportID: rep.reportID,
         incidentType: rep.incidentType,
         description: rep.description,
         perpetrator: rep.perpetrator || '',
-        victimName: rep.victim ? `${rep.victim.firstName || ''} ${rep.victim.lastName || ''}`.trim() : '',
+        victimName: composedName,
       });
     }
   };
@@ -183,6 +193,7 @@ export default function CaseManagement() {
         caseID: vals.caseID,
         reportID: selectedReport.reportID,
         victimID: selectedReport.raw.victimID?._id || selectedReport.raw.victimID || null,
+        victimName: vals.victimName || (selectedReport.victim ? `${selectedReport.victim.firstName || ''} ${selectedReport.victim.middleInitial ? selectedReport.victim.middleInitial + ' ' : ''}${selectedReport.victim.lastName || ''}`.trim() : (selectedReport.raw.victimID || '')),
         incidentType: selectedReport.incidentType,
         description: selectedReport.description,
         perpetrator: selectedReport.perpetrator || '',
@@ -192,6 +203,7 @@ export default function CaseManagement() {
         assignedOfficer: vals.assignedOfficer || '',
         riskLevel: vals.riskLevel || 'Low',
       };
+      console.debug('Creating case payload', payload);
 
       const res = await api.post('/api/cases', payload);
       if (res?.data?.success) {
@@ -239,7 +251,7 @@ export default function CaseManagement() {
       setLoading(true);
       const id = editingCase.caseID || editingCase._id;
       // always include perpetrator field (keep parity with reports)
-      const payload = { ...vals, perpetrator: vals.perpetrator || '' };
+      const payload = { ...vals, perpetrator: vals.perpetrator || '', victimName: vals.victimName || editingCase.victimName || '' };
       const res = await api.put(`/api/cases/${id}`, payload);
       if (res?.data?.success) {
         message.success('Case updated');
@@ -298,6 +310,9 @@ export default function CaseManagement() {
 
           <Modal title={editingCase ? `${isViewMode ? 'View' : 'Edit'} Case - ${editingCase?.caseID}` : 'Case'} open={editModalVisible} onCancel={() => { setEditModalVisible(false); setEditingCase(null); setIsViewMode(false); }} okText="Save" onOk={() => { form.validateFields().then((v) => handleUpdateCase(v)); }}>
             <Form form={form} layout="vertical">
+              <Form.Item name="victimName" label="Victim Name" rules={[{ required: true, message: 'Victim Name is required' }]}>
+                <Input disabled={isViewMode} />
+              </Form.Item>
               <Form.Item name="incidentType" label="Incident Type" rules={[{ required: true }]}><Input disabled={isViewMode} /></Form.Item>
               <Form.Item name="location" label="Location"><Input disabled={isViewMode} /></Form.Item>
               <Form.Item name="description" label="Description"><Input.TextArea rows={3} disabled={isViewMode} /></Form.Item>

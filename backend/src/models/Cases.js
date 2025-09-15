@@ -19,6 +19,11 @@ const CasesSchema = new mongoose.Schema({
 		index: true,
 		trim: true,
 	},
+	victimName: {
+		type: String,
+		required: [true, 'Victim name is required'],
+		trim: true,
+	},
 	incidentType: {
 		type: String,
 		required: [true, 'Incident type is required'],

@@ -31,18 +31,17 @@ const getReport = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, data: report });
 });
 
-// List reports with optional filters: status, riskLevel, victimID
+// List reports with optional filters: status, victimID
 const listReports = asyncHandler(async (req, res) => {
   const filters = {
     status: req.query.status,
-    riskLevel: req.query.riskLevel,
     victimID: req.query.victimID
   };
   const reports = await ReportService.listReports(filters);
   res.status(200).json({ success: true, data: reports });
 });
 
-// Update report status / assignedOfficer (protected for officials/admins)
+// Update report status (protected for officials/admins)
 const updateReport = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const updates = req.body;

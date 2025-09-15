@@ -51,20 +51,7 @@ const incidentReportSchema = new mongoose.Schema({
         default: 'Pending',
         trim: true
     },
-    assignedOfficer: {
-        type: String,
-        required: false,
-        trim: true,
-    },
-    riskLevel: {
-        type: String,
-        required: [true, 'Risk level is required'],
-        enum: {
-            values: ['Low', 'Medium', 'High'],
-            message: 'Risk level must be either Low, Medium, or High'
-        },
-        trim: true
-    }
+
 }, {
     timestamps: true // This will add createdAt and updatedAt timestamps
 });
@@ -78,17 +65,11 @@ incidentReportSchema.add({
 // reportID already has `unique: true` on the field definition; avoid duplicate index declaration
 incidentReportSchema.index({ victimID: 1 });
 incidentReportSchema.index({ status: 1 });
-incidentReportSchema.index({ riskLevel: 1 });
 incidentReportSchema.index({ dateReported: -1 });
 
 // Method to get reports by status
 incidentReportSchema.statics.getReportsByStatus = function(status) {
-    return this.find({ status }).populate('victimID assignedOfficer');
-};
-
-// Method to get reports by risk level
-incidentReportSchema.statics.getReportsByRiskLevel = function(riskLevel) {
-    return this.find({ riskLevel }).populate('victimID assignedOfficer');
+    return this.find({ status }).populate('victimID');
 };
 
 // Virtual for getting time elapsed since report

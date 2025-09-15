@@ -35,6 +35,7 @@ const getReport = asyncHandler(async (req, res) => {
 const listReports = asyncHandler(async (req, res) => {
   const filters = {
     status: req.query.status,
+
     victimID: req.query.victimID
   };
   const reports = await ReportService.listReports(filters);

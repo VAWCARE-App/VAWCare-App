@@ -74,7 +74,6 @@ export default function Report() {
         perpetrator: values.perpetrator,
         location: values.location,
         dateReported,
-        riskLevel: values.riskLevel,
         victimID,
       };
 
@@ -160,19 +159,7 @@ export default function Report() {
                     </Select>
                   </Form.Item>
                 </Col>
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    name="riskLevel"
-                    label={<Text strong>Risk Level</Text>}
-                    rules={[{ required: true, message: "Please select the risk level" }]}
-                  >
-                    <Select placeholder="Select risk level">
-                      <Option value="Low">Low</Option>
-                      <Option value="Medium">Medium</Option>
-                      <Option value="High">High</Option>
-                    </Select>
-                  </Form.Item>
-                </Col>
+                {/* riskLevel removed: this field is no longer part of the report schema */}
               </Row>
 
               <Row gutter={[16, 0]}>

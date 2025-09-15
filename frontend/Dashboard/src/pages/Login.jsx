@@ -16,8 +16,7 @@ import { UserOutlined, SafetyOutlined, TeamOutlined } from "@ant-design/icons";
 import { api, saveToken } from "../lib/api";
 import { useNavigate, Link } from "react-router-dom";
 // Firebase client SDK (used to exchange server custom token for an ID token)
-import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, signInWithCustomToken } from 'firebase/auth';
+import { exchangeCustomTokenForIdToken } from '../lib/firebase';
 
 // Initialize Firebase client using Vite env vars
 const firebaseConfig = {
@@ -27,13 +26,7 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-async function exchangeCustomTokenForIdToken(customToken) {
-  if (!getApps().length) initializeApp(firebaseConfig);
-  const auth = getAuth();
-  const userCredential = await signInWithCustomToken(auth, customToken);
-  const idToken = await userCredential.user.getIdToken();
-  return idToken;
-}
+// Use shared helper from src/lib/firebase.js
 import Logo from "../assets/logo1.svg?react";
 
 const { Option } = Select;

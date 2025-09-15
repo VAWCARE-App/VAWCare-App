@@ -69,8 +69,6 @@ export default function ReportManagement() {
             location: r.location,
             dateReported: r.dateReported,
             status: r.status,
-            assignedOfficer: r.assignedOfficer,
-            riskLevel: r.riskLevel,
             createdAt: r.createdAt,
             updatedAt: r.updatedAt,
           };
@@ -158,8 +156,7 @@ export default function ReportManagement() {
       filtered = filtered.filter(
         (r) =>
           r.reportID.toLowerCase().includes(searchText.toLowerCase()) ||
-          r.incidentType.toLowerCase().includes(searchText.toLowerCase()) ||
-          r.assignedOfficer?.toLowerCase().includes(searchText.toLowerCase())
+          r.incidentType.toLowerCase().includes(searchText.toLowerCase())
       );
     }
 
@@ -216,12 +213,7 @@ export default function ReportManagement() {
       key: "location",
       render: (loc) => <Tag icon={<EnvironmentOutlined />} color="geekblue">{loc}</Tag>
     },
-    {
-      title: "Risk Level",
-      dataIndex: "riskLevel",
-      key: "riskLevel",
-      render: (risk) => <Tag color={getRiskColor(risk)}>{risk}</Tag>,
-    },
+                
     {
       title: "Status",
       dataIndex: "status",
@@ -232,11 +224,7 @@ export default function ReportManagement() {
         </Tag>
       ),
     },
-    {
-      title: "Assigned Officer",
-      dataIndex: "assignedOfficer",
-      key: "assignedOfficer",
-    },
+    
     {
       title: "Date Reported",
       dataIndex: "dateReported",
@@ -431,16 +419,7 @@ export default function ReportManagement() {
               <Form.Item name="perpetrator" label="Perpetrator" style={{ marginBottom: 12 }}>
                 <Input disabled={isViewMode} />
               </Form.Item>
-              <Form.Item name="assignedOfficer" label="Assigned Officer" style={{ marginBottom: 12 }}>
-                <Input disabled={isViewMode} />
-              </Form.Item>
-              <Form.Item name="riskLevel" label="Risk Level" style={{ marginBottom: 12 }}>
-                <Select disabled={isViewMode}>
-                  <Option value="Low">Low</Option>
-                  <Option value="Medium">Medium</Option>
-                  <Option value="High">High</Option>
-                </Select>
-              </Form.Item>
+              {/* assignedOfficer and riskLevel removed from UI - schema no longer includes them */}
               <Form.Item name="status" label="Status" style={{ marginBottom: 12 }}>
                 <Select disabled={isViewMode}>
                   <Option value="Pending">Pending</Option>

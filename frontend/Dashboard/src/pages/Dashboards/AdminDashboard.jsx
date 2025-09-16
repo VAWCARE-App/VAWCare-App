@@ -56,21 +56,92 @@ export default function AdminDashboard() {
     const total = Math.max(metrics.totalCases, 1);
     return Math.round((metrics.openCases / total) * 100);
   }, [metrics]);
-
   const loadMetrics = async (withSpinner = true) => {
     try {
       if (withSpinner) setLoading(true);
-      const { data } = await api.get("/api/metrics");
+
+      // Use existing endpoints and compute metrics client-side.
+      // Some admin endpoints return arrays or objects with items; be defensive.
+      const [reportsRes, casesRes, usersRes, logsRes] = await Promise.all([
+        api.get('/api/reports').catch(() => ({ data: [] })),
+        api.get('/api/cases').catch(() => ({ data: [] })),
+        // Request admin users summary — returns admins, victims, officials or a total
+        api.get('/api/admin/users').catch(() => ({ data: [] })),
+        api.get('/api/logs').catch(() => ({ data: [] })),
+      ]);
+
+      // Backend typically returns { success: true, data: [...] }
+      const reports = Array.isArray(reportsRes.data)
+        ? reportsRes.data
+        : Array.isArray(reportsRes.data?.data)
+        ? reportsRes.data.data
+        : (reportsRes.data?.items || []);
+
+      const cases = Array.isArray(casesRes.data)
+        ? casesRes.data
+        : Array.isArray(casesRes.data?.data)
+        ? casesRes.data.data
+        : (casesRes.data?.items || []);
+
+      // usersRes may be an array, or { success:true, data: { admins, victims, officials, total } }
+      const usersPayload = usersRes.data;
+
+      const logs = Array.isArray(logsRes.data)
+        ? logsRes.data
+        : Array.isArray(logsRes.data?.data)
+        ? logsRes.data.data
+        : (logsRes.data?.items || []);
+
+      // Debug: log raw responses so developer can inspect the shapes
+      console.debug('AdminDashboard API responses:', {
+        reportsRaw: reportsRes.data,
+        casesRaw: casesRes.data,
+        usersRaw: usersRes.data,
+        logsRaw: logsRes.data,
+      });
+
+      let totalUsers = 0;
+      if (Array.isArray(usersPayload)) {
+        totalUsers = usersPayload.length;
+      } else if (usersPayload && typeof usersPayload === 'object') {
+        // If backend returned { success: true, data: {...} }
+        const d = usersPayload.data || usersPayload;
+        if (typeof d.total === 'number') {
+          totalUsers = d.total;
+        } else {
+          const adminsCount = Array.isArray(d.admins) ? d.admins.length : 0;
+          const victimsCount = Array.isArray(d.victims) ? d.victims.length : 0;
+          const officialsCount = Array.isArray(d.officials) ? d.officials.length : 0;
+          // Fallback: if none of the arrays exist but d is an array-like 'items'
+          if (!adminsCount && !victimsCount && !officialsCount && Array.isArray(d.items)) {
+            totalUsers = d.items.length;
+          } else {
+            totalUsers = adminsCount + victimsCount + officialsCount;
+          }
+        }
+      } else {
+        totalUsers = 0;
+      }
+      const totalCases = Number(cases.length || 0);
+      const openCases = Number(cases.filter((c) => (String(c.status || 'Open') === 'Open')).length || 0);
+
+  const recentActivities = [];
+  // prefer logs then reports for activity feed
+  logs.slice(-10).reverse().forEach((l) => recentActivities.push({ id: `log-${l._id || l.id}`, title: l.action || 'System event', type: 'log', createdAt: l.createdAt || l.createdAt }));
+  reports.slice(-10).reverse().forEach((r) => recentActivities.push({ id: `report-${r._id || r.reportID}`, title: r.title || `Report ${r.reportID || r._id}`, type: 'report', createdAt: r.createdAt || r.createdAt }));
+
+      recentActivities.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      console.debug('AdminDashboard parsed values:', { totalUsers, totalCases, openCases, recentCount: recentActivities.length });
       setMetrics({
-        totalUsers: data?.totalUsers ?? 0,
-        totalCases: data?.totalCases ?? 0,
-        openCases: data?.openCases ?? 0,
-        recentActivities: Array.isArray(data?.recentActivities)
-          ? data.recentActivities
-          : [],
+        totalUsers: Number(totalUsers || 0),
+        totalCases: Number(totalCases || 0),
+        openCases: Number(openCases || 0),
+        recentActivities: recentActivities.slice(0, 10),
       });
     } catch (err) {
-      message.error(err?.response?.data?.message || "Failed to load metrics");
+      message.error(err?.response?.data?.message || 'Failed to load metrics');
+      setMetrics({ totalUsers: 0, totalCases: 0, openCases: 0, recentActivities: [] });
     } finally {
       if (withSpinner) setLoading(false);
     }
@@ -121,7 +192,7 @@ export default function AdminDashboard() {
         <Skeleton.Input active size="small" style={{ width: 100 }} />
       ) : (
         <Statistic
-          value={value}
+          value={typeof value === 'number' ? value : Number(value ?? 0)}
           valueStyle={{ color: BRAND.pink, fontSize: "clamp(20px,3.4vw,28px)" }}
         />
       )}

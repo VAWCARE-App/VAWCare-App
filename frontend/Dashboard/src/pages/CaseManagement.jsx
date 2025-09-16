@@ -305,7 +305,7 @@ export default function CaseManagement() {
         </Space>
       </Header>
       <Content style={{ padding: 16 }}>
-          <Card title="All Cases" extra={<Space><Search placeholder="Search cases..." style={{ width: 240 }} onChange={(e) => setSearchText(e.target.value)} /><Select value={filterType} onChange={setFilterType}><Option value="all">All</Option><Option value="Open">Open</Option><Option value="Under Investigation">In-Progress</Option><Option value="Resolved">Resolved</Option><Option value="Closed">Closed</Option></Select></Space>}>
+          <Card title="All Cases" extra={<Space><Search placeholder="Search cases..." style={{ width: 240 }} onChange={(e) => setSearchText(e.target.value)} /><Select value={filterType} onChange={setFilterType}><Option value="all">All Cases</Option><Option value="Open">Open</Option><Option value="Under Investigation">In-Progress</Option><Option value="Resolved">Resolved</Option><Option value="Closed">Closed</Option></Select></Space>}>
           <Table columns={columns} dataSource={filteredCases} loading={loading} pagination={{ pageSize: 8 }} scroll={{ y: 480 }} />
 
           <Modal title={editingCase ? `${isViewMode ? 'View' : 'Edit'} Case - ${editingCase?.caseID}` : 'Case'} open={editModalVisible} onCancel={() => { setEditModalVisible(false); setEditingCase(null); setIsViewMode(false); }} okText="Save" onOk={() => { form.validateFields().then((v) => handleUpdateCase(v)); }}>

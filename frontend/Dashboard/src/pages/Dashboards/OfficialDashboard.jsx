@@ -60,13 +60,47 @@ export default function OfficialDashboard() {
   const loadMetrics = async (withSpinner = true) => {
     try {
       if (withSpinner) setLoading(true);
-      const { data } = await api.get("/api/officials/metrics");
-      setMetrics({
-        totalReports: data?.totalReports ?? 0,
-        totalCases: data?.totalCases ?? 0,
-        openCases: data?.openCases ?? 0,
-        recentActivities: Array.isArray(data?.recentActivities) ? data.recentActivities : [],
+      // compute metrics from existing endpoints
+      const [reportsRes, casesRes, logsRes] = await Promise.all([
+        api.get('/api/reports').catch(() => ({ data: [] })),
+        api.get('/api/cases').catch(() => ({ data: [] })),
+        api.get('/api/logs').catch(() => ({ data: [] })),
+      ]);
+
+      const reports = Array.isArray(reportsRes.data)
+        ? reportsRes.data
+        : Array.isArray(reportsRes.data?.data)
+        ? reportsRes.data.data
+        : (reportsRes.data?.items || []);
+
+      const cases = Array.isArray(casesRes.data)
+        ? casesRes.data
+        : Array.isArray(casesRes.data?.data)
+        ? casesRes.data.data
+        : (casesRes.data?.items || []);
+
+      const logs = Array.isArray(logsRes.data)
+        ? logsRes.data
+        : Array.isArray(logsRes.data?.data)
+        ? logsRes.data.data
+        : (logsRes.data?.items || []);
+
+      console.debug('OfficialDashboard API responses:', {
+        reportsRaw: reportsRes.data,
+        casesRaw: casesRes.data,
+        logsRaw: logsRes.data,
       });
+
+      const totalReports = Number(reports.length || 0);
+      const totalCases = Number(cases.length || 0);
+      const openCases = Number(cases.filter((c) => (String(c.status || 'Open') === 'Open')).length || 0);
+
+      const recentActivities = [];
+      logs.slice(-10).reverse().forEach((l) => recentActivities.push({ id: `log-${l._id || l.id}`, title: l.action || 'System event', type: 'log', createdAt: l.createdAt || l.createdAt }));
+      reports.slice(-10).reverse().forEach((r) => recentActivities.push({ id: `report-${r._id || r.reportID}`, title: r.title || `Report ${r.reportID || r._id}`, type: 'report', createdAt: r.createdAt || r.createdAt }));
+      recentActivities.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      setMetrics({ totalReports, totalCases, openCases, recentActivities: recentActivities.slice(0, 10) });
     } catch (err) {
       // optional: toast
     } finally {
@@ -127,7 +161,7 @@ export default function OfficialDashboard() {
         </div>
       ) : (
         <Statistic
-          value={value}
+          value={typeof value === 'number' ? value : Number(value ?? 0)}
           valueStyle={{ color: BRAND.pink, fontSize: "clamp(20px,3.4vw,28px)" }}
         />
       )}

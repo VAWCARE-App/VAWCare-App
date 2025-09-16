@@ -1,25 +1,19 @@
-const mongoose = require('mongoose');
-const IncidentReport = require('../models/IncidentReports');
-const Victim = require('../models/Victims');
+const mongoose = require("mongoose");
+const IncidentReport = require("../models/IncidentReports");
+const Victim = require("../models/Victims");
 
 function normalizeStatus(value) {
   if (!value) return undefined;
   const s = String(value).trim().toLowerCase();
-  if (s === 'open') return 'Open';
-  if (s === 'in-progress' || s === 'in progress' || s === 'under investigation') return 'Under Investigation';
-  if (s === 'pending') return 'Pending';
-  if (s === 'resolved' || s === 'closed') return 'Resolved';
+  if (s === "open") return "Open";
+  if (s === "in-progress" || s === "in progress" || s === "under investigation")
+    return "Under Investigation";
+  if (s === "pending") return "Pending";
+  if (s === "resolved" || s === "closed") return "Resolved";
   return undefined;
 }
 
 // riskLevel was removed from schema — no normalization needed
-
-
-
-
-
-
-
 
 async function resolveVictimIdOnPayload(payload) {
   // If caller provided firebaseUid, resolve to victimID
@@ -36,7 +30,7 @@ async function resolveVictimIdOnPayload(payload) {
     } else {
       const found = await Victim.findOne({ victimID: payload.victimID });
       if (!found) {
-        const err = new Error('Provided victimID not found');
+        const err = new Error("Provided victimID not found");
         err.statusCode = 400;
         throw err;
       }
@@ -60,14 +54,13 @@ async function createReport(payload) {
     location: payload.location,
     perpetrator: payload.perpetrator,
     dateReported: payload.dateReported || Date.now(),
-    status: normalizeStatus(payload.status) || 'Pending',
+    status: normalizeStatus(payload.status) || "Pending",
     // assignedOfficer and riskLevel removed from schema
-
   });
 
   await doc.save();
   // Only populate victim (do NOT try to populate a string)
-  return doc.populate('victimID');
+  return doc.populate("victimID");
 }
 
 async function getReportById(id) {
@@ -75,18 +68,19 @@ async function getReportById(id) {
     ? { $or: [{ reportID: id }, { _id: id }] }
     : { reportID: id };
 
-  return IncidentReport.findOne(query).populate('victimID', '-location');
+  return IncidentReport.findOne(query).populate("victimID", "-location");
 }
 
 async function listReports(filters = {}) {
   const query = {};
-  if (filters.status) query.status = normalizeStatus(filters.status) || filters.status;
+  if (filters.status)
+    query.status = normalizeStatus(filters.status) || filters.status;
   // riskLevel filter removed
   if (filters.victimID) query.victimID = filters.victimID;
 
   return IncidentReport.find(query)
     .sort({ dateReported: -1 })
-    .populate('victimID', '-location');
+    .populate("victimID", "-location");
 }
 
 async function updateReport(id, updates) {
@@ -102,14 +96,13 @@ async function updateReport(id, updates) {
 
   if (ns) normalized.status = ns;
 
-
-  const allowed = ['status', 'description', 'location', 'perpetrator'];
+  const allowed = ["status", "description", "location", "perpetrator"];
   allowed.forEach((k) => {
     if (normalized[k] !== undefined) report[k] = normalized[k];
   });
 
   await report.save();
-  return report.populate('victimID', '-location');
+  return report.populate("victimID", "-location");
 }
 
 module.exports = { createReport, getReportById, listReports, updateReport };

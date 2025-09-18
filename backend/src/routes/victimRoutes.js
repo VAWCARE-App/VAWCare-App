@@ -15,11 +15,14 @@ router.post('/anonymous/alert', victimController.sendAnonymousAlert);
 router.get('/profile', protect, victimController.getProfile);
 router.put('/profile', protect, victimController.updateProfile);
 
+// Victim-specific metrics and reports
+router.get('/metrics', protect, victimController.getMetrics);
+
 // Authentication verification routes
 router.post('/verify-email', protect, victimController.verifyEmail);
 router.post('/verify-phone', protect, victimController.verifyPhone);
 
-// Report management routes
+// Report management routes (victims can only access their own reports)
 router.get('/reports', protect, victimController.getReports);
 router.put('/reports/:id', protect, victimController.updateReport);
 

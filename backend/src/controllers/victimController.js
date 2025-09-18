@@ -1,5 +1,8 @@
 const asyncHandler = require('express-async-handler');
 const Victim = require('../models/Victims');
+const IncidentReport = require('../models/IncidentReports');
+const Alert = require('../models/Alert');
+const Chatbot = require('../models/Chatbot');
 const admin = require('../config/firebase-config');
 
 // @desc    Register victim
@@ -506,7 +509,89 @@ const sendAnonymousAlert = asyncHandler(async (req, res) => {
     }
 });
 
-// @desc    Get victim's reports
+// @desc    Get simple metrics for the logged-in victim
+// @route   GET /api/victims/metrics
+// @access  Private
+const getMetrics = asyncHandler(async (req, res) => {
+    try {
+        const victim = await Victim.findOne({ firebaseUid: req.user.uid });
+        if (!victim) {
+            res.status(404);
+            throw new Error('Victim not found');
+        }
+
+        const totalReports = await IncidentReport.countDocuments({ victimID: victim._id });
+        const openCases = await IncidentReport.countDocuments({
+            victimID: victim._id,
+            status: { $in: ['Open', 'Under Investigation'] },
+        });
+
+        // recentActivities: collect the victim's own actions (reports submitted, alerts sent, chatbot usage)
+        const [reportDocs, alertDocs, chatDocs] = await Promise.all([
+            IncidentReport.find({ victimID: victim._id })
+                .sort({ dateReported: -1 })
+                .limit(5)
+                .select('reportID incidentType dateReported createdAt')
+                .lean(),
+            Alert.find({ victimID: victim._id })
+                .sort({ createdAt: -1 })
+                .limit(5)
+                .select('alertID type createdAt status')
+                .lean(),
+            Chatbot.find({ victimID: victim._id })
+                .sort({ createdAt: -1 })
+                .limit(5)
+                .select('chatID createdAt')
+                .lean(),
+        ]);
+
+        const reportActivities = (reportDocs || []).map((r) => ({
+            kind: 'report',
+            title: `You submitted report ${r.reportID}${r.incidentType ? ` — ${r.incidentType}` : ''}`,
+            time: r.dateReported || r.createdAt,
+            note: null,
+            id: r.reportID,
+        }));
+
+        const alertActivities = (alertDocs || []).map((a) => ({
+            kind: 'alert',
+            title: `You sent ${a.type} alert`,
+            time: a.createdAt,
+            note: null,
+            id: a.alertID,
+        }));
+
+        const chatActivities = (chatDocs || []).map((c) => ({
+            kind: 'chat',
+            title: `You chatted with the assistant`,
+            time: c.createdAt,
+            note: null,
+            id: c.chatID,
+        }));
+
+        // merge and sort by time desc, then take the most recent 5
+        const merged = [...reportActivities, ...alertActivities, ...chatActivities]
+            .filter((it) => it.time)
+            .sort((a, b) => new Date(b.time) - new Date(a.time))
+            .slice(0, 5);
+
+        const recentActivities = merged;
+
+        res.status(200).json({
+            success: true,
+            data: {
+                totalReports,
+                openCases,
+                recentActivities,
+            },
+        });
+    } catch (error) {
+        res.status(500);
+        throw new Error('Error fetching metrics');
+    }
+});
+
+// @desc    Get victim's reports (only their reports)
 // @route   GET /api/victims/reports
 // @access  Private
 const getReports = asyncHandler(async (req, res) => {
@@ -517,11 +602,14 @@ const getReports = asyncHandler(async (req, res) => {
             throw new Error('Victim not found');
         }
 
-        const reports = [];
+        const reports = await IncidentReport.find({ victimID: victim._id })
+            .sort({ dateReported: -1 })
+            .select('-__v')
+            .lean();
 
         res.status(200).json({
             success: true,
-            data: reports
+            data: reports,
         });
     } catch (error) {
         res.status(500);
@@ -554,6 +642,7 @@ module.exports = {
     registerVictim,
     loginVictim,
     getProfile,
+    getMetrics,
     verifyEmail,    
     verifyPhone,
     updateProfile,

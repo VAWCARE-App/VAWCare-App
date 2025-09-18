@@ -104,6 +104,7 @@ const victimSchema = new mongoose.Schema({
         required: true,
         minlength: [8, 'Password must be at least 8 characters long']
     },
+    // ticket removed: anonymous access is handled by creating an authenticated session on registration
     emergencyContacts: [{
         name: {
             type: String,
@@ -156,12 +157,18 @@ victimSchema.pre('save', async function(next) {
     try {
         // Generate victimID if not set
         if (!this.victimID) {
+            // Use a separate counter for anonymous accounts so we don't collide with existing VIC IDs
+            const counterKey = this.victimAccount === 'anonymous' ? 'anonymousId' : 'victimId';
             const counter = await Counter.findByIdAndUpdate(
-                'victimId',
+                counterKey,
                 { $inc: { seq: 1 } },
                 { new: true, upsert: true }
             );
-            this.victimID = `VIC${counter.seq.toString().padStart(3, '0')}`;
+            if (this.victimAccount === 'anonymous') {
+                this.victimID = `ANONYMOUS${counter.seq.toString().padStart(3, '0')}`;
+            } else {
+                this.victimID = `VIC${counter.seq.toString().padStart(3, '0')}`;
+            }
         }
 
         // Hash password ONLY if modified (ONLY ONCE)

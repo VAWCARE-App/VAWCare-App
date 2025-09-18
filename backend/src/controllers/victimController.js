@@ -6,7 +6,8 @@ const admin = require('../config/firebase-config');
 // @route   POST /api/victims/register  
 // @access  Public
 const registerVictim = asyncHandler(async (req, res) => {
-    const {
+    const body = req.body || {};
+    let {
         victimUsername,
         victimPassword,
         victimAccount = 'anonymous',
@@ -19,7 +20,23 @@ const registerVictim = asyncHandler(async (req, res) => {
         contactNumber,
         emergencyContacts,
         location
-    } = req.body;
+    } = body;
+
+    // If no payload provided or explicitly anonymous ticket requested, generate a ticket-based anonymous account
+    let generatedTicket = null;
+    if (!Object.keys(body).length || victimAccount === 'anonymous') {
+        // ensure anonymous flow: if caller didn't provide username/password, generate them
+        if (!victimUsername) {
+            victimUsername = `anon_${Date.now()}_${Math.floor(Math.random() * 9000) + 1000}`;
+        }
+        if (!victimPassword) {
+            // generate a short random password (will be hashed), include a symbol to satisfy strong password validators if any
+            victimPassword = (Math.random().toString(36).slice(-8) + 'A1!').slice(0, 12);
+        }
+        // mark as anonymous explicitly
+        victimAccount = 'anonymous';
+        generatedTicket = Math.random().toString(36).substring(2, 10).toUpperCase();
+    }
 
     console.log('\n=== Starting Victim Registration Process ===');
     console.log('Request Body:', {
@@ -32,12 +49,17 @@ const registerVictim = asyncHandler(async (req, res) => {
     });
 
     try {
-        // Check if username already exists
+        // Check if username already exists (skip for purely anonymous ticket collisions handled by regeneration)
         const existingVictim = await Victim.findOne({ victimUsername });
         if (existingVictim) {
-            console.log(`Registration failed: Username ${victimUsername} already exists`);
-            res.status(400);
-            throw new Error('Username already exists');
+            // If username collision happens for anonymous generated username, regenerate a new one and proceed
+            if (victimAccount === 'anonymous' && generatedTicket) {
+                victimUsername = `anon_${Date.now()}_${Math.floor(Math.random() * 9000) + 1000}`;
+            } else {
+                console.log(`Registration failed: Username ${victimUsername} already exists`);
+                res.status(400);
+                throw new Error('Username already exists');
+            }
         }
 
         // For regular accounts, check if email already exists
@@ -61,6 +83,8 @@ const registerVictim = asyncHandler(async (req, res) => {
             victimAccount,
             victimUsername,
             victimPassword, // This will be hashed by the pre-save middleware
+            // persist generated ticket for anonymous flow so it can be used to login
+            ...(generatedTicket ? { ticket: generatedTicket } : {}),
             firstName: firstName || (victimAccount === 'anonymous' ? 'Anonymous' : undefined),
             middleInitial: middleInitial || '',
             lastName: lastName || (victimAccount === 'anonymous' ? 'User' : undefined),
@@ -81,6 +105,18 @@ const registerVictim = asyncHandler(async (req, res) => {
         console.log(JSON.stringify({...victimData, victimPassword: '***HIDDEN***'}, null, 2));
 
         console.log(`Creating new ${victimAccount} victim record...`);
+        // If ticket was generated, ensure it doesn't collide with existing records
+        if (generatedTicket) {
+            let exists = await Victim.findOne({ ticket: generatedTicket });
+            let attempts = 0;
+            while (exists && attempts < 5) {
+                generatedTicket = Math.random().toString(36).substring(2, 10).toUpperCase();
+                victimData.ticket = generatedTicket;
+                exists = await Victim.findOne({ ticket: generatedTicket });
+                attempts += 1;
+            }
+        }
+
         const victim = new Victim(victimData);
         await victim.save(); // This triggers the pre-save middleware for password hashing
 
@@ -147,21 +183,21 @@ const registerVictim = asyncHandler(async (req, res) => {
             firebaseUid: victim.firebaseUid || 'Not created'
         });
 
-        res.status(201).json({
-            success: true,
-            message: 'Victim registered successfully',
-            data: {
-                token: customToken,
-                victim: {
-                    id: victim._id,
-                    victimID: victim.victimID,
-                    victimAccount: victim.victimAccount,
-                    victimUsername: victim.victimUsername,
-                    firebaseUid: victim.firebaseUid,
-                    firstName: victim.firstName
+            res.status(201).json({
+                success: true,
+                message: 'Victim registered successfully',
+                data: {
+                    token: customToken,
+                    victim: {
+                        id: victim._id,
+                        victimID: victim.victimID,
+                        victimAccount: victim.victimAccount,
+                        victimUsername: victim.victimUsername,
+                        firebaseUid: victim.firebaseUid,
+                        firstName: victim.firstName
+                    }
                 }
-            }
-        });
+            });
     } catch (error) {
         console.log('\n=== Registration Error ===');
         console.log('Error Code:', error.code || 'No error code');
@@ -267,6 +303,7 @@ const loginVictim = asyncHandler(async (req, res) => {
         throw new Error('Invalid credentials');
     }
 });
+
 
 // @desc    Get victim profile
 // @route   GET /api/victims/profile

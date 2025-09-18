@@ -13,6 +13,7 @@ import {
   Row,
   Col,
   Tabs,
+  Modal,
 } from "antd";
 import { api, saveToken } from "../lib/api";
 import { useNavigate, Link } from "react-router-dom";
@@ -186,6 +187,24 @@ export default function Signup() {
     }
   };
 
+  // Create anonymous account (one-tap flow) and auto-login
+  const createAnonymousTicket = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.post("/api/victims/register", { victimAccount: "anonymous" });
+      if (!data || !data.success) throw new Error(data?.message || "Failed to create account");
+      const resp = data.data || {};
+      if (resp.token) saveToken(resp.token);
+      if (resp.victim) localStorage.setItem("user", JSON.stringify(resp.victim));
+      message.success("Account created successfully!");
+      navigate("/victim-test");
+    } catch (err) {
+      message.error(err?.response?.data?.message || err.message || "Unable to create account");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = () => {
     formRef.current
       .validateFields()
@@ -245,16 +264,18 @@ export default function Signup() {
                       <Radio value="regular">Regular Account</Radio>
                     </Radio.Group>
                   </Form.Item>
-                  <Form.Item
-                    name="username"
-                    label="Username"
-                    rules={[
-                      { required: true, message: "Please enter a username" },
-                      { min: 4, message: "Username must be at least 4 characters" },
-                    ]}
-                  >
-                    <Input placeholder="Enter username" size={screens.md ? "large" : "middle"} />
-                  </Form.Item>
+                  {accountType === 'regular' && (
+                    <Form.Item
+                      name="username"
+                      label="Username"
+                      rules={[
+                        { required: true, message: "Please enter a username" },
+                        { min: 4, message: "Username must be at least 4 characters" },
+                      ]}
+                    >
+                      <Input placeholder="Enter username" size={screens.md ? "large" : "middle"} />
+                    </Form.Item>
+                  )}
                   {accountType === "regular" && (
                     <Row gutter={16}>
                       <Col xs={24} md={12}>
@@ -279,38 +300,40 @@ export default function Signup() {
                       </Col>
                     </Row>
                   )}
-                  <Row gutter={16}>
-                    <Col xs={24} md={12}>
-                      <Form.Item
-                        name="password"
-                        label="Password"
-                        rules={[
-                          { required: true, message: "Please enter a password" },
-                          { min: 8, message: "Password must be at least 8 characters" },
-                        ]}
-                      >
-                        <Input.Password placeholder="At least 8 characters" size={screens.md ? "large" : "middle"} />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} md={12}>
-                      <Form.Item
-                        name="confirmPassword"
-                        label="Confirm Password"
-                        dependencies={["password"]}
-                        rules={[
-                          { required: true, message: "Please confirm your password" },
-                          ({ getFieldValue }) => ({
-                            validator(_, value) {
-                              if (!value || getFieldValue("password") === value) return Promise.resolve();
-                              return Promise.reject(new Error("Passwords do not match"));
-                            },
-                          }),
-                        ]}
-                      >
-                        <Input.Password placeholder="Re-enter password" size={screens.md ? "large" : "middle"} />
-                      </Form.Item>
-                    </Col>
-                  </Row>
+                  {accountType === 'regular' && (
+                    <Row gutter={16}>
+                      <Col xs={24} md={12}>
+                        <Form.Item
+                          name="password"
+                          label="Password"
+                          rules={[
+                            { required: true, message: "Please enter a password" },
+                            { min: 8, message: "Password must be at least 8 characters" },
+                          ]}
+                        >
+                          <Input.Password placeholder="At least 8 characters" size={screens.md ? "large" : "middle"} />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={12}>
+                        <Form.Item
+                          name="confirmPassword"
+                          label="Confirm Password"
+                          dependencies={["password"]}
+                          rules={[
+                            { required: true, message: "Please confirm your password" },
+                            ({ getFieldValue }) => ({
+                              validator(_, value) {
+                                if (!value || getFieldValue("password") === value) return Promise.resolve();
+                                return Promise.reject(new Error("Passwords do not match"));
+                              },
+                            }),
+                          ]}
+                        >
+                          <Input.Password placeholder="Re-enter password" size={screens.md ? "large" : "middle"} />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  )}
                 </Tabs.TabPane>
                 {accountType === "regular" && (
                   <Tabs.TabPane tab="Personal Info" key="2">
@@ -339,23 +362,39 @@ export default function Signup() {
                   </Tabs.TabPane>
                 )}
               </Tabs>
-              <Button
-                type="primary"
-                htmlType="submit"
-                block
-                loading={loading}
-                onClick={handleSubmit}
-                size={screens.md ? "large" : "middle"}
-                style={{
-                  backgroundColor: "#e91e63",
-                  borderColor: "#e91e63",
-                  borderRadius: 10,
-                  fontWeight: 600,
-                  marginTop: 12,
-                }}
-              >
-                Create Account
-              </Button>
+              {accountType === 'regular' ? (
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  block
+                  loading={loading}
+                  onClick={handleSubmit}
+                  size={screens.md ? "large" : "middle"}
+                  style={{
+                    backgroundColor: "#e91e63",
+                    borderColor: "#e91e63",
+                    borderRadius: 10,
+                    fontWeight: 600,
+                    marginTop: 12,
+                  }}
+                >
+                  Create Account
+                </Button>
+              ) : (
+                <Button
+                  type="default"
+                  block
+                  onClick={createAnonymousTicket}
+                  loading={loading}
+                  size={screens.md ? "large" : "middle"}
+                  style={{
+                    marginTop: 12,
+                    borderRadius: 10,
+                  }}
+                >
+                  Create Anonymous Account
+                </Button>
+              )}
               <div style={{ marginTop: 12, textAlign: "center" }}>
                 <Typography.Text style={{ color: "#666" }}>
                   Already have an account?{" "}
@@ -368,6 +407,8 @@ export default function Signup() {
           </div>
         </Card>
       </Flex>
+
+      {/* Ticket modal removed: anonymous creation now auto-logs-in and redirects */}
     </div>
   );
 }

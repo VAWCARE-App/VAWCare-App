@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Card,
   Col,
@@ -12,7 +12,6 @@ import {
   Empty,
   Space,
   Statistic,
-  Progress,
   List,
 } from "antd";
 import {
@@ -47,6 +46,8 @@ export default function VictimDashboard() {
   });
 
   const [resources, setResources] = useState([]);
+  const [myReports, setMyReports] = useState([]);
+  const [reportsLoading, setReportsLoading] = useState(false);
 
   const BRAND = {
     pink: "#e91e63",
@@ -54,27 +55,35 @@ export default function VictimDashboard() {
     soft: "#ffd1dc",
   };
 
-  const donutSize =
-    screens.xxl ? 220 : screens.xl ? 200 : screens.lg ? 180 : screens.md ? 160 : 140;
-
-  const openPercent = useMemo(() => {
-    const total = Math.max(metrics.totalReports, 1);
-    return Math.round((metrics.openCases / total) * 100);
-  }, [metrics]);
+  // Open Case Ratio (donut) removed per request
 
   const fetchMetrics = async (withSpinner = true) => {
     try {
       if (withSpinner) setLoading(true);
       const { data } = await api.get("/api/victims/metrics");
       setMetrics({
-        totalReports: data?.totalReports ?? 0,
-        openCases: data?.openCases ?? 0,
-        recentActivities: Array.isArray(data?.recentActivities) ? data.recentActivities : [],
+        totalReports: data?.data?.totalReports ?? 0,
+        openCases: data?.data?.openCases ?? 0,
+        recentActivities: Array.isArray(data?.data?.recentActivities) ? data.data.recentActivities : [],
       });
     } catch {
       // optional toast
     } finally {
       if (withSpinner) setLoading(false);
+    }
+  };
+
+  const fetchMyReports = async () => {
+    setReportsLoading(true);
+    try {
+      const { data } = await api.get('/api/victims/reports');
+      if (data?.success) {
+        setMyReports(Array.isArray(data.data) ? data.data : []);
+      }
+    } catch (err) {
+      // ignore silently - optional toast
+    } finally {
+      setReportsLoading(false);
     }
   };
 
@@ -139,6 +148,7 @@ export default function VictimDashboard() {
   useEffect(() => {
     fetchMetrics(true);
     fetchResources();
+    fetchMyReports();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -275,41 +285,34 @@ export default function VictimDashboard() {
               />
             </Col>
 
-            {/* Donut */}
-            <Col xs={24} lg={8}>
+            {/* My Reports - moved into donut position */}
+            <Col xs={24} md={12} lg={8}>
               <Card
-                className="fade-in-card"
-                title={<span style={{ color: BRAND.pink }}>Open Case Ratio</span>}
+                title={<span style={{ color: BRAND.pink }}>My Reports</span>}
                 bordered
-                style={{
-                  borderRadius: 14,
-                  borderColor: BRAND.soft,
-                  height: "100%",
-                  animationDelay: "300ms",
-                }}
-                bodyStyle={{ padding: 16, display: "grid", placeItems: "center" }}
+                style={{ borderRadius: 14, borderColor: BRAND.soft, height: "100%" }}
               >
-                {loading ? (
+                {reportsLoading ? (
                   <Skeleton active />
+                ) : myReports.length ? (
+                  <List
+                    dataSource={myReports}
+                    renderItem={(r) => (
+                      <List.Item>
+                        <Space direction="vertical" style={{ width: '100%' }}>
+                          <Space style={{ justifyContent: 'space-between', width: '100%' }}>
+                            <Text strong>{r.reportID || 'Report'}</Text>
+                            <Tag color={r.status === 'Open' || r.status === 'Under Investigation' ? 'orange' : 'green'}>
+                              {r.status}
+                            </Tag>
+                          </Space>
+                          <Text type="secondary">{r.incidentType} • {new Date(r.dateReported).toLocaleString()}</Text>
+                        </Space>
+                      </List.Item>
+                    )}
+                  />
                 ) : (
-                  <div style={{ textAlign: "center" }}>
-                    <Progress
-                      type="dashboard"
-                      percent={openPercent}
-                      strokeColor={BRAND.pink}
-                      trailColor="#ffe6ef"
-                      size={donutSize}
-                      format={(p) => `${p}% Open`}
-                    />
-                    <Space style={{ marginTop: 10 }}>
-                      <Tag color={BRAND.pink} style={{ color: "#fff", borderColor: BRAND.pink }}>
-                        Open: {metrics.openCases}
-                      </Tag>
-                      <Tag color="#ff85a2" style={{ borderColor: BRAND.soft }}>
-                        Total: {metrics.totalReports}
-                      </Tag>
-                    </Space>
-                  </div>
+                  <Empty description="No reports found" />
                 )}
               </Card>
             </Col>
@@ -357,23 +360,40 @@ export default function VictimDashboard() {
                 ) : metrics.recentActivities?.length ? (
                   <List
                     dataSource={metrics.recentActivities}
-                    renderItem={(item, idx) => (
-                      <List.Item key={idx} style={{ paddingInline: 16 }}>
-                        <Space direction="vertical" size={0}>
-                          <Text strong>{item.title || "Activity"}</Text>
-                          <Text type="secondary" style={{ fontSize: 12 }}>
-                            {item.time ? new Date(item.time).toLocaleString() : "Just now"}
-                          </Text>
-                          {item.note && <Text>{item.note}</Text>}
-                        </Space>
-                      </List.Item>
-                    )}
+                    renderItem={(item, idx) => {
+                      // item may be a string or an object; show a clear title and time
+                      const title =
+                        typeof item === 'string'
+                          ? item
+                          : item.title || (item.reportID ? `Report ${item.reportID}${item.incidentType ? ` — ${item.incidentType}` : ''}` : 'Activity');
+
+                      const timeVal =
+                        item?.time || item?.updatedAt || item?.dateReported || null;
+
+                      const timeText = timeVal ? new Date(timeVal).toLocaleString() : 'Just now';
+
+                      const note = typeof item === 'string' ? null : item.note || item.status ? `Status: ${item.status}` : null;
+
+                      return (
+                        <List.Item key={item?.reportID || idx} style={{ paddingInline: 16 }}>
+                          <Space direction="vertical" size={0} style={{ width: '100%' }}>
+                            <Text strong>{title}</Text>
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              {timeText}
+                            </Text>
+                            {/* note intentionally removed - we only show action and time */}
+                          </Space>
+                        </List.Item>
+                      );
+                    }}
                   />
                 ) : (
                   <Empty description="No recent activity" style={{ margin: "24px 0" }} />
                 )}
               </Card>
             </Col>
+
+            {/* Open Case Ratio removed */}
 
             {/* Safety Tips & Resources — ADDED */}
             <Col xs={24}>

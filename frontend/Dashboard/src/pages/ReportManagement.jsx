@@ -51,10 +51,10 @@ export default function ReportManagement() {
 
       if (data.success) {
         const formattedReports = data.data.map((r) => {
-          // Strip out victim.location to avoid exposing lat/lng in the frontend mapping
+          // Remove the victim's location (latitude/longitude) for privacy
           let victim = null;
           if (r.victimID) {
-            // copy all victim fields except `location`
+            // keep all victim fields except location
             const { location, ...victimNoLocation } = r.victimID;
             victim = victimNoLocation;
           }
@@ -97,7 +97,7 @@ export default function ReportManagement() {
   };
 
   const handleEditReport = (record) => {
-  // Ensure perpetrator is always present in the form
+  // Make sure the perpetrator field exists (use empty string if missing)
   const patchedRecord = { ...record, perpetrator: record.perpetrator || '' };
   setEditingReport(patchedRecord);
   form.setFieldsValue(patchedRecord);
@@ -126,7 +126,7 @@ export default function ReportManagement() {
   const handleUpdateReport = async (values) => {
     try {
       setLoading(true);
-      // Always send perpetrator, even if empty
+      // Include the perpetrator field in the update (empty string if not set)
       const payload = { ...values, perpetrator: values.perpetrator || '' };
       const res = await api.put(`/api/reports/${editingReport.reportID}`, payload);
       if (res?.data?.success) {
@@ -196,6 +196,18 @@ export default function ReportManagement() {
   };
 
   const columns = [
+    {
+      title: "Victim ID",
+      dataIndex: "victimID",
+      key: "victimID",
+      render: (victim) => {
+        if (!victim) return <Tag color="default">N/A</Tag>;
+        // victim can be an object or a string; pick the ID to show
+        const id = typeof victim === 'string' ? victim : victim.victimID || victim._id || 'N/A';
+        return <Tag color="magenta">{id}</Tag>;
+      },
+      width: 160,
+    },
     {
       title: "Report ID",
       dataIndex: "reportID",

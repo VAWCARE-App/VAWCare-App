@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import TwoFactor from "./pages/2FA";
 
 import Dashboard from "./pages/Dashboards/AdminDashboard";
 import Admin from "./layouts/AdminLayout";
@@ -35,6 +36,7 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/2fa" element={<TwoFactor />} />
 
             {/* Shell/Layout */}
             <Route path="/" element={<Admin />}>

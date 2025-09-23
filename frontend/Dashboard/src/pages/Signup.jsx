@@ -178,7 +178,9 @@ export default function Signup() {
         if (data.data.token) saveToken(data.data.token);
         localStorage.setItem("user", JSON.stringify(data.data.victim));
         message.success("Account created successfully!");
-        navigate("/victim-test");
+        // If this was an anonymous signup, go directly to the report page
+        const redirect = data.data.victim?.victimAccount === "anonymous" ? "/report" : "/victim-test";
+        navigate(redirect);
       } else throw new Error(data.message || "Registration failed");
     } catch (err) {
       message.error(err?.response?.data?.message || err.message || "Signup failed");
@@ -196,8 +198,9 @@ export default function Signup() {
       const resp = data.data || {};
       if (resp.token) saveToken(resp.token);
       if (resp.victim) localStorage.setItem("user", JSON.stringify(resp.victim));
-      message.success("Account created successfully!");
-      navigate("/victim-test");
+  message.success("Account created successfully!");
+  // anonymous creation should go straight to filing a report
+  navigate("/report");
     } catch (err) {
       message.error(err?.response?.data?.message || err.message || "Unable to create account");
     } finally {

@@ -226,68 +226,55 @@ const registerVictim = asyncHandler(async (req, res) => {
 const loginVictim = asyncHandler(async (req, res) => {
     const { identifier, password } = req.body;
 
-    console.log('\n=== Starting Victim Login Process ===');
-    console.log('Login attempt for identifier:', identifier);
-
     try {
-        // First try to find user by username
-        let victim = await Victim.findOne({ victimUsername: identifier });
-
-        // If not found by username, try email (for regular users)
-        if (!victim) {
-            victim = await Victim.findOne({ victimEmail: identifier });
-        }
+        // 1. Find user
+        let victim = await Victim.findOne({ victimUsername: identifier }) 
+                  || await Victim.findOne({ victimEmail: identifier });
 
         if (!victim) {
-            console.log('Login failed: User not found');
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid credentials'
-            });
+            return res.status(401).json({ success: false, message: "Invalid credentials" });
         }
 
-        console.log('Found user:', {
-            id: victim._id,
-            username: victim.victimUsername,
-            accountType: victim.victimAccount
-        });
-
-        // Check password using comparePassword method
+        // 2. Verify password
         const isMatch = await victim.comparePassword(password);
-        console.log('Password comparison result:', isMatch);
-
         if (!isMatch) {
-            console.log('Login failed: Invalid password');
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid credentials'
-            });
+            return res.status(401).json({ success: false, message: "Invalid credentials" });
         }
 
-        let customToken = null;
-
-        // Try Firebase operations if firebaseUid exists
-        if (victim.firebaseUid) {
+        // 3. Ensure Firebase UID exists
+        if (!victim.firebaseUid) {
+            let firebaseUser;
             try {
-                if (admin && admin.auth) {
-                    const firebaseUser = await admin.auth().getUser(victim.firebaseUid);
-                    customToken = await admin.auth().createCustomToken(victim.firebaseUid, {
-                        role: 'victim',
-                        isAnonymous: victim.victimAccount === 'anonymous',
-                        victimUsername: victim.victimUsername
-                    });
-                    console.log('Firebase token created successfully');
+                firebaseUser = await admin.auth().createUser({
+                    email: victim.victimEmail || undefined,
+                    displayName: victim.victimUsername,
+                });
+                victim.firebaseUid = firebaseUser.uid;
+                await victim.save();
+            } catch (err) {
+                // If duplicate email, fetch existing user instead
+                if (err.code === "auth/email-already-exists") {
+                    firebaseUser = await admin.auth().getUserByEmail(victim.victimEmail);
+                    victim.firebaseUid = firebaseUser.uid;
+                    await victim.save();
+                } else {
+                    console.error("Firebase UID creation failed:", err.message);
+                    return res.status(500).json({ success: false, message: "Firebase error" });
                 }
-            } catch (error) {
-                console.error('Firebase operation error:', error.message);
             }
         }
 
-        console.log('\n=== Login Successful ===');
+        // 4. Generate custom token
+        const customToken = await admin.auth().createCustomToken(victim.firebaseUid, {
+            role: "victim",
+            isAnonymous: victim.victimAccount === "anonymous",
+            victimUsername: victim.victimUsername
+        });
 
+        // 5. Respond with token
         res.status(200).json({
             success: true,
-            message: 'Login successful',
+            message: "Login successful",
             data: {
                 token: customToken,
                 victim: {
@@ -296,16 +283,17 @@ const loginVictim = asyncHandler(async (req, res) => {
                     victimAccount: victim.victimAccount,
                     victimUsername: victim.victimUsername,
                     victimType: victim.victimType,
-                    firstName: victim.victimAccount === 'anonymous' ? 'Anonymous' : victim.firstName
+                    firstName: victim.victimAccount === "anonymous" ? "Anonymous" : victim.firstName
                 }
             }
         });
+
     } catch (error) {
-        console.error('Login error:', error.message);
-        res.status(401);
-        throw new Error('Invalid credentials');
+        console.error("Login error:", error.message);
+        res.status(500).json({ success: false, message: "Server error" });
     }
 });
+
 
 
 // @desc    Get victim profile

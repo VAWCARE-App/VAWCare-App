@@ -13,6 +13,44 @@ export default function EmergencyButton() {
 
     // Only send emergency report when toggling ON
     if (!pulsing) {
+
+      //sends location to backend
+      if (!navigator.geolocation) {
+        message.error("Geolocation is not supported by your browser.");
+        return;
+      }
+
+      setLoading(true);
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          console.log("Emergency alert sent:", { latitude, longitude });
+
+          try {
+            // 🔥 Send location to backend API
+            await axios.post("/api/emergency", {
+              latitude,
+              longitude,
+              timestamp: new Date().toISOString(),
+            });
+
+            message.success("Emergency alert sent with your location!");
+          } catch (err) {
+            console.error(err);
+            message.error("Failed to send emergency alert.");
+          } finally {
+            setLoading(false);
+          }
+        },
+        (error) => {
+          console.error(error);
+          message.error("Unable to retrieve location.");
+          setLoading(false);
+        },
+        { enableHighAccuracy: true, timeout: 10000 } // ⏱ more accurate location
+      );
+
       try {
         setLoading(true);
 

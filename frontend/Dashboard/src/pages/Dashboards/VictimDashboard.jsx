@@ -209,7 +209,7 @@ export default function VictimDashboard() {
   return (
     <Layout style={{ minHeight: "100vh", width: "100%", background: BRAND.light }}>
       {/* Header with Refresh + Logout */}
-      <Header
+      {/* <Header
         style={{
           position: "sticky",
           top: 0,
@@ -253,7 +253,7 @@ export default function VictimDashboard() {
             Logout
           </Button>
         </Space>
-      </Header>
+      </Header> */}
 
       {/* Content */}
       <Content
@@ -434,32 +434,6 @@ export default function VictimDashboard() {
           </Row>
         </div>
       </Content>
-
-      {/* Floating “AI Chatbot” button */}
-      <button
-        onClick={() => navigate("/victim-chatbot")}
-        aria-label="Open AI Chatbot"
-        style={{
-          position: "fixed",
-          right: 16,
-          bottom: 16,
-          zIndex: 1000,
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "12px 16px",
-          borderRadius: 999,
-          border: `1px solid ${BRAND.soft}`,
-          background: "#fff",
-          color: BRAND.pink,
-          boxShadow: "0 12px 24px rgba(233,30,99,0.2)",
-          fontWeight: 700,
-          cursor: "pointer",
-        }}
-      >
-        <MessageOutlined />
-        <span>AI Chatbot</span>
-      </button>
     </Layout>
   );
 }

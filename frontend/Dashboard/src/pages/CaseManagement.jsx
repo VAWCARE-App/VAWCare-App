@@ -25,6 +25,7 @@ import {
   ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import { api } from "../lib/api";
+import { useNavigate } from "react-router-dom";
 
 const { Header, Content } = Layout;
 const { Search } = Input;
@@ -45,6 +46,7 @@ export default function CaseManagement() {
   const [selectedReport, setSelectedReport] = useState(null);
   const [form] = Form.useForm();
   const [addForm] = Form.useForm();
+  const navigate = useNavigate();
 
   const fetchAllCases = async () => {
     try {
@@ -111,43 +113,14 @@ export default function CaseManagement() {
     }
   };
 
-  const handleViewCase = (rec) => { setEditingCase(rec); form.setFieldsValue(rec); setIsViewMode(true); setEditModalVisible(true); };
-  const handleEditCase = async (rec) => {
-    try {
-      setLoading(true);
-      // fetch latest version from server (by caseID or _id)
-      const id = rec.caseID || rec._id;
-      const res = await api.get(`/api/cases/${id}`);
-      const serverCase = res?.data?.data || res?.data;
-      const patched = { ...serverCase, perpetrator: serverCase.perpetrator || '', victimName: serverCase.victimName || '' };
-      setEditingCase(patched);
-      // Ensure the form has victimName available
-      form.setFieldsValue(patched);
-      setIsViewMode(false);
-      setEditModalVisible(true);
-    } catch (err) {
-      // Provide richer diagnostics for debugging
-      const status = err.response?.status;
-      const data = err.response?.data;
-      console.error('Failed to load case for edit', { status, data, err });
-      if (status) {
-        message.error(`Failed to load case for editing (${status}): ${data?.message || JSON.stringify(data)}`);
-      } else {
-        message.error('Failed to load case for editing (no response)');
-      }
-      // Fallback: open the modal with the client record so user can still edit
-      try {
-        const patched = { ...rec, perpetrator: rec.perpetrator || '', victimName: rec.victimName || '' };
-        setEditingCase(patched);
-        form.setFieldsValue(patched);
-        setIsViewMode(false);
-        setEditModalVisible(true);
-      } catch (e) {
-        console.error('Fallback to client record failed', e);
-      }
-    } finally {
-      setLoading(false);
-    }
+  const handleViewCase = (rec) => {
+    console.log('Viewing case', rec);
+    console.log('Navigating to /cases/' + rec.caseID);
+    navigate(`/cases/${rec.caseID}`);
+  };
+
+  const handleEditCase = (rec) => {
+    navigate(`/cases/${rec.caseID}?edit=true`);
   };
 
   const openAddModal = async () => {
@@ -286,13 +259,15 @@ export default function CaseManagement() {
     { title: 'Assigned Officer', dataIndex: 'assignedOfficer', key: 'assignedOfficer' },
     { title: 'Risk Level', dataIndex: 'riskLevel', key: 'riskLevel' },
     { title: 'Date', dataIndex: 'dateReported', key: 'dateReported', render: (d) => d ? new Date(d).toLocaleString() : '' },
-    { title: 'Actions', key: 'actions', render: (_, rec) => (
-      <Space>
-        <Tooltip title="View"><Button type="link" icon={<EyeOutlined />} onClick={() => handleViewCase(rec)} /></Tooltip>
-        <Tooltip title="Edit"><Button type="link" icon={<EditOutlined />} onClick={() => handleEditCase(rec)} /></Tooltip>
-        <Tooltip title="Delete"><Button type="link" icon={<DeleteOutlined />} danger onClick={() => handleDeleteCase(rec)} /></Tooltip>
-      </Space>
-    ) }
+    {
+      title: 'Actions', key: 'actions', render: (_, rec) => (
+        <Space>
+          <Tooltip title="View"><Button type="link" icon={<EyeOutlined />} onClick={() => handleViewCase(rec)} /></Tooltip>
+          <Tooltip title="Edit"><Button type="link" icon={<EditOutlined />} onClick={() => handleEditCase(rec)} /></Tooltip>
+          <Tooltip title="Delete"><Button type="link" icon={<DeleteOutlined />} danger onClick={() => handleDeleteCase(rec)} /></Tooltip>
+        </Space>
+      )
+    }
   ];
 
   return (
@@ -305,7 +280,7 @@ export default function CaseManagement() {
         </Space>
       </Header>
       <Content style={{ padding: 16 }}>
-          <Card title="All Cases" extra={<Space><Search placeholder="Search cases..." style={{ width: 240 }} onChange={(e) => setSearchText(e.target.value)} /><Select value={filterType} onChange={setFilterType}><Option value="all">All Cases</Option><Option value="Open">Open</Option><Option value="Under Investigation">In-Progress</Option><Option value="Resolved">Resolved</Option><Option value="Closed">Closed</Option></Select></Space>}>
+        <Card title="All Cases" extra={<Space><Search placeholder="Search cases..." style={{ width: 240 }} onChange={(e) => setSearchText(e.target.value)} /><Select value={filterType} onChange={setFilterType}><Option value="all">All Cases</Option><Option value="Open">Open</Option><Option value="Under Investigation">In-Progress</Option><Option value="Resolved">Resolved</Option><Option value="Closed">Closed</Option></Select></Space>}>
           <Table columns={columns} dataSource={filteredCases} loading={loading} pagination={{ pageSize: 8 }} scroll={{ y: 480 }} />
 
           <Modal title={editingCase ? `${isViewMode ? 'View' : 'Edit'} Case - ${editingCase?.caseID}` : 'Case'} open={editModalVisible} onCancel={() => { setEditModalVisible(false); setEditingCase(null); setIsViewMode(false); }} okText="Save" onOk={() => { form.validateFields().then((v) => handleUpdateCase(v)); }}>
@@ -326,7 +301,7 @@ export default function CaseManagement() {
           {/* Add Case Modal */}
           <Modal title="Create Case" open={addModalVisible} onCancel={() => { setAddModalVisible(false); setSelectedReport(null); }} okText="Create" onOk={() => { addForm.validateFields().then((v) => handleCreateCase(v)); }}>
             <Form form={addForm} layout="vertical">
-              <Form.Item name="reportID" label="Select Report" rules={[{ required: true }]}> 
+              <Form.Item name="reportID" label="Select Report" rules={[{ required: true }]}>
                 <Select showSearch placeholder="Select a report to base case on" onChange={handleReportSelect} optionFilterProp="children">
                   {reportsList.map((r) => (
                     <Option key={r.reportID} value={r.reportID}>{r.reportID} — {r.incidentType} — {r.victim?.firstName || ''} {r.victim?.lastName || ''}</Option>

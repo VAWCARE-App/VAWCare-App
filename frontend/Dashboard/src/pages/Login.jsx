@@ -184,38 +184,11 @@ export default function Login() {
   const maxWidth = screens.x2 ? 520 : screens.lg ? 480 : screens.md ? 420 : 360;
   const cardPadding = screens.md ? 24 : 16;
 
-  const getUserTypeInfo = (type) => {
-    switch (type) {
-      case "victim": return { icon: <UserOutlined />, label: "Victim", color: "#e91e63" };
-      case "admin": return { icon: <SafetyOutlined />, label: "Administrator", color: "#1890ff" };
-      case "official": return { icon: <TeamOutlined />, label: "Barangay Official", color: "#52c41a" };
-      default: return { icon: <UserOutlined />, label: "User", color: "#e91e63" };
-    }
-  };
-
-  const getApiEndpoint = (type) => {
-    switch (type) {
-      case "victim": return "/api/victims/login";
-      case "admin": return "/api/admin/login";
-      case "official": return "/api/officials/login";
-      default: return "/api/victims/login";
-    }
-  };
-
-  const formatLoginData = (values, type) => {
-    switch (type) {
-      case "victim": return { identifier: values.identifier, password: values.password };
-      case "admin": return { adminEmail: values.identifier, adminPassword: values.password };
-      case "official": return { officialEmail: values.identifier, password: values.password };
-      default: return values;
-    }
-  };
-
   const onFinish = async (values) => {
     try {
       setLoading(true);
-      const endpoint = getApiEndpoint(userType);
-      const loginData = formatLoginData(values, userType);
+      const endpoint = "api/victims/login"
+      const loginData = { identifier: values.identifier, password: values.password };
       const { data } = await api.post(endpoint, loginData);
       if (data.success) {
         if (data.data?.token) {
@@ -261,7 +234,7 @@ export default function Login() {
     }
   };
 
-  const currentUserType = getUserTypeInfo(userType);
+  const currentUserType = { icon: <UserOutlined />, label: "Victim", color: "#e91e63" };
 
   return (
     <div style={{ position: "relative", minHeight: "100vh", width: "100%", backgroundColor: "#fff0f5" }}>
@@ -311,20 +284,6 @@ export default function Login() {
             </Typography.Paragraph>
 
             <Form layout="vertical" onFinish={onFinish} initialValues={{ identifier: "", password: "" }}>
-              <Form.Item name="userType" label="Account Type" initialValue="victim">
-                <Select value={userType} onChange={setUserType} size={screens.md ? "large" : "middle"} style={{ width: "100%" }}>
-                  <Option value="victim">
-                    <UserOutlined style={{ marginRight: 8, color: "#e91e63" }} /> Victim
-                  </Option>
-                  <Option value="admin">
-                    <SafetyOutlined style={{ marginRight: 8, color: "#1890ff" }} /> Administrator
-                  </Option>
-                  <Option value="official">
-                    <TeamOutlined style={{ marginRight: 8, color: "#52c41a" }} /> Barangay Official
-                  </Option>
-                </Select>
-              </Form.Item>
-
               <Divider style={{ margin: "16px 0" }} />
 
               <Form.Item

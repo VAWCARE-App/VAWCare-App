@@ -10,6 +10,7 @@ import TwoFactor from "./pages/2FA";
 
 import Dashboard from "./pages/Dashboards/AdminDashboard";
 import Admin from "./layouts/AdminLayout";
+import Main from "./layouts/MainLayout";
 
 import UserManagement from "./pages/UserManagement";
 import ReportManagement from "./pages/ReportManagement";
@@ -20,9 +21,6 @@ import OfficialDashboard from "./pages/Dashboards/OfficialDashboard";
 import Test from "./pages/Test";
 import ReportCase from "./pages/Victim/Report";
 import EmergencyButton from "./pages/Victim/EmergencyButton";
-
-// ⬇️ NEW: demo chatbot page
-import Chatbot from "./pages/Victim/Chatbot";
 
 import { isAuthed } from "./lib/api";
 
@@ -41,16 +39,17 @@ export default function App() {
             <Route path="/signup" element={<Signup />} />
             <Route path="/2fa" element={<TwoFactor />} />
 
+            <Route path="/victim" element={<Main />}>
+              <Route index element={<Protected><VictimDashboard /></Protected>} />
+              <Route path="victim-test" element={<Protected><VictimDashboard /></Protected>} />
+              <Route path="report" element={<Protected><ReportCase /></Protected>} />
+              <Route path="emergency" element={<Protected><EmergencyButton /></Protected>} />
+            </Route>
+
             {/* Shell/Layout */}
             <Route path="/" element={<Admin />}>
               {/* Default (admin) */}
               <Route index element={<Protected><Dashboard /></Protected>} />
-
-              {/* Victim */}
-              <Route path="victim-test" element={<Protected><VictimDashboard /></Protected>} />
-              <Route path="victim-chatbot" element={<Protected><Chatbot /></Protected>} /> {/* ⬅️ NEW */}
-              <Route path="report" element={<Protected><ReportCase /></Protected>} />
-              <Route path="emergency" element={<Protected><EmergencyButton /></Protected>} />
 
               {/* Officials */}
               <Route path="official-dashboard" element={<Protected><OfficialDashboard /></Protected>} />
@@ -68,7 +67,7 @@ export default function App() {
             </Route>
 
             {/* Fallback */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/victim" replace />} />
           </Routes>
         </BrowserRouter>
       </AntApp>

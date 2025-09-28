@@ -243,7 +243,7 @@ export default function AdminLogin() {
                 message.success(`Welcome back, ${userName}!`);
 
                 if (userType === "official") navigate("/official-dashboard");
-                else navigate("/dashboard");
+                else navigate("/");
             } else {
                 throw new Error(data.message || "Login failed");
             }

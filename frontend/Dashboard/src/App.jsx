@@ -15,6 +15,7 @@ import Main from "./layouts/MainLayout";
 import UserManagement from "./pages/UserManagement";
 import ReportManagement from "./pages/ReportManagement";
 import CaseManagement from "./pages/CaseManagement";
+import CaseDetail from "./pages/CaseDetail";
 import VictimDashboard from "./pages/Dashboards/VictimDashboard";
 import OfficialDashboard from "./pages/Dashboards/OfficialDashboard";
 
@@ -59,6 +60,7 @@ export default function App() {
               <Route path="users" element={<Protected><UserManagement /></Protected>} />
               <Route path="reports" element={<Protected><ReportManagement /></Protected>} />
               <Route path="cases" element={<Protected><CaseManagement /></Protected>} />
+              <Route path="cases/:id" element={<Protected><CaseDetail /></Protected>} />
             </Route>
 
             {/* Simple test route (outside shell) */}
@@ -67,7 +69,7 @@ export default function App() {
             </Route>
 
             {/* Fallback */}
-            <Route path="*" element={<Navigate to="/victim" replace />} />
+            {/* <Route path="*" element={<Navigate to="/victim" replace />} /> */}
           </Routes>
         </BrowserRouter>
       </AntApp>

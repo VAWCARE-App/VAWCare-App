@@ -245,7 +245,7 @@ export default function Login() {
           userInfo.firstName || userInfo.victimUsername || userInfo.adminEmail || userInfo.officialEmail || "User";
         message.success(`Welcome back, ${userName}!`);
 
-        if (userType === "victim") navigate("/victim-test");
+        if (userType === "victim") navigate("/victim/victim-test");
         else if (userType === "official") navigate("/official-dashboard");
         else navigate("/dashboard");
       } else {

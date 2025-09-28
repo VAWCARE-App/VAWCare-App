@@ -38,9 +38,14 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
   const handleLogout = () => {
     clearToken();
+    if (userType === "admin" || userType === "official") {
+      navigate("/admin/login");
+    } else {
+      navigate("/login");
+    }
     localStorage.removeItem("user");
     localStorage.removeItem("userType");
-    navigate("/login");
+    
   };
 
   const currentUser = useMemo(

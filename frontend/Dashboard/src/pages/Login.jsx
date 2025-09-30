@@ -187,7 +187,7 @@ export default function Login() {
   const onFinish = async (values) => {
     try {
       setLoading(true);
-      const endpoint = "api/victims/login"
+  const endpoint = "/api/victims/login";
       const loginData = { identifier: values.identifier, password: values.password };
       const { data } = await api.post(endpoint, loginData);
       if (data.success) {
@@ -220,7 +220,7 @@ export default function Login() {
 
         if (userType === "victim") navigate("/victim/victim-test");
         else if (userType === "official") navigate("/official-dashboard");
-        else navigate("/dashboard");
+  else navigate("/");
       } else {
         throw new Error(data.message || "Login failed");
       }

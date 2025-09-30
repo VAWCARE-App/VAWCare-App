@@ -68,7 +68,7 @@ const alertSchema = new mongoose.Schema({
 });
 
 // Create indexes for faster querying
-alertSchema.index({ alertID: 1 }, { unique: true });
+// Note: 'alertID' has `unique: true` in the field definition above; avoid duplicating the index.
 alertSchema.index({ victimID: 1 });
 alertSchema.index({ status: 1 });
 alertSchema.index({ createdAt: -1 });

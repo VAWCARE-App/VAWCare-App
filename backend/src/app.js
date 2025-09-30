@@ -27,6 +27,8 @@ const officialRoutes = require('./routes/officialRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const casesRoutes = require('./routes/casesRoutes');
+const dssRoutes = require('./routes/dssRoutes');
+const bpoRoutes = require('./routes/bpoRoutes');
 
 // Use routes
 app.use('/api/victims', victimRoutes);
@@ -34,6 +36,13 @@ app.use('/api/officials', officialRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/cases', casesRoutes);
+app.use('/api/dss', dssRoutes);
+app.use('/api/bpo', bpoRoutes);
+
+// Health check - lightweight endpoint for manual connectivity tests
+app.get('/api/ping', (req, res) => {
+    res.json({ success: true, message: 'pong', now: new Date().toISOString() });
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -61,7 +61,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
   // MENU SETS
   const adminMenu = [
-    { key: "/dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
+    { key: "/", icon: <DashboardOutlined />, label: "Dashboard" },
     { key: "/users", icon: <TeamOutlined />, label: "User Management" },
     { key: "/reports", icon: <FileTextOutlined />, label: "Reports" },
     { key: "/cases", icon: <TeamOutlined />, label: "Cases" },
@@ -76,13 +76,13 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   ];
 
   const victimMenu = [
-    { key: "/victim-test", icon: <DashboardOutlined />, label: "Dashboard" },
-    { key: "/emergency", icon: <ExclamationCircleOutlined />, label: "Emergency Button" },
-    { key: "/report", icon: <FileAddOutlined />, label: "Report-Case" },
-    { key: "/victim-cases", icon: <UserSwitchOutlined />, label: "My Cases" },
-    { key: "/victim-chatbot", icon: <MessageOutlined />, label: "VAWCare Chatbot" },
-    { key: "/victim-barangay", icon: <InfoCircleOutlined />, label: "Barangay Details" },
-    { key: "/victim-settings", icon: <SettingOutlined />, label: "Settings" },
+    { key: "/victim/victim-test", icon: <DashboardOutlined />, label: "Dashboard" },
+    { key: "/victim/emergency", icon: <ExclamationCircleOutlined />, label: "Emergency Button" },
+    { key: "/victim/report", icon: <FileAddOutlined />, label: "Report-Case" },
+    { key: "/victim/victim-cases", icon: <UserSwitchOutlined />, label: "My Cases" },
+    { key: "/victim/victim-chatbot", icon: <MessageOutlined />, label: "VAWCare Chatbot" },
+    { key: "/victim/victim-barangay", icon: <InfoCircleOutlined />, label: "Barangay Details" },
+    { key: "/victim/victim-settings", icon: <SettingOutlined />, label: "Settings" },
   ];
 
   let menuItems = adminMenu;

@@ -64,6 +64,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     { key: "/", icon: <DashboardOutlined />, label: "Dashboard" },
     { key: "/users", icon: <TeamOutlined />, label: "User Management" },
     { key: "/reports", icon: <FileTextOutlined />, label: "Reports" },
+    { key: "/bpo", icon: <FileAddOutlined />, label: "BPO Form" },
+    { key: "/bpo-management", icon: <FileTextOutlined />, label: "BPO Management" },
     { key: "/cases", icon: <TeamOutlined />, label: "Cases" },
     { key: "/settings", icon: <SettingOutlined />, label: "Settings" },
   ];
@@ -71,6 +73,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   const officialMenu = [
     { key: "/official-dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
     { key: "/reports", icon: <FileTextOutlined />, label: "Reports" },
+    { key: "/bpo", icon: <FileAddOutlined />, label: "BPO Form" },
+    { key: "/bpo-management", icon: <FileTextOutlined />, label: "BPO Management" },
     { key: "/official-cases", icon: <TeamOutlined />, label: "Cases" },
     { key: "/official-settings", icon: <SettingOutlined />, label: "Settings" },
   ];

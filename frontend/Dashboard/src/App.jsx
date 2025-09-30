@@ -7,6 +7,9 @@ import AdminLogin from "./pages/AdminLogin";
 
 import Signup from "./pages/Signup";
 import TwoFactor from "./pages/2FA";
+import BPO from "./pages/BPO";
+import BPOManagement from "./pages/BPOManagement";
+import BPODetail from "./pages/BPODetail";
 
 import Dashboard from "./pages/Dashboards/AdminDashboard";
 import Admin from "./layouts/AdminLayout";
@@ -18,6 +21,7 @@ import CaseManagement from "./pages/CaseManagement";
 import CaseDetail from "./pages/CaseDetail";
 import VictimDashboard from "./pages/Dashboards/VictimDashboard";
 import OfficialDashboard from "./pages/Dashboards/OfficialDashboard";
+
 
 import Test from "./pages/Test";
 import ReportCase from "./pages/Victim/Report";
@@ -59,6 +63,9 @@ export default function App() {
               {/* Admin */}
               <Route path="users" element={<Protected><UserManagement /></Protected>} />
               <Route path="reports" element={<Protected><ReportManagement /></Protected>} />
+              <Route path="bpo" element={<Protected><BPO /></Protected>} />
+              <Route path="bpo/:id" element={<Protected><BPODetail /></Protected>} />
+              <Route path="bpo-management" element={<Protected><BPOManagement /></Protected>} />
               <Route path="cases" element={<Protected><CaseManagement /></Protected>} />
               <Route path="cases/:id" element={<Protected><CaseDetail /></Protected>} />
             </Route>

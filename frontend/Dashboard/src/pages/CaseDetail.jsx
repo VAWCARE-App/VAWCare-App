@@ -12,7 +12,8 @@ import {
   message,
 } from "antd";
 import { PrinterOutlined, EditOutlined, SaveOutlined } from "@ant-design/icons";
-import { api } from "../lib/api";
+import { api, getUserType } from "../lib/api";
+import DssSuggestion from "../components/DssSuggestion";
 import { useReactToPrint } from "react-to-print";
 
 export default function CaseDetail() {
@@ -21,6 +22,7 @@ export default function CaseDetail() {
   const [editing, setEditing] = useState(false);
   const [form] = Form.useForm();
   const printRef = useRef();
+  const userType = getUserType();
 
   // Fetch case
   useEffect(() => {
@@ -186,6 +188,10 @@ export default function CaseDetail() {
           </div>
         )}
       </Card>
+      {/* DSS suggestion card for admin/official users */}
+      {!editing && (userType === "admin" || userType === "official") && (
+        <DssSuggestion caseData={caseData} />
+      )}
     </div>
   );
 }

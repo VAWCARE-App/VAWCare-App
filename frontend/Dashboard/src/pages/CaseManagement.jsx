@@ -150,6 +150,16 @@ export default function CaseManagement() {
         description: rep.description,
         perpetrator: rep.perpetrator || '',
         victimName: composedName,
+        // Auto-map incidentType -> riskLevel (economic->Low, psychological->Medium, physical->High, sexual->High)
+        riskLevel: (function(it) {
+          if (!it) return 'Low';
+          const l = String(it).toLowerCase();
+          if (l.includes('economic') || l.includes('financial')) return 'Low';
+          if (l.includes('psych') || l.includes('psychological')) return 'Medium';
+          if (l.includes('physical')) return 'High';
+          if (l.includes('sexual')) return 'High';
+          return 'Low';
+        })(rep.incidentType),
       });
     }
   };

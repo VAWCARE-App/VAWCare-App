@@ -18,6 +18,12 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    try {
+      // Debug: log outgoing requests for easier tracing (including method and url)
+      console.debug('[api] outgoing request', { method: config.method, url: config.baseURL ? `${config.baseURL}${config.url}` : config.url, hasAuth: !!token });
+    } catch (e) {
+      console.debug('[api] failed to log request', e && e.message);
+    }
     return config;
   },
   (error) => {

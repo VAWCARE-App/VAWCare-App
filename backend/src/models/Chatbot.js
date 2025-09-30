@@ -92,7 +92,7 @@ const chatbotSchema = new mongoose.Schema({
 });
 
 // Create indexes for faster querying
-chatbotSchema.index({ chatID: 1 }, { unique: true });
+// Note: 'chatID' has `unique: true` in the field definition above; avoid duplicating the index.
 chatbotSchema.index({ victimID: 1 });
 chatbotSchema.index({ createdAt: -1 });
 

@@ -56,7 +56,7 @@ export default function App() {
             </Route>
 
             {/* Shell/Layout */}
-            <Route path="/" element={<Admin />}>
+            <Route path="/" element={<LandingPage />}>
               {/* Default (admin) */}
               <Route index element={<Protected><Dashboard /></Protected>} />
 

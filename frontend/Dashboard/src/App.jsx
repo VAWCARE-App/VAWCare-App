@@ -3,6 +3,7 @@ import { App as AntApp, ConfigProvider } from "antd";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Login from "./pages/Login";
+import LandingPage from "./pages/LandingPage";
 import AdminLogin from "./pages/AdminLogin";
 
 import Signup from "./pages/Signup";
@@ -39,11 +40,13 @@ export default function App() {
       <AntApp>
         <BrowserRouter>
           <Routes>
-             <Route path="/" element={<LandingPage />} />
+             <Route path="/landing" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/2fa" element={<TwoFactor />} />
+
+
 
             <Route path="/victim" element={<Main />}>
               <Route index element={<Protected><VictimDashboard /></Protected>} />

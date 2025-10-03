@@ -27,9 +27,6 @@ import Test from "./pages/Test";
 import ReportCase from "./pages/Victim/Report";
 import EmergencyButton from "./pages/Victim/EmergencyButton";
 
-// ⬇️ NEW: demo chatbot page
-import Chatbot from "./pages/Victim/Chatbot";
-
 import { isAuthed } from "./lib/api";
 
 function Protected({ children }) {
@@ -46,17 +43,19 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/2fa" element={<TwoFactor />} />
+
+            <Route path="/victim" element={<Main />}>
+              <Route index element={<Protected><VictimDashboard /></Protected>} />
+              <Route path="victim-test" element={<Protected><VictimDashboard /></Protected>} />
+              <Route path="report" element={<Protected><ReportCase /></Protected>} />
+              <Route path="emergency" element={<Protected><EmergencyButton /></Protected>} />
+            </Route>
 
             {/* Shell/Layout */}
             <Route path="/" element={<Admin />}>
               {/* Default (admin) */}
               <Route index element={<Protected><Dashboard /></Protected>} />
-
-              {/* Victim */}
-              <Route path="victim-test" element={<Protected><VictimDashboard /></Protected>} />
-              <Route path="victim-chatbot" element={<Protected><Chatbot /></Protected>} /> {/* ⬅️ NEW */}
-              <Route path="report" element={<Protected><ReportCase /></Protected>} />
-              <Route path="emergency" element={<Protected><EmergencyButton /></Protected>} />
 
               {/* Officials */}
               <Route path="official-dashboard" element={<Protected><OfficialDashboard /></Protected>} />

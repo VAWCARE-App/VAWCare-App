@@ -1,0 +1,99 @@
+const asyncHandler = require('express-async-handler');
+const mongoose = require('mongoose');
+const crypto = require('crypto');
+const BPO = require('../models/BPO');
+
+function buildIdQuery(id) {
+    const or = [];
+    if (mongoose.Types.ObjectId.isValid(id)) or.push({ _id: id });
+    if (id) or.push({ bpoID: id });
+    if (id) or.push({ controlNO: id });
+    return { $or: or };
+}
+
+const createBPO = asyncHandler(async (req, res) => {
+    const payload = req.body && req.body.data ? req.body.data : req.body;
+    if (!payload || !payload.nameofRespondent) {
+        return res.status(400).json({ success: false, message: 'nameofRespondent is required' });
+    }
+    const bpoID = payload.bpoID || `BPO-${crypto.randomBytes(6).toString('hex')}`;
+    const doc = new BPO({ ...payload, bpoID });
+    try {
+        const saved = await doc.save();
+        console.log('[createBPO] created', { _id: saved._id, bpoID: saved.bpoID });
+        return res.status(201).json({ success: true, data: saved });
+    } catch (err) {
+        console.error('[createBPO] error', err && (err.message || err));
+        if (err.code === 11000) return res.status(409).json({ success: false, message: 'Duplicate BPO id or controlNO' });
+        return res.status(500).json({ success: false, message: 'Failed to create BPO', error: err.message });
+    }
+});
+
+const listBPOs = asyncHandler(async (req, res) => {
+    const { status, limit = 100, skip = 0 } = req.query;
+    const q = { deleted: { $ne: true } };
+    if (status) q.status = status;
+    try {
+        const docs = await BPO.find(q).sort({ createdAt: -1 }).limit(Number(limit)).skip(Number(skip)).lean();
+        return res.json({ success: true, data: docs });
+    } catch (err) {
+        console.error('[listBPOs] error', err && err.message);
+        return res.status(500).json({ success: false, message: 'Failed to list BPOs', error: err.message });
+    }
+});
+
+const getBPO = asyncHandler(async (req, res) => {
+    const id = (req.params.id || '').toString().trim();
+    if (!id) return res.status(400).json({ success: false, message: 'Missing id' });
+    const q = { ...buildIdQuery(id), deleted: { $ne: true } };
+    try {
+        const doc = await BPO.findOne(q).lean();
+        if (!doc) return res.status(404).json({ success: false, message: 'BPO not found' });
+        return res.json({ success: true, data: doc });
+    } catch (err) {
+        console.error('[getBPO] error', err && err.message);
+        return res.status(500).json({ success: false, message: 'Failed to get BPO', error: err.message });
+    }
+});
+
+const updateBPO = asyncHandler(async (req, res) => {
+    const id = (req.params.id || '').toString().trim();
+    const payload = req.body && req.body.data ? req.body.data : req.body;
+    if (!id) return res.status(400).json({ success: false, message: 'Missing id' });
+    if (!payload) return res.status(400).json({ success: false, message: 'Missing payload' });
+    const allowed = ['status', 'copyReceivedBy', 'servedBy', 'dateReceived', 'punongBarangay', 'barangaykagawad', 'controlNO'];
+    const updates = {};
+    for (const k of allowed) if (Object.prototype.hasOwnProperty.call(payload, k)) updates[k] = payload[k];
+    if (Object.keys(updates).length === 0) return res.status(400).json({ success: false, message: 'No updatable fields provided' });
+    const q = { ...buildIdQuery(id), deleted: { $ne: true } };
+    try {
+        const updated = await BPO.findOneAndUpdate(q, { $set: updates }, { new: true, runValidators: true });
+        if (!updated) return res.status(404).json({ success: false, message: 'BPO not found or deleted' });
+        console.log('[updateBPO] updated', { _id: updated._id, bpoID: updated.bpoID });
+        return res.json({ success: true, data: updated });
+    } catch (err) {
+        console.error('[updateBPO] error', err && err.message);
+        return res.status(500).json({ success: false, message: 'Failed to update BPO', error: err.message });
+    }
+});
+
+const deleteBPO = asyncHandler(async (req, res) => {
+    const id = (req.params.id || '').toString().trim();
+    if (!id) return res.status(400).json({ success: false, message: 'Missing id' });
+    const q = { ...buildIdQuery(id), deleted: { $ne: true } };
+    try {
+        console.log('[deleteBPO] attempting delete for id=', id, 'query=', JSON.stringify(q));
+        const updated = await BPO.findOneAndUpdate(q, { $set: { deleted: true, deletedAt: new Date() } }, { new: true });
+        if (!updated) {
+            console.log('[deleteBPO] nothing matched for id=', id);
+            return res.status(404).json({ success: false, message: 'BPO not found or already deleted' });
+        }
+        console.log('[deleteBPO] soft-deleted', { _id: updated._id, bpoID: updated.bpoID });
+        return res.json({ success: true, data: updated });
+    } catch (err) {
+        console.error('[deleteBPO] error', err && err.stack);
+        return res.status(500).json({ success: false, message: 'Failed to delete BPO', error: err.message });
+    }
+});
+
+module.exports = { createBPO, listBPOs, getBPO, updateBPO, deleteBPO };

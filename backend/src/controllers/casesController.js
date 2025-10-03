@@ -2,6 +2,7 @@ const Cases = require('../models/Cases');
 const mongoose = require('mongoose');
 const reportService = require('../services/reportService');
 const Victim = require('../models/Victims');
+const dssService = require('../services/dssService');
 
 exports.createCase = async (req, res, next) => {
   try {
@@ -43,6 +44,36 @@ exports.createCase = async (req, res, next) => {
       if (!payload.victimName || payload.victimName.trim() === '') {
         payload.victimName = (payload.victimID && String(payload.victimID)) || 'Anonymous';
       }
+    }
+
+    // If client didn't provide a riskLevel, ask the DSS to suggest one and map it
+    try {
+      if (!payload.riskLevel) {
+        const dssInput = {
+          incidentType: payload.incidentType,
+          description: payload.description,
+          assignedOfficer: payload.assignedOfficer,
+          status: payload.status,
+          perpetrator: payload.perpetrator,
+        };
+        const dssRes = await dssService.suggestForCase(dssInput);
+        if (dssRes && dssRes.predictedRisk) {
+          // Map 4-class predictedRisk to existing 3-level stored riskLevel
+          const mapToStored = (pred) => {
+            const p = (pred || '').toLowerCase();
+            if (p === 'economic') return 'Low';
+            if (p === 'psychological') return 'Medium';
+            if (p === 'physical') return 'High';
+            if (p === 'sexual') return 'High';
+            // default
+            return 'Low';
+          };
+          payload.riskLevel = mapToStored(dssRes.predictedRisk);
+        }
+      }
+    } catch (e) {
+      // Non-fatal: if DSS fails, continue with default riskLevel
+      console.warn('DSS enrich failed during case creation', e?.message || e);
     }
 
     const created = await Cases.create(payload);

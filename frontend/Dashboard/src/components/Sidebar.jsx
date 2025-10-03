@@ -38,9 +38,14 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
   const handleLogout = () => {
     clearToken();
+    if (userType === "admin" || userType === "official") {
+      navigate("/admin/login");
+    } else {
+      navigate("/login");
+    }
     localStorage.removeItem("user");
     localStorage.removeItem("userType");
-    navigate("/login");
+    
   };
 
   const currentUser = useMemo(
@@ -56,9 +61,11 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
   // MENU SETS
   const adminMenu = [
-    { key: "/dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
+    { key: "/", icon: <DashboardOutlined />, label: "Dashboard" },
     { key: "/users", icon: <TeamOutlined />, label: "User Management" },
     { key: "/reports", icon: <FileTextOutlined />, label: "Reports" },
+    { key: "/bpo", icon: <FileAddOutlined />, label: "BPO Form" },
+    { key: "/bpo-management", icon: <FileTextOutlined />, label: "BPO Management" },
     { key: "/cases", icon: <TeamOutlined />, label: "Cases" },
     { key: "/settings", icon: <SettingOutlined />, label: "Settings" },
     { key: "/landing", icon: <SettingOutlined />, label: "landing Page" },
@@ -68,18 +75,20 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   const officialMenu = [
     { key: "/official-dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
     { key: "/reports", icon: <FileTextOutlined />, label: "Reports" },
+    { key: "/bpo", icon: <FileAddOutlined />, label: "BPO Form" },
+    { key: "/bpo-management", icon: <FileTextOutlined />, label: "BPO Management" },
     { key: "/official-cases", icon: <TeamOutlined />, label: "Cases" },
     { key: "/official-settings", icon: <SettingOutlined />, label: "Settings" },
   ];
 
   const victimMenu = [
-    { key: "/victim-test", icon: <DashboardOutlined />, label: "Dashboard" },
-    { key: "/emergency", icon: <ExclamationCircleOutlined />, label: "Emergency Button" },
-    { key: "/report", icon: <FileAddOutlined />, label: "Report-Case" },
-    { key: "/victim-cases", icon: <UserSwitchOutlined />, label: "My Cases" },
-    { key: "/victim-chatbot", icon: <MessageOutlined />, label: "VAWCare Chatbot" },
-    { key: "/victim-barangay", icon: <InfoCircleOutlined />, label: "Barangay Details" },
-    { key: "/victim-settings", icon: <SettingOutlined />, label: "Settings" },
+    { key: "/victim/victim-test", icon: <DashboardOutlined />, label: "Dashboard" },
+    { key: "/victim/emergency", icon: <ExclamationCircleOutlined />, label: "Emergency Button" },
+    { key: "/victim/report", icon: <FileAddOutlined />, label: "Report-Case" },
+    { key: "/victim/victim-cases", icon: <UserSwitchOutlined />, label: "My Cases" },
+    { key: "/victim/victim-chatbot", icon: <MessageOutlined />, label: "VAWCare Chatbot" },
+    { key: "/victim/victim-barangay", icon: <InfoCircleOutlined />, label: "Barangay Details" },
+    { key: "/victim/victim-settings", icon: <SettingOutlined />, label: "Settings" },
   ];
 
   let menuItems = adminMenu;

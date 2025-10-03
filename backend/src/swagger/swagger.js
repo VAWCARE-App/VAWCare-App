@@ -247,6 +247,71 @@ const options = {
           },
         },
       },
+      "/api/bpo": {
+        get: {
+          security: [{ bearerAuth: [] }],
+          tags: ["BPO"],
+          summary: "List BPOs",
+          description: "Returns all BPOs (excludes soft-deleted records).",
+          responses: {
+            200: {
+              description: "List of BPOs",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      success: { type: "boolean" },
+                      data: { type: "array", items: { $ref: "#/components/schemas/BPO" } }
+                    }
+                  }
+                }
+              }
+            },
+            401: { description: "Unauthorized" }
+          }
+        },
+        post: {
+          tags: ["BPO"],
+          summary: "Create a new Barangay Protection Order (BPO)",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/BPOCreate" }
+              }
+            }
+          },
+          responses: {
+            201: { description: "BPO created", content: { "application/json": { schema: { $ref: "#/components/schemas/BPO" } } } },
+            400: { description: "Bad request" }
+          }
+        }
+      },
+      "/api/bpo/{id}": {
+        get: {
+          tags: ["BPO"],
+          summary: "Get a BPO by bpoID or _id",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+          responses: { 200: { description: "BPO found", content: { "application/json": { schema: { $ref: "#/components/schemas/BPO" } } } }, 404: { description: "Not found" } }
+        },
+        put: {
+          security: [{ bearerAuth: [] }],
+          tags: ["BPO"],
+          summary: "Update a BPO (restricted fields: status, copyReceivedBy, servedBy, dateReceived, punongBarangay, barangaykagawad, controlNO)",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+          requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/BPOUpdate" } } } },
+          responses: { 200: { description: "BPO updated", content: { "application/json": { schema: { $ref: "#/components/schemas/BPO" } } } }, 404: { description: "Not found" } }
+        },
+        delete: {
+          security: [{ bearerAuth: [] }],
+          tags: ["BPO"],
+          summary: "Soft-delete a BPO",
+          description: "Performs a soft delete by marking the BPO as deleted (sets `deleted=true` and `deletedAt`). The record is not removed from the database.",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+          responses: { 200: { description: "BPO soft-deleted" }, 404: { description: "Not found" } }
+        }
+      },
     },
     servers: [
       {
@@ -526,6 +591,67 @@ const options = {
               },
             },
           },
+        },
+        BPOCreate: {
+          type: "object",
+          description: "Create a new Barangay Protection Order. Do not include bpoID — server will generate it if omitted.",
+          properties: {
+            controlNO: { type: "string" },
+            nameofRespondent: { type: "string" },
+            address: { type: "string" },
+            applicationName: { type: "string" },
+            orderDate: { type: "string", format: "date-time" },
+            statement: { type: "string" },
+            hisOrher: { type: "string" },
+            nameofChildren: { type: "string" },
+            dateIssued: { type: "string", format: "date-time" },
+            copyReceivedBy: { type: "string" },
+            dateReceived: { type: "string", format: "date-time" },
+            servedBy: { type: "string" },
+            punongBarangay: { type: "string" },
+            barangaykagawad: { type: "string" },
+            expiryDate: { type: "string", format: "date-time" },
+            status: { type: "string", enum: ["Active", "Expired", "Revoked"] }
+          },
+          required: ["nameofRespondent", "applicationName"]
+        },
+        BPOUpdate: {
+          type: "object",
+          properties: {
+            status: { type: "string", enum: ["Active", "Expired", "Revoked"] },
+            copyReceivedBy: { type: "string" },
+            servedBy: { type: "string" },
+            dateReceived: { type: "string", format: "date-time" },
+            punongBarangay: { type: "string" },
+            barangaykagawad: { type: "string" },
+            controlNO: { type: "string" }
+          }
+        },
+        BPO: {
+          type: "object",
+          properties: {
+            _id: { type: "string" },
+            bpoID: { type: "string" },
+            controlNO: { type: "string" },
+            nameofRespondent: { type: "string" },
+            address: { type: "string" },
+            applicationName: { type: "string" },
+            orderDate: { type: "string", format: "date-time" },
+            statement: { type: "string" },
+            nameofChildren: { type: "string" },
+            dateIssued: { type: "string", format: "date-time" },
+            copyReceivedBy: { type: "string" },
+            dateReceived: { type: "string", format: "date-time" },
+            servedBy: { type: "string" },
+            punongBarangay: { type: "string" },
+            barangaykagawad: { type: "string" },
+            expiryDate: { type: "string", format: "date-time" },
+            status: { type: "string" },
+            deleted: { type: "boolean" },
+            deletedAt: { type: "string", format: "date-time" },
+            createdAt: { type: "string", format: "date-time" },
+            updatedAt: { type: "string", format: "date-time" }
+          }
         },
         VictimLogin: {
           type: "object",

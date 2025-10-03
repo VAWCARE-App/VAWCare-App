@@ -61,6 +61,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     { key: "/reports", icon: <FileTextOutlined />, label: "Reports" },
     { key: "/cases", icon: <TeamOutlined />, label: "Cases" },
     { key: "/settings", icon: <SettingOutlined />, label: "Settings" },
+    { key: "/landing", icon: <SettingOutlined />, label: "landing Page" },
+
   ];
 
   const officialMenu = [

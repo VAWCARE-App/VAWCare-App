@@ -17,6 +17,7 @@ import OfficialDashboard from "./pages/Dashboards/OfficialDashboard";
 import Test from "./pages/Test";
 import ReportCase from "./pages/Victim/Report";
 import EmergencyButton from "./pages/Victim/EmergencyButton";
+import LandingPage from "./pages/LandingPage";  
 
 // ⬇️ NEW: demo chatbot page
 import Chatbot from "./pages/Victim/Chatbot";
@@ -33,8 +34,10 @@ export default function App() {
       <AntApp>
         <BrowserRouter>
           <Routes>
+             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/landing" element={<LandingPage />} />
 
             {/* Shell/Layout */}
             <Route path="/" element={<Admin />}>
@@ -46,6 +49,7 @@ export default function App() {
               <Route path="victim-chatbot" element={<Protected><Chatbot /></Protected>} /> {/* ⬅️ NEW */}
               <Route path="report" element={<Protected><ReportCase /></Protected>} />
               <Route path="emergency" element={<Protected><EmergencyButton /></Protected>} />
+
 
               {/* Officials */}
               <Route path="official-dashboard" element={<Protected><OfficialDashboard /></Protected>} />

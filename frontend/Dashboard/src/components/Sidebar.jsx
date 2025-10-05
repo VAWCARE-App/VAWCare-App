@@ -63,6 +63,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   const adminMenu = [
     { key: "/admin", icon: <DashboardOutlined />, label: "Dashboard" },
     { key: "/admin/users", icon: <TeamOutlined />, label: "User Management" },
+    { key: "/admin/create-official", icon: <UserSwitchOutlined />, label: "Create Official" },
     { key: "/admin/reports", icon: <FileTextOutlined />, label: "Reports" },
     { key: "/admin/cases", icon: <TeamOutlined />, label: "Cases" },
     { key: "/admin/bpo", icon: <FileAddOutlined />, label: "BPO Form" },
@@ -74,6 +75,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
   const officialMenu = [
     { key: "/admin/official-dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
+    { key: "/admin/create-official", icon: <UserSwitchOutlined />, label: "Create Official" },
     { key: "/landing", icon: <HomeOutlined />, label: "Landing Page" },
     { key: "/admin/reports", icon: <FileTextOutlined />, label: "Reports" },
     { key: "/admin/official-cases", icon: <TeamOutlined />, label: "Cases" },

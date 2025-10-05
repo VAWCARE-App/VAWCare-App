@@ -29,6 +29,7 @@ export default function CaseDetail() {
     const fetchCase = async () => {
       try {
         const res = await api.get(`/api/cases/${id}`);
+        console.log(res.data.data);
         setCaseData(res.data.data);
         form.setFieldsValue(res.data.data);
       } catch (err) {

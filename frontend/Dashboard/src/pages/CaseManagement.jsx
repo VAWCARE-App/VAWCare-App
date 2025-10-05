@@ -116,11 +116,11 @@ export default function CaseManagement() {
   const handleViewCase = (rec) => {
     console.log('Viewing case', rec);
     console.log('Navigating to /cases/' + rec.caseID);
-    navigate(`/cases/${rec.caseID}`);
+    navigate(`${rec.caseID}`);
   };
 
   const handleEditCase = (rec) => {
-    navigate(`/cases/${rec.caseID}?edit=true`);
+    navigate(`${rec.caseID}?edit=true`);
   };
 
   const openAddModal = async () => {

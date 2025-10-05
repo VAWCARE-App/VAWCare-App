@@ -12,7 +12,7 @@ import {
   Divider,
   Modal,
 } from "antd";
-import { UserOutlined, SafetyOutlined, TeamOutlined } from "@ant-design/icons";
+import { UserOutlined, SafetyOutlined, TeamOutlined, CloseOutlined } from "@ant-design/icons";
 import { api, saveToken } from "../lib/api";
 import { useNavigate, Link } from "react-router-dom";
 import { isAuthed, getUserType } from "../lib/api";
@@ -197,7 +197,7 @@ export default function Login() {
   const onFinish = async (values) => {
     try {
       setLoading(true);
-  const endpoint = "/api/victims/login";
+      const endpoint = "/api/victims/login";
       const loginData = { identifier: values.identifier, password: values.password };
       const { data } = await api.post(endpoint, loginData);
       if (data.success) {
@@ -228,9 +228,9 @@ export default function Login() {
           userInfo.firstName || userInfo.victimUsername || userInfo.adminEmail || userInfo.officialEmail || "User";
         message.success(`Welcome back, ${userName}!`);
 
-    if (userType === "victim") navigate("/victim/victim-test");
-    else if (userType === "official") navigate("/admin/official-dashboard");
-  else navigate("/admin");
+        if (userType === "victim") navigate("/victim/victim-test");
+        else if (userType === "official") navigate("/admin/official-dashboard");
+        else navigate("/admin");
       } else {
         throw new Error(data.message || "Login failed");
       }
@@ -350,6 +350,27 @@ export default function Login() {
           </Modal>
         </Card>
       </Flex>
+
+      <Button
+        onClick={() => navigate("/")}
+        style={{
+          position: "absolute",
+          top: 16,
+          right: 16,
+          color: "#555",
+          border: "1px solid #ddd",
+          width: 40,
+          height: 40,
+          zIndex: 9999, // ensures it's clickable above everything
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#fff",
+          borderRadius: 6, // square with slightly rounded corners
+        }}
+      >
+        <CloseOutlined style={{ fontSize: 20 }} />
+      </Button>
     </div>
   );
 }

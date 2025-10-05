@@ -112,7 +112,7 @@ export default function Navbar({
           }`}
         >
           {/* Brand */}
-          <Link to="/" style={{ textDecoration: "none" }}>
+          <Link to="/landing" style={{ textDecoration: "none" }}>
             <Space align="center" size={10}>
               <span className="brand-dot" />
               <span className="brand-title">VAWCare</span>

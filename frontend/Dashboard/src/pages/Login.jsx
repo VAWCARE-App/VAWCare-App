@@ -293,7 +293,7 @@ export default function Login() {
               Choose your account type and sign in to continue.
             </Typography.Paragraph>
 
-            <Form layout="vertical" onFinish={onFinish} initialValues={{ identifier: "", password: "" }}>
+            <Form layout="vertical" onFinish={onFinish} initialValues={{ identifier: "", password: "" }} autoComplete="off">
               <Divider style={{ margin: "16px 0" }} />
 
               <Form.Item
@@ -301,11 +301,11 @@ export default function Login() {
                 label={userType === "victim" ? "Username or Email" : "Email Address"}
                 rules={[{ required: true, message: `Please enter your ${userType === "victim" ? "username or email" : "email address"}` }]}
               >
-                <Input placeholder={userType === "victim" ? "Username or email" : "Email address"} size={screens.md ? "large" : "middle"} />
+                <Input autoComplete="off" placeholder={userType === "victim" ? "Username or email" : "Email address"} size={screens.md ? "large" : "middle"} />
               </Form.Item>
 
               <Form.Item name="password" label="Password" rules={[{ required: true, message: "Please enter your password" }]}>
-                <Input.Password placeholder="••••••••" size={screens.md ? "large" : "middle"} />
+                <Input.Password autoComplete="new-password" placeholder="••••••••" size={screens.md ? "large" : "middle"} />
               </Form.Item>
 
               <Button

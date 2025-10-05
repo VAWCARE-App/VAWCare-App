@@ -1,5 +1,6 @@
 // src/lib/api.js
 import axios from "axios";
+import { message } from 'antd';
 import { exchangeCustomTokenForIdToken } from './firebase';
 
 const baseURL = import.meta.env.VITE_API_URL || "http://localhost:5000";
@@ -75,6 +76,12 @@ api.interceptors.response.use(async (response) => {
           // accepted by Firebase Admin's verifyIdToken. Clear tokens and surface a clear warning.
           console.warn('Auto token exchange failed:', ex);
           clearToken();
+          // Show a visible error message to help devs/users diagnose the issue
+          try {
+            message.error('Authentication failed: unable to exchange server token. Ensure Firebase client config (VITE_FIREBASE_*) is set in the frontend and restart the dev server.');
+          } catch (mErr) {
+            console.warn('Unable to show UI message:', mErr);
+          }
           // Developers: ensure VITE_FIREBASE_* client config is set and correct so exchange can succeed.
           console.warn('Token exchange failed. Ensure Firebase client config (VITE_FIREBASE_*) is available to the frontend.');
         }

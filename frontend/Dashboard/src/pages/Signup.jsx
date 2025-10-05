@@ -16,6 +16,8 @@ import {
   Modal,
 } from "antd";
 import { api, saveToken } from "../lib/api";
+import { exchangeCustomTokenForIdToken } from "../lib/firebase";
+import { AimOutlined } from '@ant-design/icons';
 import { useNavigate, Link } from "react-router-dom";
 
 const { Option } = Select;
@@ -152,6 +154,8 @@ export default function Signup() {
   const screens = Grid.useBreakpoint();
   const formRef = React.useRef();
   const [activeTab, setActiveTab] = useState("1");
+  const [showAimCard, setShowAimCard] = useState(false);
+  const [iframeCoords, setIframeCoords] = useState({ lat: 16.4991166, lng: 121.1800792 });
 
   const maxWidth = screens.xl ? 520 : screens.lg ? 480 : screens.md ? 420 : 360;
   const cardPadding = screens.md ? 20 : 16;
@@ -173,13 +177,40 @@ export default function Signup() {
         if (payload.address) victimData.address = payload.address;
         if (payload.contactNumber) victimData.contactNumber = payload.contactNumber;
       }
+        // include location if the user selected one (stored in hidden fields)
+        const hasLat = payload.latitude !== undefined && payload.latitude !== '';
+        const hasLng = payload.longitude !== undefined && payload.longitude !== '';
+        if (hasLat && hasLng) {
+          const lat = Number(payload.latitude);
+          const lng = Number(payload.longitude);
+          if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+            victimData.location = { lat, lng };
+          }
+        }
       const { data } = await api.post("/api/victims/register", victimData);
       if (data.success) {
-        if (data.data.token) saveToken(data.data.token);
+        // If backend returned a Firebase custom token, exchange it for an ID token here so the user is authenticated client-side
+        if (data.data.token) {
+          try {
+            const idToken = await exchangeCustomTokenForIdToken(data.data.token);
+            if (idToken) {
+              saveToken(idToken);
+            } else {
+              // If exchange unexpectedly returned no idToken, throw to handle below
+              throw new Error('Token exchange failed');
+            }
+          } catch (ex) {
+            // Exchange failed — surface friendly error and do not redirect
+            message.error('Authentication failed after registration. Please try logging in.');
+            console.error('Token exchange error:', ex);
+            setLoading(false);
+            return;
+          }
+        }
         localStorage.setItem("user", JSON.stringify(data.data.victim));
         message.success("Account created successfully!");
         // If this was an anonymous signup, go directly to the report page
-        const redirect = data.data.victim?.victimAccount === "anonymous" ? "/report" : "/victim-test";
+  const redirect = data.data.victim?.victimAccount === "anonymous" ? "/report" : "/victim/victim-test";
         navigate(redirect);
       } else throw new Error(data.message || "Registration failed");
     } catch (err) {
@@ -259,6 +290,13 @@ export default function Signup() {
                 if (changedValues.victimAccount) setAccountType(changedValues.victimAccount);
               }}
             >
+                    {/* Hidden fields to store chosen coordinates */}
+                    <Form.Item name="latitude" style={{ display: 'none' }}>
+                      <Input />
+                    </Form.Item>
+                    <Form.Item name="longitude" style={{ display: 'none' }}>
+                      <Input />
+                    </Form.Item>
               <Tabs activeKey={activeTab} onChange={setActiveTab} type="card" style={{ marginBottom: 16 }}>
                 <Tabs.TabPane tab="Account Setup" key="1">
                   <Form.Item name="victimAccount" label="Account Type">
@@ -353,7 +391,11 @@ export default function Signup() {
                       </Col>
                     </Row>
                     <Form.Item name="address" label="Address">
-                      <Input placeholder="Your address" size={screens.md ? "large" : "middle"} />
+                      <Input
+                        placeholder="Your address"
+                        size={screens.md ? "large" : "middle"}
+                        suffix={<AimOutlined onClick={() => setShowAimCard(true)} style={{ cursor: 'pointer', color: '#e91e63' }} />}
+                      />
                     </Form.Item>
                     <Form.Item
                       name="contactNumber"
@@ -410,6 +452,78 @@ export default function Signup() {
           </div>
         </Card>
       </Flex>
+
+      <Modal
+        title="Select location"
+        open={showAimCard}
+        onCancel={() => setShowAimCard(false)}
+        footer={null}
+        width={820}
+      >
+        <Card bodyStyle={{ padding: 8 }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+            <Input value={iframeCoords.lat?.toFixed(6)} readOnly style={{ textAlign: 'center' }} />
+            <Input value={iframeCoords.lng?.toFixed(6)} readOnly style={{ textAlign: 'center' }} />
+          </div>
+          <div style={{ width: '100%', height: 360, borderRadius: 8, overflow: 'hidden' }}>
+            <iframe
+              title="Selected location"
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              loading="lazy"
+              src={`https://www.google.com/maps?q=${iframeCoords.lat},${iframeCoords.lng}&z=15&output=embed`}
+              allowFullScreen
+            />
+          </div>
+                  <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <Button
+                type="primary"
+                onClick={() => {
+                  if (!navigator.geolocation) {
+                    message.error('Geolocation is not supported by your browser');
+                    return;
+                  }
+                  message.loading({ content: 'Locating…', key: 'locate' });
+                  navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                      const lat = pos.coords.latitude;
+                      const lng = pos.coords.longitude;
+                      setIframeCoords({ lat, lng });
+                              // DO NOT populate address; users should enter address manually.
+                      message.success({ content: 'Location found', key: 'locate', duration: 2 });
+                    },
+                    (err) => {
+                      message.error({ content: err.message || 'Unable to retrieve location', key: 'locate' });
+                    },
+                    { enableHighAccuracy: true, timeout: 10000 }
+                  );
+                }}
+              >
+                Use my current location
+              </Button>
+            </div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <Button
+                        onClick={() => {
+                          // copy the iframe coords into the hidden form fields and close modal
+                          try {
+                            formRef.current?.setFieldsValue({ latitude: iframeCoords.lat, longitude: iframeCoords.lng });
+                            message.success('Coordinates applied to form');
+                            setShowAimCard(false);
+                          } catch (e) {
+                            message.error('Unable to apply coordinates');
+                          }
+                        }}
+                      >
+                        Use this location
+                      </Button>
+                      <Button type="link" onClick={() => window.open(`https://www.google.com/maps/@${iframeCoords.lat},${iframeCoords.lng},15.64z?entry=ttu`, '_blank', 'noopener')}>Open in Google Maps</Button>
+                    </div>
+          </div>
+        </Card>
+      </Modal>
 
       {/* Ticket modal removed: anonymous creation now auto-logs-in and redirects */}
     </div>

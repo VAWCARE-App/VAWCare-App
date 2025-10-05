@@ -15,6 +15,7 @@ import {
 import { UserOutlined, SafetyOutlined, TeamOutlined } from "@ant-design/icons";
 import { api, saveToken } from "../lib/api";
 import { useNavigate, Link } from "react-router-dom";
+import { isAuthed, getUserType } from "../lib/api";
 // Firebase client SDK (used to exchange server custom token for an ID token)
 import { exchangeCustomTokenForIdToken } from '../lib/firebase';
 
@@ -175,6 +176,15 @@ function MultiBackgroundCarousel() {
 export default function Login() {
   const { message } = AntApp.useApp();
   const navigate = useNavigate();
+  // If already authenticated, redirect to their dashboard
+  React.useEffect(() => {
+    if (isAuthed()) {
+      const ut = getUserType();
+      if (ut === "victim") navigate("/victim/victim-test");
+      else if (ut === "official") navigate("/admin/official-dashboard");
+      else navigate("/admin");
+    }
+  }, []);
   const [loading, setLoading] = useState(false);
   const [userType, setUserType] = useState("victim");
   const [errorModalVisible, setErrorModalVisible] = useState(false);
@@ -218,9 +228,9 @@ export default function Login() {
           userInfo.firstName || userInfo.victimUsername || userInfo.adminEmail || userInfo.officialEmail || "User";
         message.success(`Welcome back, ${userName}!`);
 
-        if (userType === "victim") navigate("/victim/victim-test");
-        else if (userType === "official") navigate("/official-dashboard");
-  else navigate("/");
+    if (userType === "victim") navigate("/victim/victim-test");
+    else if (userType === "official") navigate("/admin/official-dashboard");
+  else navigate("/admin");
       } else {
         throw new Error(data.message || "Login failed");
       }

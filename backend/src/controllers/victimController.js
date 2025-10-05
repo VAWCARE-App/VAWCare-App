@@ -93,7 +93,8 @@ const registerVictim = asyncHandler(async (req, res) => {
             lastName: lastName || (victimAccount === 'anonymous' ? 'User' : undefined),
             address: address || (victimAccount === 'anonymous' ? '' : undefined),
             contactNumber: contactNumber || (victimAccount === 'anonymous' ? '' : undefined),
-            location: location || { lat: 0, lng: 0 },
+            // only set location if caller provided one; otherwise leave undefined so Mongo doesn't save zeros
+            ...(location && typeof location === 'object' && (location.lat !== undefined && location.lng !== undefined) ? { location } : {}),
             firebaseUid: null
         };
 

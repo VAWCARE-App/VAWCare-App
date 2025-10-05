@@ -40,7 +40,9 @@ export default function App() {
       <AntApp>
         <BrowserRouter>
           <Routes>
-             <Route path="/landing" element={<LandingPage />} />
+            <Route path="/landing" element={<LandingPage />} />
+            {/* Root is landing page */}
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/signup" element={<Signup />} />
@@ -55,8 +57,8 @@ export default function App() {
               <Route path="emergency" element={<Protected><EmergencyButton /></Protected>} />
             </Route>
 
-            {/* Shell/Layout */}
-            <Route path="/" element={<LandingPage />}>
+            {/* Admin shell moved to /admin */}
+            <Route path="/admin" element={<Admin/>}>
               {/* Default (admin) */}
               <Route index element={<Protected><Dashboard /></Protected>} />
 

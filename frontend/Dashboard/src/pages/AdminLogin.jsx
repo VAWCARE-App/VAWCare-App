@@ -12,7 +12,7 @@ import {
     Divider,
     Modal,
 } from "antd";
-import { UserOutlined, SafetyOutlined, TeamOutlined } from "@ant-design/icons";
+import { UserOutlined, SafetyOutlined, TeamOutlined, CloseOutlined } from "@ant-design/icons";
 import { api, saveToken } from "../lib/api";
 import { useNavigate, Link } from "react-router-dom";
 import { isAuthed, getUserType } from "../lib/api";
@@ -317,7 +317,7 @@ export default function AdminLogin() {
 
                         <Form layout="vertical" onFinish={onFinish} initialValues={{ identifier: "", password: "" }}>
                             <Form.Item name="userType" label="Account Type" initialValue="official">
-                                <Select value={userType} onChange={setUserType} size={screens.md ? "large" : "middle"} style={{ width: "100%" }}>
+                                <Select value={userType} onChange={setUserType} size={screens.md ? "large" : "middle</Option>"} style={{ width: "100%" }}>
                                     <Option value="admin">
                                         <SafetyOutlined style={{ marginRight: 8, color: "#1890ff" }} /> Administrator
                                     </Option>
@@ -383,6 +383,28 @@ export default function AdminLogin() {
                     </Modal>
                 </Card>
             </Flex>
+
+            <Button
+                onClick={() => navigate("/")}
+                style={{
+                    position: "absolute",
+                    top: 16,
+                    right: 16,
+                    color: "#555",
+                    border: "1px solid #ddd",
+                    width: 40,
+                    height: 40,
+                    zIndex: 9999, // ensures it's clickable above everything
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "#fff",
+                    borderRadius: 6, // square with slightly rounded corners
+                }}
+            >
+                <CloseOutlined style={{ fontSize: 20 }} />
+            </Button>
+
         </div>
     );
 }

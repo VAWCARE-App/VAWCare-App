@@ -61,24 +61,25 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
   // MENU SETS
   const adminMenu = [
-    { key: "/", icon: <DashboardOutlined />, label: "Dashboard" },
-    { key: "/users", icon: <TeamOutlined />, label: "User Management" },
-    { key: "/reports", icon: <FileTextOutlined />, label: "Reports" },
-    { key: "/bpo", icon: <FileAddOutlined />, label: "BPO Form" },
-    { key: "/bpo-management", icon: <FileTextOutlined />, label: "BPO Management" },
-    { key: "/cases", icon: <TeamOutlined />, label: "Cases" },
-    { key: "/settings", icon: <SettingOutlined />, label: "Settings" },
-    { key: "/landing", icon: <SettingOutlined />, label: "landing Page" },
+    { key: "/admin", icon: <DashboardOutlined />, label: "Dashboard" },
+    { key: "/admin/users", icon: <TeamOutlined />, label: "User Management" },
+    { key: "/admin/reports", icon: <FileTextOutlined />, label: "Reports" },
+    { key: "/admin/bpo", icon: <FileAddOutlined />, label: "BPO Form" },
+    { key: "/admin/bpo-management", icon: <FileTextOutlined />, label: "BPO Management" },
+    { key: "/admin/cases", icon: <TeamOutlined />, label: "Cases" },
+    { key: "/admin/settings", icon: <SettingOutlined />, label: "Settings" },
+     { key: "/landing", icon: <HomeOutlined />, label: "Landing Page" }
 
   ];
 
   const officialMenu = [
-    { key: "/official-dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
-    { key: "/reports", icon: <FileTextOutlined />, label: "Reports" },
-    { key: "/bpo", icon: <FileAddOutlined />, label: "BPO Form" },
-    { key: "/bpo-management", icon: <FileTextOutlined />, label: "BPO Management" },
-    { key: "/official-cases", icon: <TeamOutlined />, label: "Cases" },
-    { key: "/official-settings", icon: <SettingOutlined />, label: "Settings" },
+    { key: "/admin/official-dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
+    { key: "/landing", icon: <HomeOutlined />, label: "Landing Page" },
+    { key: "/admin/bpo", icon: <FileAddOutlined />, label: "BPO Form" },
+    { key: "/admin/bpo-management", icon: <FileTextOutlined />, label: "BPO Management" },
+    { key: "/admin/official-cases", icon: <TeamOutlined />, label: "Cases" },
+    { key: "/admin/official-settings", icon: <SettingOutlined />, label: "Settings" },
+    { key: "/admin/reports", icon: <FileTextOutlined />, label: "Reports" }
   ];
 
   const victimMenu = [

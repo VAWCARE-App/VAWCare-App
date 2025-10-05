@@ -17,6 +17,7 @@ import Admin from "./layouts/AdminLayout";
 import Main from "./layouts/MainLayout";
 
 import UserManagement from "./pages/UserManagement";
+import CreateOfficial from "./pages/CreateOfficial";
 import ReportManagement from "./pages/ReportManagement";
 import CaseManagement from "./pages/CaseManagement";
 import CaseDetail from "./pages/CaseDetail";
@@ -28,10 +29,21 @@ import Test from "./pages/Test";
 import ReportCase from "./pages/Victim/Report";
 import EmergencyButton from "./pages/Victim/EmergencyButton";
 
-import { isAuthed } from "./lib/api";
+import { isAuthed, getUserType } from "./lib/api";
 
-function Protected({ children }) {
-  return isAuthed() ? children : <Navigate to="/login" replace />;
+function Protected({ children, roles }) {
+  // roles: optional array of allowed user types (e.g. ['admin','official'])
+  if (!isAuthed()) return <Navigate to="/login" replace />;
+
+  if (roles && Array.isArray(roles)) {
+    const userType = getUserType();
+    if (!roles.includes(userType)) {
+      // Authenticated but not authorized -> redirect to landing
+      return <Navigate to="/landing" replace />;
+    }
+  }
+
+  return children;
 }
 
 export default function App() {
@@ -68,6 +80,7 @@ export default function App() {
 
               {/* Admin */}
               <Route path="users" element={<Protected><UserManagement /></Protected>} />
+              <Route path="create-official" element={<Protected roles={["admin","official"]}><CreateOfficial /></Protected>} />
               <Route path="reports" element={<Protected><ReportManagement /></Protected>} />
               <Route path="bpo" element={<Protected><BPO /></Protected>} />
               <Route path="bpo/:id" element={<Protected><BPODetail /></Protected>} />

@@ -64,9 +64,9 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     { key: "/admin", icon: <DashboardOutlined />, label: "Dashboard" },
     { key: "/admin/users", icon: <TeamOutlined />, label: "User Management" },
     { key: "/admin/reports", icon: <FileTextOutlined />, label: "Reports" },
+    { key: "/admin/cases", icon: <TeamOutlined />, label: "Cases" },
     { key: "/admin/bpo", icon: <FileAddOutlined />, label: "BPO Form" },
     { key: "/admin/bpo-management", icon: <FileTextOutlined />, label: "BPO Management" },
-    { key: "/admin/cases", icon: <TeamOutlined />, label: "Cases" },
     { key: "/admin/settings", icon: <SettingOutlined />, label: "Settings" },
      { key: "/landing", icon: <HomeOutlined />, label: "Landing Page" }
 
@@ -75,9 +75,10 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   const officialMenu = [
     { key: "/admin/official-dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
     { key: "/landing", icon: <HomeOutlined />, label: "Landing Page" },
+    { key: "/admin/reports", icon: <FileTextOutlined />, label: "Reports" },
+    { key: "/admin/official-cases", icon: <TeamOutlined />, label: "Cases" },
     { key: "/admin/bpo", icon: <FileAddOutlined />, label: "BPO Form" },
     { key: "/admin/bpo-management", icon: <FileTextOutlined />, label: "BPO Management" },
-    { key: "/admin/official-cases", icon: <TeamOutlined />, label: "Cases" },
     { key: "/admin/official-settings", icon: <SettingOutlined />, label: "Settings" },
     { key: "/admin/reports", icon: <FileTextOutlined />, label: "Reports" }
   ];

@@ -40,6 +40,7 @@ const victimSchema = new mongoose.Schema({
     victimEmail: {
         type: String,
         trim: true,
+        unique: true,
         lowercase: true,
         validate: {
             validator: function(v) {

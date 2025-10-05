@@ -45,8 +45,12 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      clearToken();
-      window.location.href = '/login';
+      // Don't auto-redirect to /login if the request itself was a login attempt
+      const requestUrl = error.config?.url || '';
+      if (!requestUrl.includes('/login')) {
+        clearToken();
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
@@ -93,8 +97,11 @@ api.interceptors.response.use(async (response) => {
   return response;
 }, (error) => {
   if (error.response?.status === 401) {
-    clearToken();
-    window.location.href = '/login';
+    const requestUrl = error.config?.url || '';
+    if (!requestUrl.includes('/login')) {
+      clearToken();
+      window.location.href = '/login';
+    }
   }
   return Promise.reject(error);
 });

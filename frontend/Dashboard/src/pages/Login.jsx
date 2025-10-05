@@ -197,8 +197,17 @@ export default function Login() {
   const onFinish = async (values) => {
     try {
       setLoading(true);
-      const endpoint = "/api/victims/login";
-      const loginData = { identifier: values.identifier, password: values.password };
+      let endpoint = "/api/victims/login";
+      let loginData = { identifier: values.identifier, password: values.password };
+
+      if (userType === 'official') {
+        endpoint = '/api/officials/login';
+        loginData = { officialEmail: values.identifier, password: values.password };
+      } else if (userType === 'admin') {
+        endpoint = '/api/admin/login';
+        loginData = { adminEmail: values.identifier, password: values.password };
+      }
+
       const { data } = await api.post(endpoint, loginData);
       if (data.success) {
         if (data.data?.token) {
@@ -235,10 +244,15 @@ export default function Login() {
         throw new Error(data.message || "Login failed");
       }
     } catch (err) {
-      const msg = err?.response?.data?.message || "Invalid username or password";
-      message.error(msg);
-      setErrorModalMessage(msg);
-      setErrorModalVisible(true);
+        const msg = err?.response?.data?.message || "Invalid username or password";
+        // If the server indicates account is pending approval, show a gentle toast and stay on page
+        if (String(msg).toLowerCase().includes('pending') || String(msg).toLowerCase().includes('pending approval')) {
+          message.info(msg);
+        } else {
+          message.error(msg);
+          setErrorModalMessage(msg);
+          setErrorModalVisible(true);
+        }
     } finally {
       setLoading(false);
     }

@@ -331,11 +331,11 @@ export default function VictimDashboard() {
                   onClick={() => navigate("/report")}
                 >
                   File a New Report
-                </Button>
+                </Button> 
                 <Button
                   danger
                   icon={<WarningOutlined />}
-                  onClick={() => navigate("/emergency")}
+                  onClick={() => navigate("/victim/emergency")}
                 >
                   Emergency Button
                 </Button>

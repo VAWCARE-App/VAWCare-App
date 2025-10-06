@@ -180,7 +180,7 @@ export default function BPOManagement() {
       <Layout.Header style={{ background: '#fff', borderBottom: '1px solid #ffd1dc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography.Title level={4} style={{ margin: 0, color: '#e91e63' }}>BPO Management</Typography.Title>
         <Space>
-          <Button type="primary" onClick={() => navigate('/bpo')} style={{ background: '#e91e63', borderColor: '#e91e63' }}>Add BPO</Button>
+          <Button type="primary" onClick={() => navigate('/admin/bpo')} style={{ background: '#e91e63', borderColor: '#e91e63' }}>Add BPO</Button>
           <Button onClick={fetchBPOs} icon={<ReloadOutlined />} style={{ borderColor: '#e91e63', color: '#e91e63' }} loading={loading}>Refresh</Button>
         </Space>
       </Layout.Header>

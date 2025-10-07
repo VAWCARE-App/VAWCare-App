@@ -1,6 +1,7 @@
 const admin = require('../config/firebase-config');
 const BarangayOfficial = require('../models/BarangayOfficials');
 const Victim = require('../models/Victims');
+const SystemLog = require('../models/SystemLogs');
 const asyncHandler = require('express-async-handler');
 
 // @desc    Register a new barangay official
@@ -129,6 +130,7 @@ const registerOfficial = asyncHandler(async (req, res) => {
                 }
             }
         });
+        try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: req.user?.role || 'official', actorId: req.user?.officialID || null, action: 'create_official', details: `New official registered: ${official.officialID || official._id}` }); } catch(e) { console.warn('Failed to record official registration log', e && e.message); }
     } catch (error) {
         if (error.code === 'auth/email-already-exists') {
             res.status(400);
@@ -143,7 +145,7 @@ const registerOfficial = asyncHandler(async (req, res) => {
 // @access  Public
 const loginOfficial = asyncHandler(async (req, res) => {
     const { officialEmail, password } = req.body;
-    console.log('Login attempt with:', { officialEmail, passwordLength: password?.length });
+    console.log('Login attempt for official:', { officialEmail, hasPassword: !!password });
 
     try {
         // First find the official in MongoDB
@@ -177,9 +179,9 @@ const loginOfficial = asyncHandler(async (req, res) => {
         }
 
         // Verify password
-        console.log('Attempting password comparison');
-        const isMatch = await official.comparePassword(password);
-        console.log('Password comparison result:', isMatch);
+    console.log('Attempting password comparison for official:', officialEmail);
+    const isMatch = await official.comparePassword(password);
+    console.log('Password comparison result for official:', officialEmail, isMatch);
         
         if (!isMatch) {
             return res.status(401).json({
@@ -210,7 +212,7 @@ const loginOfficial = asyncHandler(async (req, res) => {
             status: official.status
         });
 
-        console.log('Login successful, returning token');
+        console.log('Login successful for official, returning token');
         res.status(200).json({
             success: true,
             data: {
@@ -226,6 +228,24 @@ const loginOfficial = asyncHandler(async (req, res) => {
                 }
             }
         });
+
+        // record login in system logs (best-effort)
+        try {
+            const forwarded = (req.headers && (req.headers['x-forwarded-for'] || req.headers['X-Forwarded-For'])) || null;
+            const ipToRecord = forwarded ? String(forwarded).split(',')[0].trim() : req.ip;
+            await SystemLog.createLog({
+                logID: `LOG-${Date.now()}`,
+                actorType: 'official',
+                actorId: official._id,
+                action: 'login',
+                details: `Official ${official.officialID} logged in`,
+                ipAddress: ipToRecord,
+                timestamp: new Date()
+            });
+            console.log('Recorded login system log for official', official.officialID, 'ip=', ipToRecord);
+        } catch (logErr) {
+            console.warn('Failed to record official login system log:', logErr && logErr.message, logErr);
+        }
     } catch (error) {
         console.error('Login error:', error);
         res.status(401);

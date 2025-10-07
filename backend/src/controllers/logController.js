@@ -169,9 +169,11 @@ exports.recordPageView = asyncHandler(async (req, res) => {
     const { path } = req.body;
     try {
         const { recordLog } = require('../middleware/logger');
-        // Prefer authenticated user IDs; fall back to client-supplied actor info (from localStorage)
-        let actorType = req.user?.role || req.body?.actorType || req.query?.actorType || 'anonymous';
-        let actorId = req.user?.adminID || req.user?.officialID || req.user?.victimID || req.body?.actorId || req.query?.actorId || null;
+        // Prefer client-supplied actor info (from localStorage) when available because
+        // some Firebase ID tokens may not carry DB _id lookups in req.user. Fall back
+        // to authenticated req.user values when client info is not present.
+        let actorType = req.body?.actorType || req.query?.actorType || req.user?.role || 'anonymous';
+        let actorId = req.body?.actorId || req.query?.actorId || req.user?.adminID || req.user?.officialID || req.user?.victimID || null;
         // If a business id (ADM001 etc.) was supplied, include it in details for traceability
         const actorBusinessId = req.body?.actorBusinessId || req.query?.actorBusinessId || null;
         const details = `Opened page ${path || req.originalUrl}` + (actorBusinessId ? ` by ${actorBusinessId}` : '');

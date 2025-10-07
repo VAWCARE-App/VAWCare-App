@@ -66,11 +66,11 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   const adminMenu = [
     { key: "/admin", icon: <DashboardOutlined />, label: "Dashboard" },
     { key: "/admin/users", icon: <TeamOutlined />, label: "User Management" },
-    { key: "/admin/logs", icon: <FileTextOutlined />, label: "System Logs" },
     { key: "/admin/create-official", icon: <UserSwitchOutlined />, label: "Create Official" },
     { key: "/admin/reports", icon: <FileTextOutlined />, label: "Reports" },
     { key: "/admin/cases", icon: <TeamOutlined />, label: "Cases" },
     { key: "/admin/bpo-management", icon: <FileTextOutlined />, label: "BPO Management" },
+    { key: "/admin/logs", icon: <FileTextOutlined />, label: "System Logs" },
     { key: "/admin/settings", icon: <SettingOutlined />, label: "Settings" },
      { key: "/landing", icon: <HomeOutlined />, label: "Landing Page" }
 

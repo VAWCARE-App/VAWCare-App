@@ -119,10 +119,14 @@ export default function OfficialDashboard() {
   }, []);
 
   const handleLogout = () => {
+    try { api.post('/api/auth/logout').catch(() => {}); } catch(e) {}
     clearToken();
     localStorage.removeItem("user");
     localStorage.removeItem("userType");
-    navigate("/login");
+    localStorage.removeItem('actorId');
+    localStorage.removeItem('actorType');
+    localStorage.removeItem('actorBusinessId');
+    navigate('/');
   };
 
   const KpiCard = ({ icon, label, value, delay = 0 }) => (
@@ -313,7 +317,7 @@ export default function OfficialDashboard() {
                   icon={<EyeOutlined />}
                   block
                   style={{ background: BRAND.pink, borderColor: BRAND.pink, height: 44, fontWeight: 600 }}
-                  href="/official-reports"
+                  href="/admin/official-reports"
                 >
                   Review New Reports
                 </Button>
@@ -321,7 +325,7 @@ export default function OfficialDashboard() {
                   icon={<SolutionOutlined />}
                   block
                   style={{ borderColor: BRAND.pink, color: BRAND.pink, height: 44, fontWeight: 600 }}
-                  href="/official-cases"
+                  href="/admin/official-cases"
                 >
                   Manage Cases
                 </Button>
@@ -329,7 +333,7 @@ export default function OfficialDashboard() {
                   icon={<SettingOutlined />}
                   block
                   style={{ borderColor: BRAND.pink, color: BRAND.pink, height: 44, fontWeight: 600 }}
-                  href="/official-settings"
+                  href="/admin/official-settings"
                 >
                   Settings
                 </Button>

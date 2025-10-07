@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Modal, Form, Input, Button, message, Steps, Typography } from "antd";
 import axios from "axios";
+import logo from "../../assets/logo1.png";
 
 const { Step } = Steps;
 const { Title, Paragraph } = Typography;
@@ -277,6 +278,7 @@ export default function ForgotPasswordModal({ open, onClose }) {
             bodyStyle={{ padding: "12px 8px 24px" }}
         >
             <div style={{ textAlign: "center", marginBottom: 24 }}>
+                <img src={logo} alt="VAWCare Logo" style={{ width: 60, marginBottom: 16 }} />
                 <Steps
                     size="small"
                     current={currentStep}

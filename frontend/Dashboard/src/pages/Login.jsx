@@ -13,6 +13,7 @@ import {
   Modal,
 } from "antd";
 import { UserOutlined, SafetyOutlined, TeamOutlined, CloseOutlined } from "@ant-design/icons";
+import ForgotPasswordModal from "../components/Modals/ForgotPasswordModal";
 import { api, saveToken } from "../lib/api";
 import { useNavigate, Link } from "react-router-dom";
 import { isAuthed, getUserType } from "../lib/api";
@@ -174,6 +175,7 @@ function MultiBackgroundCarousel() {
 
 /* ---------- Login Component ---------- */
 export default function Login() {
+  const [showForgot, setShowForgot] = useState(false);
   const { message } = AntApp.useApp();
   const navigate = useNavigate();
   // If already authenticated, redirect to their dashboard
@@ -226,9 +228,9 @@ export default function Login() {
           saveToken("victim-test-token");
         }
         let userInfo = {};
-  if (userType === "victim") userInfo = { ...data.data.victim, userType: "victim" };
-  else if (userType === "admin") userInfo = { ...data.data.admin, userType: "admin" };
-  else if (userType === "official") userInfo = { ...data.data.official, userType: "official" };
+        if (userType === "victim") userInfo = { ...data.data.victim, userType: "victim" };
+        else if (userType === "admin") userInfo = { ...data.data.admin, userType: "admin" };
+        else if (userType === "official") userInfo = { ...data.data.official, userType: "official" };
 
         localStorage.setItem("user", JSON.stringify(userInfo));
         localStorage.setItem("userType", userType);
@@ -260,15 +262,15 @@ export default function Login() {
         throw new Error(data.message || "Login failed");
       }
     } catch (err) {
-        const msg = err?.response?.data?.message || "Invalid username or password";
-        // If the server indicates account is pending approval, show a gentle toast and stay on page
-        if (String(msg).toLowerCase().includes('pending') || String(msg).toLowerCase().includes('pending approval')) {
-          message.info(msg);
-        } else {
-          message.error(msg);
-          setErrorModalMessage(msg);
-          setErrorModalVisible(true);
-        }
+      const msg = err?.response?.data?.message || "Invalid username or password";
+      // If the server indicates account is pending approval, show a gentle toast and stay on page
+      if (String(msg).toLowerCase().includes('pending') || String(msg).toLowerCase().includes('pending approval')) {
+        message.info(msg);
+      } else {
+        message.error(msg);
+        setErrorModalMessage(msg);
+        setErrorModalVisible(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -341,6 +343,11 @@ export default function Login() {
               <Form.Item name="password" label="Password" rules={[{ required: true, message: "Please enter your password" }]}>
                 <Input.Password autoComplete="current-password" placeholder="••••••••" size={screens.md ? "large" : "middle"} />
               </Form.Item>
+              <div style={{ textAlign: "right", marginBottom: 24, marginTop: -24 }}>
+                <Button type="link" onClick={() => setShowForgot(true)} style={{ padding: 0, fontSize: 14, color: "#e91e63" }}>
+                  Forgot password?
+                </Button>
+              </div>
 
               <Button
                 type="primary"
@@ -382,8 +389,32 @@ export default function Login() {
           >
             <Typography.Paragraph>{errorModalMessage}</Typography.Paragraph>
           </Modal>
+
+          <Button
+            type="text"
+            icon={<CloseOutlined />}
+            onClick={() => navigate("/")}
+            style={{
+              position: "absolute",
+              top: 10,
+              right: 10,
+              fontSize: 18,
+              color: "#888",
+              background: "transparent",
+            }}
+          />
+
         </Card>
       </Flex>
+
+      <ForgotPasswordModal
+        open={showForgot}
+        onClose={() => setShowForgot(false)}
+        onSubmit={(email) => {
+          console.log("Reset link sent to:", email);
+          setShowForgot(false);
+        }}
+      />
     </div>
   );
 }

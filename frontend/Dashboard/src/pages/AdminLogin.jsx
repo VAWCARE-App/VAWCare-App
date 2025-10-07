@@ -348,11 +348,15 @@ export default function AdminLogin() {
                                 label={userType === "victim" ? "Username or Email" : "Email Address"}
                                 rules={[{ required: true, message: `Please enter your ${userType === "victim" ? "username or email" : "email address"}` }]}
                             >
-                                <Input placeholder={userType === "victim" ? "Username or email" : "Email address"} size={screens.md ? "large" : "middle"} />
+                                <Input
+                                    autoComplete={userType === 'victim' ? 'username' : 'email'}
+                                    placeholder={userType === "victim" ? "Username or email" : "Email address"}
+                                    size={screens.md ? "large" : "middle"}
+                                />
                             </Form.Item>
 
                             <Form.Item name="password" label="Password" rules={[{ required: true, message: "Please enter your password" }]}>
-                                <Input.Password placeholder="••••••••" size={screens.md ? "large" : "middle"} />
+                                <Input.Password autoComplete="current-password" placeholder="••••••••" size={screens.md ? "large" : "middle"} />
                             </Form.Item>
 
                             <Button

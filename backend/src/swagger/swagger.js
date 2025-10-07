@@ -312,7 +312,122 @@ const options = {
           responses: { 200: { description: "BPO soft-deleted" }, 404: { description: "Not found" } }
         }
       },
+      "/api/auth/send-otp": {
+        post: {
+          tags: ["Authentication"],
+          summary: "Send OTP to user email",
+          description: "Sends a one-time password (OTP) to the user's registered email address for password reset.",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["email"],
+                  properties: {
+                    email: { type: "string", format: "email", example: "user@example.com" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "OTP sent successfully.",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: { message: { type: "string", example: "OTP sent successfully." } },
+                  },
+                },
+              },
+            },
+            404: { description: "Email not found." },
+            500: { description: "Failed to send OTP." },
+          },
+        },
+      },
+
+      "/api/auth/verify-otp": {
+        post: {
+          tags: ["Authentication"],
+          summary: "Verify the OTP code sent to user's email",
+          description: "Validates whether the provided OTP matches the one sent to the user's email address.",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["email", "otp"],
+                  properties: {
+                    email: { type: "string", format: "email", example: "user@example.com" },
+                    otp: { type: "string", example: "123456" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "OTP verified successfully.",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: { message: { type: "string", example: "OTP verified successfully." } },
+                  },
+                },
+              },
+            },
+            400: { description: "Invalid or expired OTP." },
+            404: { description: "User not found." },
+            500: { description: "Error verifying OTP." },
+          },
+        },
+      },
+
+      "/api/auth/reset-password": {
+        post: {
+          tags: ["Authentication"],
+          summary: "Reset user password using verified email",
+          description: "Resets the user's password after successful OTP verification.",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["email", "password"],
+                  properties: {
+                    email: { type: "string", format: "email", example: "user@example.com" },
+                    password: { type: "string", format: "password", example: "MySecurePass123!" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Password reset successfully.",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: { message: { type: "string", example: "Password reset successfully." } },
+                  },
+                },
+              },
+            },
+            404: { description: "User not found." },
+            500: { description: "Error resetting password." },
+          },
+        },
+      },
     },
+
+
     servers: [
       {
         url: "http://localhost:5000",

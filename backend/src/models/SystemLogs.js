@@ -78,14 +78,15 @@ const systemLogSchema = new mongoose.Schema({
     timestamps: true // This will add createdAt and updatedAt timestamps
 });
 
-// Allow anonymous logs (page views, unauthenticated events). If no actor id is present,
-systemLogSchema.pre('validate', function(next) {
-    if (!this.victimID && !this.adminID && !this.officialID) {
-
-        // eslint-disable-next-line no-console
-        console.warn('SystemLog validation: no actor ID present for log', this.action, this.logID || 'no-log-id');
+// Keep actor business id (string) for cases where frontend supplies a business identifier
+// (e.g. ADM001, VIC001) instead of a DB ObjectId. This allows logs to record the
+// visible actor id directly without requiring resolution to a Mongo _id.
+systemLogSchema.add({
+    actorBusinessId: {
+        type: String,
+        trim: true,
+        required: false
     }
-    next();
 });
 
 // Create indexes for faster querying
@@ -127,12 +128,14 @@ systemLogSchema.statics.getOfficialLogs = function(officialID) {
 // Helper to create a system log for any actor type
 // actorType: one of 'victim'|'admin'|'official'
 // actorId: the ObjectId of the corresponding document
-systemLogSchema.statics.createLog = async function({ logID, actorType, actorId, action, details, ipAddress, timestamp }) {
+systemLogSchema.statics.createLog = async function({ logID, actorType, actorId, actorBusinessId, action, details, ipAddress, timestamp }) {
     const payload = { logID, action, details, ipAddress, timestamp };
 
     if (actorType === 'victim') payload.victimID = actorId;
     else if (actorType === 'admin') payload.adminID = actorId;
     else if (actorType === 'official') payload.officialID = actorId;
+
+    if (actorBusinessId) payload.actorBusinessId = actorBusinessId;
 
     const doc = new this(payload);
     return await doc.save();

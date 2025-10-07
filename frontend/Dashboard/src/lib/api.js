@@ -19,6 +19,17 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // Attach actor information from localStorage so backend can persist actorBusinessId
+    try {
+      const actorBusinessId = localStorage.getItem('actorBusinessId');
+      const actorId = localStorage.getItem('actorId');
+      const actorType = localStorage.getItem('actorType');
+      if (actorBusinessId) config.headers['x-actor-business-id'] = actorBusinessId;
+      if (actorId) config.headers['x-actor-id'] = actorId;
+      if (actorType) config.headers['x-actor-type'] = actorType;
+    } catch (e) {
+      // ignore localStorage errors (e.g., during SSR or restricted environments)
+    }
     try {
       // Debug: log outgoing requests for easier tracing (including method and url)
       console.debug('[api] outgoing request', { method: config.method, url: config.baseURL ? `${config.baseURL}${config.url}` : config.url, hasAuth: !!token });

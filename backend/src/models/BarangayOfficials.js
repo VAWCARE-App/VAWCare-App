@@ -82,6 +82,14 @@ const barangayOfficialSchema = new mongoose.Schema({
     }
 });
 
+// Two-factor for officials
+barangayOfficialSchema.add({
+    twoFactorEnabled: {
+        type: Boolean,
+        default: false
+    }
+});
+
 // Pre-save middleware to hash password before saving
 barangayOfficialSchema.pre('save', async function(next) {
     if (!this.isModified('officialPassword')) return next();

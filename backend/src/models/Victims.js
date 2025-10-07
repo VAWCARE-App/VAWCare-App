@@ -144,6 +144,16 @@ const victimSchema = new mongoose.Schema({
         type: Date,
         default: null,
     },
+}, {
+    // keep timestamps in a separate options object if needed later
+});
+
+// Two-factor for Victims
+victimSchema.add({
+    twoFactorEnabled: {
+        type: Boolean,
+        default: false
+    }
 });
 
 // Pre-validate middleware

@@ -82,7 +82,6 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     { key: "/landing", icon: <HomeOutlined />, label: "Landing Page" },
     { key: "/admin/reports", icon: <FileTextOutlined />, label: "Reports" },
     { key: "/admin/official-cases", icon: <TeamOutlined />, label: "Cases" },
-    { key: "/admin/bpo", icon: <FileAddOutlined />, label: "BPO Form" },
     { key: "/admin/bpo-management", icon: <FileTextOutlined />, label: "BPO Management" },
     { key: "/admin/official-settings", icon: <SettingOutlined />, label: "Settings" },
   ];

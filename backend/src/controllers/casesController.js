@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const reportService = require('../services/reportService');
 const Victim = require('../models/Victims');
 const dssService = require('../services/dssService');
+const { recordLog } = require('../middleware/logger');
 
 exports.createCase = async (req, res, next) => {
   try {
@@ -77,6 +78,10 @@ exports.createCase = async (req, res, next) => {
     }
 
     const created = await Cases.create(payload);
+    // Log case creation/view as appropriate
+    try {
+      await recordLog({ req, actorType: req.user?.role || 'official', actorId: req.user?.officialID || req.user?.adminID, action: 'view_case', details: `Created case ${created.caseID || created._id}` });
+    } catch (e) { console.warn('Failed to record case create log', e && e.message); }
     return res.status(201).json({ success: true, data: created });
   } catch (err) {
     next(err);
@@ -102,7 +107,8 @@ exports.getCase = async (req, res, next) => {
       : { caseID: id, deleted: { $ne: true } };
     const item = await Cases.findOne(query).lean();
     if (!item) return res.status(404).json({ success: false, message: 'Case not found or deleted' });
-    return res.json({ success: true, data: item });
+      try { await recordLog({ req, actorType: req.user?.role || 'official', actorId: req.user?.officialID || req.user?.adminID || req.user?.victimID, action: 'view_case', details: `Viewed case ${item.caseID || item._id}` }); } catch(e) { console.warn('Failed to record case view log', e && e.message); }
+      return res.json({ success: true, data: item });
   } catch (err) {
     next(err);
   }
@@ -117,7 +123,8 @@ exports.updateCase = async (req, res, next) => {
       : { caseID: id, deleted: { $ne: true } };
     const item = await Cases.findOneAndUpdate(query, updates, { new: true }).lean();
     if (!item) return res.status(404).json({ success: false, message: 'Case not found or deleted' });
-    return res.json({ success: true, data: item });
+      try { await recordLog({ req, actorType: req.user?.role || 'official', actorId: req.user?.officialID || req.user?.adminID, action: 'edit_case', details: `Edited case ${item.caseID || item._id}: ${JSON.stringify(updates)}` }); } catch(e) { console.warn('Failed to record case edit log', e && e.message); }
+      return res.json({ success: true, data: item });
   } catch (err) {
     next(err);
   }
@@ -132,7 +139,8 @@ exports.deleteCase = async (req, res, next) => {
       : { caseID: id, deleted: { $ne: true } };
     const item = await Cases.findOneAndUpdate(query, { deleted: true, deletedAt: new Date() }, { new: true }).lean();
     if (!item) return res.status(404).json({ success: false, message: 'Case not found or already deleted' });
-    return res.json({ success: true, data: item });
+      try { await recordLog({ req, actorType: req.user?.role || 'official', actorId: req.user?.officialID || req.user?.adminID, action: 'delete_case', details: `Deleted case ${item.caseID || item._id}` }); } catch(e) { console.warn('Failed to record case delete log', e && e.message); }
+      return res.json({ success: true, data: item });
   } catch (err) {
     next(err);
   }

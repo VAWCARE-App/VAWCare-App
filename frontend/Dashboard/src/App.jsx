@@ -28,6 +28,7 @@ import OfficialDashboard from "./pages/Dashboards/OfficialDashboard";
 import Test from "./pages/Test";
 import ReportCase from "./pages/Victim/Report";
 import EmergencyButton from "./pages/Victim/EmergencyButton";
+import LogManagement from "./pages/LogManagement";
 
 import { isAuthed, getUserType } from "./lib/api";
 
@@ -77,9 +78,11 @@ export default function App() {
               {/* Officials */}
               <Route path="official-dashboard" element={<Protected><OfficialDashboard /></Protected>} />
               <Route path="official-cases" element={<Protected><CaseManagement /></Protected>} />
+              <Route path="official-cases/:id" element={<Protected><CaseDetail /></Protected>} />
 
               {/* Admin */}
               <Route path="users" element={<Protected><UserManagement /></Protected>} />
+              <Route path="logs" element={<Protected><LogManagement /></Protected>} />
               <Route path="create-official" element={<Protected roles={["admin","official"]}><CreateOfficial /></Protected>} />
               <Route path="reports" element={<Protected><ReportManagement /></Protected>} />
               <Route path="bpo" element={<Protected><BPO /></Protected>} />

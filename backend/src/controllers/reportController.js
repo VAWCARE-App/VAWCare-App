@@ -2,6 +2,8 @@ const asyncHandler = require('express-async-handler');
 const ReportService = require('../services/reportService');
 
 // Create a new incident report (victim submits)
+const { recordLog } = require('../middleware/logger');
+
 const createReport = asyncHandler(async (req, res) => {
   const payload = req.body;
   // Pass perpetrator field if present
@@ -12,6 +14,13 @@ const createReport = asyncHandler(async (req, res) => {
   }
 
   const report = await ReportService.createReport(payload);
+
+  // Record system log for report submission (victim or other actor)
+  try {
+    await recordLog({ req, actorType: req.user?.role || 'victim', actorId: req.user?.victimID || req.user?.officialID || req.user?.adminID, action: 'report_submission', details: `Report ${report.reportID || report._id} submitted` });
+  } catch (e) {
+    console.warn('Failed to record report submission log', e && e.message);
+  }
 
   res.status(201).json({
     success: true,
@@ -28,6 +37,11 @@ const getReport = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error('Report not found');
   }
+  // Log view
+  try {
+    await recordLog({ req, actorType: req.user?.role || 'victim', actorId: req.user?.victimID || req.user?.officialID || req.user?.adminID, action: 'view_report', details: `Viewed report ${report.reportID || report._id}` });
+  } catch (e) { console.warn('Failed to record report view log', e && e.message); }
+
   res.status(200).json({ success: true, data: report });
 });
 
@@ -52,6 +66,11 @@ const updateReport = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error('Report not found');
   }
+
+  // Log edit
+  try {
+    await recordLog({ req, actorType: req.user?.role || 'official', actorId: req.user?.officialID || req.user?.adminID, action: 'edit_report', details: `Updated report ${updated.reportID || updated._id}: ${JSON.stringify(updates)}` });
+  } catch (e) { console.warn('Failed to record report edit log', e && e.message); }
 
   res.status(200).json({ success: true, message: 'Report updated', data: updated });
 });

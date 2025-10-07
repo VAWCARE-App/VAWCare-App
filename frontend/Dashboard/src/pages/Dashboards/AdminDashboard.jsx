@@ -354,7 +354,7 @@ export default function AdminDashboard() {
                     height: 44,
                     fontWeight: 600,
                   }}
-                  href="/users"
+                  href="/admin/users"
                 >
                   Manage Users
                 </Button>
@@ -367,7 +367,7 @@ export default function AdminDashboard() {
                     height: 44,
                     fontWeight: 600,
                   }}
-                  href="/reports"
+                  href="/admin/reports"
                 >
                   Review Reports
                 </Button>
@@ -380,7 +380,7 @@ export default function AdminDashboard() {
                     height: 44,
                     fontWeight: 600,
                   }}
-                  href="/cases"
+                  href="/admin/cases"
                 >
                   Manage Cases
                 </Button>
@@ -393,7 +393,7 @@ export default function AdminDashboard() {
                     height: 44,
                     fontWeight: 600,
                   }}
-                  href="/settings"
+                  href="/admin/settings"
                 >
                   Settings
                 </Button>

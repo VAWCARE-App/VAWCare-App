@@ -75,7 +75,7 @@ const adminSchema = new mongoose.Schema({
     resetTokenExpiry: Date
 });
 
-// Two-factor auth flag
+// Two-factor  for Admin
 adminSchema.add({
     twoFactorEnabled: {
         type: Boolean,

@@ -7,10 +7,21 @@ const systemLogSchema = new mongoose.Schema({
         unique: true,
         trim: true
     },
+    // One of victimID, adminID, or officialID may be set depending on who performed the action
     victimID: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Victim',
-        required: [true, 'Victim ID is required']
+        required: false
+    },
+    adminID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Admin',
+        required: false
+    },
+    officialID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'BarangayOfficial',
+        required: false
     },
     action: {
         type: String,
@@ -54,9 +65,19 @@ const systemLogSchema = new mongoose.Schema({
     timestamps: true // This will add createdAt and updatedAt timestamps
 });
 
+// Ensure at least one actor id is present
+systemLogSchema.pre('validate', function(next) {
+    if (!this.victimID && !this.adminID && !this.officialID) {
+        return next(new Error('At least one actor ID (victimID, adminID, or officialID) is required'));
+    }
+    next();
+});
+
 // Create indexes for faster querying
 systemLogSchema.index({ logID: 1 }, { unique: true });
 systemLogSchema.index({ victimID: 1 });
+systemLogSchema.index({ adminID: 1 });
+systemLogSchema.index({ officialID: 1 });
 systemLogSchema.index({ action: 1 });
 systemLogSchema.index({ timestamp: -1 });
 systemLogSchema.index({ ipAddress: 1 });
@@ -65,14 +86,50 @@ systemLogSchema.index({ ipAddress: 1 });
 systemLogSchema.statics.getVictimLogs = function(victimID) {
     return this.find({ victimID })
         .sort({ timestamp: -1 })
-        .populate('victimID');
+        .populate('victimID')
+        .populate('adminID')
+        .populate('officialID');
+};
+
+// Static method to get logs by admin
+systemLogSchema.statics.getAdminLogs = function(adminID) {
+    return this.find({ adminID })
+        .sort({ timestamp: -1 })
+        .populate('victimID')
+        .populate('adminID')
+        .populate('officialID');
+};
+
+// Static method to get logs by barangay official
+systemLogSchema.statics.getOfficialLogs = function(officialID) {
+    return this.find({ officialID })
+        .sort({ timestamp: -1 })
+        .populate('victimID')
+        .populate('adminID')
+        .populate('officialID');
+};
+
+// Helper to create a system log for any actor type
+// actorType: one of 'victim'|'admin'|'official'
+// actorId: the ObjectId of the corresponding document
+systemLogSchema.statics.createLog = async function({ logID, actorType, actorId, action, details, ipAddress, timestamp }) {
+    const payload = { logID, action, details, ipAddress, timestamp };
+
+    if (actorType === 'victim') payload.victimID = actorId;
+    else if (actorType === 'admin') payload.adminID = actorId;
+    else if (actorType === 'official') payload.officialID = actorId;
+
+    const doc = new this(payload);
+    return await doc.save();
 };
 
 // Static method to get logs by action type
 systemLogSchema.statics.getLogsByAction = function(action) {
     return this.find({ action })
         .sort({ timestamp: -1 })
-        .populate('victimID');
+    .populate('victimID')
+    .populate('adminID')
+    .populate('officialID');
 };
 
 // Static method to get logs within a date range
@@ -84,14 +141,18 @@ systemLogSchema.statics.getLogsByDateRange = function(startDate, endDate) {
         }
     })
     .sort({ timestamp: -1 })
-    .populate('victimID');
+    .populate('victimID')
+    .populate('adminID')
+    .populate('officialID');
 };
 
 // Static method to get logs from a specific IP address
 systemLogSchema.statics.getLogsByIP = function(ipAddress) {
     return this.find({ ipAddress })
         .sort({ timestamp: -1 })
-        .populate('victimID');
+    .populate('victimID')
+    .populate('adminID')
+    .populate('officialID');
 };
 
 // Method to add details to a log

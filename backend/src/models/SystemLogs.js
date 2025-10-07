@@ -28,17 +28,33 @@ const systemLogSchema = new mongoose.Schema({
         required: [true, 'Action is required'],
         enum: {
             values: [
-                'login',
-                'logout',
-                'report_submission',
-                'bpo_issued',
-                'alert_created',
-                'alert_resolved',
-                'profile_updated',
-                'password_changed',
-                'account_created',
-                'account_deactivated'
-            ],
+                    'login',
+                    'logout',
+                    'page_view',
+                    'emergency_button',
+                    'report_submission',
+                    'chatbot_interaction',
+                    'bpo_issued',
+                    'bpo_saved',
+                    'bpo_edited',
+                    'bpo_deleted',
+                    'alert_created',
+                    'alert_resolved',
+                    'profile_updated',
+                    'password_changed',
+                    'account_created',
+                    'account_deactivated',
+                    'create_official',
+                    'view_report',
+                    'edit_report',
+                    'delete_report',
+                    'view_case',
+                    'edit_case',
+                    'delete_case',
+                    'edit_user',
+                    'view_user',
+                    'delete_user'
+                ],
             message: 'Please enter a valid action type'
         },
         trim: true
@@ -56,19 +72,25 @@ const systemLogSchema = new mongoose.Schema({
         type: String,
         required: [true, 'IP address is required'],
         trim: true,
-        match: [
-            /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/,
-            'Please enter a valid IPv4 address'
-        ]
+        // Removed strict IPv4 validation to allow IPv6, proxy headers, or other formats
     }
 }, {
     timestamps: true // This will add createdAt and updatedAt timestamps
 });
 
 // Ensure at least one actor id is present
+// Allow anonymous logs (page views, unauthenticated events). If no actor id is present,
+// we warn during validation but do not block the save. This keeps logging best-effort
+// without breaking the primary application flows.
 systemLogSchema.pre('validate', function(next) {
     if (!this.victimID && !this.adminID && !this.officialID) {
-        return next(new Error('At least one actor ID (victimID, adminID, or officialID) is required'));
+        // don't throw; allow anonymous/unauthenticated events to be recorded
+        // but emit a server-side warning for debugging/auditing.
+        // Note: anonymous logs will have no DB refs to actor documents.
+        // Developers may filter these by checking for missing actor refs.
+        // Console warn here to aid debugging during development.
+        // eslint-disable-next-line no-console
+        console.warn('SystemLog validation: no actor ID present for log', this.action, this.logID || 'no-log-id');
     }
     next();
 });

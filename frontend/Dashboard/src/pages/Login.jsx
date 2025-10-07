@@ -384,27 +384,6 @@ export default function Login() {
           </Modal>
         </Card>
       </Flex>
-
-      <Button
-        onClick={() => navigate("/")}
-        style={{
-          position: "absolute",
-          top: 16,
-          right: 16,
-          color: "#555",
-          border: "1px solid #ddd",
-          width: 40,
-          height: 40,
-          zIndex: 9999, // ensures it's clickable above everything
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#fff",
-          borderRadius: 6, // square with slightly rounded corners
-        }}
-      >
-        <CloseOutlined style={{ fontSize: 20 }} />
-      </Button>
     </div>
   );
 }

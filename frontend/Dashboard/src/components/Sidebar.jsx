@@ -18,7 +18,7 @@ import {
   InfoCircleOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
-import { clearToken } from "../lib/api";
+import { clearToken, api } from "../lib/api";
 import logo from "../assets/logo1.png";
 
 const { Sider } = Layout;
@@ -37,14 +37,17 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   };
 
   const handleLogout = () => {
+    try {
+      api.post('/api/auth/logout').catch(() => {});
+    } catch (e) {}
     clearToken();
-    if (userType === "admin" || userType === "official") {
-      navigate("/admin/login");
-    } else {
-      navigate("/login");
-    }
+    // Always route to landing page after logout
+    navigate('/');
     localStorage.removeItem("user");
     localStorage.removeItem("userType");
+    localStorage.removeItem('actorId');
+    localStorage.removeItem('actorType');
+  localStorage.removeItem('actorBusinessId');
     
   };
 
@@ -63,6 +66,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   const adminMenu = [
     { key: "/admin", icon: <DashboardOutlined />, label: "Dashboard" },
     { key: "/admin/users", icon: <TeamOutlined />, label: "User Management" },
+    { key: "/admin/logs", icon: <FileTextOutlined />, label: "System Logs" },
     { key: "/admin/create-official", icon: <UserSwitchOutlined />, label: "Create Official" },
     { key: "/admin/reports", icon: <FileTextOutlined />, label: "Reports" },
     { key: "/admin/cases", icon: <TeamOutlined />, label: "Cases" },
@@ -81,7 +85,6 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     { key: "/admin/bpo", icon: <FileAddOutlined />, label: "BPO Form" },
     { key: "/admin/bpo-management", icon: <FileTextOutlined />, label: "BPO Management" },
     { key: "/admin/official-settings", icon: <SettingOutlined />, label: "Settings" },
-    { key: "/admin/reports", icon: <FileTextOutlined />, label: "Reports" }
   ];
 
   const victimMenu = [

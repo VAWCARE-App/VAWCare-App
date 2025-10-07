@@ -2,6 +2,7 @@ const admin = require('../config/firebase-config');
 const Admin = require('../models/Admin');
 const Victim = require('../models/Victims');
 const BarangayOfficial = require('../models/BarangayOfficials');
+const SystemLog = require('../models/SystemLogs');
 const asyncHandler = require('express-async-handler');
 
 // @desc    Get all users (admins, victims, and officials)
@@ -208,6 +209,7 @@ exports.updateVictim = asyncHandler(async (req, res) => {
                 data: updatedVictim,
                 message: 'Victim updated successfully'
             });
+            try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: 'admin', actorId: req.user?.adminID, action: 'edit_user', details: `Admin updated victim ${updatedVictim.victimID || updatedVictim._id}: ${JSON.stringify(req.body)}` }); } catch(e) { console.warn('Failed to record victim update log', e && e.message); }
         } catch (err) {
             if (err.name === 'ValidationError') {
                 return res.status(400).json({ success: false, message: err.message });
@@ -270,6 +272,7 @@ exports.registerOfficial = asyncHandler(async (req, res) => {
             data: official,
             message: 'Official registered successfully'
         });
+        try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: 'admin', actorId: req.user?.adminID, action: 'create_official', details: `Admin created official ${official.officialID || official._id}` }); } catch(e) { console.warn('Failed to record admin official creation log', e && e.message); }
     } catch (error) {
         res.status(500);
         throw new Error('Error registering official: ' + error.message);
@@ -317,6 +320,7 @@ exports.updateOfficial = asyncHandler(async (req, res) => {
                 data: updatedOfficial,
                 message: 'Official updated successfully'
             });
+            try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: 'admin', actorId: req.user?.adminID, action: 'edit_user', details: `Admin updated official ${updatedOfficial.officialID || updatedOfficial._id}: ${JSON.stringify(body)}` }); } catch(e) { console.warn('Failed to record official update log', e && e.message); }
         } catch (err) {
             if (err.name === 'ValidationError') {
         console.error('Validation error in updateOfficial:', err);
@@ -806,21 +810,12 @@ const generateToken = async (adminUser) => {
 // Admin Login
 exports.loginAdmin = async (req, res) => {
     try {
-        // Log the full request body to see what we're receiving
-        console.log('Full request body:', req.body);
-        
         // Accept either adminPassword or password from the request body
         const { adminEmail, adminPassword, password } = req.body;
         const passwordToUse = adminPassword || password;
 
-        console.log('Login attempt:', { 
-            adminEmail, 
-            hasAdminPassword: !!adminPassword,
-            hasPassword: !!password,
-            passwordToUse,
-            adminPasswordLength: adminPassword ? adminPassword.length : 0,
-            passwordLength: password ? password.length : 0
-        });
+        // Log attempt without exposing secrets
+        console.log('Login attempt for admin:', { adminEmail, hasAdminPassword: !!adminPassword, hasPassword: !!password });
 
         // Find admin
         const adminUser = await Admin.findOne({ adminEmail, isDeleted: false });
@@ -845,12 +840,10 @@ exports.loginAdmin = async (req, res) => {
             });
         }
 
-        // Check password
-        console.log('About to compare password');
-        console.log('Input password to compare:', passwordToUse);
-        console.log('Stored hashed password:', adminUser.adminPassword);
-        const isMatch = await adminUser.comparePassword(passwordToUse);
-        console.log('Password match result:', isMatch);
+    // Check password (do not log sensitive data)
+    console.log('About to compare password for admin:', adminEmail);
+    const isMatch = await adminUser.comparePassword(passwordToUse);
+    console.log('Password match result for admin:', adminEmail, isMatch);
         if (!isMatch) {
             return res.status(401).json({
                 success: false,
@@ -876,6 +869,24 @@ exports.loginAdmin = async (req, res) => {
                 }
             }
         });
+
+        // Record system log for admin login
+        try {
+            const forwarded = (req.headers && (req.headers['x-forwarded-for'] || req.headers['X-Forwarded-For'])) || null;
+            const ipToRecord = forwarded ? String(forwarded).split(',')[0].trim() : req.ip;
+            await SystemLog.createLog({
+                logID: `LOG-${Date.now()}`,
+                actorType: 'admin',
+                actorId: adminUser._id,
+                action: 'login',
+                details: `Admin ${adminUser.adminID} logged in`,
+                ipAddress: ipToRecord,
+                timestamp: new Date()
+            });
+            console.log('Recorded login system log for admin', adminUser.adminID, 'ip=', ipToRecord);
+        } catch (logErr) {
+            console.warn('Failed to record login system log:', logErr && logErr.message, logErr);
+        }
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({

@@ -78,17 +78,10 @@ const systemLogSchema = new mongoose.Schema({
     timestamps: true // This will add createdAt and updatedAt timestamps
 });
 
-// Ensure at least one actor id is present
 // Allow anonymous logs (page views, unauthenticated events). If no actor id is present,
-// we warn during validation but do not block the save. This keeps logging best-effort
-// without breaking the primary application flows.
 systemLogSchema.pre('validate', function(next) {
     if (!this.victimID && !this.adminID && !this.officialID) {
-        // don't throw; allow anonymous/unauthenticated events to be recorded
-        // but emit a server-side warning for debugging/auditing.
-        // Note: anonymous logs will have no DB refs to actor documents.
-        // Developers may filter these by checking for missing actor refs.
-        // Console warn here to aid debugging during development.
+
         // eslint-disable-next-line no-console
         console.warn('SystemLog validation: no actor ID present for log', this.action, this.logID || 'no-log-id');
     }

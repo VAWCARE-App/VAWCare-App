@@ -34,8 +34,13 @@ api.interceptors.request.use(
 
 export const saveToken = (t) => localStorage.setItem("token", t);
 export const clearToken = () => {
+  // Remove all authentication and actor-related keys from localStorage
   localStorage.removeItem("token");
+  localStorage.removeItem("user");
   localStorage.removeItem("userType");
+  localStorage.removeItem('actorId');
+  localStorage.removeItem('actorType');
+  localStorage.removeItem('actorBusinessId');
 };
 export const isAuthed = () => !!localStorage.getItem("token");
 export const getUserType = () => localStorage.getItem("userType") || 'victim';
@@ -49,7 +54,7 @@ api.interceptors.response.use(
       const requestUrl = error.config?.url || '';
       if (!requestUrl.includes('/login')) {
         clearToken();
-        window.location.href = '/login';
+        window.location.href = '/';
       }
     }
     return Promise.reject(error);
@@ -100,7 +105,7 @@ api.interceptors.response.use(async (response) => {
     const requestUrl = error.config?.url || '';
     if (!requestUrl.includes('/login')) {
       clearToken();
-      window.location.href = '/login';
+      window.location.href = '/';
     }
   }
   return Promise.reject(error);

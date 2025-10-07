@@ -24,7 +24,7 @@ import {
   DeleteOutlined,
   ExclamationCircleOutlined,
 } from "@ant-design/icons";
-import { api } from "../lib/api";
+import { api, getUserType } from "../lib/api";
 import { useNavigate } from "react-router-dom";
 
 const { Header, Content } = Layout;
@@ -116,11 +116,15 @@ export default function CaseManagement() {
   const handleViewCase = (rec) => {
     console.log('Viewing case', rec);
     console.log('Navigating to /cases/' + rec.caseID);
-    navigate(`${rec.caseID}`);
+    const userType = getUserType();
+    const base = userType === 'official' ? '/admin/official-cases' : '/admin/cases';
+    navigate(`${base}/${rec.caseID}`);
   };
 
   const handleEditCase = (rec) => {
-    navigate(`${rec.caseID}?edit=true`);
+    const userType = getUserType();
+    const base = userType === 'official' ? '/admin/official-cases' : '/admin/cases';
+    navigate(`${base}/${rec.caseID}?edit=true`);
   };
 
   const openAddModal = async () => {

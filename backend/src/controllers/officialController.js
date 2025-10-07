@@ -91,7 +91,7 @@ const registerOfficial = asyncHandler(async (req, res) => {
 
                 // Set custom claims for initial access
                 await admin.auth().setCustomUserClaims(userRecord.uid, {
-                    role: 'barangay_official',
+                    role: 'official',
                     position: position,
                     status: 'pending'
                 });
@@ -207,7 +207,7 @@ const loginOfficial = asyncHandler(async (req, res) => {
 
         // Create custom token for approved official with updated claims
         const customToken = await admin.auth().createCustomToken(official.firebaseUid, {
-            role: 'barangay_official',
+            role: 'official',
             position: official.position,
             status: official.status
         });

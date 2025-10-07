@@ -289,6 +289,25 @@ const loginVictim = asyncHandler(async (req, res) => {
             }
         });
 
+        // record login in system logs (best-effort)
+        try {
+            const SystemLog = require('../models/SystemLogs');
+            const forwarded = (req.headers && (req.headers['x-forwarded-for'] || req.headers['X-Forwarded-For'])) || null;
+            const ipToRecord = forwarded ? String(forwarded).split(',')[0].trim() : req.ip;
+            await SystemLog.createLog({
+                logID: `LOG-${Date.now()}`,
+                actorType: 'victim',
+                actorId: victim._id,
+                action: 'login',
+                details: `Victim ${victim.victimID || victim.victimUsername} logged in`,
+                ipAddress: ipToRecord,
+                timestamp: new Date()
+            });
+            console.log('Recorded login system log for victim', victim.victimID || victim.victimUsername, 'ip=', ipToRecord);
+        } catch (logErr) {
+            console.warn('Failed to record victim login system log:', logErr && logErr.message, logErr);
+        }
+
     } catch (error) {
         console.error("Login error:", error.message);
         res.status(500).json({ success: false, message: "Server error" });
@@ -464,6 +483,7 @@ const submitAnonymousReport = asyncHandler(async (req, res) => {
                 token: anonymousCustomToken
             }
         });
+        try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: 'victim', actorId: victim._id, action: 'report_submission', details: `Anonymous report submitted id=${report._id}` }); } catch(e) { console.warn('Failed to record anonymous report log', e && e.message); }
     } catch (error) {
         res.status(500);
         throw new Error('Error submitting anonymous report');
@@ -492,6 +512,7 @@ const sendAnonymousAlert = asyncHandler(async (req, res) => {
                 timestamp: alert.timestamp
             }
         });
+        try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: 'victim', actorId: null, action: 'emergency_button', details: `Anonymous emergency alert sent type=${alertType}` }); } catch(e) { console.warn('Failed to record anonymous alert log', e && e.message); }
     } catch (error) {
         res.status(500);
         throw new Error('Error sending anonymous alert');

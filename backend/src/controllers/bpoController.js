@@ -21,6 +21,10 @@ const createBPO = asyncHandler(async (req, res) => {
     try {
         const saved = await doc.save();
         console.log('[createBPO] created', { _id: saved._id, bpoID: saved.bpoID });
+        try {
+            const { recordLog } = require('../middleware/logger');
+            await recordLog({ req, actorType: req.user?.role || 'official', actorId: req.user?.officialID || req.user?.adminID, action: 'bpo_saved', details: `Saved BPO ${saved.bpoID || saved._id}` });
+        } catch (e) { console.warn('Failed to record BPO create log', e && e.message); }
         return res.status(201).json({ success: true, data: saved });
     } catch (err) {
         console.error('[createBPO] error', err && (err.message || err));
@@ -48,8 +52,9 @@ const getBPO = asyncHandler(async (req, res) => {
     const q = { ...buildIdQuery(id), deleted: { $ne: true } };
     try {
         const doc = await BPO.findOne(q).lean();
-        if (!doc) return res.status(404).json({ success: false, message: 'BPO not found' });
-        return res.json({ success: true, data: doc });
+    if (!doc) return res.status(404).json({ success: false, message: 'BPO not found' });
+    try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: req.user?.role || 'official', actorId: req.user?.officialID || req.user?.adminID || req.user?.victimID, action: 'view_bpo', details: `Viewed BPO ${doc.bpoID || doc._id}` }); } catch(e) { console.warn('Failed to record BPO view log', e && e.message); }
+    return res.json({ success: true, data: doc });
     } catch (err) {
         console.error('[getBPO] error', err && err.message);
         return res.status(500).json({ success: false, message: 'Failed to get BPO', error: err.message });
@@ -70,7 +75,8 @@ const updateBPO = asyncHandler(async (req, res) => {
         const updated = await BPO.findOneAndUpdate(q, { $set: updates }, { new: true, runValidators: true });
         if (!updated) return res.status(404).json({ success: false, message: 'BPO not found or deleted' });
         console.log('[updateBPO] updated', { _id: updated._id, bpoID: updated.bpoID });
-        return res.json({ success: true, data: updated });
+    try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: req.user?.role || 'official', actorId: req.user?.officialID || req.user?.adminID, action: 'bpo_edited', details: `Edited BPO ${updated.bpoID || updated._id}: ${JSON.stringify(updates)}` }); } catch(e) { console.warn('Failed to record BPO edit log', e && e.message); }
+    return res.json({ success: true, data: updated });
     } catch (err) {
         console.error('[updateBPO] error', err && err.message);
         return res.status(500).json({ success: false, message: 'Failed to update BPO', error: err.message });
@@ -89,6 +95,7 @@ const deleteBPO = asyncHandler(async (req, res) => {
             return res.status(404).json({ success: false, message: 'BPO not found or already deleted' });
         }
         console.log('[deleteBPO] soft-deleted', { _id: updated._id, bpoID: updated.bpoID });
+        try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: req.user?.role || 'official', actorId: req.user?.officialID || req.user?.adminID, action: 'bpo_deleted', details: `Deleted BPO ${updated.bpoID || updated._id}` }); } catch(e) { console.warn('Failed to record BPO delete log', e && e.message); }
         return res.json({ success: true, data: updated });
     } catch (err) {
         console.error('[deleteBPO] error', err && err.stack);

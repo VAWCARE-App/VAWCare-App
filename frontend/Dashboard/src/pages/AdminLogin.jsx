@@ -246,20 +246,20 @@ export default function AdminLogin() {
 
                 localStorage.setItem("user", JSON.stringify(userInfo));
                 localStorage.setItem("userType", userType);
-                    try {
-                        if (userInfo && userInfo.id) {
-                            localStorage.setItem('actorId', String(userInfo.id));
-                            localStorage.setItem('actorType', userType);
-                        }
-                    } catch (e) {
-                        console.warn('Unable to persist actorId to localStorage', e && e.message);
+                try {
+                    if (userInfo && userInfo.id) {
+                        localStorage.setItem('actorId', String(userInfo.id));
+                        localStorage.setItem('actorType', userType);
                     }
-                    try {
-                        const businessId = userInfo?.adminID || userInfo?.officialID || userInfo?.victimID || null;
-                        if (businessId) localStorage.setItem('actorBusinessId', String(businessId));
-                    } catch (e) {
-                        console.warn('Unable to persist actorBusinessId to localStorage', e && e.message);
-                    }
+                } catch (e) {
+                    console.warn('Unable to persist actorId to localStorage', e && e.message);
+                }
+                try {
+                    const businessId = userInfo?.adminID || userInfo?.officialID || userInfo?.victimID || null;
+                    if (businessId) localStorage.setItem('actorBusinessId', String(businessId));
+                } catch (e) {
+                    console.warn('Unable to persist actorBusinessId to localStorage', e && e.message);
+                }
 
                 const userName =
                     userInfo.firstName || userInfo.victimUsername || userInfo.adminEmail || userInfo.officialEmail || "User";
@@ -399,6 +399,21 @@ export default function AdminLogin() {
                     >
                         <Typography.Paragraph>{errorModalMessage}</Typography.Paragraph>
                     </Modal>
+
+                    <Button
+                        type="text"
+                        icon={<CloseOutlined />}
+                        onClick={() => navigate("/")}
+                        style={{
+                            position: "absolute",
+                            top: 10,
+                            right: 10,
+                            fontSize: 18,
+                            color: "#888",
+                            background: "transparent",
+                        }}
+                    />
+
                 </Card>
             </Flex>
         </div>

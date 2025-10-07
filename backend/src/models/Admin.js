@@ -75,6 +75,14 @@ const adminSchema = new mongoose.Schema({
     resetTokenExpiry: Date
 });
 
+// Two-factor auth flag
+adminSchema.add({
+    twoFactorEnabled: {
+        type: Boolean,
+        default: false
+    }
+});
+
 // Method to compare passwords for login
 adminSchema.methods.comparePassword = async function(candidatePassword) {
     return await bcrypt.compare(candidatePassword, this.adminPassword);

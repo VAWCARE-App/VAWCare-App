@@ -153,10 +153,14 @@ export default function VictimDashboard() {
   }, []);
 
   const handleLogout = () => {
+    try { api.post('/api/auth/logout').catch(() => {}); } catch(e) {}
     clearToken();
     localStorage.removeItem("user");
     localStorage.removeItem("userType");
-    navigate("/login");
+    localStorage.removeItem('actorId');
+    localStorage.removeItem('actorType');
+    localStorage.removeItem('actorBusinessId');
+    navigate('/');
   };
 
   const KpiCard = ({ icon, label, value, delay = 0 }) => (
@@ -328,7 +332,7 @@ export default function VictimDashboard() {
                 <Button
                   type="primary"
                   icon={<FileAddOutlined />}
-                  onClick={() => navigate("/report")}
+                  onClick={() => navigate("/victim/report")}
                 >
                   File a New Report
                 </Button> 

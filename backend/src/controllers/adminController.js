@@ -484,9 +484,9 @@ exports.updateOfficialStatus = asyncHandler(async (req, res) => {
                     throw error;
                 }
 
-                // Update custom claims
+                // Update custom claims - normalize role to 'official'
                 await admin.auth().setCustomUserClaims(official.firebaseUid, {
-                    role: 'barangay_official',
+                    role: 'official',
                     position: official.position,
                     officialId: official.officialID,
                     status: 'approved'

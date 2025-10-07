@@ -39,7 +39,11 @@ export default function VictimNavbar() {
         clearToken();
         localStorage.removeItem("user");
         localStorage.removeItem("userType");
-        navigate("/login");
+        localStorage.removeItem('actorId');
+        localStorage.removeItem('actorType');
+        localStorage.removeItem('actorBusinessId');
+        // After logout go back to the landing page for all user types
+        navigate('/');
     };
 
     const userMenu = (

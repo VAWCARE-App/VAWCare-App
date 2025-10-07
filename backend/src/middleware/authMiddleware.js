@@ -46,11 +46,20 @@ const protect = asyncHandler(async (req, res, next) => {
         // Try to attach business identifiers for admins / officials so controllers can log "by=" correctly
         try {
             if (req.user.role === 'admin') {
-                const adminDoc = await AdminModel.findOne({ firebaseUid: req.user.uid }).select('adminID firebaseUid');
-                if (adminDoc) req.user.adminID = adminDoc.adminID;
+                // select Mongo _id as well as business adminID
+                const adminDoc = await AdminModel.findOne({ firebaseUid: req.user.uid }).select('_id adminID firebaseUid');
+                if (adminDoc) {
+                    // store Mongo ObjectId for DB refs and keep business id for display
+                    req.user.adminID = adminDoc._id;
+                    req.user.adminBusinessId = adminDoc.adminID; // optional, for human-friendly display
+                }
             } else if (req.user.role === 'official') {
-                const officialDoc = await OfficialModel.findOne({ firebaseUid: req.user.uid }).select('officialID firebaseUid');
-                if (officialDoc) req.user.officialID = officialDoc.officialID;
+                // select Mongo _id as well as business officialID
+                const officialDoc = await OfficialModel.findOne({ firebaseUid: req.user.uid }).select('_id officialID firebaseUid');
+                if (officialDoc) {
+                    req.user.officialID = officialDoc._id;
+                    req.user.officialBusinessId = officialDoc.officialID;
+                }
             }
         } catch (e) {
             // non-fatal: if DB lookup fails, continue without business IDs

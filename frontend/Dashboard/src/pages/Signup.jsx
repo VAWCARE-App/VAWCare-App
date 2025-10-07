@@ -208,6 +208,20 @@ export default function Signup() {
           }
         }
         localStorage.setItem("user", JSON.stringify(data.data.victim));
+        try {
+          if (data.data && data.data.victim && data.data.victim.id) {
+            localStorage.setItem('actorId', String(data.data.victim.id));
+            localStorage.setItem('actorType', 'victim');
+          }
+        } catch (e) {
+          console.warn('Unable to persist actorId on signup', e && e.message);
+        }
+        try {
+          const businessId = data?.data?.victim?.victimID || null;
+          if (businessId) localStorage.setItem('actorBusinessId', String(businessId));
+        } catch (e) {
+          console.warn('Unable to persist actorBusinessId on signup', e && e.message);
+        }
         message.success("Account created successfully!");
         // If this was an anonymous signup, go directly to the report page
   const redirect = data.data.victim?.victimAccount === "anonymous" ? "/report" : "/victim/victim-test";
@@ -229,6 +243,20 @@ export default function Signup() {
       const resp = data.data || {};
       if (resp.token) saveToken(resp.token);
       if (resp.victim) localStorage.setItem("user", JSON.stringify(resp.victim));
+      try {
+        if (resp && resp.victim && resp.victim.id) {
+          localStorage.setItem('actorId', String(resp.victim.id));
+          localStorage.setItem('actorType', 'victim');
+        }
+      } catch (e) {
+        console.warn('Unable to persist actorId for anonymous signup', e && e.message);
+      }
+      try {
+        const businessId = resp?.victim?.victimID || null;
+        if (businessId) localStorage.setItem('actorBusinessId', String(businessId));
+      } catch (e) {
+        console.warn('Unable to persist actorBusinessId for anonymous signup', e && e.message);
+      }
   message.success("Account created successfully!");
   // anonymous creation should go straight to filing a report
   navigate("/report");

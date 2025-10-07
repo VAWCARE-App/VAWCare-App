@@ -74,14 +74,14 @@ export default function AdminDashboard() {
       const reports = Array.isArray(reportsRes.data)
         ? reportsRes.data
         : Array.isArray(reportsRes.data?.data)
-        ? reportsRes.data.data
-        : (reportsRes.data?.items || []);
+          ? reportsRes.data.data
+          : (reportsRes.data?.items || []);
 
       const cases = Array.isArray(casesRes.data)
         ? casesRes.data
         : Array.isArray(casesRes.data?.data)
-        ? casesRes.data.data
-        : (casesRes.data?.items || []);
+          ? casesRes.data.data
+          : (casesRes.data?.items || []);
 
       // usersRes may be an array, or { success:true, data: { admins, victims, officials, total } }
       const usersPayload = usersRes.data;
@@ -89,8 +89,8 @@ export default function AdminDashboard() {
       const logs = Array.isArray(logsRes.data)
         ? logsRes.data
         : Array.isArray(logsRes.data?.data)
-        ? logsRes.data.data
-        : (logsRes.data?.items || []);
+          ? logsRes.data.data
+          : (logsRes.data?.items || []);
 
       // Debug: log raw responses so developer can inspect the shapes
       console.debug('AdminDashboard API responses:', {
@@ -125,10 +125,10 @@ export default function AdminDashboard() {
       const totalCases = Number(cases.length || 0);
       const openCases = Number(cases.filter((c) => (String(c.status || 'Open') === 'Open')).length || 0);
 
-  const recentActivities = [];
-  // prefer logs then reports for activity feed
-  logs.slice(-10).reverse().forEach((l) => recentActivities.push({ id: `log-${l._id || l.id}`, title: l.action || 'System event', type: 'log', createdAt: l.createdAt || l.createdAt }));
-  reports.slice(-10).reverse().forEach((r) => recentActivities.push({ id: `report-${r._id || r.reportID}`, title: r.title || `Report ${r.reportID || r._id}`, type: 'report', createdAt: r.createdAt || r.createdAt }));
+      const recentActivities = [];
+      // prefer logs then reports for activity feed
+      logs.slice(-10).reverse().forEach((l) => recentActivities.push({ id: `log-${l._id || l.id}`, title: l.action || 'System event', type: 'log', createdAt: l.createdAt || l.createdAt }));
+      reports.slice(-10).reverse().forEach((r) => recentActivities.push({ id: `report-${r._id || r.reportID}`, title: r.title || `Report ${r.reportID || r._id}`, type: 'report', createdAt: r.createdAt || r.createdAt }));
 
       recentActivities.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
@@ -417,6 +417,8 @@ export default function AdminDashboard() {
                   display: "flex",
                   flexDirection: "column",
                   minHeight: 200,
+                  maxHeight: 400,
+                  overflowY: "auto", 
                 }}
               >
                 {loading ? (

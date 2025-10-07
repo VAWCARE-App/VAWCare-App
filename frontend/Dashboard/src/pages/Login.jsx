@@ -226,12 +226,28 @@ export default function Login() {
           saveToken("victim-test-token");
         }
         let userInfo = {};
-        if (userType === "victim") userInfo = { ...data.data.victim, userType: "victim", role: "victim" };
-        else if (userType === "admin") userInfo = { ...data.data.admin, userType: "admin", role: "admin" };
-        else if (userType === "official") userInfo = { ...data.data.official, userType: "official", role: "official" };
+  if (userType === "victim") userInfo = { ...data.data.victim, userType: "victim" };
+  else if (userType === "admin") userInfo = { ...data.data.admin, userType: "admin" };
+  else if (userType === "official") userInfo = { ...data.data.official, userType: "official" };
 
         localStorage.setItem("user", JSON.stringify(userInfo));
         localStorage.setItem("userType", userType);
+        // Persist actor id (Mongo _id) and actor type for client-side reference
+        try {
+          if (userInfo && userInfo.id) {
+            localStorage.setItem('actorId', String(userInfo.id));
+            localStorage.setItem('actorType', userType);
+          }
+        } catch (e) {
+          console.warn('Unable to persist actorId to localStorage', e && e.message);
+        }
+        try {
+          // Persist the human/business id (ADM001 etc.) for display or where needed
+          const businessId = userInfo?.adminID || userInfo?.officialID || userInfo?.victimID || null;
+          if (businessId) localStorage.setItem('actorBusinessId', String(businessId));
+        } catch (e) {
+          console.warn('Unable to persist actorBusinessId to localStorage', e && e.message);
+        }
 
         const userName =
           userInfo.firstName || userInfo.victimUsername || userInfo.adminEmail || userInfo.officialEmail || "User";

@@ -32,10 +32,16 @@ const protect = asyncHandler(async (req, res, next) => {
         };
 
         // Add enhanced user info to request object
+        // Normalize roles returned from custom claims so downstream logging and
+        // SystemLog mapping can rely on a small set of canonical values.
+        let roleFromToken = decodedToken.role || 'victim';
+        // Legacy/custom claim values may use 'barangay_official' - map it to 'official'
+        if (String(roleFromToken).toLowerCase() === 'barangay_official') roleFromToken = 'official';
+
         req.user = {
             uid: decodedToken.uid,
             email: decodedToken.email,
-            role: decodedToken.role || 'victim',
+            role: roleFromToken,
             isAnonymous: decodedToken.isAnonymous || false,
             phoneNumber: firebaseUser.phoneNumber,
             authMethods: authMethods,

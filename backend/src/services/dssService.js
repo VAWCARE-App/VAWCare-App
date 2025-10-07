@@ -112,7 +112,7 @@ async function trainModelFromCases(minSamples = 50) {
   });
 
   const model = await buildAndTrainModel(samples, labels);
-  return { model };
+  return { model, sampleCount: samples.length, lastTrainedAt: new Date().toISOString() };
 }
 
 /**
@@ -139,7 +139,9 @@ async function suggestForCase(payload, modelObj = null) {
     const immediateProb = (probs[2] || 0) + (probs[3] || 0);
     const requiresImmediate = immediateProb >= 0.5;
 
-    return { predictedRisk, probabilities: probs, suggestion, immediateAssistanceProbability: immediateProb, requiresImmediateAssistance: requiresImmediate };
+  // Also include a mapping to stored risk levels used by case records (Low/Medium/High)
+  const storedRisk = mapPredictedRiskToStored(predictedRisk);
+  return { predictedRisk, storedRisk, probabilities: probs, suggestion, immediateAssistanceProbability: immediateProb, requiresImmediateAssistance: requiresImmediate };
   }
 
   // heuristics fallback
@@ -167,7 +169,21 @@ async function suggestForCase(payload, modelObj = null) {
   const immediateProb = (probs[2] || 0) + (probs[3] || 0);
   const requiresImmediate = immediateProb >= 0.5;
 
-  return { predictedRisk: heuristicRisk, probabilities: probs, suggestion, immediateAssistanceProbability: immediateProb, requiresImmediateAssistance: requiresImmediate };
+  const storedRisk = mapPredictedRiskToStored(heuristicRisk);
+  return { predictedRisk: heuristicRisk, storedRisk, probabilities: probs, suggestion, immediateAssistanceProbability: immediateProb, requiresImmediateAssistance: requiresImmediate };
+}
+
+/**
+* Map the 4-class predicted risk (Economic/Psychological/Physical/Sexual)
+* to the stored 3-level risk used in Cases (Low/Medium/High).
+*/
+function mapPredictedRiskToStored(predicted) {
+  const p = (predicted || '').toLowerCase();
+  if (p === 'economic') return 'Low';
+  if (p === 'psychological') return 'Medium';
+  if (p === 'physical') return 'High';
+  if (p === 'sexual') return 'High';
+  return 'Low';
 }
 
 module.exports = {

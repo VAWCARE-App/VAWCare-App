@@ -172,12 +172,12 @@ exports.recordPageView = asyncHandler(async (req, res) => {
         // Prefer client-supplied actor info (from localStorage) when available because
         // some Firebase ID tokens may not carry DB _id lookups in req.user. Fall back
         // to authenticated req.user values when client info is not present.
-        let actorType = req.body?.actorType || req.query?.actorType || req.user?.role || 'anonymous';
-        let actorId = req.body?.actorId || req.query?.actorId || req.user?.adminID || req.user?.officialID || req.user?.victimID || null;
-        // If a business id (ADM001 etc.) was supplied, include it in details for traceability
-        const actorBusinessId = req.body?.actorBusinessId || req.query?.actorBusinessId || null;
-        const details = `Opened page ${path || req.originalUrl}` + (actorBusinessId ? ` by ${actorBusinessId}` : '');
-        await recordLog({ req, actorType, actorId, action: 'page_view', details });
+    let actorType = req.body?.actorType || req.query?.actorType || req.headers?.['x-actor-type'] || req.user?.role || 'anonymous';
+    let actorId = req.body?.actorId || req.query?.actorId || req.headers?.['x-actor-id'] || req.user?.adminID || req.user?.officialID || req.user?.victimID || null;
+    // If a business id (ADM001 etc.) was supplied, include it in details for traceability
+    const actorBusinessId = req.body?.actorBusinessId || req.query?.actorBusinessId || req.headers?.['x-actor-business-id'] || null;
+    const details = `Opened page ${path || req.originalUrl}` + (actorBusinessId ? ` by ${actorBusinessId}` : '');
+    await recordLog({ req, actorType, actorId, actorBusinessId, action: 'page_view', details });
     } catch (e) {
         console.warn('Failed to record page view', e && e.message);
     }

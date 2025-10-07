@@ -1,12 +1,34 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Layout } from "antd";
 import { Outlet } from "react-router-dom";
 import VictimNavbar from "../components/VictimNavbar";
 import Chatbot from "../components/Chatbot";
+import { useLocation } from 'react-router-dom';
+import { api } from '../lib/api';
 
 const { Content } = Layout;
 
 export default function MainLayout() {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Fire-and-forget pageview log
+    try {
+      const path = location.pathname;
+      // dedupe quick successive posts for same path
+      const lastPath = localStorage.getItem('__lastPageviewPath') || '';
+      const lastAt = Number(localStorage.getItem('__lastPageviewAt') || '0');
+      const now = Date.now();
+      // Only send if path changed or more than 3 seconds elapsed since last post
+      if (lastPath !== path || (now - lastAt) > 3000) {
+        const actorId = localStorage.getItem('actorId');
+        const actorType = localStorage.getItem('actorType');
+        const actorBusinessId = localStorage.getItem('actorBusinessId');
+        api.post('/api/logs/pageview', { path, actorId, actorType, actorBusinessId }).catch(() => {});
+        try { localStorage.setItem('__lastPageviewPath', path); localStorage.setItem('__lastPageviewAt', String(now)); } catch (e) {}
+      }
+    } catch (e) { console.warn('Failed to call pageview API', e && e.message); }
+  }, [location]);
   return (
     <Layout
       style={{

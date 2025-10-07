@@ -21,7 +21,7 @@ const victimSchema = new mongoose.Schema({
     },
     victimType: {
         type: String,
-        required: function() {
+        required: function () {
             return this.victimAccount === 'regular';
         },
         enum: ['Child', 'Woman']
@@ -43,7 +43,7 @@ const victimSchema = new mongoose.Schema({
         unique: true,
         lowercase: true,
         validate: {
-            validator: function(v) {
+            validator: function (v) {
                 if (this.victimAccount === 'anonymous') {
                     return true;
                 }
@@ -52,14 +52,14 @@ const victimSchema = new mongoose.Schema({
             },
             message: 'Please enter a valid email address'
         },
-        required: function() {
+        required: function () {
             return this.victimAccount === 'regular';
         },
         sparse: true
     },
     firstName: {
         type: String,
-        required: function() {
+        required: function () {
             return this.victimAccount === 'regular';
         },
         default: 'Anonymous',
@@ -71,7 +71,7 @@ const victimSchema = new mongoose.Schema({
     },
     lastName: {
         type: String,
-        required: function() {
+        required: function () {
             return this.victimAccount === 'regular';
         },
         default: 'User',
@@ -79,7 +79,7 @@ const victimSchema = new mongoose.Schema({
     },
     address: {
         type: String,
-        required: function() {
+        required: function () {
             return this.victimAccount === 'regular';
         },
         trim: true
@@ -94,7 +94,7 @@ const victimSchema = new mongoose.Schema({
     },
     contactNumber: {
         type: String,
-        required: function() {
+        required: function () {
             return this.victimAccount === 'regular';
         },
         trim: true,
@@ -135,11 +135,19 @@ const victimSchema = new mongoose.Schema({
     firebaseUid: {
         type: String,
         sparse: true
-    }
+    },
+    otp: {
+        type: String,
+        default: null,
+    },
+    otpExpires: {
+        type: Date,
+        default: null,
+    },
 });
 
 // Pre-validate middleware
-victimSchema.pre('validate', function(next) {
+victimSchema.pre('validate', function (next) {
     if (this.victimAccount === 'anonymous') {
         this.victimType = undefined;
         this.victimEmail = undefined;
@@ -154,7 +162,7 @@ victimSchema.pre('validate', function(next) {
 });
 
 // SINGLE pre-save middleware (MAIN FIX - removed duplicate that caused double hashing)
-victimSchema.pre('save', async function(next) {
+victimSchema.pre('save', async function (next) {
     try {
         // Generate victimID if not set
         if (!this.victimID) {
@@ -182,7 +190,7 @@ victimSchema.pre('save', async function(next) {
             const salt = await bcrypt.genSalt(10);
             this.victimPassword = await bcrypt.hash(this.victimPassword, salt);
         }
-        
+
         next();
     } catch (error) {
         next(error);
@@ -190,7 +198,7 @@ victimSchema.pre('save', async function(next) {
 });
 
 // Method to compare passwords for login
-victimSchema.methods.comparePassword = async function(candidatePassword) {
+victimSchema.methods.comparePassword = async function (candidatePassword) {
     try {
         return await bcrypt.compare(candidatePassword, this.victimPassword);
     } catch (error) {
@@ -201,7 +209,7 @@ victimSchema.methods.comparePassword = async function(candidatePassword) {
 // Indexes
 victimSchema.index(
     { victimEmail: 1, victimAccount: 1 },
-    { 
+    {
         unique: true,
         sparse: true,
         partialFilterExpression: { victimAccount: 'regular' }

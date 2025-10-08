@@ -11,7 +11,8 @@ const chatbotSchema = new mongoose.Schema({
     victimID: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Victim',
-        required: [true, 'Victim ID is required']
+        //required: [true, 'Victim ID is required']
+        required: false // Allow null for anonymous chats
     },
     message: {
         type: String,

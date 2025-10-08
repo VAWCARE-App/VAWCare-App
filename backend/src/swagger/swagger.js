@@ -425,6 +425,53 @@ const options = {
           },
         },
       },
+      "/api/chatbot/message": {
+        post: {
+          tags: ["Chatbot"],
+          summary: "Send a message to the VAWCare chatbot",
+          description: "Sends a user message to the VAWCareBot and receives an AI-generated reply. The message is logged and stored in the database.",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["message"],
+                  properties: {
+                    message: { type: "string", example: "How do I report abuse?" }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            201: {
+              description: "Chatbot reply generated successfully.",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      success: { type: "boolean", example: true },
+                      userMessage: {
+                        type: "object",
+                        description: "Saved user message document"
+                      },
+                      botReply: {
+                        type: "string",
+                        description: "AI-generated chatbot reply",
+                        example: "You can report abuse at your Barangay VAW Desk or call the 1343 Actionline. All reports are confidential."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            400: { description: "Message is required." },
+            500: { description: "Failed to generate chatbot response." }
+          }
+        }
+      },
     },
 
 

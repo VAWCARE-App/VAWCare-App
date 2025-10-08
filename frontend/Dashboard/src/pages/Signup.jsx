@@ -224,7 +224,7 @@ export default function Signup() {
         }
         message.success("Account created successfully!");
         // If this was an anonymous signup, go directly to the report page
-  const redirect = data.data.victim?.victimAccount === "anonymous" ? "/report" : "/victim/victim-test";
+  const redirect = data.data.victim?.victimAccount === "anonymous" ? "/victim/report" : "/victim/victim-test";
         navigate(redirect);
       } else throw new Error(data.message || "Registration failed");
     } catch (err) {
@@ -241,7 +241,19 @@ export default function Signup() {
       const { data } = await api.post("/api/victims/register", { victimAccount: "anonymous" });
       if (!data || !data.success) throw new Error(data?.message || "Failed to create account");
       const resp = data.data || {};
-      if (resp.token) saveToken(resp.token);
+      // If backend issued a Firebase custom token, exchange it for an ID token and save it.
+      if (resp.token) {
+        try {
+          const idToken = await exchangeCustomTokenForIdToken(resp.token);
+          if (idToken) saveToken(idToken);
+          else throw new Error('Token exchange failed');
+        } catch (ex) {
+          console.error('Token exchange error for anonymous signup:', ex);
+          message.error('Authentication failed after account creation. Please try logging in.');
+          setLoading(false);
+          return;
+        }
+      }
       if (resp.victim) localStorage.setItem("user", JSON.stringify(resp.victim));
       try {
         if (resp && resp.victim && resp.victim.id) {
@@ -259,7 +271,7 @@ export default function Signup() {
       }
   message.success("Account created successfully!");
   // anonymous creation should go straight to filing a report
-  navigate("/report");
+  navigate("/victim/report");
     } catch (err) {
       message.error(err?.response?.data?.message || err.message || "Unable to create account");
     } finally {

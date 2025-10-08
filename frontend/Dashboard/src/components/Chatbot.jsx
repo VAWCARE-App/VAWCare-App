@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect} from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { FloatButton, Drawer, Input, Button, List, Avatar, Space, Typography, Tag } from "antd";
 import { MessageOutlined, RobotOutlined, UserOutlined, SendOutlined, WarningOutlined } from "@ant-design/icons";
 
@@ -15,48 +15,39 @@ export default function Chatbot() {
 
   const BRAND = { pink: "#e91e63", soft: "#ffd1dc", light: "#fff5f8" };
 
-  const reply = (userText) => {
-    const t = userText.toLowerCase();
+  // --- Replace the current reply() with this ---
+  const reply = async (userText) => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/chatbot/message`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ message: userText }),
+      });
 
-    // --- Emergency / Help ---
-    if (t.includes("emergency") || t.includes("help") || t.includes("danger")) {
-      return "If you are in immediate danger, please go to your nearest Barangay VAWC Desk or call the emergency hotline 911.";
+      // ✅ If response is not OK, log it
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("Chatbot backend error:", res.status, text);
+        return "Sorry, I couldn't reach the chatbot service right now.";
+      }
+
+      // ✅ Safely parse JSON
+      const data = await res.json().catch(() => null);
+      if (!data || !data.reply) return "Sorry, I didn’t get a proper response from the assistant.";
+
+      return data.reply;
+    } catch (err) {
+      console.error("Chatbot error:", err);
+      return "Sorry, something went wrong with the chatbot connection.";
     }
-
-    // --- Reporting ---
-    if (t.includes("report") || t.includes("complain")) {
-      return "You can file a report by going to the Victim Dashboard and selecting 'File a New Report'. Barangay officials will review it and contact you.";
-    }
-
-    // --- Laws / Legal Info ---
-    if (t.includes("law") || t.includes("9262") || t.includes("vawc")) {
-      return "Republic Act 9262, or the Anti-Violence Against Women and Their Children Act, protects women and children from abuse—physical, emotional, sexual, or economic.";
-    }
-
-    if (t.includes("safe spaces") || t.includes("11313")) {
-      return "Republic Act 11313, the Safe Spaces Act, ensures protection from gender-based harassment in public places and online.";
-    }
-
-    // --- Barangay / Help Desk ---
-    if (t.includes("barangay") || t.includes("where") || t.includes("desk")) {
-      return "Every barangay has a VAWC Desk where victims can seek help, counseling, and file protection orders. You can visit your barangay hall for assistance.";
-    }
-
-    // --- Greetings ---
-    if (t.includes("hi") || t.includes("hello") || t.includes("good morning") || t.includes("good evening")) {
-      return "Hello! I’m your VAWCare assistant. I can explain laws, help you understand your rights, or guide you on how to report a case.";
-    }
-
-    // --- Emotional Support ---
-    if (t.includes("sad") || t.includes("scared") || t.includes("afraid") || t.includes("alone")) {
-      return "I’m really sorry that you feel that way. Please remember — you are not alone, and help is available. You can reach out to your barangay VAWC desk anytime.";
-    }
-
-    // --- Default ---
-    return `I understand: “${userText}”. I'm still learning — for now, please contact your barangay VAWC Desk if you need personal help.`;
   };
 
-  const send = () => {
+
+
+  const send = async () => {
     const userText = input.trim();
     if (!userText) return;
 
@@ -64,12 +55,11 @@ export default function Chatbot() {
     setInput("");
     setThinking(true);
 
-    setTimeout(() => {
-      const bot = reply(userText);
-      setMessages((m) => [...m, { role: "assistant", text: bot }]);
-      setThinking(false);
-    }, 600);
+    const bot = await reply(userText); // <--- now async call to backend
+    setMessages((m) => [...m, { role: "assistant", text: bot }]);
+    setThinking(false);
   };
+
 
   const onKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {

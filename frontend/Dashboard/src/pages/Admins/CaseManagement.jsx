@@ -153,6 +153,7 @@ export default function CaseManagement() {
         incidentType: rep.incidentType,
         description: rep.description,
         perpetrator: rep.perpetrator || '',
+        location: rep.location || '',
         victimName: composedName,
         // Auto-map incidentType -> riskLevel (economic->Low, psychological->Medium, physical->High, sexual->High)
         riskLevel: (function(it) {
@@ -171,25 +172,40 @@ export default function CaseManagement() {
   const handleCreateCase = async (vals) => {
     try {
       setLoading(true);
-      if (!selectedReport) {
-        message.error('Please select a report to base this case on');
-        return;
+      let payload;
+      if (selectedReport) {
+        // build payload: include reportID and fields from selected report
+        payload = {
+          caseID: vals.caseID,
+          reportID: selectedReport.reportID,
+          victimID: selectedReport.raw.victimID?._id || selectedReport.raw.victimID || null,
+          victimName: vals.victimName || (selectedReport.victim ? `${selectedReport.victim.firstName || ''} ${selectedReport.victim.middleInitial ? selectedReport.victim.middleInitial + ' ' : ''}${selectedReport.victim.lastName || ''}`.trim() : (selectedReport.raw.victimID || '')),
+          incidentType: selectedReport.incidentType,
+          description: selectedReport.description,
+          perpetrator: selectedReport.perpetrator || '',
+          location: selectedReport.location || '',
+          dateReported: selectedReport.dateReported || new Date().toISOString(),
+          status: vals.status || 'Open',
+          assignedOfficer: vals.assignedOfficer || '',
+          riskLevel: vals.riskLevel || 'Low',
+        };
+      } else {
+        // manual/walk-in case creation: use the form values
+        payload = {
+          caseID: vals.caseID,
+          reportID: vals.reportID || null,
+          victimID: vals.victimID || null,
+          victimName: vals.victimName,
+          incidentType: vals.incidentType,
+          description: vals.description,
+          perpetrator: vals.perpetrator || '',
+          location: vals.location || '',
+          dateReported: vals.dateReported || new Date().toISOString(),
+          status: vals.status || 'Open',
+          assignedOfficer: vals.assignedOfficer || '',
+          riskLevel: vals.riskLevel || 'Low',
+        };
       }
-      // build payload: include reportID and fields from selected report
-      const payload = {
-        caseID: vals.caseID,
-        reportID: selectedReport.reportID,
-        victimID: selectedReport.raw.victimID?._id || selectedReport.raw.victimID || null,
-        victimName: vals.victimName || (selectedReport.victim ? `${selectedReport.victim.firstName || ''} ${selectedReport.victim.middleInitial ? selectedReport.victim.middleInitial + ' ' : ''}${selectedReport.victim.lastName || ''}`.trim() : (selectedReport.raw.victimID || '')),
-        incidentType: selectedReport.incidentType,
-        description: selectedReport.description,
-        perpetrator: selectedReport.perpetrator || '',
-        location: selectedReport.location || '',
-        dateReported: selectedReport.dateReported || new Date().toISOString(),
-        status: vals.status || 'Open',
-        assignedOfficer: vals.assignedOfficer || '',
-        riskLevel: vals.riskLevel || 'Low',
-      };
       console.debug('Creating case payload', payload);
 
       const res = await api.post('/api/cases', payload);
@@ -315,28 +331,32 @@ export default function CaseManagement() {
           {/* Add Case Modal */}
           <Modal title="Create Case" open={addModalVisible} onCancel={() => { setAddModalVisible(false); setSelectedReport(null); }} okText="Create" onOk={() => { addForm.validateFields().then((v) => handleCreateCase(v)); }}>
             <Form form={addForm} layout="vertical">
-              <Form.Item name="reportID" label="Select Report" rules={[{ required: true }]}>
-                <Select showSearch placeholder="Select a report to base case on" onChange={handleReportSelect} optionFilterProp="children">
+              <Form.Item name="reportID" label="Select Report (optional)" help="Pick a report to prefill fields, or leave blank to add a manual/walk-in case">
+                <Select showSearch placeholder="Optional: select a report to base case on" onChange={handleReportSelect} optionFilterProp="children" allowClear>
                   {reportsList.map((r) => (
                     <Option key={r.reportID} value={r.reportID}>{r.reportID} — {r.incidentType} — {r.victim?.firstName || ''} {r.victim?.lastName || ''}</Option>
                   ))}
                 </Select>
               </Form.Item>
 
-              <Form.Item name="victimName" label="Victim Name">
-                <Input readOnly />
+              <Form.Item name="victimName" label="Victim Name" rules={[{ required: true, message: 'Victim Name is required' }]}>
+                <Input />
               </Form.Item>
 
-              <Form.Item name="incidentType" label="Incident Type">
-                <Input readOnly />
+              <Form.Item name="incidentType" label="Incident Type" rules={[{ required: true, message: 'Incident Type is required' }]}>
+                <Input />
               </Form.Item>
 
-              <Form.Item name="description" label="Description">
-                <Input.TextArea rows={3} readOnly />
+              <Form.Item name="location" label="Location">
+                <Input />
+              </Form.Item>
+
+              <Form.Item name="description" label="Description" rules={[{ required: true, message: 'Description is required' }]}>
+                <Input.TextArea rows={3} />
               </Form.Item>
 
               <Form.Item name="perpetrator" label="Perpetrator">
-                <Input readOnly />
+                <Input />
               </Form.Item>
 
               <Form.Item name="caseID" label="Case ID" rules={[{ required: true }]}>

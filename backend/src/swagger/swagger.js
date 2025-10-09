@@ -14,6 +14,115 @@ const options = {
       },
     },
     paths: {
+      "/api/victims/register": {
+        post: {
+          tags: ["Victims"],
+          summary: "Register a new victim (anonymous or regular)",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/VictimRegistration" }
+              }
+            }
+          },
+          responses: {
+            201: { description: "Victim registered" },
+            400: { description: "Bad request" }
+          }
+        }
+      },
+      "/api/victims/login": {
+        post: {
+          tags: ["Victims"],
+          summary: "Login a victim",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/VictimLogin" }
+              }
+            }
+          },
+          responses: {
+            200: { description: "Logged in (returns token)" },
+            401: { description: "Invalid credentials" }
+          }
+        }
+      },
+      "/api/victims/profile": {
+        get: {
+          security: [{ bearerAuth: [] }],
+          tags: ["Victims"],
+          summary: "Get current victim profile",
+          responses: { 200: { description: "Victim profile", content: { "application/json": { schema: { $ref: "#/components/schemas/VictimProfile" } } } }, 401: { description: "Unauthorized" } }
+        },
+        put: {
+          security: [{ bearerAuth: [] }],
+          tags: ["Victims"],
+          summary: "Update current victim profile",
+          requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/VictimUpdate" } } } },
+          responses: { 200: { description: "Profile updated" }, 400: { description: "Validation error" } }
+        }
+      },
+      "/api/victims/verify-email": {
+        post: {
+          tags: ["Victims"],
+          summary: "Verify victim email (sends verification token)",
+          requestBody: { required: true, content: { "application/json": { schema: { type: "object", properties: { email: { type: "string", format: "email" } }, required: ["email"] } } } },
+          responses: { 200: { description: "Verification sent" }, 400: { description: "Bad request" } }
+        }
+      },
+      "/api/victims/verify-phone": {
+        post: {
+          tags: ["Victims"],
+          summary: "Verify victim phone (sends OTP)",
+          requestBody: { required: true, content: { "application/json": { schema: { type: "object", properties: { phone: { type: "string" } }, required: ["phone"] } } } },
+          responses: { 200: { description: "OTP sent" }, 400: { description: "Bad request" } }
+        }
+      },
+      "/api/victims/anonymous/report": {
+        post: {
+          tags: ["Victims"],
+          summary: "Submit anonymous incident report",
+          requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/AnonymousReportCreate" } } } },
+          responses: { 201: { description: "Report created" }, 400: { description: "Bad request" } }
+        }
+      },
+      "/api/victims/anonymous/alert": {
+        post: {
+          tags: ["Victims"],
+          summary: "Send an anonymous alert (SOS)",
+          requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/AnonymousAlertCreate" } } } },
+          responses: { 201: { description: "Alert created" }, 400: { description: "Bad request" } }
+        }
+      },
+      "/api/victims/metrics": {
+        get: {
+          security: [{ bearerAuth: [] }],
+          tags: ["Victims"],
+          summary: "Get simple victim metrics (reports, cases, recent activities)",
+          responses: { 200: { description: "Metrics returned", content: { "application/json": { schema: { $ref: "#/components/schemas/MetricsResponse" } } } }, 401: { description: "Unauthorized" } }
+        }
+      },
+      "/api/victims/reports": {
+        get: {
+          security: [{ bearerAuth: [] }],
+          tags: ["Victims"],
+          summary: "Get victim's incident reports",
+          responses: { 200: { description: "List of reports", content: { "application/json": { schema: { type: "array", items: { $ref: "#/components/schemas/IncidentReport" } } } } }, 401: { description: "Unauthorized" } }
+        }
+      },
+      "/api/victims/reports/{id}": {
+        put: {
+          security: [{ bearerAuth: [] }],
+          tags: ["Victims"],
+          summary: "Update a victim's report",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+          requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/ReportUpdate" } } } },
+          responses: { 200: { description: "Report updated" }, 404: { description: "Not found" } }
+        }
+      },
       "/api/reports": {
         get: {
           security: [{ bearerAuth: [] }],
@@ -118,6 +227,62 @@ const options = {
             404: { description: "Not found" },
           },
         },
+      },
+      "/api/admin/register": {
+        post: {
+          tags: ["Admins"],
+          summary: "Register a new admin",
+          requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/AdminRegistration" } } } },
+          responses: { 201: { description: "Admin registered" }, 400: { description: "Bad request" } }
+        }
+      },
+      "/api/admin/login": {
+        post: {
+          tags: ["Admins"],
+          summary: "Admin login",
+          requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/AdminLogin" } } } },
+          responses: { 200: { description: "Logged in" }, 401: { description: "Invalid credentials" } }
+        }
+      },
+      "/api/admin/users": {
+        get: {
+          security: [{ bearerAuth: [] }],
+          tags: ["Admins"],
+          summary: "Get all users (admins, victims, officials)",
+          responses: { 200: { description: "List of users" }, 401: { description: "Unauthorized" } }
+        }
+      },
+      "/api/admin/officials": {
+        get: {
+          security: [{ bearerAuth: [] }],
+          tags: ["Admins"],
+          summary: "List barangay officials",
+          responses: { 200: { description: "List of officials" }, 401: { description: "Unauthorized" } }
+        },
+        post: {
+          security: [{ bearerAuth: [] }],
+          tags: ["Admins"],
+          summary: "Register a barangay official",
+          requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/OfficialRegistration" } } } },
+          responses: { 201: { description: "Official registered" }, 400: { description: "Bad request" } }
+        }
+      },
+      "/api/admin/officials/{id}": {
+        put: {
+          security: [{ bearerAuth: [] }],
+          tags: ["Admins"],
+          summary: "Update a barangay official",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+          requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/OfficialRegistration" } } } },
+          responses: { 200: { description: "Official updated" }, 404: { description: "Not found" } }
+        },
+        delete: {
+          security: [{ bearerAuth: [] }],
+          tags: ["Admins"],
+          summary: "Delete a barangay official",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+          responses: { 200: { description: "Official deleted" }, 404: { description: "Not found" } }
+        }
       },
       "/api/cases": {
         get: {
@@ -425,6 +590,71 @@ const options = {
           },
         },
       },
+        "/api/officials/register": {
+          post: {
+            tags: ["Officials"],
+            summary: "Register a new barangay official",
+            description: "Creates a new Barangay Official account. Account will be created with status 'pending' until approved by admins. This creates a Firebase user and a MongoDB record.",
+            requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/OfficialRegistration" } } } },
+            responses: { 201: { description: "Official registered (pending approval)" }, 400: { description: "Bad request or already exists" }, 500: { description: "Server error" } }
+          }
+        },
+        "/api/officials/login": {
+          post: {
+            tags: ["Officials"],
+            summary: "Login as a barangay official",
+            requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/OfficialLogin" } } } },
+            responses: { 200: { description: "Login successful (returns Firebase custom token)" }, 401: { description: "Invalid credentials or not approved" } }
+          }
+        },
+        "/api/officials/forgot-password": {
+          post: {
+            tags: ["Officials"],
+            summary: "Request password reset email for official",
+            requestBody: { required: true, content: { "application/json": { schema: { type: "object", properties: { officialEmail: { type: "string", format: "email" } }, required: ["officialEmail"] } } } },
+            responses: { 200: { description: "Password reset email sent (if account exists)" } }
+          }
+        },
+        "/api/officials/verify-email": {
+          post: {
+            security: [{ bearerAuth: [] }],
+            tags: ["Officials"],
+            summary: "Generate email verification link for the authenticated official",
+            responses: { 200: { description: "Verification link generated" }, 400: { description: "Error generating link" } }
+          }
+        },
+        "/api/officials/verify-phone": {
+          post: {
+            security: [{ bearerAuth: [] }],
+            tags: ["Officials"],
+            summary: "Verify phone number for the authenticated official",
+            requestBody: { required: true, content: { "application/json": { schema: { type: "object", properties: { phoneNumber: { type: "string" }, verificationCode: { type: "string" } } } } } },
+            responses: { 200: { description: "Phone number verified" }, 400: { description: "Verification failed" } }
+          }
+        },
+        "/api/officials/profile": {
+          get: {
+            security: [{ bearerAuth: [] }],
+            tags: ["Officials"],
+            summary: "Get authenticated official's profile",
+            responses: { 200: { description: "Official profile", content: { "application/json": { schema: { $ref: "#/components/schemas/VictimProfile" } } } }, 404: { description: "Not found" } }
+          },
+          put: {
+            security: [{ bearerAuth: [] }],
+            tags: ["Officials"],
+            summary: "Update authenticated official's profile",
+            requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/OfficialRegistration" } } } },
+            responses: { 200: { description: "Profile updated" }, 400: { description: "Bad request" }, 404: { description: "Not found" } }
+          }
+        },
+        "/api/officials/victims": {
+          get: {
+            security: [{ bearerAuth: [] }],
+            tags: ["Officials"],
+            summary: "Get all victims (official access)",
+            responses: { 200: { description: "List of victims", content: { "application/json": { schema: { type: "object", properties: { success: { type: "boolean" }, data: { type: "object" } } } } } }, 401: { description: "Unauthorized" } }
+          }
+        },
       "/api/chatbot/message": {
         post: {
           tags: ["Chatbot"],
@@ -829,6 +1059,74 @@ const options = {
           },
           required: ["identifier", "password"],
         },
+        VictimRegistration: {
+          type: "object",
+          properties: {
+            victimAccount: { type: "string", enum: ["anonymous", "regular"], example: "anonymous" },
+            victimUsername: { type: "string" },
+            victimPassword: { type: "string" },
+            victimEmail: { type: "string", format: "email" },
+            firstName: { type: "string" },
+            middleInitial: { type: "string" },
+            lastName: { type: "string" },
+            address: { type: "string" },
+            contactNumber: { type: "string" },
+            emergencyContacts: { type: "array", items: { type: "object" } },
+            location: { type: "object", properties: { lat: { type: "number" }, lng: { type: "number" } } }
+          },
+          required: ["victimAccount"]
+        },
+        VictimProfile: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            victimID: { type: "string" },
+            victimAccount: { type: "string" },
+            victimUsername: { type: "string" },
+            firstName: { type: "string" },
+            lastName: { type: "string" },
+            victimEmail: { type: "string", format: "email" },
+            contactNumber: { type: "string" },
+            location: { type: "object", properties: { lat: { type: "number" }, lng: { type: "number" } } }
+          }
+        },
+        VictimUpdate: {
+          type: "object",
+          properties: {
+            firstName: { type: "string" },
+            middleInitial: { type: "string" },
+            lastName: { type: "string" },
+            address: { type: "string" },
+            contactNumber: { type: "string" }
+          }
+        },
+        AnonymousReportCreate: {
+          type: "object",
+          properties: {
+            incidentType: { type: "string" },
+            details: { type: "string" },
+            location: { type: "object", properties: { latitude: { type: "number" }, longitude: { type: "number" } } },
+            victimID: { type: "string" }
+          },
+          required: ["victimID"]
+        },
+        AnonymousAlertCreate: {
+          type: "object",
+          properties: {
+            alertType: { type: "string", example: "Emergency" },
+            location: { type: "object", properties: { latitude: { type: "number" }, longitude: { type: "number" } } },
+            victimID: { type: "string" }
+          },
+          required: ["victimID"]
+        },
+        MetricsResponse: {
+          type: "object",
+          properties: {
+            totalReports: { type: "integer" },
+            openCases: { type: "integer" },
+            recentActivities: { type: "array", items: { type: "object" } }
+          }
+        },
         AdminLogin: {
           type: "object",
           properties: {
@@ -943,6 +1241,14 @@ const options = {
             "officialPassword",
             "contactNumber",
           ],
+        },
+        OfficialLogin: {
+          type: "object",
+          properties: {
+            officialEmail: { type: "string", format: "email" },
+            password: { type: "string" }
+          },
+          required: ["officialEmail", "password"]
         },
       },
       securitySchemes: {

@@ -106,28 +106,54 @@ export default function Chatbot() {
           <List
             dataSource={messages}
             renderItem={(m, idx) => (
-              <List.Item key={idx} style={{ border: "none", padding: "6px 0" }}>
-                <Space align="start">
-                  <Avatar
-                    icon={m.role === "assistant" ? <RobotOutlined /> : <UserOutlined />}
-                    style={{
-                      background: m.role === "assistant" ? BRAND.pink : "#999",
-                      color: "#fff",
-                    }}
-                    size="small"
-                  />
-                  <div
-                    style={{
-                      maxWidth: 260,
-                      background: m.role === "assistant" ? BRAND.light : "#f5f5f5",
-                      border: `1px solid ${BRAND.soft}`,
-                      borderRadius: 10,
-                      padding: "6px 10px",
-                    }}
-                  >
-                    <Text>{m.text}</Text>
-                  </div>
-                </Space>
+              <List.Item
+                key={idx}
+                style={{
+                  border: "none",
+                  padding: "6px 0",
+                  display: "flex",
+                  justifyContent: m.role === "user" ? "flex-end" : "flex-start",
+                }}
+              >
+                {m.role === "assistant" ? (
+                  <Space align="start">
+                    <Avatar
+                      icon={<RobotOutlined />}
+                      style={{ background: BRAND.pink, color: "#fff" }}
+                      size="small"
+                    />
+                    <div
+                      style={{
+                        maxWidth: 260,
+                        background: BRAND.light,
+                        border: `1px solid ${BRAND.soft}`,
+                        borderRadius: 10,
+                        padding: "6px 10px",
+                      }}
+                    >
+                      <Text>{m.text}</Text>
+                    </div>
+                  </Space>
+                ) : (
+                  <Space align="start" style={{ flexDirection: "row-reverse" }}>
+                    <Avatar
+                      icon={<UserOutlined />}
+                      style={{ background: "#999", color: "#fff" }}
+                      size="small"
+                    />
+                    <div
+                      style={{
+                        maxWidth: 260,
+                        background: "#F5F5F5",
+                        border: "1px solid darkgray",
+                        borderRadius: 10,
+                        padding: "6px 10px",
+                      }}
+                    >
+                      <Text>{m.text}</Text>
+                    </div>
+                  </Space>
+                )}
               </List.Item>
             )}
           />
@@ -172,7 +198,7 @@ export default function Chatbot() {
             autoSize={{ minRows: 1, maxRows: 4 }}
             placeholder="Type a message..."
           />
-          <Button type="primary" icon={<SendOutlined />} onClick={send}>
+          <Button type="primary" icon={<SendOutlined />} onClick={send} style={{ background: BRAND.pink, borderColor: BRAND.pink }}>
             Send
           </Button>
         </div>

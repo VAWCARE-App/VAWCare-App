@@ -28,7 +28,17 @@ const suggest = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, data: result });
 });
 
+  // Test rules engine directly: POST /api/dss/test with arbitrary facts in body
+  const testRules = asyncHandler(async (req, res) => {
+    const facts = req.body || {};
+    const { evaluateRules, initEngine } = require('../services/rulesEngine');
+    initEngine();
+    const out = await evaluateRules(facts);
+    res.status(200).json({ success: true, data: out });
+  });
+
 module.exports = {
   trainModel,
   suggest,
+  testRules,
 };

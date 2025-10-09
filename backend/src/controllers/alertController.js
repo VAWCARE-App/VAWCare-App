@@ -1,0 +1,50 @@
+const asyncHandler = require('express-async-handler');
+const Alert = require('../models/Alert');
+
+// Resolve an alert by id (sets status to 'Resolved')
+const resolveAlert = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const alert = await Alert.findById(id);
+  if (!alert) {
+    res.status(404);
+    throw new Error('Alert not found');
+  }
+
+  const now = new Date();
+  alert.status = 'Resolved';
+  alert.resolvedAt = now;
+  // compute duration from createdAt to now (ms)
+  try {
+    if (alert.createdAt) {
+      alert.durationMs = now.getTime() - new Date(alert.createdAt).getTime();
+    }
+  } catch (e) {
+    alert.durationMs = null;
+  }
+
+  // compute durationStr HH:MM:SS
+  if (typeof alert.durationMs === 'number') {
+    const totalSeconds = Math.max(0, Math.floor(alert.durationMs / 1000));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const pad = (n) => String(n).padStart(2, '0');
+    alert.durationStr = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  } else {
+    alert.durationStr = '00:00:00';
+  }
+
+  await alert.save();
+
+  // record system log (best-effort)
+  try {
+    const { recordLog } = require('../middleware/logger');
+    await recordLog({ req, actorType: 'victim', actorId: alert.victimID || null, action: 'alert_resolved', details: `Alert ${alert.alertID} resolved` });
+  } catch (e) {
+    console.warn('Failed to record alert resolved log', e && e.message);
+  }
+
+  res.status(200).json({ success: true, message: 'Alert resolved', data: { id: alert._id, alertID: alert.alertID, resolvedAt: alert.resolvedAt, durationMs: alert.durationMs, durationStr: alert.durationStr } });
+});
+
+module.exports = { resolveAlert };

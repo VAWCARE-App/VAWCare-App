@@ -3,7 +3,7 @@ import { Layout } from "antd";
 import { Outlet } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { useLocation } from 'react-router-dom';
-import { api } from '../lib/api';
+import { api, isAuthed } from '../lib/api';
 
 const { Content } = Layout;
 
@@ -58,7 +58,12 @@ function AdminPageViewReporter() {
         const actorId = localStorage.getItem('actorId');
         const actorType = localStorage.getItem('actorType');
         const actorBusinessId = localStorage.getItem('actorBusinessId');
-        api.post('/api/logs/pageview', { path, actorId, actorType, actorBusinessId }).catch(() => {});
+        // Only send a ping when the client is authenticated OR there is
+        // an actor header (walk-in or persisted actor) available. This
+        // avoids extraneous pings during unauthenticated browsing.
+        if (isAuthed() || actorBusinessId || actorId) {
+          api.post('/api/logs/pageview', { path, actorId, actorType, actorBusinessId }).catch(() => {});
+        }
         try { localStorage.setItem('__lastPageviewPath', path); localStorage.setItem('__lastPageviewAt', String(now)); } catch (e) {}
       }
     } catch (e) { console.warn('Failed to send admin pageview', e && e.message); }

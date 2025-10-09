@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Spin, Typography, Button, Tag, message } from 'antd';
+import { Card, Spin, Typography, Button, Tag, message, Collapse } from 'antd';
 import { api } from '../lib/api';
 
 export default function DssSuggestion({ caseData }) {
@@ -19,6 +19,10 @@ export default function DssSuggestion({ caseData }) {
           assignedOfficer: caseData.assignedOfficer,
           status: caseData.status,
           perpetrator: caseData.perpetrator,
+          // include injury facts if present on the case so backend rules can match
+          injuries: caseData.injuries,
+          injurySeverity: caseData.injurySeverity,
+          victimId: caseData.victim || caseData.victimId || caseData.reportedBy
         };
         const res = await api.post('/api/dss/suggest', payload);
         setResult(res.data.data);
@@ -39,6 +43,11 @@ export default function DssSuggestion({ caseData }) {
         <Spin />
       ) : result ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {result.ruleMatched && result.ruleEvent ? (
+            <div>
+              <Tag color="purple">Rule: {result.ruleEvent.type}</Tag>
+            </div>
+          ) : null}
           <div>
             <Typography.Text strong>Predicted Risk: </Typography.Text>
             <Tag color={result.predictedRisk === 'Sexual' ? 'red' : result.predictedRisk === 'Physical' ? 'orange' : result.predictedRisk === 'Psychological' ? 'geekblue' : 'green'}>
@@ -68,6 +77,16 @@ export default function DssSuggestion({ caseData }) {
               } finally { setLoading(false); }
             }} type="default">Retrain Model</Button>
           </div>
+          {/* Debug panel visible for admin/official only */}
+          {result.ruleMatched && result.ruleEvent && (userType === 'admin' || userType === 'official') ? (
+            <div style={{ marginTop: 8 }}>
+              <Collapse>
+                <Collapse.Panel header={`Rule details: ${result.ruleEvent.type}`} key="1">
+                  <pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(result.ruleEvent.params, null, 2)}</pre>
+                </Collapse.Panel>
+              </Collapse>
+            </div>
+          ) : null}
         </div>
       ) : (
         <Typography.Text type="secondary">No suggestion available</Typography.Text>

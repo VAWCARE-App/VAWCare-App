@@ -18,7 +18,7 @@ import {
   InfoCircleOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
-import { clearToken, api } from "../lib/api";
+import { clearToken, api, isTokenProbablyJwt } from "../lib/api";
 import logo from "../assets/logo1.png";
 
 const { Sider } = Layout;
@@ -36,19 +36,30 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     muted: "#7a7a7a",
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Attempt to call backend logout and wait briefly so server can record the log
     try {
-      api.post('/api/auth/logout').catch(() => { });
-    } catch (e) { }
+      const token = localStorage.getItem('token');
+      if (token && isTokenProbablyJwt(token)) {
+        // Wait for either the request to finish or a short timeout (1.5s)
+        await Promise.race([
+          api.post('/api/auth/logout'),
+          new Promise((resolve) => setTimeout(resolve, 1500)),
+        ]).catch(() => {});
+      }
+    } catch (e) {
+      // ignore errors — we still want to clear client state
+    }
+
+    // Clear auth state and navigate away
     clearToken();
-    // Always route to landing page after logout
-    navigate('/');
     localStorage.removeItem("user");
     localStorage.removeItem("userType");
     localStorage.removeItem('actorId');
     localStorage.removeItem('actorType');
     localStorage.removeItem('actorBusinessId');
-
+    // Always route to landing page after logout
+    navigate('/');
   };
 
   const currentUser = useMemo(

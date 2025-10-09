@@ -31,6 +31,7 @@ const dssRoutes = require('./routes/dssRoutes');
 const bpoRoutes = require('./routes/bpoRoutes');
 const logRoutes = require('./routes/logRoutes');
 const chatbotRoutes = require('./routes/chatbotRoutes');
+const resourceRoutes = require('./routes/resourceRoutes');
 const authRoutes = require('./routes/authRoutes');
 const alertRoutes = require('./routes/alertRoutes');
 
@@ -43,6 +44,7 @@ app.use('/api/cases', casesRoutes);
 app.use('/api/dss', dssRoutes);
 app.use('/api/bpo', bpoRoutes);
 app.use('/api/logs', logRoutes);
+app.use('/api/resources', resourceRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/alerts', alertRoutes);

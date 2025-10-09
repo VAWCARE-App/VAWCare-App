@@ -7,7 +7,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 exports.generateChatbotResponse = async (user, message) => {
     const lowerMsg = message.toLowerCase();
 
-    // 🔹 Rule-based context detection
+    // Rule-based context detection
     let context = "general";
     let systemPrompt = `
     You are their personal VAWCare Assistant — a chatbot for the VAWCare System.
@@ -57,7 +57,7 @@ exports.generateChatbotResponse = async (user, message) => {
     `;
     }
 
-    // 🔹 Combine system and user prompt
+    // Combine system and user prompt
     const finalPrompt = `
     ${systemPrompt}
 
@@ -65,12 +65,12 @@ exports.generateChatbotResponse = async (user, message) => {
     Respond appropriately for the context: ${context}.
   `;
 
-    // 🔹 Generate AI reply
+    // Generate AI reply
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
     const result = await model.generateContent([{ text: finalPrompt }]);
     const aiReply = result.response.text();
 
-    // 🔹 Save chat
+    // Save chat
     await Chatbot.create({
         chatID: `CHAT-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
         victimID: user?.victimID || null,
@@ -78,7 +78,7 @@ exports.generateChatbotResponse = async (user, message) => {
         aiReply,
     });
 
-    // 🔹 Record log (not critical if fails)
+    // Record log (not critical if fails)
     await recordLog({
         req: { user },
         actorType: user?.role || "victim",

@@ -119,14 +119,25 @@ export default function OfficialDashboard() {
   }, []);
 
   const handleLogout = () => {
-    try { api.post('/api/auth/logout').catch(() => {}); } catch(e) {}
-    clearToken();
-    localStorage.removeItem("user");
-    localStorage.removeItem("userType");
-    localStorage.removeItem('actorId');
-    localStorage.removeItem('actorType');
-    localStorage.removeItem('actorBusinessId');
-    navigate('/');
+    (async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (token && token.split && token.split('.').length === 3) {
+          await Promise.race([
+            api.post('/api/auth/logout'),
+            new Promise((resolve) => setTimeout(resolve, 1500)),
+          ]).catch(() => {});
+        }
+      } catch (e) {}
+
+      clearToken();
+      localStorage.removeItem("user");
+      localStorage.removeItem("userType");
+      localStorage.removeItem('actorId');
+      localStorage.removeItem('actorType');
+      localStorage.removeItem('actorBusinessId');
+      navigate('/');
+    })();
   };
 
   const KpiCard = ({ icon, label, value, delay = 0 }) => (

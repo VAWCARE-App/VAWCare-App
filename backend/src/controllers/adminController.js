@@ -897,6 +897,121 @@ exports.loginAdmin = async (req, res) => {
     }
 };
 
+// @desc    Get admin profile (current authenticated admin)
+// @route   GET /api/admin/profile
+// @access  Private (Admin)
+exports.getProfile = asyncHandler(async (req, res) => {
+    // First try to find by firebaseUid
+    let adminUser = null;
+    if (req.user && req.user.uid) {
+        adminUser = await Admin.findOne({ firebaseUid: req.user.uid });
+    }
+
+    // Fallback: try to find by email present in the token (useful if firebaseUid wasn't linked)
+    if (!adminUser && req.user && req.user.email) {
+        adminUser = await Admin.findOne({ adminEmail: req.user.email });
+        // If we find the admin by email but firebaseUid is not set, link it for future requests
+        if (adminUser && !adminUser.firebaseUid && req.user.uid) {
+            adminUser.firebaseUid = req.user.uid;
+            try { await adminUser.save(); } catch (e) { console.warn('Failed to auto-link admin firebaseUid:', e && e.message); }
+        }
+    }
+
+    if (adminUser) {
+        res.status(200).json({
+            success: true,
+            data: {
+                id: adminUser._id,
+                firebaseUid: adminUser.firebaseUid,
+                adminID: adminUser.adminID,
+                adminEmail: adminUser.adminEmail,
+                firstName: adminUser.firstName,
+                middleInitial: adminUser.middleInitial,
+                lastName: adminUser.lastName,
+                adminRole: adminUser.adminRole
+            }
+        });
+    } else {
+        res.status(404);
+        throw new Error('Admin not found');
+    }
+});
+
+// @desc    Update admin profile (current authenticated admin)
+// @route   PUT /api/admin/profile
+// @access  Private (Admin)
+exports.updateProfile = asyncHandler(async (req, res) => {
+    // Try to find by firebaseUid first, else fallback to adminEmail
+    let adminUser = null;
+    if (req.user && req.user.uid) adminUser = await Admin.findOne({ firebaseUid: req.user.uid });
+    if (!adminUser && req.user && req.user.email) adminUser = await Admin.findOne({ adminEmail: req.user.email });
+
+    if (!adminUser) {
+        res.status(404);
+        throw new Error('Admin not found');
+    }
+
+    // Update fields locally
+    if (req.body.firstName !== undefined) adminUser.firstName = req.body.firstName;
+    if (req.body.middleInitial !== undefined) adminUser.middleInitial = req.body.middleInitial;
+    if (req.body.lastName !== undefined) adminUser.lastName = req.body.lastName;
+
+    // If email is being updated, update in Firebase too (if uid available)
+    if (req.body.email && req.body.email !== adminUser.adminEmail) {
+        try {
+            if (req.user && req.user.uid) {
+                await admin.auth().updateUser(req.user.uid, { email: req.body.email, emailVerified: false });
+            }
+            adminUser.adminEmail = req.body.email;
+        } catch (err) {
+            console.error('Failed to update Firebase email for admin:', err);
+            res.status(500);
+            throw new Error('Failed to update email');
+        }
+    }
+
+    // If password is being changed, update Firebase and local hash
+    if (req.body.password) {
+        try {
+            if (req.user && req.user.uid) {
+                await admin.auth().updateUser(req.user.uid, { password: req.body.password });
+            }
+            adminUser.adminPassword = req.body.password;
+        } catch (err) {
+            console.error('Failed to update Firebase password for admin:', err);
+            res.status(500);
+            throw new Error('Failed to update password');
+        }
+    }
+
+    // If firebaseUid is missing but we have uid, link it
+    if (!adminUser.firebaseUid && req.user && req.user.uid) {
+        adminUser.firebaseUid = req.user.uid;
+    }
+
+    const updated = await adminUser.save();
+
+    res.status(200).json({
+        success: true,
+        message: 'Profile updated successfully',
+        data: {
+            id: updated._id,
+            firebaseUid: updated.firebaseUid,
+            adminID: updated.adminID,
+            adminEmail: updated.adminEmail,
+            firstName: updated.firstName,
+            middleInitial: updated.middleInitial,
+            lastName: updated.lastName,
+            adminRole: updated.adminRole
+        }
+    });
+    // record admin profile update
+    try {
+        const { recordLog } = require('../middleware/logger');
+        await recordLog({ req, actorType: 'admin', actorId: updated._id, action: 'admin_profile_updated', details: `Admin profile updated for ${updated.adminID || updated._id}` });
+    } catch (e) { console.warn('Failed to record admin profile update log', e && e.message); }
+});
+
 // Get all admins
 exports.getAllAdmins = async (req, res) => {
     try {

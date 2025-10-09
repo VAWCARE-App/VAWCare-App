@@ -15,6 +15,9 @@ router.get('/admin/:adminId', protect, adminOnly, logController.getAdminLogs);
 router.get('/official/:officialId', protect, adminOnly, logController.getOfficialLogs);
 
 // Record a page view (called by frontend when opening pages)
-router.post('/pageview', protect, logController.recordPageView);
+// This endpoint is intentionally public so client-side pageview pings do not
+// require a Firebase ID token. The controller will still prefer client-supplied
+// actor headers when present and will fall back to authenticated req.user if available.
+router.post('/pageview', logController.recordPageView);
 
 module.exports = router;

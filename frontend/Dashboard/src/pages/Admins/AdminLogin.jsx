@@ -66,14 +66,26 @@ function BackgroundCarouselLayer({
 }
 
 /* ---------- Multi-Layer Background Carousel ---------- */
-function MultiBackgroundCarousel() {
-    const slides = [
-        { color: "#ffd1dc", label: "Support" },
-        { color: "#ff9bb5", label: "Safety" },
-        { color: "#ffc4d3", label: "Care" },
-        { color: "#ffb3c4", label: "Hope" },
-        { color: "#ff8fa8", label: "Trust" },
-    ];
+function MultiBackgroundCarousel({ userType }) {
+    const slidesByType = {
+        admin: [
+            { color: "#bae7ff", label: "Manage" },
+            { color: "#91d5ff", label: "Control" },
+            { color: "#69c0ff", label: "Secure" },
+        ],
+        official: [
+            { color: "#d9f7be", label: "Serve" },
+            { color: "#b7eb8f", label: "Support" },
+            { color: "#95de64", label: "Protect" },
+        ],
+        victim: [
+            { color: "#ffd6e7", label: "Care" },
+            { color: "#ffadd2", label: "Hope" },
+            { color: "#ff85c0", label: "Help" },
+        ],
+    };
+
+    const slides = slidesByType[userType] || slidesByType["official"];
 
     return (
         <>
@@ -195,9 +207,27 @@ export default function AdminLogin() {
 
     const getUserTypeInfo = (type) => {
         switch (type) {
-            case "admin": return { icon: <SafetyOutlined />, label: "Administrator", color: "#1890ff" };
-            case "official": return { icon: <TeamOutlined />, label: "Barangay Official", color: "#52c41a" };
-            default: return { icon: <UserOutlined />, label: "User", color: "#e91e63" };
+            case "admin":
+                return {
+                    icon: <SafetyOutlined />,
+                    label: "Administrator",
+                    color: "#1890ff",
+                    bg: "linear-gradient(135deg, #e6f7ff, #bae7ff)",
+                };
+            case "official":
+                return {
+                    icon: <TeamOutlined />,
+                    label: "Barangay Official",
+                    color: "#52c41a",
+                    bg: "linear-gradient(135deg, #f6ffed, #d9f7be)",
+                };
+            default:
+                return {
+                    icon: <UserOutlined />,
+                    label: "User",
+                    color: "#e91e63",
+                    bg: "linear-gradient(135deg, #fff0f5, #ffd6e7)",
+                };
         }
     };
 
@@ -283,8 +313,16 @@ export default function AdminLogin() {
     const currentUserType = getUserTypeInfo(userType);
 
     return (
-        <div style={{ position: "relative", minHeight: "100vh", width: "100%", backgroundColor: "#fff0f5" }}>
-            <MultiBackgroundCarousel />
+        <div
+            style={{
+                position: "relative",
+                minHeight: "100vh",
+                width: "100%",
+                background: currentUserType.bg,
+                transition: "background 0.5s ease",
+            }}
+        >
+            <MultiBackgroundCarousel userType={userType} />
 
             <Flex align="center" justify="center" style={{ minHeight: "100vh", position: "relative", zIndex: 1 }}>
                 <Card

@@ -14,6 +14,10 @@ router.post('/reset-password', adminController.resetAdminPassword);
 router.post('/setup-mfa', protect, adminOnly, adminController.setupMFA);
 router.post('/verify-mfa', protect, adminOnly, adminController.verifyMFA);
 
+// Profile routes for the currently authenticated admin
+router.get('/profile', protect, adminOnly, adminController.getProfile);
+router.put('/profile', protect, adminOnly, adminController.updateProfile);
+
 // Get all users route
 router.get('/users', /*protect, adminOnly,*/ adminController.getAllUsers);
 

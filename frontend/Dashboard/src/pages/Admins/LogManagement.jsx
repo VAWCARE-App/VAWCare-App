@@ -1,15 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Card, Space, Select, DatePicker, Input, Button, Typography, Layout, Row, Col } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
-import { api } from '../../lib/api';
+import { api, isAuthed, getUserType, clearToken } from '../../lib/api';
+import { message } from 'antd';
 const { Title } = Typography;
 
 export default function LogManagement(){
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({ action: '', actorType: '', actorId: '', date: null, ipAddress: '' });
+  const [messageApi, contextHolder] = message.useMessage();
 
   const fetchLogs = async () => {
+    // Only attempt to fetch protected logs when the client is authenticated
+    // and the user is an admin. This avoids spamming the backend with 401s
+    // when the frontend is rendered in a non-authed context.
+    if (!isAuthed() || getUserType() !== 'admin') return;
     setLoading(true);
     try {
       const params = {};
@@ -41,6 +47,14 @@ export default function LogManagement(){
       const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
       setLogs(data);
     } catch (e) {
+      // If the token is invalid or expired, clear it so we stop producing
+      // repeated 401s on protected endpoints and surface a user-visible message.
+      if (e?.response?.status === 401) {
+        try { clearToken(); } catch (ex) { /* ignore */ }
+        try { messageApi?.warning('Session expired or invalid. Please sign in again.'); } catch (mErr) { /* ignore */ }
+        console.warn('Cleared invalid auth token after 401 from /api/logs');
+        return;
+      }
       console.error('Failed to load logs', e, e.response?.data || e.message);
     } finally { setLoading(false); }
   };
@@ -71,6 +85,7 @@ export default function LogManagement(){
 
   return (
     <Layout style={{ minHeight: '100vh', width: '100%', background: LIGHT_PINK }}>
+      {contextHolder}
       <Layout.Header style={{ background: '#fff', borderBottom: `1px solid ${SOFT_PINK}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingInline: 16 }}>
         <Title level={4} style={{ margin: 0, color: PINK }}>System Logs</Title>
         <Button onClick={fetchLogs} icon={<ReloadOutlined />} style={{ borderColor: PINK, color: PINK }}>Refresh</Button>

@@ -6,10 +6,45 @@ import { BellFilled } from "@ant-design/icons";
 export default function EmergencyButton() {
   const [loading, setLoading] = useState(false);
   const [pulsing, setPulsing] = useState(false);
+  const [activeAlertId, setActiveAlertId] = useState(null);
+  const [activeAlertStart, setActiveAlertStart] = useState(null);
+
+  // Format milliseconds to HH:MM:SS
+  const formatDuration = (ms) => {
+    if (ms == null || isNaN(ms)) return '00:00:00';
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  };
 
   const handleEmergencyClick = async () => {
-    // Toggle pulsing on/off
-    setPulsing((prev) => !prev);
+    // If already pulsing, this click should resolve the active alert
+    if (pulsing && activeAlertId) {
+      // Stop pulsing immediately in UI
+      setPulsing(false);
+      setLoading(true);
+      try {
+        const { data } = await api.put(`/api/alerts/${activeAlertId}/resolve`);
+        message.success('Alert resolved');
+        // clear stored active alert and start time
+        setActiveAlertId(null);
+        setActiveAlertStart(null);
+        // optionally show duration if returned
+        const duration = data?.data?.durationMs;
+        if (typeof duration === 'number') {
+          message.info(`Alert active for ${formatDuration(duration)}`);
+        }
+      } catch (err) {
+        console.error('Failed to resolve alert', err);
+        message.error(err?.response?.data?.message || 'Failed to resolve alert');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
 
     // Only send emergency report when toggling ON
     if (!pulsing) {
@@ -22,60 +57,46 @@ export default function EmergencyButton() {
 
       setLoading(true);
 
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-          console.log("Emergency alert sent:", { latitude, longitude });
-
-          try {
-            // 🔥 Send location to backend API
-            await axios.post("/api/emergency", {
-              latitude,
-              longitude,
-              timestamp: new Date().toISOString(),
-            });
-
-            message.success("Emergency alert sent with your location!");
-          } catch (err) {
-            console.error(err);
-            message.error("Failed to send emergency alert.");
-          } finally {
-            setLoading(false);
-          }
-        },
-        (error) => {
-          console.error(error);
-          message.error("Unable to retrieve location.");
-          setLoading(false);
-        },
-        { enableHighAccuracy: true, timeout: 10000 } // ⏱ more accurate location
-      );
+      // Wrap geolocation in a Promise so we can await coordinates
+      const getPosition = () =>
+        new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            (position) => resolve(position),
+            (error) => reject(error),
+            { enableHighAccuracy: true, timeout: 10000 }
+          );
+        });
 
       try {
-        setLoading(true);
+        const pos = await getPosition();
+        const { latitude, longitude } = pos.coords;
+        const locationString = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+        console.log("Emergency alert sent:", { latitude, longitude });
 
+        // For emergency one-click alerts we send an anonymous alert payload
         const user = JSON.parse(localStorage.getItem("user") || "{}");
         const victimID = user && (user._id || user.id);
-        if (!victimID) {
-          message.error("Victim ID not found. Please log in again.");
-          setLoading(false);
-          return;
-        }
 
         const payload = {
-          incidentType: "Emergency",
-          description: "Urgent emergency report triggered via one-click button.",
-          location: "Unknown",
-          riskLevel: "High",
-          victimID,
+          location: { latitude, longitude },
+          alertType: "Emergency",
+          // include victimID when available; the backend Alert model requires it
+          ...(victimID ? { victimID } : {})
         };
 
-        await api.post("/api/reports", payload);
-        message.success("🚨 Emergency report sent!");
+  const { data } = await api.post("/api/victims/anonymous/alert", payload);
+  // backend returns created alert id and createdAt in data.data
+  const alertId = data?.data?.alertId || data?.alertId || (data && data._id);
+  const createdAt = data?.data?.createdAt || data?.createdAt || null;
+  if (alertId) setActiveAlertId(alertId);
+  if (createdAt) setActiveAlertStart(new Date(createdAt));
+  // Start pulsing only after backend confirms the alert was saved
+  setPulsing(true);
+  message.success("🚨 Emergency alert sent!");
       } catch (err) {
-        message.error(
-          err?.response?.data?.message || "Emergency report failed. Try again."
-        );
+        console.error(err);
+        const errMsg = err?.response?.data?.message || err?.message || "Emergency report failed. Try again.";
+        message.error(errMsg);
       } finally {
         setLoading(false);
       }

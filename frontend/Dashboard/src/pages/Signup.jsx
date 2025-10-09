@@ -176,6 +176,23 @@ export default function Signup() {
         victimData.lastName = payload.lastName;
         if (payload.address) victimData.address = payload.address;
         if (payload.contactNumber) victimData.contactNumber = payload.contactNumber;
+        // Include emergency contact if any emergency contact fields are provided
+        if (
+          payload.emergencyContactName ||
+          payload.emergencyContactNumber ||
+          payload.emergencyContactRelationship ||
+          payload.emergencyContactEmail ||
+          payload.emergencyContactAddress
+        ) {
+          const ec = {
+            name: payload.emergencyContactName || "",
+            relationship: payload.emergencyContactRelationship || "",
+            contactNumber: payload.emergencyContactNumber || "",
+            email: payload.emergencyContactEmail || "",
+            address: payload.emergencyContactAddress || "",
+          };
+          victimData.emergencyContacts = [ec];
+        }
       }
         // include location if the user selected one (stored in hidden fields)
         const hasLat = payload.latitude !== undefined && payload.latitude !== '';
@@ -287,7 +304,8 @@ export default function Signup() {
         const firstErrorField = errorInfo.errorFields[0].name[0];
         const tabMapping = {
           "1": ["username", "victimAccount", "victimType", "email"],
-          "2": ["firstName", "lastName", "address", "contactNumber", "password", "confirmPassword"]
+          "2": ["firstName", "lastName", "address", "contactNumber", "password", "confirmPassword"],
+          "3": ["emergencyContactName", "emergencyContactRelationship", "emergencyContactNumber", "emergencyContactEmail", "emergencyContactAddress"]
         };
         for (const [tabKey, fields] of Object.entries(tabMapping)) {
           if (fields.includes(firstErrorField)) setActiveTab(tabKey);
@@ -443,6 +461,31 @@ export default function Signup() {
                       rules={[{ pattern: /^(\+63|0)[0-9]{10}$/, message: "Enter a valid Philippine phone number" }]}
                     >
                       <Input placeholder="+639123456789 or 09123456789" size={screens.md ? "large" : "middle"} />
+                    </Form.Item>
+                  </Tabs.TabPane>
+                )}
+                {accountType === "regular" && (
+                  <Tabs.TabPane tab="Emergency Contact" key="3">
+                    <Row gutter={16}>
+                      <Col xs={24} md={12}>
+                        <Form.Item name="emergencyContactName" label="Contact Name" rules={[{ required: false, message: "Please enter a contact name" }]}>
+                          <Input placeholder="Full name" size={screens.md ? "large" : "middle"} />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={12}>
+                        <Form.Item name="emergencyContactRelationship" label="Relationship">
+                          <Input placeholder="e.g. Mother, Friend" size={screens.md ? "large" : "middle"} />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Form.Item name="emergencyContactNumber" label="Contact Number" rules={[{ pattern: /^(\+63|0)[0-9]{10}$/, message: "Enter a valid Philippine phone number" }] }>
+                      <Input placeholder="+639123456789 or 09123456789" size={screens.md ? "large" : "middle"} />
+                    </Form.Item>
+                    <Form.Item name="emergencyContactEmail" label="Contact Email" rules={[{ type: 'email', message: 'Please enter a valid email' }]}>
+                      <Input placeholder="contact@example.com" size={screens.md ? "large" : "middle"} />
+                    </Form.Item>
+                    <Form.Item name="emergencyContactAddress" label="Contact Address">
+                      <Input.TextArea placeholder="Contact address (optional)" rows={2} />
                     </Form.Item>
                   </Tabs.TabPane>
                 )}

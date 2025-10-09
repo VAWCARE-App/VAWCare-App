@@ -34,8 +34,8 @@ const alertSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Status is required'],
         enum: {
-            values: ['Active', 'Resolved'],
-            message: 'Status must be either Active or Resolved'
+            values: ['Active', 'Cancelled', 'Resolved'],
+            message: 'Status must be either Active, Cancelled, or Resolved'
         },
         default: 'Active',
         trim: true

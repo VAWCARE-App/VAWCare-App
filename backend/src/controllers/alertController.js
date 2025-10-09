@@ -47,4 +47,13 @@ const resolveAlert = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: 'Alert resolved', data: { id: alert._id, alertID: alert.alertID, resolvedAt: alert.resolvedAt, durationMs: alert.durationMs, durationStr: alert.durationStr } });
 });
 
-module.exports = { resolveAlert };
+// List alerts with optional filters (status)
+const listAlerts = asyncHandler(async (req, res) => {
+  const { status } = req.query;
+  const filter = {};
+  if (status) filter.status = status;
+  const alerts = await Alert.find(filter).sort({ createdAt: -1 }).populate('victimID');
+  res.status(200).json({ success: true, data: alerts });
+});
+
+module.exports = { resolveAlert, listAlerts };

@@ -32,6 +32,7 @@ const bpoRoutes = require('./routes/bpoRoutes');
 const logRoutes = require('./routes/logRoutes');
 const chatbotRoutes = require('./routes/chatbotRoutes');
 const authRoutes = require('./routes/authRoutes');
+const alertRoutes = require('./routes/alertRoutes');
 
 // Use routes
 app.use('/api/victims', victimRoutes);
@@ -44,6 +45,7 @@ app.use('/api/bpo', bpoRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/chatbot', chatbotRoutes);
+app.use('/api/alerts', alertRoutes);
 
 // Health check - lightweight endpoint for manual connectivity tests
 app.get('/api/ping', (req, res) => {

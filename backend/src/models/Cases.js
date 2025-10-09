@@ -9,13 +9,14 @@ const CasesSchema = new mongoose.Schema({
 	},
 	reportID: {
 		type: String,
-		required: [true, 'Report ID is required'],
+		// reportID is optional to allow manual/walk-in case creation
+		required: false,
 		index: true,
-		trim: true,
+		trim: false,
 	},
 	victimID: {
 		type: String,
-		required: [true, 'Victim ID is required'],
+		required: false,
 		index: true,
 		trim: true,
 	},

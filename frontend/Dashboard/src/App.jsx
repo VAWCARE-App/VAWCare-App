@@ -4,23 +4,24 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Login from "./pages/Login";
 import LandingPage from "./pages/LandingPage";
-import AdminLogin from "./pages/AdminLogin";
+import AdminLogin from "./pages/Admins/AdminLogin";
 
 import Signup from "./pages/Signup";
 import TwoFactor from "./pages/2FA";
-import BPO from "./pages/BPO";
-import BPOManagement from "./pages/BPOManagement";
-import BPODetail from "./pages/BPODetail";
+import BPO from "./pages/Admins/BPO";
+import BPOManagement from "./pages/Admins/BPOManagement";
+import BPODetail from "./pages/Admins/BPODetail";
 
 import Dashboard from "./pages/Dashboards/AdminDashboard";
 import Admin from "./layouts/AdminLayout";
 import Main from "./layouts/MainLayout";
 
-import UserManagement from "./pages/UserManagement";
-import CreateOfficial from "./pages/CreateOfficial";
-import ReportManagement from "./pages/ReportManagement";
-import CaseManagement from "./pages/CaseManagement";
-import CaseDetail from "./pages/CaseDetail";
+import UserManagement from "./pages/Admins/UserManagement";
+import CreateOfficial from "./pages/Admins/CreateOfficial";
+import ReportManagement from "./pages/Admins/ReportManagement";
+import AlertsManagement from "./pages/Admins/AlertsManagement";
+import CaseManagement from "./pages/Admins/CaseManagement";
+import CaseDetail from "./pages/Admins/CaseDetail";
 import VictimDashboard from "./pages/Dashboards/VictimDashboard";
 import OfficialDashboard from "./pages/Dashboards/OfficialDashboard";
 
@@ -28,7 +29,7 @@ import OfficialDashboard from "./pages/Dashboards/OfficialDashboard";
 import Test from "./pages/Test";
 import ReportCase from "./pages/Victim/Report";
 import EmergencyButton from "./pages/Victim/EmergencyButton";
-import LogManagement from "./pages/LogManagement";
+import LogManagement from "./pages/Admins/LogManagement";
 
 import { isAuthed, getUserType } from "./lib/api";
 
@@ -85,6 +86,7 @@ export default function App() {
               <Route path="logs" element={<Protected><LogManagement /></Protected>} />
               <Route path="create-official" element={<Protected roles={["admin","official"]}><CreateOfficial /></Protected>} />
               <Route path="reports" element={<Protected><ReportManagement /></Protected>} />
+              <Route path="alerts" element={<Protected><AlertsManagement /></Protected>} />
               <Route path="bpo" element={<Protected><BPO /></Protected>} />
               <Route path="bpo/:id" element={<Protected><BPODetail /></Protected>} />
               <Route path="bpo-management" element={<Protected><BPOManagement /></Protected>} />

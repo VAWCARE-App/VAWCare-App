@@ -494,26 +494,56 @@ const submitAnonymousReport = asyncHandler(async (req, res) => {
 // @route   POST /api/victims/anonymous/alert
 // @access  Public
 const sendAnonymousAlert = asyncHandler(async (req, res) => {
-    const { location, alertType } = req.body;
+    const { location, alertType, victimID } = req.body;
+
+    console.log('sendAnonymousAlert payload:', JSON.stringify(req.body));
 
     try {
-        const alert = {
-            location,
-            alertType,
-            isAnonymous: true,
-            timestamp: new Date()
-        };
+        // Require victimID because your model enforces it
+        if (!victimID) {
+            res.status(400);
+            throw new Error('victimID is required for anonymous alerts');
+        }
 
-        res.status(200).json({
+        // Build alert document
+        const AlertModel = require('../models/Alert');
+        const alertDoc = new AlertModel({
+            alertID: `ALT${Date.now().toString().slice(-6)}`,
+            victimID: victimID,
+            type: alertType || 'Emergency',
+            location: {
+                latitude: typeof location?.latitude === 'number' ? location.latitude : (typeof location?.lat === 'number' ? location.lat : 0),
+                longitude: typeof location?.longitude === 'number' ? location.longitude : (typeof location?.lng === 'number' ? location.lng : 0)
+            },
+            status: 'Active'
+        });
+
+        await alertDoc.save();
+
+        // Debug: log the saved document so we can verify the alert was persisted
+        console.log('Alert saved to DB:', JSON.stringify({ id: alertDoc._id, alertID: alertDoc.alertID, createdAt: alertDoc.createdAt, status: alertDoc.status, victimID: alertDoc.victimID }));
+
+        res.status(201).json({
             success: true,
-            message: 'Anonymous alert sent successfully',
+            message: 'Anonymous alert created successfully',
             data: {
-                alertId: alert._id,
-                timestamp: alert.timestamp
+                alertId: String(alertDoc._id),
+                alertID: alertDoc.alertID,
+                createdAt: alertDoc.createdAt
             }
         });
-        try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: 'victim', actorId: null, action: 'emergency_button', details: `Anonymous emergency alert sent type=${alertType}` }); } catch(e) { console.warn('Failed to record anonymous alert log', e && e.message); }
+
+        try {
+            const { recordLog } = require('../middleware/logger');
+            await recordLog({ req, actorType: 'victim', actorId: victimID, action: 'emergency_button', details: `Anonymous emergency alert sent type=${alertType}` });
+        } catch(e) { console.warn('Failed to record anonymous alert log', e && e.message); }
+
     } catch (error) {
+        console.error('Error saving anonymous alert:', error && error.message, error && error.errors);
+        if (error && error.name === 'ValidationError') {
+            res.status(400);
+            throw new Error(Object.values(error.errors).map(e => e.message).join('; '));
+        }
         res.status(500);
         throw new Error('Error sending anonymous alert');
     }

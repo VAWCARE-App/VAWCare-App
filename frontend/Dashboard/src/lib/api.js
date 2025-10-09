@@ -56,6 +56,16 @@ export const clearToken = () => {
 export const isAuthed = () => !!localStorage.getItem("token");
 export const getUserType = () => localStorage.getItem("userType") || 'victim';
 
+// Heuristic: Firebase ID tokens are JWTs (three period-separated segments).
+// Many dev/test tokens are placeholders like "victim-test-token" which are
+// not JWTs; avoid calling protected logout endpoints with those to prevent
+// needless 401s in the browser console during development.
+export const isTokenProbablyJwt = (token) => {
+  try {
+    return typeof token === 'string' && token.split('.').length === 3;
+  } catch (e) { return false; }
+};
+
 // Add an axios response interceptor to handle unauthorized responses
 api.interceptors.response.use(
   (response) => response,

@@ -22,6 +22,8 @@ import ReportManagement from "./pages/Admins/ReportManagement";
 import AlertsManagement from "./pages/Admins/AlertsManagement";
 import CaseManagement from "./pages/Admins/CaseManagement";
 import CaseDetail from "./pages/Admins/CaseDetail";
+import AdminSettings from "./pages/Admins/AdminSettings";
+import OfficialSettings from "./pages/Admins/OfficialSettings";
 import VictimDashboard from "./pages/Dashboards/VictimDashboard";
 import OfficialDashboard from "./pages/Dashboards/OfficialDashboard";
 
@@ -30,6 +32,7 @@ import Test from "./pages/Test";
 import ReportCase from "./pages/Victim/Report";
 import EmergencyButton from "./pages/Victim/EmergencyButton";
 import LogManagement from "./pages/Admins/LogManagement";
+import VictimSettings from "./pages/Victim/VictimSettings";
 
 import { isAuthed, getUserType } from "./lib/api";
 
@@ -69,6 +72,7 @@ export default function App() {
               <Route path="victim-test" element={<Protected><VictimDashboard /></Protected>} />
               <Route path="report" element={<Protected><ReportCase /></Protected>} />
               <Route path="emergency" element={<Protected><EmergencyButton /></Protected>} />
+              <Route path="victim-settings" element={<Protected><VictimSettings /></Protected>} />
             </Route>
 
             {/* Admin shell moved to /admin */}
@@ -83,6 +87,8 @@ export default function App() {
 
               {/* Admin */}
               <Route path="users" element={<Protected><UserManagement /></Protected>} />
+              <Route path="settings" element={<Protected><AdminSettings /></Protected>} />
+              <Route path="official-settings" element={<Protected><OfficialSettings /></Protected>} />
               <Route path="logs" element={<Protected><LogManagement /></Protected>} />
               <Route path="create-official" element={<Protected roles={["admin","official"]}><CreateOfficial /></Protected>} />
               <Route path="reports" element={<Protected><ReportManagement /></Protected>} />

@@ -11,6 +11,7 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@tensorflow/tfjs": "^4.22.0",
+  "json-rules-engine": "^6.2.0",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
@@ -27,3 +28,4 @@
     "nodemon": "^3.1.10"
   }
 }
+

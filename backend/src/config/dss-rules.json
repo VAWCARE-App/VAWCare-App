@@ -1,0 +1,63 @@
+[
+  {
+    "conditions": {
+      "all": [
+        { "fact": "incidentType", "operator": "equal", "value": "Sexual" }
+      ]
+    },
+    "event": {
+      "type": "escalate-sexual",
+      "params": {
+        "predictedRisk": "Sexual",
+        "suggestion": "Escalate immediately: ensure safety, arrange medical/forensic exam, notify legal support.",
+        "requiresImmediate": true
+      }
+    }
+  },
+  {
+    "conditions": {
+      "all": [
+        { "fact": "description", "operator": "matches", "value": "(rape|severe bleeding|unconscious|assault)", "options": "i" }
+      ]
+    },
+    "event": {
+      "type": "escalate-keyword",
+      "params": {
+        "predictedRisk": "Physical",
+        "suggestion": "Possible severe physical harm — urgent referral.",
+        "requiresImmediate": true
+      }
+    }
+  },
+  {
+    "conditions": {
+      "any": [
+        { "fact": "injuries", "operator": "equal", "value": true },
+        { "fact": "injurySeverity", "operator": "greaterThanInclusive", "value": 2 }
+      ]
+    },
+    "event": {
+      "type": "injury-escalate",
+      "params": {
+        "predictedRisk": "Physical",
+        "suggestion": "Arrange medical attention and document injuries.",
+        "requiresImmediate": true
+      }
+    }
+  },
+  {
+    "conditions": {
+      "all": [
+        { "fact": "recentReports", "operator": "greaterThanInclusive", "value": 2 }
+      ]
+    },
+    "event": {
+      "type": "repeat-reports",
+      "params": {
+        "predictedRisk": "Psychological",
+        "suggestion": "Multiple reports — prioritize case worker follow-up.",
+        "requiresImmediate": false
+      }
+    }
+  }
+]

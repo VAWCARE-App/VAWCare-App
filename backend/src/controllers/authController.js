@@ -7,8 +7,22 @@ const { sendMail } = require('../utils/sendmail');
 // POST /api/auth/logout
 const logout = asyncHandler(async (req, res) => {
   try {
-    // record logout for whoever is calling (best-effort)
-    await recordLog({ req, actorType: req.user?.role || 'victim', actorId: req.user?.adminID || req.user?.officialID || req.user?.victimID, action: 'logout', details: `User logged out from ${req.originalUrl || 'client'}` });
+    // Determine actor info and build a human-friendly details string
+    const headerActorBusinessId = req && (req.body?.actorBusinessId || req.query?.actorBusinessId || req.headers?.['x-actor-business-id']);
+    const headerActorId = req && (req.body?.actorId || req.query?.actorId || req.headers?.['x-actor-id']);
+    const headerActorType = req && (req.body?.actorType || req.query?.actorType || req.headers?.['x-actor-type']);
+
+    const actorType = headerActorType || req.user?.role || 'victim';
+    let actorId = headerActorId || req.user?.adminID || req.user?.officialID || req.user?.victimID || null;
+    const actorBusinessId = headerActorBusinessId || null;
+
+    // Choose pretty id for details: prefer actorBusinessId (e.g. ADM001), fall back to actorId
+    const idLabel = actorBusinessId || (actorId ? String(actorId) : 'Unknown');
+    const prettyActorType = (actorType || 'User').charAt(0).toUpperCase() + (actorType || 'User').slice(1);
+    const details = `${prettyActorType} ${idLabel} logged out`;
+
+    // record logout for whoever is calling (best-effort). Include actorBusinessId so it gets stored.
+    await recordLog({ req, actorType, actorId, actorBusinessId, action: 'logout', details });
   } catch (e) {
     console.warn('Failed to record logout log', e && e.message);
   }

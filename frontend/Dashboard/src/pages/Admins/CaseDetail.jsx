@@ -1,8 +1,7 @@
 // src/pages/barangay/CaseDetail.js
 import React, { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
-  Card,
   Descriptions,
   Button,
   Tag,
@@ -10,29 +9,40 @@ import {
   Input,
   Select,
   message,
+  Typography,
+  Space,
+  Divider,
+  Layout,
 } from "antd";
-import { PrinterOutlined, EditOutlined, SaveOutlined } from "@ant-design/icons";
+import {
+  PrinterOutlined,
+  EditOutlined,
+  SaveOutlined,
+  ArrowLeftOutlined,
+} from "@ant-design/icons";
 import { api, getUserType } from "../../lib/api";
 import DssSuggestion from "../../components/DssSuggestion";
 import { useReactToPrint } from "react-to-print";
 
+const { Content } = Layout;
+const { Title } = Typography;
+
 export default function CaseDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [caseData, setCaseData] = useState(null);
   const [editing, setEditing] = useState(false);
   const [form] = Form.useForm();
   const printRef = useRef();
   const userType = getUserType();
 
-  // Fetch case
   useEffect(() => {
     const fetchCase = async () => {
       try {
         const res = await api.get(`/api/cases/${id}`);
-        console.log(res.data.data);
         setCaseData(res.data.data);
         form.setFieldsValue(res.data.data);
-      } catch (err) {
+      } catch {
         message.error("Failed to load case data");
       }
     };
@@ -46,7 +56,7 @@ export default function CaseDetail() {
       setCaseData(res.data.data);
       setEditing(false);
       message.success("Case updated successfully");
-    } catch (err) {
+    } catch {
       message.error("Update failed");
     }
   };
@@ -55,43 +65,54 @@ export default function CaseDetail() {
     content: () => printRef.current,
   });
 
-  if (!caseData) return <p>Loading...</p>;
+  if (!caseData)
+    return <p style={{ textAlign: "center", marginTop: 50 }}>Loading...</p>;
 
   return (
-    <div style={{ padding: 24 }}>
-      <Card
-        title={`Case: ${caseData.caseID}`}
-        extra={
-          <>
+    <Layout style={{ width: "100%", background: "#FFF5F8", minHeight: "100vh" }}>
+      <Content style={{ maxWidth: "100%", paddingTop: 32, paddingBottom: 32, paddingLeft: 16, paddingRight: 16 }}>
+        <Space align="center" style={{ marginBottom: 16 }}>
+          <Button
+            icon={<ArrowLeftOutlined />}
+            onClick={() => navigate(-1)}
+            style={{ borderColor: "#e91e63", color: "#e91e63" }}
+          >
+            Back
+          </Button>
+          <Title level={3} style={{ margin: 0, color: "#e91e63" }}>
+            Case Details
+          </Title>
+        </Space>
+
+        <Divider />
+
+        <Space style={{ marginBottom: 24 }}>
+          <Button icon={<PrinterOutlined />} onClick={handlePrint}>
+            Print
+          </Button>
+          {editing ? (
             <Button
-              icon={<PrinterOutlined />}
-              onClick={handlePrint}
-              style={{ marginRight: 8 }}
+              type="primary"
+              icon={<SaveOutlined />}
+              style={{ background: "#e91e63", borderColor: "#e91e63" }}
+              onClick={handleSave}
             >
-              Print
+              Save
             </Button>
-            {editing ? (
-              <Button
-                type="primary"
-                icon={<SaveOutlined />}
-                onClick={handleSave}
-              >
-                Save
-              </Button>
-            ) : (
-              <Button
-                type="primary"
-                icon={<EditOutlined />}
-                onClick={() => setEditing(true)}
-              >
-                Edit
-              </Button>
-            )}
-          </>
-        }
-      >
+          ) : (
+            <Button
+              type="primary"
+              icon={<EditOutlined />}
+              style={{ background: "#e91e63", borderColor: "#e91e63" }}
+              onClick={() => setEditing(true)}
+            >
+              Edit
+            </Button>
+          )}
+        </Space>
+
         {editing ? (
-          <Form form={form} layout="vertical">
+          <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
             <Form.Item name="victimName" label="Victim">
               <Input />
             </Form.Item>
@@ -136,8 +157,16 @@ export default function CaseDetail() {
             </Form.Item>
           </Form>
         ) : (
-          <div ref={printRef}>
-            <Descriptions bordered column={1} size="middle">
+          <div ref={printRef} style={{ marginTop: 16 }}>
+            <Descriptions
+              bordered
+              size="middle"
+              column={1}
+              labelStyle={{ width: 220, background: "#fafafa" }}
+            >
+              <Descriptions.Item label="Case ID">
+                {caseData.caseID}
+              </Descriptions.Item>
               <Descriptions.Item label="Victim">
                 {caseData.victimName}
               </Descriptions.Item>
@@ -188,11 +217,14 @@ export default function CaseDetail() {
             </Descriptions>
           </div>
         )}
-      </Card>
-      {/* DSS suggestion card for admin/official users */}
-      {!editing && (userType === "admin" || userType === "official") && (
-        <DssSuggestion caseData={caseData} />
-      )}
-    </div>
+
+        {!editing && (userType === "admin" || userType === "official") && (
+          <div style={{ marginTop: 32 }}>
+            <Divider />
+            <DssSuggestion caseData={caseData} />
+          </div>
+        )}
+      </Content>
+    </Layout>
   );
 }

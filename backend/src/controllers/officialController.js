@@ -338,6 +338,7 @@ const updateProfile = asyncHandler(async (req, res) => {
                 contactNumber: updatedOfficial.contactNumber
             }
         });
+        try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: 'official', actorId: updatedOfficial._id, action: 'official_profile_updated', details: `Official profile updated ${updatedOfficial.officialID || updatedOfficial._id}` }); } catch(e) { console.warn('Failed to record official profile update log', e && e.message); }
     } else {
         res.status(404);
         throw new Error('Barangay Official not found');

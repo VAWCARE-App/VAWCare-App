@@ -12,7 +12,7 @@ import {
     PhoneOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
-import { clearToken } from "../lib/api";
+import { clearToken, api, isTokenProbablyJwt } from "../lib/api";
 import logo from "../assets/logo1.png";
 
 // ✅ Import EmergencyButton
@@ -35,7 +35,17 @@ export default function VictimNavbar() {
         (currentUser.firstName || "U").charAt(0) +
         (currentUser.lastName || "").charAt(0);
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            if (token && isTokenProbablyJwt(token)) {
+                await Promise.race([
+                    api.post('/api/auth/logout'),
+                    new Promise((resolve) => setTimeout(resolve, 1500)),
+                ]).catch(() => {});
+            }
+        } catch (e) {}
+
         clearToken();
         localStorage.removeItem("user");
         localStorage.removeItem("userType");

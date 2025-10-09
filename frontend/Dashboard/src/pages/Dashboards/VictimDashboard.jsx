@@ -300,7 +300,7 @@ export default function VictimDashboard() {
                   <Skeleton active />
                 ) : myReports.length ? (
                   <List
-                    dataSource={myReports}
+                    dataSource={myReports.slice(0, 3)}
                     renderItem={(r) => (
                       <List.Item>
                         <Space direction="vertical" style={{ width: '100%' }}>

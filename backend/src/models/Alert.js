@@ -10,14 +10,13 @@ const alertSchema = new mongoose.Schema({
     victimID: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Victim',
-        required: [true, 'Victim ID is required']
+        required: true
     },
     type: {
         type: String,
         required: [true, 'Alert type is required'],
         enum: {
-            values: ['SOS', 'Voice Alert'],
-            message: 'Alert type must be either SOS or Voice Alert'
+            values: ['Emergency'],
         },
         trim: true
     },
@@ -41,10 +40,23 @@ const alertSchema = new mongoose.Schema({
         default: 'Active',
         trim: true
     },
+    resolvedAt: {
+        type: Date,
+        required: false
+    },
+    durationMs: {
+        type: Number,
+        required: false
+    },
+    durationStr: {
+        type: String,
+        required: false,
+        trim: true
+    },
     notifiedContacts: [{
         contactID: {
             type: String,
-            required: true
+            required: false
         },
         name: String,
         contactNumber: String,

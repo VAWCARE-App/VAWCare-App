@@ -336,6 +336,7 @@ const getProfile = asyncHandler(async (req, res) => {
                 lastName: victim.lastName,
                 address: victim.address,
                 contactNumber: victim.contactNumber,
+                receiveEmail: (typeof victim.receiveEmail === 'boolean') ? victim.receiveEmail : true,
                 victimType: victim.victimType,
                 isAnonymous: victim.isAnonymous,
                 emergencyContacts: victim.emergencyContacts,
@@ -359,11 +360,42 @@ const updateProfile = asyncHandler(async (req, res) => {
         throw new Error('Victim not found');
     }
 
+    // Detect emergencyContacts changes so we can emit specific log actions
+    const beforeEC = Array.isArray(victim.emergencyContacts) ? victim.emergencyContacts.map(ec => ({ name: ec.name || '', email: (ec.email||'').toLowerCase(), contactNumber: ec.contactNumber || '' })) : [];
+
     const updatedVictim = await Victim.findByIdAndUpdate(
         victim._id,
         { ...req.body },
         { new: true, runValidators: true }
     );
+
+    // Compare after update and emit logs for added/removed/updated emergency contacts
+    try {
+        const afterEC = Array.isArray(updatedVictim.emergencyContacts) ? updatedVictim.emergencyContacts.map(ec => ({ name: ec.name || '', email: (ec.email||'').toLowerCase(), contactNumber: ec.contactNumber || '' })) : [];
+        const added = afterEC.filter(a => !beforeEC.some(b => b.email && b.email === a.email));
+        const removed = beforeEC.filter(b => !afterEC.some(a => a.email && a.email === b.email));
+        const possiblyUpdated = afterEC.filter(a => beforeEC.some(b => b.email && b.email === a.email));
+
+        const { recordLog } = require('../middleware/logger');
+        // Record general profile update
+        try { await recordLog({ req, actorType: 'victim', actorId: updatedVictim._id, action: 'victim_profile_updated', details: `Victim profile updated ${updatedVictim.victimID || updatedVictim._id}` }); } catch(e) { console.warn('Failed to record victim profile update log', e && e.message); }
+
+        for (const a of added) {
+            try { await recordLog({ req, actorType: 'victim', actorId: updatedVictim._id, action: 'emergency_contact_added', details: `Emergency contact added: ${a.email || a.name}` }); } catch(e) { /* ignore */ }
+        }
+        for (const r of removed) {
+            try { await recordLog({ req, actorType: 'victim', actorId: updatedVictim._id, action: 'emergency_contact_removed', details: `Emergency contact removed: ${r.email || r.name}` }); } catch(e) { /* ignore */ }
+        }
+        for (const p of possiblyUpdated) {
+            // naive diff: if contactNumber or name differ
+            const before = beforeEC.find(b => b.email === p.email) || {};
+            if ((before.contactNumber || '') !== (p.contactNumber || '') || (before.name || '') !== (p.name || '')) {
+                try { await recordLog({ req, actorType: 'victim', actorId: updatedVictim._id, action: 'emergency_contact_updated', details: `Emergency contact updated: ${p.email || p.name}` }); } catch(e) { /* ignore */ }
+            }
+        }
+    } catch (e) {
+        console.warn('Failed to analyze emergencyContacts diff for logs', e && e.message);
+    }
 
     res.status(200).json({
         success: true,
@@ -539,15 +571,24 @@ const sendAnonymousAlert = asyncHandler(async (req, res) => {
             await recordLog({ req, actorType: 'victim', actorId: victimID, action: 'emergency_button', details: `Anonymous emergency alert sent type=${alertType}` });
         } catch(e) { console.warn('Failed to record anonymous alert log', e && e.message); }
 
-        // Fire-and-forget: send SOS email to configured recipient (default to jadenyuki486@gmail.com)
+        // Fire-and-forget: send SOS email to configured recipient and to victim's emergency contact emails
         (async () => {
-            const recipient = process.env.SOS_RECIPIENT || 'jadenyuki486@gmail.com';
             try {
                 const lat = alertDoc.location?.latitude;
                 const lng = alertDoc.location?.longitude;
                 const mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lat + ',' + lng)}`;
                 const subject = `SOS Alert — ${alertDoc.alertID || 'Unknown ID'}`;
-                const victimInfo = alertDoc.victimID ? `Victim: ${alertDoc.victimID}` : 'Victim: unknown';
+                // Try to fetch victim details to obtain emergency contacts
+                let victim = null;
+                try {
+                    victim = await Victim.findById(victimID).lean();
+                } catch (e) {
+                    // ignore fetch errors; we'll still send to default recipient
+                    console.warn('Unable to load victim for emergency contacts', e && e.message);
+                }
+
+                const victimInfo = victim ? `${victim.firstName || ''} ${victim.lastName || ''}`.trim() || `Victim: ${victim._id}` : 'Victim: unknown';
+
                 const html = `
                     <p><strong>Emergency SOS</strong></p>
                     <p>${victimInfo}</p>
@@ -558,31 +599,55 @@ const sendAnonymousAlert = asyncHandler(async (req, res) => {
                     <p>This message was generated by the VAWCare Barangay Support System.</p>
                 `;
 
-                await sendMail(recipient, subject, html);
-                try {
-                    await alertDoc.addNotifiedContact({
-                        contactID: `email-${recipient}`,
-                        name: recipient,
-                        contactNumber: '',
-                        notificationTime: new Date(),
-                        notificationStatus: 'Sent'
-                    });
-                } catch (e) {
-                    console.warn('Failed to record notified contact after sending SOS email', e && e.message);
+                // Build recipient list: default SOS recipient + any emergency contact emails
+                const recipients = new Set();
+                const defaultRecipient = process.env.SOS_RECIPIENT || 'jadenyuki486@gmail.com';
+                recipients.add(defaultRecipient);
+
+                if (victim && Array.isArray(victim.emergencyContacts)) {
+                    for (const c of victim.emergencyContacts) {
+                        if (c && c.email && typeof c.email === 'string' && c.email.trim()) {
+                            recipients.add(c.email.trim().toLowerCase());
+                        }
+                    }
                 }
 
-                console.log('SOS email sent for alert', alertDoc._id);
+                // Send email to each recipient and record notifiedContacts
+                // record that SOS background processing started
+                try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: 'victim', actorId: victimID || null, action: 'send_sos', details: `Anonymous SOS started for alert ${alertDoc.alertID || alertDoc._id}` }); } catch(e) { console.warn('Failed to record send_sos log', e && e.message); }
+
+                for (const recipient of Array.from(recipients)) {
+                    try {
+                        await sendMail(recipient, subject, html);
+                        try {
+                            await alertDoc.addNotifiedContact({
+                                contactID: `email-${recipient}`,
+                                name: (victim && victim.emergencyContacts ? (victim.emergencyContacts.find(ec => (ec.email || '').toLowerCase() === recipient) || {}).name : '') || recipient,
+                                contactNumber: (victim && victim.emergencyContacts ? (victim.emergencyContacts.find(ec => (ec.email || '').toLowerCase() === recipient) || {}).contactNumber : '') || '',
+                                notificationTime: new Date(),
+                                notificationStatus: 'Sent'
+                            });
+                        } catch (e) {
+                            console.warn('Failed to record notified contact after sending SOS email', e && e.message);
+                        }
+                        console.log('SOS email sent for alert', alertDoc._id, 'to', recipient);
+                            try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: 'victim', actorId: victimID || null, action: 'sos_email_sent', details: `Anonymous SOS email sent to ${recipient} for alert ${alertDoc.alertID || alertDoc._id}` }); } catch(e) { /* ignore */ }
+                    } catch (err) {
+                        console.warn('Failed to send SOS email for alert to', recipient, err && err.message);
+                        try {
+                            await alertDoc.addNotifiedContact({
+                                contactID: `email-${recipient}`,
+                                name: (victim && victim.emergencyContacts ? (victim.emergencyContacts.find(ec => (ec.email || '').toLowerCase() === recipient) || {}).name : '') || recipient,
+                                contactNumber: (victim && victim.emergencyContacts ? (victim.emergencyContacts.find(ec => (ec.email || '').toLowerCase() === recipient) || {}).contactNumber : '') || '',
+                                notificationTime: new Date(),
+                                notificationStatus: 'Failed'
+                            });
+                        } catch (e) { /* ignore */ }
+                            try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: 'victim', actorId: victimID || null, action: 'sos_email_failed', details: `Anonymous SOS email failed to ${recipient} for alert ${alertDoc.alertID || alertDoc._id}` }); } catch(e) { /* ignore */ }
+                    }
+                }
             } catch (err) {
-                console.warn('Failed to send SOS email for alert', err && err.message);
-                try {
-                    await alertDoc.addNotifiedContact({
-                        contactID: `email-${recipient}`,
-                        name: recipient,
-                        contactNumber: '',
-                        notificationTime: new Date(),
-                        notificationStatus: 'Failed'
-                    });
-                } catch (e) { /* ignore */ }
+                console.warn('Unexpected error in SOS email background task', err && err.message);
             }
         })();
 

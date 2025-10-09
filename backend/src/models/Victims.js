@@ -119,6 +119,18 @@ const victimSchema = new mongoose.Schema({
             type: String,
             trim: true
         },
+        email: {
+            type: String,
+            trim: true,
+            lowercase: true,
+            validate: {
+                validator: function (v) {
+                    if (!v) return true; // allow empty
+                    return /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v);
+                },
+                message: 'Please enter a valid email address'
+            }
+        },
         address: {
             type: String,
             trim: true

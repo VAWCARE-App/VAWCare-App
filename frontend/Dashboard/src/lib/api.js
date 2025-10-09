@@ -60,12 +60,18 @@ export const getUserType = () => localStorage.getItem("userType") || 'victim';
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Previously we cleared tokens and redirected here. That caused immediate sign-out
+    // when some protected endpoints returned 401 during development. Delegate handling
+    // to the calling component so pages can retry or show friendly UI.
     if (error.response?.status === 401) {
-      // Don't auto-redirect to /login if the request itself was a login attempt
-      const requestUrl = error.config?.url || '';
-      if (!requestUrl.includes('/login')) {
-        clearToken();
-        window.location.href = '/';
+      try {
+        // Show a non-intrusive message; don't clear token or redirect here.
+        const requestUrl = error.config?.url || '';
+        console.warn(`[api] 401 response for ${requestUrl}`);
+        // Optionally show a warning for visibility during dev
+        // message.warning('Session invalid or expired. Please sign in again.');
+      } catch (e) {
+        console.debug('Failed to log 401 handling', e && e.message);
       }
     }
     return Promise.reject(error);
@@ -92,17 +98,15 @@ api.interceptors.response.use(async (response) => {
             clearToken();
           }
         } catch (ex) {
-          // Exchange failed — do NOT save the server custom token because server custom tokens are not
-          // accepted by Firebase Admin's verifyIdToken. Clear tokens and surface a clear warning.
-          console.warn('Auto token exchange failed:', ex);
-          clearToken();
-          // Show a visible error message to help devs/users diagnose the issue
+          // Exchange failed — don't forcibly clear the stored token here. Some development setups
+          // don't have Firebase client config and we want the login flow to decide what to do.
+          console.warn('Auto token exchange failed (non-fatal):', ex);
+          // Show a visible warning to help devs/users diagnose the issue, but don't clear token.
           try {
-            message.error('Authentication failed: unable to exchange server token. Ensure Firebase client config (VITE_FIREBASE_*) is set in the frontend and restart the dev server.');
+            message.warning('Authentication token exchange failed. If protected requests fail, ensure Firebase client config (VITE_FIREBASE_*) is set.');
           } catch (mErr) {
             console.warn('Unable to show UI message:', mErr);
           }
-          // Developers: ensure VITE_FIREBASE_* client config is set and correct so exchange can succeed.
           console.warn('Token exchange failed. Ensure Firebase client config (VITE_FIREBASE_*) is available to the frontend.');
         }
       }
@@ -113,11 +117,9 @@ api.interceptors.response.use(async (response) => {
   return response;
 }, (error) => {
   if (error.response?.status === 401) {
-    const requestUrl = error.config?.url || '';
-    if (!requestUrl.includes('/login')) {
-      clearToken();
-      window.location.href = '/';
-    }
+    // Delegate 401 handling to the caller; do not mutate auth storage here to avoid
+    // race conditions that cause components to redirect unexpectedly.
+    console.warn('[api] intercepted 401 error (delegating to caller)');
   }
   return Promise.reject(error);
 });

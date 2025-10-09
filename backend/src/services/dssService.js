@@ -8,6 +8,7 @@ try {
   tf = null;
 }
 const Cases = require('../models/Cases');
+const { evaluateRules, initEngine } = require('./rulesEngine');
 
 /**
  * Simple helper: convert incidentType string to one-hot vector
@@ -119,6 +120,25 @@ async function trainModelFromCases(minSamples = 50) {
  * Suggest action from a case payload. If model is present, use it; otherwise heuristics.
  */
 async function suggestForCase(payload, modelObj = null) {
+  // Evaluate rule-based overrides first (if any rules match, they take precedence)
+  try {
+    // Ensure engine initialized
+    initEngine();
+    const ruleResult = await evaluateRules(payload);
+    if (ruleResult && ruleResult.matched && Array.isArray(ruleResult.events) && ruleResult.events.length) {
+      // Use the first event's params as override if provided
+      const ev = ruleResult.events[0];
+      const override = ev.params || {};
+      const predictedRisk = override.predictedRisk || override.risk || (override.action === 'escalate' ? 'Sexual' : null);
+      const storedRisk = mapPredictedRiskToStored(predictedRisk || null);
+      const suggestion = override.suggestion || getDetailedSuggestion(predictedRisk || null, payload.incidentType);
+      const immediateProb = override.immediateProbability || 1.0;
+      const requiresImmediate = !!override.requiresImmediate || immediateProb >= 0.5;
+      return { predictedRisk, storedRisk, probabilities: override.probabilities || [], suggestion, immediateAssistanceProbability: immediateProb, requiresImmediateAssistance: requiresImmediate, ruleMatched: true, ruleEvent: ev };
+    }
+  } catch (e) {
+    console.warn('Rules engine failed during suggestForCase', e && e.message);
+  }
   // payload: { incidentType, description, assignedOfficer, status }
   const itVec = incidentTypeToOneHot(payload.incidentType || 'Other');
   const status = payload.status === 'Open' || payload.status === 'Under Investigation' ? 1 : 0;

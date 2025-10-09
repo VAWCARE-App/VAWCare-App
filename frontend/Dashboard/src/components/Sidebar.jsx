@@ -38,8 +38,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
   const handleLogout = () => {
     try {
-      api.post('/api/auth/logout').catch(() => {});
-    } catch (e) {}
+      api.post('/api/auth/logout').catch(() => { });
+    } catch (e) { }
     clearToken();
     // Always route to landing page after logout
     navigate('/');
@@ -47,8 +47,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     localStorage.removeItem("userType");
     localStorage.removeItem('actorId');
     localStorage.removeItem('actorType');
-  localStorage.removeItem('actorBusinessId');
-    
+    localStorage.removeItem('actorBusinessId');
+
   };
 
   const currentUser = useMemo(
@@ -64,17 +64,16 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
   // MENU SETS
   const adminMenu = [
+    { key: "/landing", icon: <HomeOutlined />, label: "Home" },
     { key: "/admin", icon: <DashboardOutlined />, label: "Dashboard" },
-    { key: "/admin/users", icon: <TeamOutlined />, label: "User Management" },
     { key: "/admin/create-official", icon: <UserSwitchOutlined />, label: "Create Official" },
-    { key: "/admin/reports", icon: <FileTextOutlined />, label: "Reports" },
-    { key: "/admin/cases", icon: <TeamOutlined />, label: "Cases" },
+    { key: "/admin/users", icon: <TeamOutlined />, label: "User Management" },
+    { key: "/admin/reports", icon: <FileTextOutlined />, label: "Reports Management" },
+    { key: "/admin/cases", icon: <TeamOutlined />, label: "Case Management" },
     { key: "/admin/bpo-management", icon: <FileTextOutlined />, label: "BPO Management" },
-    { key: "/admin/alerts", icon: <AlertOutlined />, label: "Alerts" },
+    { key: "/admin/alerts", icon: <AlertOutlined />, label: "Alert Management" },
     { key: "/admin/logs", icon: <FileTextOutlined />, label: "System Logs" },
     { key: "/admin/settings", icon: <SettingOutlined />, label: "Settings" },
-     { key: "/landing", icon: <HomeOutlined />, label: "Landing Page" }
-
   ];
 
   const officialMenu = [

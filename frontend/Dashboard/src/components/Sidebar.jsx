@@ -70,6 +70,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     { key: "/admin/reports", icon: <FileTextOutlined />, label: "Reports" },
     { key: "/admin/cases", icon: <TeamOutlined />, label: "Cases" },
     { key: "/admin/bpo-management", icon: <FileTextOutlined />, label: "BPO Management" },
+    { key: "/admin/alerts", icon: <AlertOutlined />, label: "Alerts" },
     { key: "/admin/logs", icon: <FileTextOutlined />, label: "System Logs" },
     { key: "/admin/settings", icon: <SettingOutlined />, label: "Settings" },
      { key: "/landing", icon: <HomeOutlined />, label: "Landing Page" }
@@ -82,6 +83,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     { key: "/admin/reports", icon: <FileTextOutlined />, label: "Reports" },
     { key: "/admin/official-cases", icon: <TeamOutlined />, label: "Cases" },
     { key: "/admin/bpo-management", icon: <FileTextOutlined />, label: "BPO Management" },
+    { key: "/admin/alerts", icon: <AlertOutlined />, label: "Alerts" },
     { key: "/admin/official-settings", icon: <SettingOutlined />, label: "Settings" },
     { key: "/landing", icon: <HomeOutlined />, label: "Landing Page" }
   ];

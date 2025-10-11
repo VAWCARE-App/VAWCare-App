@@ -283,7 +283,7 @@ export default function CaseManagement() {
 
   const columns = [
     { title: 'Case ID', dataIndex: 'caseID', key: 'caseID' },
-    { title: 'Report ID', dataIndex: 'reportID', key: 'reportID' },
+    { title: 'Report ID', dataIndex: 'reportID', key: 'reportID', render: (r) => r || 'N/A' },
     { title: 'Incident Type', dataIndex: 'incidentType', key: 'incidentType' },
     { title: 'Status', dataIndex: 'status', key: 'status' },
     { title: 'Assigned Officer', dataIndex: 'assignedOfficer', key: 'assignedOfficer' },

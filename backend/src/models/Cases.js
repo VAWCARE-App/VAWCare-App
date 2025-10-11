@@ -88,4 +88,16 @@ const CasesSchema = new mongoose.Schema({
 		createdAt: { type: Date, default: Date.now }
 	});
 
+// DSS suggestion / metadata fields persisted for each case
+CasesSchema.add({
+    dssPredictedRisk: { type: String, required: false, trim: true },
+    dssStoredRisk: { type: String, required: false, trim: true },
+    dssProbabilities: { type: Array, required: false, default: [] },
+    dssImmediateAssistanceProbability: { type: Number, required: false, default: 0 },
+    dssSuggestion: { type: String, required: false, trim: true },
+    dssRuleMatched: { type: Boolean, required: false, default: false },
+    dssChosenRule: { type: mongoose.Schema.Types.Mixed, required: false },
+    dssManualOverride: { type: Boolean, required: false, default: false }
+});
+
 module.exports = mongoose.model('Cases', CasesSchema);

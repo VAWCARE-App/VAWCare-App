@@ -26,6 +26,8 @@ import AdminSettings from "./pages/Admins/AdminSettings";
 import OfficialSettings from "./pages/Admins/OfficialSettings";
 import VictimDashboard from "./pages/Dashboards/VictimDashboard";
 import OfficialDashboard from "./pages/Dashboards/OfficialDashboard";
+import VictimBarangay from "./pages/Victim/VictimBarangay";
+import VictimCases from "./pages/Victim/VictimCases";
 
 
 import Test from "./pages/Test";
@@ -72,6 +74,8 @@ export default function App() {
               <Route path="victim-test" element={<Protected><VictimDashboard /></Protected>} />
               <Route path="report" element={<Protected><ReportCase /></Protected>} />
               <Route path="emergency" element={<Protected><EmergencyButton /></Protected>} />
+              <Route path="victim-barangay" element={<Protected><VictimBarangay /></Protected>} />
+              <Route path="victim-cases" element={<Protected><VictimCases /></Protected>} />
               <Route path="victim-settings" element={<Protected><VictimSettings /></Protected>} />
             </Route>
 

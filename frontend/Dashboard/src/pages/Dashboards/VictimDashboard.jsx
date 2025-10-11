@@ -1,43 +1,49 @@
-import React, { useEffect, useState } from "react";
+// src/pages/victim/VictimDashboard.jsx
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  Card,
-  Col,
-  Row,
-  Typography,
-  Skeleton,
-  Tag,
   Layout,
-  Grid,
+  Row,
+  Col,
+  Card,
+  Typography,
   Button,
-  Empty,
   Space,
-  Statistic,
+  Grid,
+  Tag,
   List,
+  Skeleton,
+  Empty,
+  Input,
+  Avatar,
+  Tabs,
 } from "antd";
 import {
-  FileTextOutlined,
-  ReloadOutlined,
-  SafetyCertificateOutlined,
-  MessageOutlined,
   FileAddOutlined,
-  WarningOutlined,
-  LogoutOutlined,
+  SearchOutlined,
+  FileTextOutlined,
+  CheckCircleTwoTone,
+  ExclamationCircleTwoTone,
+  HistoryOutlined,
   PhoneOutlined,
+  LinkOutlined,
+  BookOutlined,
+  ReadOutlined,
+  MessageOutlined,
   InfoCircleOutlined,
+  WarningOutlined,
 } from "@ant-design/icons";
-import { api, clearToken } from "../../lib/api";
 import { useNavigate } from "react-router-dom";
+import { api } from "../../lib/api";
 
-const { Header, Content } = Layout;
+const { Content } = Layout;
 const { Title, Text } = Typography;
 
 export default function VictimDashboard() {
-  const navigate = useNavigate();
   const screens = Grid.useBreakpoint();
+  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [resourcesLoading, setResourcesLoading] = useState(false);
+  const [reportsLoading, setReportsLoading] = useState(false);
 
   const [metrics, setMetrics] = useState({
     totalReports: 0,
@@ -45,410 +51,663 @@ export default function VictimDashboard() {
     recentActivities: [],
   });
 
-  const [resources, setResources] = useState([]);
   const [myReports, setMyReports] = useState([]);
-  const [reportsLoading, setReportsLoading] = useState(false);
+
+  // --- VAWC Hub data (safe defaults; swap to API when ready) ---
+  const [hotlines, setHotlines] = useState([]);
+  const [news, setNews] = useState([]);
+  const [laws, setLaws] = useState([]);
+  const [tips, setTips] = useState([]); // Tips & Resources
 
   const BRAND = {
-    pink: "#e91e63",
-    light: "#fff5f8",
-    soft: "#ffd1dc",
+    violet: "#7A5AF8",
+    pink: "#FF6EA9",
+    soft: "rgba(122,90,248,0.18)",
+    bg: "linear-gradient(180deg, #ffffff 0%, #fbf8ff 60%, #f7f4ff 100%)",
   };
 
-  // Open Case Ratio (donut) removed per request
-
-  const fetchMetrics = async (withSpinner = true) => {
-    try {
-      if (withSpinner) setLoading(true);
-      const { data } = await api.get("/api/victims/metrics");
-      setMetrics({
-        totalReports: data?.data?.totalReports ?? 0,
-        openCases: data?.data?.openCases ?? 0,
-        recentActivities: Array.isArray(data?.data?.recentActivities) ? data.data.recentActivities : [],
-      });
-    } catch {
-      // optional toast
-    } finally {
-      if (withSpinner) setLoading(false);
-    }
-  };
-
-  const fetchMyReports = async () => {
-    setReportsLoading(true);
-    try {
-      const { data } = await api.get('/api/victims/reports');
-      if (data?.success) {
-        setMyReports(Array.isArray(data.data) ? data.data : []);
-      }
-    } catch (err) {
-      // ignore silently - optional toast
-    } finally {
-      setReportsLoading(false);
-    }
-  };
-
-  // Optional: fetch safety tips/resources from backend; fall back to defaults
-  const fetchResources = async () => {
-    setResourcesLoading(true);
-    try {
-      const { data } = await api.get("/api/resources"); // if your backend has this
-      const list = Array.isArray(data?.data) ? data.data : [];
-      if (list.length) {
-        setResources(
-          list.map((r, i) => ({
-            key: r.id || i,
-            title: r.title || "Resource",
-            desc: r.description || "",
-            action: r.action || null,
-          }))
-        );
-      } else {
-        setResources(defaultResources());
-      }
-    } catch {
-      setResources(defaultResources());
-    } finally {
-      setResourcesLoading(false);
-    }
-  };
-
-  const defaultResources = () => [
-    {
-      key: "r1",
-      title: "If you’re in immediate danger",
-      desc: "Use the Emergency Button or call your local hotline immediately.",
-      action: { label: "Open Emergency Button", onClick: () => navigate("/emergency"), icon: <PhoneOutlined /> },
-    },
-    {
-      key: "r2",
-      title: "Document safely",
-      desc: "Write what happened, where and when. Only if it’s safe to do so.",
-      action: { label: "File a Report", onClick: () => navigate("/report"), icon: <FileAddOutlined /> },
-    },
-    {
-      key: "r3",
-      title: "Reach out",
-      desc: "Consider a trusted person or barangay desk for support and guidance.",
-      action: { label: "Barangay Details", onClick: () => navigate("/victim-barangay"), icon: <InfoCircleOutlined /> },
-    },
-    {
-      key: "r4",
-      title: "Chat with the assistant",
-      desc: "Ask how to file reports, track cases, or where to get support.",
-      action: { label: "Open AI Chatbot", onClick: () => navigate("/victim-chatbot"), icon: <MessageOutlined /> },
-    },
-  ];
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await Promise.all([fetchMetrics(false), fetchResources()]);
-    setRefreshing(false);
-  };
+  const resolvedCount = useMemo(
+    () => Math.max(metrics.totalReports - metrics.openCases, 0),
+    [metrics]
+  );
 
   useEffect(() => {
-    fetchMetrics(true);
-    fetchResources();
-    fetchMyReports();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleLogout = () => {
     (async () => {
+      setLoading(true);
       try {
-        const token = localStorage.getItem('token');
-        if (token && token.split && token.split('.').length === 3) {
-          await Promise.race([
-            api.post('/api/auth/logout'),
-            new Promise((resolve) => setTimeout(resolve, 1500)),
-          ]).catch(() => {});
-        }
-      } catch (e) {}
+        const [{ data: mRes }, { data: rRes }] = await Promise.all([
+          api.get("/api/victims/metrics").catch(() => ({ data: { data: {} } })),
+          api.get("/api/victims/reports").catch(() => ({ data: { data: [] } })),
+        ]);
 
-      clearToken();
-      localStorage.removeItem("user");
-      localStorage.removeItem("userType");
-      localStorage.removeItem('actorId');
-      localStorage.removeItem('actorType');
-      localStorage.removeItem('actorBusinessId');
-      navigate('/');
+        const m = mRes?.data || {};
+        setMetrics({
+          totalReports: m.totalReports ?? 0,
+          openCases: m.openCases ?? 0,
+          recentActivities: Array.isArray(m.recentActivities)
+            ? m.recentActivities
+            : [],
+        });
+
+        const reports = Array.isArray(rRes?.data) ? rRes.data : [];
+        setMyReports(reports);
+      } finally {
+        setLoading(false);
+        setReportsLoading(false);
+      }
     })();
-  };
 
-  const KpiCard = ({ icon, label, value, delay = 0 }) => (
+    // Hub defaults (PH)
+    setHotlines([
+      {
+        name: "Emergency (PH)",
+        desc: "Immediate police/medical/fire assistance.",
+        number: "911",
+        cta: { href: "tel:911", text: "Call 911" },
+      },
+      {
+        name: "Barangay VAW Desk",
+        desc: "Nearest barangay desk for VAWC assistance.",
+        cta: {
+          onClick: () => navigate("/victim/victim-barangay"),
+          text: "Find Barangay",
+        },
+      },
+      {
+        name: "PNP WCPD",
+        desc: "Women & Children Protection Desk at your local police station.",
+        cta: {
+          onClick: () => navigate("/victim/victim-cases"),
+          text: "Contact WCPD",
+        },
+      },
+      {
+        name: "1343 Actionline",
+        desc: "Human trafficking national hotline.",
+        number: "1343",
+        cta: { href: "tel:1343", text: "Call 1343" },
+      },
+    ]);
+
+    setNews([
+      {
+        title: "How Barangay VAW Desks help in reporting",
+        source: "LGU Guidance",
+        href: "#",
+      },
+      {
+        title: "What to bring when filing a VAWC case",
+        source: "Help Center",
+        href: "#",
+      },
+      {
+        title: "DSWD support services for VAWC survivors",
+        source: "DSWD",
+        href: "#",
+      },
+    ]);
+
+    setLaws([
+      {
+        code: "RA 9262",
+        name: "Anti-Violence Against Women and Their Children Act of 2004",
+      },
+      { code: "RA 9710", name: "Magna Carta of Women" },
+      { code: "RA 11313", name: "Safe Spaces Act (Bawal Bastos Law)" },
+      {
+        code: "RA 9208 / 10364",
+        name: "Anti-Trafficking in Persons Act (as amended)",
+      },
+    ]);
+
+    setTips([
+      {
+        title: "If you’re in immediate danger",
+        desc: "Use the Emergency button or call your local hotline.",
+        btn: {
+          text: "Emergency",
+          icon: <WarningOutlined />,
+          onClick: () => navigate("/victim/emergency"),
+          primary: true,
+        },
+      },
+      {
+        title: "Document safely",
+        desc: "Write what happened, where and when—only if it’s safe.",
+        btn: {
+          text: "File a Report",
+          icon: <FileAddOutlined />,
+          onClick: () => navigate("/victim/report"),
+        },
+      },
+      {
+        title: "Reach your barangay",
+        desc: "Your barangay desk can support and guide you.",
+        btn: {
+          text: "Find Barangay",
+          icon: <InfoCircleOutlined />,
+          onClick: () => navigate("/victim/victim-barangay"),
+        },
+      },
+      {
+        title: "Chat with the assistant",
+        desc: "Ask how to track cases and find resources.",
+        btn: {
+          text: "Open Chat",
+          icon: <MessageOutlined />,
+          onClick: () => navigate("/victim-chatbot"),
+        },
+      },
+    ]);
+  }, [navigate]);
+
+  // ---------- UI helpers ----------
+  const GlassCard = ({ children, style, bodyStyle, ...rest }) => (
     <Card
-      bordered
-      className="fade-in-card"
+      {...rest}
       style={{
-        borderRadius: 14,
+        borderRadius: 18,
         borderColor: BRAND.soft,
-        height: "100%",
-        animationDelay: `${delay}ms`,
+        background: "rgba(255,255,255,0.9)",
+        boxShadow: "0 24px 48px rgba(122,90,248,0.08)",
+        ...style,
       }}
-      bodyStyle={{
-        padding: 16,
-        display: "flex",
-        flexDirection: "column",
-        gap: 8,
-        justifyContent: "center",
-      }}
+      bodyStyle={{ padding: 16, ...bodyStyle }}
     >
-      <Space align="center">
-        <div
-          style={{
-            width: 38,
-            height: 38,
-            borderRadius: 10,
-            background: "#fff0f5",
-            display: "grid",
-            placeItems: "center",
-            border: `1px solid ${BRAND.soft}`,
-          }}
-        >
-          {icon}
-        </div>
-        <Text type="secondary" style={{ fontSize: 13 }}>
-          {label}
-        </Text>
-      </Space>
-      {loading ? (
-        <Skeleton.Input active size="small" style={{ width: 90 }} />
-      ) : (
-        <Statistic
-          value={value}
-          valueStyle={{ color: BRAND.pink, fontSize: "clamp(20px,3.4vw,28px)" }}
-        />
-      )}
+      {children}
     </Card>
   );
 
-  return (
-    <Layout style={{ minHeight: "100vh", width: "100%", background: BRAND.light }}>
-      {/* Header with Refresh + Logout */}
-      {/* <Header
+  const StatPill = ({ label, value, icon, color = BRAND.violet }) => (
+    <div
+      style={{
+        borderRadius: 16,
+        padding: "14px 16px",
+        background: "linear-gradient(180deg, #ffffff, #f8f5ff)",
+        border: `1px solid ${BRAND.soft}`,
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+      }}
+    >
+      <div
         style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 5,
-          background: "linear-gradient(180deg, #fff5f8 0%, #ffffff 60%)",
-          borderBottom: "1px solid #ffd1dc",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          paddingInline: 16,
-          height: "auto",
-          lineHeight: 1.2,
-          paddingBlock: 12,
+          width: 38,
+          height: 38,
+          borderRadius: 12,
+          background: "#fff",
+          display: "grid",
+          placeItems: "center",
+          border: `1px solid ${BRAND.soft}`,
         }}
       >
-        <Space direction="vertical" size={0}>
-          <Title level={screens.md ? 4 : 5} style={{ margin: 0, color: BRAND.pink }}>
-            Victim Dashboard
+        {icon}
+      </div>
+      <div>
+        <Text style={{ color: "#888" }}>{label}</Text>
+        <div style={{ fontSize: 22, color, fontWeight: 800, lineHeight: 1 }}>
+          {value}
+        </div>
+      </div>
+    </div>
+  );
+
+  const Hero = () => (
+    <GlassCard
+      style={{
+        background:
+          "linear-gradient(180deg, #fff1f7 0%, #ffe5f1 40%, #f4eaff 100%)",
+      }}
+      bodyStyle={{ padding: 20 }}
+    >
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: screens.lg ? "1fr auto" : "1fr",
+          gap: 14,
+          alignItems: "center",
+        }}
+      >
+        <div>
+          <Title level={4} style={{ margin: 0, color: "#6B49F6" }}>
+            Safety & Support
           </Title>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            Your reports, case status, and recent activity
+          <Text style={{ color: "#6f6f6f" }}>
+            File reports, track case status, and access VAWC resources.
           </Text>
-        </Space>
+          <div style={{ marginTop: 12 }}>
+            <Space wrap>
+              <Button
+                type="primary"
+                icon={<FileAddOutlined />}
+                onClick={() => navigate("/victim/report")}
+                style={{
+                  background: BRAND.violet,
+                  borderColor: BRAND.violet,
+                  borderRadius: 12,
+                  height: 40,
+                  fontWeight: 700,
+                }}
+              >
+                File New Report
+              </Button>
+              <Button
+                onClick={() => navigate("/victim/victim-cases")}
+                style={{
+                  borderColor: BRAND.violet,
+                  color: BRAND.violet,
+                  borderRadius: 12,
+                  height: 40,
+                  fontWeight: 700,
+                }}
+              >
+                View My Cases
+              </Button>
+            </Space>
+          </div>
+        </div>
 
-        <Space>
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={handleRefresh}
-            loading={refreshing}
-            size={screens.md ? "middle" : "small"}
-            style={{ borderColor: BRAND.pink, color: BRAND.pink }}
-          >
-            Refresh
-          </Button>
-          <Button
-            icon={<LogoutOutlined />}
-            onClick={handleLogout}
-            size={screens.md ? "middle" : "small"}
-            style={{ borderColor: BRAND.pink, color: BRAND.pink }}
-          >
-            Logout
-          </Button>
-        </Space>
-      </Header> */}
+        <Input
+          allowClear
+          size="large"
+          prefix={<SearchOutlined />}
+          placeholder="Search anything…"
+          style={{
+            borderRadius: 14,
+            borderColor: BRAND.soft,
+            background: "#fff",
+            width: screens.lg ? 320 : "100%",
+            justifySelf: screens.lg ? "end" : "stretch",
+            height: 44,
+          }}
+        />
+      </div>
+    </GlassCard>
+  );
 
-      {/* Content */}
+  // ---- VAWC Hub sections (used below Latest Report) ----
+  const HubHotlines = () => (
+    <List
+      dataSource={hotlines}
+      locale={{ emptyText: <Empty description="No hotlines yet" /> }}
+      renderItem={(h) => (
+        <List.Item style={{ padding: "10px 0" }}>
+          <Space
+            align="start"
+            style={{ width: "100%", justifyContent: "space-between" }}
+          >
+            <Space>
+              <Avatar
+                style={{ background: "#fff0f6", color: BRAND.pink }}
+                icon={<PhoneOutlined />}
+              />
+              <div>
+                <div style={{ fontWeight: 700 }}>{h.name}</div>
+                <div style={{ color: "#888", fontSize: 12 }}>{h.desc}</div>
+                {h.number && (
+                  <Tag color="purple" style={{ marginTop: 6 }}>
+                    {h.number}
+                  </Tag>
+                )}
+              </div>
+            </Space>
+            {h.cta?.href ? (
+              <Button
+                type="primary"
+                href={h.cta.href}
+                style={{
+                  borderRadius: 12,
+                  background: BRAND.violet,
+                  borderColor: BRAND.violet,
+                }}
+              >
+                {h.cta.text}
+              </Button>
+            ) : h.cta?.onClick ? (
+              <Button
+                onClick={h.cta.onClick}
+                style={{
+                  borderRadius: 12,
+                  borderColor: BRAND.violet,
+                  color: BRAND.violet,
+                }}
+              >
+                {h.cta.text}
+              </Button>
+            ) : null}
+          </Space>
+        </List.Item>
+      )}
+    />
+  );
+
+  const HubNews = () => (
+    <List
+      dataSource={news}
+      locale={{ emptyText: <Empty description="No news yet" /> }}
+      renderItem={(n) => (
+        <List.Item style={{ padding: "10px 0" }}>
+          <List.Item.Meta
+            avatar={
+              <Avatar
+                style={{ background: "#efeaff", color: BRAND.violet }}
+                icon={<LinkOutlined />}
+              />
+            }
+            title={<a href={n.href || "#"}>{n.title}</a>}
+            description={
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {n.source}
+              </Text>
+            }
+          />
+        </List.Item>
+      )}
+    />
+  );
+
+  const HubLaws = () => (
+    <List
+      dataSource={laws}
+      locale={{ emptyText: <Empty description="No law entries yet" /> }}
+      renderItem={(l) => (
+        <List.Item style={{ padding: "10px 0" }}>
+          <Space align="start">
+            <Avatar
+              style={{ background: "#fff0f6", color: BRAND.pink }}
+              icon={<BookOutlined />}
+            />
+            <div>
+              <div style={{ fontWeight: 700 }}>
+                <Tag color="purple" style={{ marginRight: 8 }}>
+                  {l.code}
+                </Tag>
+                {l.name}
+              </div>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                For guidance only. Contact your LGU/Barangay VAW Desk for help.
+              </Text>
+            </div>
+          </Space>
+        </List.Item>
+      )}
+    />
+  );
+
+  // Utility: sort reports by date (desc)
+  const sortedReports = useMemo(() => {
+    const list = Array.isArray(myReports) ? [...myReports] : [];
+    return list.sort(
+      (a, b) =>
+        new Date(b.dateReported || b.createdAt || 0) -
+        new Date(a.dateReported || a.createdAt || 0)
+    );
+  }, [myReports]);
+
+  return (
+    <Layout style={{ minHeight: "100vh", background: BRAND.bg }}>
       <Content
         style={{
-          padding: screens.md ? 16 : 12,
+          padding: screens.md ? 18 : 12,
+          paddingBottom: "max(18px, env(safe-area-inset-bottom))",
           display: "flex",
           justifyContent: "center",
-          overflow: "auto",
-          paddingBottom: "max(16px, env(safe-area-inset-bottom))",
         }}
       >
-        <div style={{ width: "100%", maxWidth: 1200 }}>
-          <Row gutter={[16, 16]} align="stretch">
-            {/* KPIs */}
-            <Col xs={24} sm={12} lg={8}>
-              <KpiCard
-                icon={<FileTextOutlined style={{ color: BRAND.pink, fontSize: 18 }} />}
-                label="My Reports"
-                value={metrics.totalReports}
-                delay={100}
-              />
+        <div style={{ width: "100%", maxWidth: 1180 }}>
+          {/* Hero */}
+          <Row gutter={[16, 16]}>
+            <Col span={24}>
+              <Hero />
             </Col>
-            <Col xs={24} sm={12} lg={8}>
-              <KpiCard
-                icon={<SafetyCertificateOutlined style={{ color: BRAND.pink, fontSize: 18 }} />}
-                label="Open Cases"
-                value={metrics.openCases}
-                delay={200}
-              />
+          </Row>
+
+          {/* Main layout */}
+          <Row gutter={[16, 16]} style={{ marginTop: 6 }}>
+            {/* LEFT column */}
+            <Col xs={24} xl={16}>
+              {/* Overview */}
+              <GlassCard>
+                <Space direction="vertical" style={{ width: "100%" }} size={12}>
+                  <Text strong style={{ color: BRAND.violet }}>
+                    Overview
+                  </Text>
+
+                  {loading ? (
+                    <Skeleton active />
+                  ) : (
+                    <Row gutter={[12, 12]}>
+                      <Col xs={24} sm={8}>
+                        <StatPill
+                          label="Total Reports"
+                          value={metrics.totalReports}
+                          icon={
+                            <FileTextOutlined style={{ color: BRAND.violet }} />
+                          }
+                          color={BRAND.violet}
+                        />
+                      </Col>
+                      <Col xs={24} sm={8}>
+                        <StatPill
+                          label="Open Cases"
+                          value={metrics.openCases}
+                          icon={
+                            <ExclamationCircleTwoTone
+                              twoToneColor={["#FA8C16", "#FFE58F"]}
+                            />
+                          }
+                          color="#FA8C16"
+                        />
+                      </Col>
+                      <Col xs={24} sm={8}>
+                        <StatPill
+                          label="Resolved"
+                          value={resolvedCount}
+                          icon={
+                            <CheckCircleTwoTone
+                              twoToneColor={["#52C41A", "#D9F7BE"]}
+                            />
+                          }
+                          color="#52C41A"
+                        />
+                      </Col>
+                    </Row>
+                  )}
+                </Space>
+              </GlassCard>
+
+              {/* Latest Report */}
+              <GlassCard style={{ marginTop: 16 }}>
+                <Text strong style={{ color: BRAND.violet }}>Latest Report</Text>
+                {reportsLoading ? (
+                  <Skeleton active style={{ marginTop: 10 }} />
+                ) : sortedReports.length ? (
+                  <div
+                    style={{
+                      marginTop: 10,
+                      borderRadius: 16,
+                      padding: 14,
+                      background: "#fff",
+                      border: `1px solid ${BRAND.soft}`,
+                    }}
+                  >
+                    <Space
+                      style={{ width: "100%", justifyContent: "space-between" }}
+                    >
+                      <Space size={12}>
+                        <Avatar
+                          style={{ background: BRAND.violet }}
+                          icon={<HistoryOutlined />}
+                        />
+                        <div>
+                          <Text strong>
+                            {sortedReports[0]?.reportID || "Report"}
+                          </Text>
+                          <div style={{ color: "#888", fontSize: 12 }}>
+                            {sortedReports[0]?.incidentType || "—"}
+                          </div>
+                        </div>
+                      </Space>
+                      <Tag
+                        color={
+                          ["Open", "Under Investigation"].includes(
+                            sortedReports[0]?.status
+                          )
+                            ? "orange"
+                            : "green"
+                        }
+                      >
+                        {sortedReports[0]?.status || "—"}
+                      </Tag>
+                    </Space>
+                    <Button
+                      type="link"
+                      onClick={() => navigate("/victim/victim-cases")}
+                      style={{ padding: 0, marginTop: 6 }}
+                    >
+                      See details
+                    </Button>
+                  </div>
+                ) : (
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description="No reports yet"
+                    style={{ marginTop: 12 }}
+                  />
+                )}
+              </GlassCard>
+
+              {/* VAWC Hub — directly BELOW Latest Report */}
+              <GlassCard
+                style={{ marginTop: 16 }}
+                title={
+                  <Space>
+                    <ReadOutlined style={{ color: BRAND.violet }} />
+                    <span
+                      style={{ color: BRAND.violet, fontWeight: 700 }}
+                    >{`VAWC Hub (PH)`}</span>
+                  </Space>
+                }
+              >
+                <Tabs
+                  defaultActiveKey="news"
+                  items={[
+                    { key: "news", label: "News", children: <HubNews /> },
+                    { key: "hotlines", label: "Hotlines", children: <HubHotlines /> },
+                    { key: "laws", label: "Laws", children: <HubLaws /> },
+                  ]}
+                />
+              </GlassCard>
             </Col>
 
-            {/* My Reports - moved into donut position */}
-            <Col xs={24} md={12} lg={8}>
-              <Card
-                title={<span style={{ color: BRAND.pink }}>My Reports</span>}
-                bordered
-                style={{ borderRadius: 14, borderColor: BRAND.soft, height: "100%" }}
+            {/* RIGHT column — Report History & Tips & Resources */}
+            <Col xs={24} xl={8}>
+              {/* Report History */}
+              <GlassCard
+                title={<span style={{ color: BRAND.violet }}>Report History</span>}
               >
-                {reportsLoading ? (
+                {loading ? (
                   <Skeleton active />
-                ) : myReports.length ? (
+                ) : sortedReports.length ? (
                   <List
-                    dataSource={myReports.slice(0, 3)}
+                    dataSource={sortedReports.slice(0, 6)}
                     renderItem={(r) => (
-                      <List.Item>
-                        <Space direction="vertical" style={{ width: '100%' }}>
-                          <Space style={{ justifyContent: 'space-between', width: '100%' }}>
-                            <Text strong>{r.reportID || 'Report'}</Text>
-                            <Tag color={r.status === 'Open' || r.status === 'Under Investigation' ? 'orange' : 'green'}>
-                              {r.status}
-                            </Tag>
+                      <List.Item style={{ paddingLeft: 0, paddingRight: 0 }}>
+                        <Space
+                          style={{ width: "100%", justifyContent: "space-between" }}
+                          align="start"
+                        >
+                          <Space>
+                            <Avatar
+                              style={{ background: "#efeaff", color: BRAND.violet }}
+                              icon={<FileTextOutlined />}
+                            />
+                            <div>
+                              <Text strong>{r.reportID || "Report"}</Text>
+                              <div style={{ color: "#888", fontSize: 12 }}>
+                                {r.incidentType || "—"} •{" "}
+                                {r.dateReported
+                                  ? new Date(r.dateReported).toLocaleString()
+                                  : r.createdAt
+                                  ? new Date(r.createdAt).toLocaleString()
+                                  : ""}
+                              </div>
+                            </div>
                           </Space>
-                          <Text type="secondary">{r.incidentType} • {new Date(r.dateReported).toLocaleString()}</Text>
+                          <Tag
+                            color={
+                              ["Open", "Under Investigation"].includes(r.status)
+                                ? "orange"
+                                : "green"
+                            }
+                          >
+                            {r.status || "—"}
+                          </Tag>
                         </Space>
                       </List.Item>
                     )}
                   />
                 ) : (
-                  <Empty description="No reports found" />
+                  <Empty description="No history yet" />
                 )}
-              </Card>
-            </Col>
+              </GlassCard>
 
-            {/* Quick Actions */}
-            <Col xs={24} md={12}>
-              <Card
-                title={<span style={{ color: BRAND.pink }}>Quick Actions</span>}
-                bordered
-                style={{ borderRadius: 14, borderColor: BRAND.soft, height: "100%" }}
-                bodyStyle={{ display: "flex", gap: 12, flexWrap: "wrap" }}
+              {/* Tips & Resources */}
+              <GlassCard
+                style={{ marginTop: 16 }}
+                title={
+                  <span style={{ color: BRAND.violet }}>Tips & Resources</span>
+                }
               >
-                <Button
-                  type="primary"
-                  icon={<FileAddOutlined />}
-                  onClick={() => navigate("/victim/report")}
-                >
-                  File a New Report
-                </Button> 
-                <Button
-                  danger
-                  icon={<WarningOutlined />}
-                  onClick={() => navigate("/victim/emergency")}
-                >
-                  Emergency Button
-                </Button>
-                <Button onClick={() => navigate("/victim-chatbot")} icon={<MessageOutlined />}>
-                  Chat with AI
-                </Button>
-              </Card>
-            </Col>
-
-            {/* Recent Activity */}
-            <Col xs={24} md={12}>
-              <Card
-                title={<span style={{ color: BRAND.pink }}>Recent Activity</span>}
-                bordered
-                style={{ borderRadius: 14, borderColor: BRAND.soft, height: "100%" }}
-                bodyStyle={{ padding: 0 }}
-              >
-                {loading ? (
-                  <div style={{ padding: 16 }}>
-                    <Skeleton active />
-                  </div>
-                ) : metrics.recentActivities?.length ? (
-                  <List
-                    dataSource={metrics.recentActivities}
-                    renderItem={(item, idx) => {
-                      // item may be a string or an object; show a clear title and time
-                      const title =
-                        typeof item === 'string'
-                          ? item
-                          : item.title || (item.reportID ? `Report ${item.reportID}${item.incidentType ? ` — ${item.incidentType}` : ''}` : 'Activity');
-
-                      const timeVal =
-                        item?.time || item?.updatedAt || item?.dateReported || null;
-
-                      const timeText = timeVal ? new Date(timeVal).toLocaleString() : 'Just now';
-
-                      const note = typeof item === 'string' ? null : item.note || item.status ? `Status: ${item.status}` : null;
-
-                      return (
-                        <List.Item key={item?.reportID || idx} style={{ paddingInline: 16 }}>
-                          <Space direction="vertical" size={0} style={{ width: '100%' }}>
-                            <Text strong>{title}</Text>
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              {timeText}
-                            </Text>
-                            {/* note intentionally removed - we only show action and time */}
-                          </Space>
-                        </List.Item>
-                      );
-                    }}
-                  />
-                ) : (
-                  <Empty description="No recent activity" style={{ margin: "24px 0" }} />
-                )}
-              </Card>
-            </Col>
-
-            {/* Open Case Ratio removed */}
-
-            {/* Safety Tips & Resources — ADDED */}
-            <Col xs={24}>
-              <Card
-                title={<span style={{ color: BRAND.pink }}>Safety Tips & Resources</span>}
-                bordered
-                style={{ borderRadius: 14, borderColor: BRAND.soft }}
-                bodyStyle={{ paddingTop: 0 }}
-              >
-                {resourcesLoading ? (
-                  <Skeleton active />
+                {!tips.length ? (
+                  <Empty description="No tips yet" />
                 ) : (
                   <List
                     itemLayout="vertical"
-                    dataSource={resources}
-                    renderItem={(r) => (
-                      <List.Item key={r.key}>
-                        <Space direction="vertical" size={2}>
-                          <Text strong>{r.title}</Text>
-                          {r.desc && <Text type="secondary">{r.desc}</Text>}
-                          {r.action && (
+                    dataSource={tips}
+                    renderItem={(t) => (
+                      <List.Item style={{ paddingLeft: 0, paddingRight: 0 }}>
+                        <Space direction="vertical" size={2} style={{ width: "100%" }}>
+                          <Text strong>{t.title}</Text>
+                          <Text type="secondary">{t.desc}</Text>
+                          <div>
                             <Button
                               size="small"
-                              icon={r.action.icon || <InfoCircleOutlined />}
-                              onClick={r.action.onClick}
-                              style={{ marginTop: 6, borderColor: BRAND.pink, color: BRAND.pink }}
+                              icon={t.btn.icon}
+                              onClick={t.btn.onClick}
+                              style={{
+                                marginTop: 6,
+                                borderRadius: 999,
+                                ...(t.btn.primary
+                                  ? {
+                                      background: BRAND.violet,
+                                      borderColor: BRAND.violet,
+                                      color: "#fff",
+                                    }
+                                  : {
+                                      borderColor: BRAND.violet,
+                                      color: BRAND.violet,
+                                    }),
+                              }}
                             >
-                              {r.action.label}
+                              {t.btn.text}
                             </Button>
-                          )}
+                          </div>
                         </Space>
                       </List.Item>
                     )}
                   />
                 )}
-              </Card>
+              </GlassCard>
             </Col>
           </Row>
         </div>
       </Content>
+
+      <style>{`
+        .ant-card { transition: transform .18s ease, box-shadow .18s ease; }
+        .ant-card:hover { transform: translateY(-3px); box-shadow: 0 28px 56px rgba(122,90,248,.10); }
+      `}</style>
     </Layout>
   );
 }

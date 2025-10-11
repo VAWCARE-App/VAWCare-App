@@ -120,6 +120,76 @@ async function trainModelFromCases(minSamples = 50) {
  * Suggest action from a case payload. If model is present, use it; otherwise heuristics.
  */
 async function suggestForCase(payload, modelObj = null) {
+  // If a manual stored riskLevel is supplied (Low/Medium/High), respect it and
+  // produce a suggestion that aligns with that manual level. This is used when
+  // a user (case worker) edits the risk level and wants the DSS suggestion to
+  // reflect the manual change.
+  function normalizeStoredRisk(r) {
+    if (!r) return null;
+    const s = String(r).toLowerCase();
+    if (s === 'low') return 'Low';
+    if (s === 'medium') return 'Medium';
+    if (s === 'high') return 'High';
+    return null;
+  }
+
+  function synthesizeProbabilities(incidentType, storedRisk) {
+    // Map incidentType to index: Economic, Psychological, Physical, Sexual
+    const canonical = ['Economic', 'Psychological', 'Physical', 'Sexual'];
+    let idx = canonical.indexOf((incidentType || '').toString());
+    if (idx === -1) idx = 0;
+
+    // Base confidence by storedRisk
+    let strength = 0.5;
+    if (storedRisk === 'High') strength = 0.9;
+    else if (storedRisk === 'Medium') strength = 0.6;
+    else if (storedRisk === 'Low') strength = 0.25;
+
+    const base = (1 - strength) / 3;
+    const probs = canonical.map((c, i) => (i === idx ? strength : base));
+    return probs;
+  }
+
+  function getSuggestionForManualRisk(storedRisk, incidentType) {
+    const sr = normalizeStoredRisk(storedRisk);
+    const it = (incidentType || '').toLowerCase();
+
+    // Provide tailored messaging per incident type and stored risk
+    if (it.includes('sexual')) {
+      if (sr === 'High') return 'Manual override: High sexual risk — immediate escalation, ensure victim safety, arrange forensic/medical exam, notify legal and child/sexual assault response teams as appropriate.';
+      if (sr === 'Medium') return 'Manual override: Medium sexual risk — arrange prompt medical evaluation, provide counselling and consider legal referral; monitor closely.';
+      return 'Manual override: Low sexual risk — ensure victim has access to support services and follow-up; escalate if any concerning signs emerge.';
+    }
+
+    if (it.includes('physical')) {
+      if (sr === 'High') return 'Manual override: High physical risk — urgent medical attention and safety planning required; consider emergency accommodations and police referral.';
+      if (sr === 'Medium') return 'Manual override: Medium physical risk — arrange medical check, document injuries, create a safety plan and schedule follow-up.';
+      return 'Manual override: Low physical risk — provide referrals for medical and psychosocial support and monitor the situation.';
+    }
+
+    if (it.includes('psych')) {
+      if (sr === 'High') return 'Manual override: High psychological risk — immediate psychosocial intervention, crisis counselling and frequent follow-up; prioritize mental health referral.';
+      if (sr === 'Medium') return 'Manual override: Medium psychological risk — refer to counselling services and schedule regular check-ins.';
+      return 'Manual override: Low psychological risk — provide information about counselling and self-help resources; monitor over time.';
+    }
+
+    // default to economic/other
+    if (sr === 'High') return 'Manual override: High economic/other risk — prioritize urgent social/financial support, ensure basic needs met and assign social worker.';
+    if (sr === 'Medium') return 'Manual override: Medium economic/other risk — connect to social services and follow up on benefits or livelihood assistance.';
+    return 'Manual override: Low economic/other risk — provide information about available support and schedule routine follow-up.';
+  }
+
+  // If client provided a manual riskLevel explicitly, use it and return a manual override response
+  const manualStored = normalizeStoredRisk(payload && payload.riskLevel);
+  if (manualStored) {
+    const predictedRisk = payload.incidentType || null;
+    const storedRisk = manualStored;
+    const suggestion = getSuggestionForManualRisk(storedRisk, payload.incidentType || 'Other');
+    const probabilities = synthesizeProbabilities(payload.incidentType || 'Other', storedRisk);
+    const immediateProb = (probabilities[2] || 0) + (probabilities[3] || 0);
+    const requiresImmediate = immediateProb >= 0.5;
+    return { predictedRisk, storedRisk, probabilities, suggestion, immediateAssistanceProbability: immediateProb, requiresImmediateAssistance: requiresImmediate, manualOverride: true };
+  }
   // Evaluate rule-based overrides first (if any rules match, they take precedence)
   try {
     // Ensure engine initialized

@@ -370,11 +370,11 @@ export default function AdminLogin() {
                         <Form layout="vertical" onFinish={onFinish} initialValues={{ identifier: "", password: "" }}>
                             <Form.Item name="userType" label="Account Type" initialValue="official">
                                 <Select value={userType} onChange={setUserType} size={screens.md ? "large" : "middle</Option>"} style={{ width: "100%" }}>
-                                    <Option value="admin">
-                                        <SafetyOutlined style={{ marginRight: 8, color: "#1890ff" }} /> Administrator
-                                    </Option>
                                     <Option value="official">
                                         <TeamOutlined style={{ marginRight: 8, color: "#52c41a" }} /> Barangay Official
+                                    </Option>
+                                    <Option value="admin">
+                                        <SafetyOutlined style={{ marginRight: 8, color: "#1890ff" }} /> Administrator
                                     </Option>
                                 </Select>
                             </Form.Item>

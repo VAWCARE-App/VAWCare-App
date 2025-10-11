@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { message } from "antd";
 import { api } from "../../lib/api";
 import { BellFilled } from "@ant-design/icons";
@@ -8,6 +8,8 @@ export default function EmergencyButton() {
   const [pulsing, setPulsing] = useState(false);
   const [activeAlertId, setActiveAlertId] = useState(null);
   const [activeAlertStart, setActiveAlertStart] = useState(null);
+  const submittingRef = useRef(false); // synchronous guard to prevent double-submit
+  const autoResolveTimerRef = useRef(null);
 
   // Format milliseconds to HH:MM:SS
   const formatDuration = (ms) => {
@@ -21,13 +23,21 @@ export default function EmergencyButton() {
   };
 
   const handleEmergencyClick = async () => {
+    // Prevent re-entry (covers very fast double/tap events)
+    if (submittingRef.current) return;
     // If already pulsing, this click should resolve the active alert
     if (pulsing && activeAlertId) {
+      // mark submitting so resolve can't be re-triggered
+      submittingRef.current = true;
       // Stop pulsing immediately in UI
       setPulsing(false);
+      // clear auto-resolve timer if any
+      if (autoResolveTimerRef.current) { clearTimeout(autoResolveTimerRef.current); autoResolveTimerRef.current = null; }
       setLoading(true);
       try {
-        const { data } = await api.put(`/api/alerts/${activeAlertId}/resolve`);
+        // compute client-measured duration and send it to server
+        const durationMs = activeAlertStart ? (Date.now() - new Date(activeAlertStart).getTime()) : null;
+        const { data } = await api.put(`/api/alerts/${activeAlertId}/resolve`, { durationMs });
         message.success('Alert resolved');
         // clear stored active alert and start time
         setActiveAlertId(null);
@@ -42,6 +52,7 @@ export default function EmergencyButton() {
         message.error(err?.response?.data?.message || 'Failed to resolve alert');
       } finally {
         setLoading(false);
+        submittingRef.current = false;
       }
       return;
     }
@@ -49,13 +60,17 @@ export default function EmergencyButton() {
     // Only send emergency report when toggling ON
     if (!pulsing) {
 
+  // Immediately show pulsing feedback so user sees action and is unlikely to double-press
+  setPulsing(true);
+  submittingRef.current = true;
+
       //sends location to backend
       if (!navigator.geolocation) {
         message.error("Geolocation is not supported by your browser.");
         return;
       }
 
-      setLoading(true);
+  setLoading(true);
 
       // Wrap geolocation in a Promise so we can await coordinates
       const getPosition = () =>
@@ -68,7 +83,7 @@ export default function EmergencyButton() {
         });
 
       try {
-        const pos = await getPosition();
+  const pos = await getPosition();
         const { latitude, longitude } = pos.coords;
         const locationString = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
         console.log("Emergency alert sent:", { latitude, longitude });
@@ -91,14 +106,44 @@ export default function EmergencyButton() {
   if (alertId) setActiveAlertId(alertId);
   if (createdAt) setActiveAlertStart(new Date(createdAt));
   // Start pulsing only after backend confirms the alert was saved
-  setPulsing(true);
+  // start auto-resolve timer to stop the alert after 5 minutes
+  if (autoResolveTimerRef.current) { clearTimeout(autoResolveTimerRef.current); }
+  autoResolveTimerRef.current = setTimeout(async () => {
+    try {
+      if (!activeAlertId && alertId) {
+        // resolve the alert we just created
+        const durationMs = 300000; // exact 5 minutes mark
+        await api.put(`/api/alerts/${alertId}/resolve`, { durationMs });
+        // update UI
+        setPulsing(false);
+        setActiveAlertId(null);
+        setActiveAlertStart(null);
+        message.info('Alert auto-resolved after 5 minutes');
+      } else if (activeAlertId) {
+        const durationMs = 300000;
+        await api.put(`/api/alerts/${activeAlertId}/resolve`, { durationMs });
+        setPulsing(false);
+        setActiveAlertId(null);
+        setActiveAlertStart(null);
+        message.info('Alert auto-resolved after 5 minutes');
+      }
+    } catch (e) {
+      console.warn('Auto-resolve failed', e && e.message);
+    } finally {
+      submittingRef.current = false;
+      if (autoResolveTimerRef.current) { clearTimeout(autoResolveTimerRef.current); autoResolveTimerRef.current = null; }
+    }
+  }, 300000);
   message.success("🚨 Emergency alert sent!");
       } catch (err) {
         console.error(err);
         const errMsg = err?.response?.data?.message || err?.message || "Emergency report failed. Try again.";
+        // revert optimistic pulsing on error
+        setPulsing(false);
         message.error(errMsg);
       } finally {
         setLoading(false);
+        submittingRef.current = false;
       }
     }
   };
@@ -129,6 +174,7 @@ export default function EmergencyButton() {
           justifyContent: "center",
           alignItems: "center",
           cursor: "pointer",
+          pointerEvents: submittingRef.current ? 'none' : 'auto',
           boxShadow:
             "inset -6px -6px 12px rgba(255,255,255,0.25), inset 6px 6px 12px rgba(0,0,0,0.4), 0 12px 28px rgba(0,0,0,0.4)",
           transition: "transform 0.1s ease",

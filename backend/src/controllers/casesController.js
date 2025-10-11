@@ -56,6 +56,8 @@ exports.createCase = async (req, res, next) => {
           assignedOfficer: payload.assignedOfficer,
           status: payload.status,
           perpetrator: payload.perpetrator,
+          victimId: payload.victimID || payload.victimId || null,
+          victimType: payload.victimType || null
         };
         const dssRes = await dssService.suggestForCase(dssInput);
         if (dssRes && dssRes.predictedRisk) {
@@ -70,6 +72,17 @@ exports.createCase = async (req, res, next) => {
             return 'Low';
           };
           payload.riskLevel = mapToStored(dssRes.predictedRisk);
+          // Persist DSS suggestion details for auditing
+          try {
+            payload.dssPredictedRisk = dssRes.predictedRisk;
+            payload.dssStoredRisk = payload.riskLevel;
+            payload.dssProbabilities = Array.isArray(dssRes.probabilities) ? dssRes.probabilities : [];
+            payload.dssImmediateAssistanceProbability = dssRes.immediateAssistanceProbability || 0;
+            payload.dssSuggestion = dssRes.suggestion || '';
+            payload.dssRuleMatched = !!dssRes.ruleMatched;
+            payload.dssChosenRule = dssRes.chosenRuleEvent || dssRes.ruleEvent || null;
+            payload.dssManualOverride = !!dssRes.manualOverride;
+          } catch (err) { /* non-fatal */ }
         }
       }
     } catch (e) {
@@ -121,10 +134,44 @@ exports.updateCase = async (req, res, next) => {
     const query = mongoose.Types.ObjectId.isValid(id)
       ? { $or: [{ caseID: id }, { _id: id }], deleted: { $ne: true } }
       : { caseID: id, deleted: { $ne: true } };
+    // If a manual riskLevel is provided in updates, compute a DSS suggestion reflecting that override
+    if (updates && updates.riskLevel) {
+      try {
+        // Fetch existing case to enrich input where updates don't provide fields
+        const existing = await Cases.findOne(query).lean();
+        if (existing) {
+          const dssInput = {
+            incidentType: updates.incidentType || existing.incidentType,
+            description: updates.description || existing.description,
+            assignedOfficer: updates.assignedOfficer || existing.assignedOfficer,
+            status: updates.status || existing.status,
+            perpetrator: updates.perpetrator || existing.perpetrator,
+            victimId: updates.victimID || updates.victimId || existing.victimID || existing.victim || null,
+            victimType: updates.victimType || existing.victimType || null,
+            riskLevel: updates.riskLevel
+          };
+          const dssRes = await dssService.suggestForCase(dssInput, null);
+          if (dssRes) {
+            // merge DSS results into updates so they are persisted
+            updates.dssPredictedRisk = dssRes.predictedRisk;
+            updates.dssStoredRisk = updates.riskLevel;
+            updates.dssProbabilities = Array.isArray(dssRes.probabilities) ? dssRes.probabilities : [];
+            updates.dssImmediateAssistanceProbability = dssRes.immediateAssistanceProbability || 0;
+            updates.dssSuggestion = dssRes.suggestion || '';
+            updates.dssRuleMatched = !!dssRes.ruleMatched;
+            updates.dssChosenRule = dssRes.chosenRuleEvent || dssRes.ruleEvent || null;
+            updates.dssManualOverride = !!dssRes.manualOverride || true;
+          }
+        }
+      } catch (e) {
+        console.warn('DSS enrich during update failed', e && e.message);
+      }
+    }
+
     const item = await Cases.findOneAndUpdate(query, updates, { new: true }).lean();
     if (!item) return res.status(404).json({ success: false, message: 'Case not found or deleted' });
-      try { await recordLog({ req, actorType: req.user?.role || 'official', actorId: req.user?.officialID || req.user?.adminID, action: 'edit_case', details: `Edited case ${item.caseID || item._id}: ${JSON.stringify(updates)}` }); } catch(e) { console.warn('Failed to record case edit log', e && e.message); }
-      return res.json({ success: true, data: item });
+    try { await recordLog({ req, actorType: req.user?.role || 'official', actorId: req.user?.officialID || req.user?.adminID, action: 'edit_case', details: `Edited case ${item.caseID || item._id}: ${JSON.stringify(updates)}` }); } catch(e) { console.warn('Failed to record case edit log', e && e.message); }
+    return res.json({ success: true, data: item });
   } catch (err) {
     next(err);
   }

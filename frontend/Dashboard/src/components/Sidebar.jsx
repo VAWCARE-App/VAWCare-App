@@ -45,7 +45,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         await Promise.race([
           api.post('/api/auth/logout'),
           new Promise((resolve) => setTimeout(resolve, 1500)),
-        ]).catch(() => {});
+        ]).catch(() => { });
       }
     } catch (e) {
       // ignore errors — we still want to clear client state
@@ -77,12 +77,26 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   const adminMenu = [
     { key: "/landing", icon: <HomeOutlined />, label: "Home" },
     { key: "/admin", icon: <DashboardOutlined />, label: "Dashboard" },
-    { key: "/admin/create-official", icon: <UserSwitchOutlined />, label: "Create Official" },
-    { key: "/admin/users", icon: <TeamOutlined />, label: "User Management" },
-    { key: "/admin/reports", icon: <FileTextOutlined />, label: "Reports Management" },
-    { key: "/admin/cases", icon: <TeamOutlined />, label: "Case Management" },
-    { key: "/admin/bpo-management", icon: <FileTextOutlined />, label: "BPO Management" },
-    { key: "/admin/alerts", icon: <AlertOutlined />, label: "Alert Management" },
+    {
+      key: "management",
+      icon: <TeamOutlined />,
+      label: "Users",
+      children: [
+        { key: "/admin/create-official", label: "Add Official" },
+        { key: "/admin/users", label: "View Users" },
+      ],
+    },
+    {
+      key: "reports",
+      icon: <FileTextOutlined />,
+      label: "Case & Reports",
+      children: [
+        { key: "/admin/reports", label: "View Reports" },
+        { key: "/admin/alerts", label: "View Alerts" },
+        { key: "/admin/cases", label: "View Cases" },
+        { key: "/admin/bpo-management", label: "View BPO" },
+      ],
+    },
     { key: "/admin/logs", icon: <FileTextOutlined />, label: "System Logs" },
     { key: "/admin/settings", icon: <SettingOutlined />, label: "Settings" },
   ];
@@ -98,15 +112,16 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     { key: "/landing", icon: <HomeOutlined />, label: "Landing Page" }
   ];
 
-  const victimMenu = [
-    { key: "/victim/victim-test", icon: <DashboardOutlined />, label: "Dashboard" },
-    { key: "/victim/emergency", icon: <ExclamationCircleOutlined />, label: "Emergency Button" },
-    { key: "/victim/report", icon: <FileAddOutlined />, label: "Report-Case" },
-    { key: "/victim/victim-cases", icon: <UserSwitchOutlined />, label: "My Cases" },
-    { key: "/victim/victim-chatbot", icon: <MessageOutlined />, label: "VAWCare Chatbot" },
-    { key: "/victim/victim-barangay", icon: <InfoCircleOutlined />, label: "Barangay Details" },
-    { key: "/victim/victim-settings", icon: <SettingOutlined />, label: "Settings" },
-  ];
+  function getDefaultOpenKeys(pathname) {
+    if (pathname.startsWith("/admin/reports") || pathname.startsWith("/admin/bpo-management") || pathname.startsWith("/admin/alerts")) {
+      return ["reports"];
+    }
+    if (pathname.startsWith("/admin/create-official") || pathname.startsWith("/admin/users") || pathname.startsWith("/admin/cases")) {
+      return ["management"];
+    }
+    return [];
+  }
+
 
   let menuItems = adminMenu;
   if (userType === "official") menuItems = officialMenu;
@@ -186,13 +201,13 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         <Menu
           mode="inline"
           selectedKeys={[location.pathname]}
+          defaultOpenKeys={[getDefaultOpenKeys(location.pathname)]}
           onClick={({ key }) => navigate(key)}
           items={menuItems}
           style={{
             border: "none",
             background: "transparent",
           }}
-          className="menu-modern"
         />
       </div>
 

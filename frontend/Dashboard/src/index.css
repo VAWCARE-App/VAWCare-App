@@ -57,3 +57,8 @@ button:focus-visible {
   background-color: #e91e63 !important; /* your BRAND.pink */
   border-color: #e91e63 !important;
 }
+
+.sider-modern .ant-menu-submenu-selected .ant-menu-submenu-title,
+.sider-modern .ant-menu-submenu-active .ant-menu-submenu-title .anticon {
+  color: #e91e63 !important;
+}

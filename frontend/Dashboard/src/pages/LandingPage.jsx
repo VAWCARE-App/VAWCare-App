@@ -264,7 +264,7 @@ export default function LandingPage() {
         <div className={`shell ${dark ? "theme-dark" : ""}`}>
           {/* Topbar + Theme Switch */}
           <Navbar dark={dark} onToggleTheme={() => setDark((v) => !v)} />
-          <div className="theme-toggle">
+          {/* <div className="theme-toggle">
             <Space>
               <BulbOutlined />
               <Switch
@@ -274,7 +274,7 @@ export default function LandingPage() {
                 onChange={(v) => setDark(Boolean(v))}
               />
             </Space>
-          </div>
+          </div> */}
 
           <Content id="home">
             {/* HERO */}

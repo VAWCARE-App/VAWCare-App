@@ -5,8 +5,6 @@ const { protect } = require('../middleware/authMiddleware');
 
 // Public routes (no authentication required)
 router.post('/register', victimController.registerVictim);
-// Verify OTP for a pending registration and complete account creation
-router.post('/register/verify', victimController.verifyRegistration);
 router.post('/login', victimController.loginVictim);
 
 // Anonymous reporting routes

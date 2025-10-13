@@ -10,6 +10,7 @@ export default function ForgotPasswordModal({ open, onClose }) {
     const [currentStep, setCurrentStep] = useState(0);
     const [sendingOTP, setSendingOTP] = useState(false);
     const [email, setEmail] = useState("");
+    const [emailError, setEmailError] = useState("");
     const [otp, setOtp] = useState(Array(6).fill(""));
     const [form] = Form.useForm();
 
@@ -19,12 +20,21 @@ export default function ForgotPasswordModal({ open, onClose }) {
     // --- STEP 1: Send OTP ---
     const handleSendOTP = async () => {
         setSendingOTP(true);
+        setEmailError("");
         try {
-            await axios.post(`${apiUrl}/api/auth/send-otp`, { email });
-            message.success("OTP sent to your email.");
+            const res = await axios.post(`${apiUrl}/api/auth/send-otp`, { email });
+            message.success(res?.data?.message || "OTP sent to your email.");
             setCurrentStep(1);
-        } catch {
-            message.error("Failed to send OTP. Please check your email.");
+        } catch (error) {
+            // Prefer server-provided message when available
+            const serverMsg = error?.response?.data?.message;
+            const fallback = "Failed to send OTP. Please check your email.";
+            const errMsg = serverMsg || (error && error.message) || fallback;
+            // If server indicates email not found
+            if (serverMsg && /not found|not exist|no user|no account|not registered/i.test(serverMsg)) {
+                setEmailError("This email is not registered. Please check or sign up.");
+            }
+            message.error(errMsg);
         } finally {
             setSendingOTP(false);
         }
@@ -51,24 +61,28 @@ export default function ForgotPasswordModal({ open, onClose }) {
     const handleVerifyOTP = async () => {
         const otpString = otp.join("");
         try {
-            await axios.post(`${apiUrl}/api/auth/verify-otp`, { email, otp: otpString });
-            message.success("OTP verified successfully!");
+            const res = await axios.post(`${apiUrl}/api/auth/verify-otp`, { email, otp: otpString });
+            message.success(res?.data?.message || "OTP verified successfully!");
             setCurrentStep(2);
-        } catch {
-            message.error("Invalid OTP. Please try again.");
+        } catch (error) {
+            const serverMsg = error?.response?.data?.message;
+            const fallback = "Invalid OTP. Please try again.";
+            message.error(serverMsg || (error && error.message) || fallback);
         }
     };
 
     // --- STEP 3: Reset Password ---
     const handleResetPassword = async ({ password }) => {
         try {
-            await axios.post(`${apiUrl}/api/auth/reset-password`, { email, password });
-            message.success("Password reset successfully!");
+            const res = await axios.post(`${apiUrl}/api/auth/reset-password`, { email, password });
+            message.success(res?.data?.message || "Password reset successfully!");
             form.resetFields();
             setCurrentStep(0);
             onClose();
-        } catch {
-            message.error("Failed to reset password.");
+        } catch (error) {
+            const serverMsg = error?.response?.data?.message;
+            const fallback = "Failed to reset password.";
+            message.error(serverMsg || (error && error.message) || fallback);
         }
     };
 
@@ -111,6 +125,11 @@ export default function ForgotPasswordModal({ open, onClose }) {
                                 onChange={(e) => setEmail(e.target.value)}
                                 style={{ borderRadius: 8 }}
                             />
+                            {emailError && (
+                                <div style={{ color: '#ff4d4f', marginTop: 6, fontSize: 12 }}>
+                                    {emailError}
+                                </div>
+                            )}
                         </Form.Item>
 
                         <Button

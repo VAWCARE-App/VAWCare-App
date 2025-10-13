@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Spin, Typography, Button, Tag, message, Collapse } from 'antd';
+import { Card, Spin, Typography, Button, Tag, message, Collapse, Space, Divider, Alert } from 'antd';
+import { WarningOutlined, CheckCircleOutlined, InfoCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { api } from '../lib/api';
 
 export default function DssSuggestion({ caseData }) {
@@ -30,6 +31,7 @@ export default function DssSuggestion({ caseData }) {
           riskLevel: caseData.dssManualOverride ? (caseData.riskLevel || null) : null
         };
         const res = await api.post('/api/dss/suggest', payload);
+        console.log('DSS Response:', res.data.data);
         setResult(res.data.data);
       } catch (err) {
         console.warn('DSS suggestion failed', err?.response?.data || err.message);
@@ -45,58 +47,199 @@ export default function DssSuggestion({ caseData }) {
   return (
     <Card title="DSS Suggestion" style={{ marginTop: 16 }}>
       {loading ? (
-        <Spin />
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
+          <Spin size="large" />
+        </div>
       ) : result ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {result.ruleMatched && result.ruleEvent ? (
-            <div>
-              <Tag color="purple">Rule: {result.ruleEvent.type}</Tag>
-            </div>
-          ) : null}
-          {result.keywordMatched && result.matchedKeyword ? (
-            <div>
-              <Tag color="magenta">Keyword: {result.matchedKeyword}</Tag>
-            </div>
-          ) : null}
-          <div>
-            <Typography.Text strong>Predicted Risk: </Typography.Text>
-            <Tag color={result.predictedRisk === 'Sexual' ? 'red' : result.predictedRisk === 'Physical' ? 'orange' : result.predictedRisk === 'Psychological' ? 'geekblue' : 'green'}>
-              {result.predictedRisk}
-            </Tag>
-          </div>
-          <div>
-            <Typography.Text strong>Requires immediate assistance: </Typography.Text>
-            <Tag color={result.requiresImmediateAssistance ? 'red' : 'green'}>
-              {result.requiresImmediateAssistance ? 'Yes' : 'No'}
-            </Tag>
-            {/* short guidance removed per request */}
-          </div>
-          <div>
-            <Typography.Text strong>Suggestion: </Typography.Text>
-            <Typography.Paragraph>{result.suggestion}</Typography.Paragraph>
-          </div>
-          {/* Per-class probabilities hidden by request */}
-          <div style={{ marginTop: 6 }}>
-            <Button onClick={async () => {
-              setLoading(true);
-              try {
-                const res = await api.post('/api/dss/train');
-                message.success(res.data.message || 'Training triggered');
-              } catch (e) {
-                message.error('Training failed');
-              } finally { setLoading(false); }
-            }} type="default">Retrain Model</Button>
-          </div>
-          {/* Debug panel visible for admin/official only */}
-          {result.ruleMatched && result.ruleEvent && (userType === 'admin' || userType === 'official') ? (
-            <div style={{ marginTop: 8 }}>
-              <Collapse>
-                <Collapse.Panel header={`Rule details: ${result.ruleEvent.type}`} key="1">
-                  <pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(result.ruleEvent.params, null, 2)}</pre>
-                </Collapse.Panel>
-              </Collapse>
-            </div>
-          ) : null}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Immediate Action Alert */}
+          {result.requiresImmediateAssistance && (
+            <Alert
+              message="URGENT: Immediate Action Required"
+              description={
+                <Typography.Text strong style={{ color: '#cf1322' }}>
+                  This is a high-risk case requiring immediate intervention and response. 
+                  Prioritize victim safety and immediate protective measures.
+                </Typography.Text>
+              }
+              type="error"
+              showIcon
+              icon={<WarningOutlined style={{ fontSize: '24px' }} />}
+              banner
+              style={{
+                backgroundColor: '#fff1f0',
+                borderColor: '#ff4d4f',
+                padding: '12px'
+              }}
+            />
+          )}
+
+          {/* Risk Assessment Section */}
+          <Card type="inner" title={
+            <Space>
+              <WarningOutlined style={{ color: '#cf1322' }} />
+              Risk Assessment
+            </Space>
+          }>
+            <Space direction="vertical" style={{ width: '100%' }} size={16}>
+              {/* Risk Level Indicators */}
+              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                <div>
+                  <Typography.Text strong>Case Type: </Typography.Text>
+                  <Tag color={
+                    result.predictedRisk === 'Sexual' ? 'magenta' :
+                    result.predictedRisk === 'Physical' ? 'purple' :
+                    result.predictedRisk === 'Psychological' ? 'blue' :
+                    'orange'
+                  } style={{ 
+                    padding: '4px 12px', 
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}>
+                    {result.predictedRisk}
+                  </Tag>
+                </div>
+                <div>
+                  <Typography.Text strong>Risk Level: </Typography.Text>
+                  <div style={{ display: 'inline-block', marginLeft: 8 }}>
+                    {result.requiresImmediateAssistance || result.riskLevel === 'High' ? (
+                      <Tag
+                        style={{ 
+                          backgroundColor: '#ff4d4f',
+                          color: 'white',
+                          padding: '4px 12px', 
+                          fontSize: '14px',
+                          fontWeight: 'bold',
+                          border: 'none'
+                        }}>
+                        HIGH RISK
+                      </Tag>
+                    ) : result.riskLevel === 'Medium' ? (
+                      <Tag
+                        style={{ 
+                          backgroundColor: '#faad14',
+                          color: 'black',
+                          padding: '4px 12px', 
+                          fontSize: '14px',
+                          fontWeight: 'bold',
+                          border: 'none'
+                        }}>
+                        MEDIUM RISK
+                      </Tag>
+                    ) : (
+                      <Tag
+                        style={{ 
+                          backgroundColor: '#52c41a',
+                          color: 'white',
+                          padding: '4px 12px', 
+                          fontSize: '14px',
+                          fontWeight: 'bold',
+                          border: 'none'
+                        }}>
+                        LOW RISK
+                      </Tag>
+                    )}
+                    {(result.requiresImmediateAssistance || result.riskLevel === 'High') && (
+                      <Tag 
+                        style={{ 
+                          marginLeft: 8,
+                          backgroundColor: '#ff4d4f',
+                          color: 'white',
+                          border: 'none'
+                        }}>
+                        <WarningOutlined /> IMMEDIATE ACTION
+                      </Tag>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Detection Method */}
+              <div>
+                <Typography.Text type="secondary">Detection Method:</Typography.Text>
+                <div style={{ marginTop: 4 }}>
+                  {result.ruleMatched && result.ruleEvent && (
+                    <Tag color="purple" icon={<CheckCircleOutlined />}>
+                      Rule Match: {result.ruleEvent.type}
+                    </Tag>
+                  )}
+                  {result.keywordMatched && result.matchedKeyword && (
+                    <Tag color="magenta" icon={<InfoCircleOutlined />}>
+                      Keyword: {result.matchedKeyword}
+                    </Tag>
+                  )}
+                </div>
+              </div>
+            </Space>
+          </Card>
+
+          {/* Action Recommendation Section */}
+          <Card type="inner" title={
+            <Space>
+              <InfoCircleOutlined style={{ color: '#1890ff' }} />
+              Recommended Actions
+            </Space>
+          }>
+            <Typography.Paragraph style={{ 
+              whiteSpace: 'pre-line', 
+              fontSize: '14px',
+              backgroundColor: '#f5f5f5',
+              padding: '12px',
+              borderRadius: '4px',
+              marginBottom: 0
+            }}>
+              {result.suggestion}
+            </Typography.Paragraph>
+          </Card>
+
+          {/* Administrative Actions */}
+          {userType === 'admin' && (
+            <>
+              <Divider />
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <Typography.Text type="secondary">
+                  <ClockCircleOutlined /> Administrative Actions
+                </Typography.Text>
+                <Space>
+                  <Button 
+                    onClick={async () => {
+                      setLoading(true);
+                      try {
+                        const res = await api.post('/api/dss/train');
+                        message.success(res.data.message || 'Training triggered');
+                      } catch (e) {
+                        message.error('Training failed');
+                      } finally { setLoading(false); }
+                    }} 
+                    type="default"
+                    icon={<InfoCircleOutlined />}
+                  >
+                    Retrain Model
+                  </Button>
+                </Space>
+              </Space>
+            </>
+          )}
+
+          {/* Debug Information */}
+          {result.ruleMatched && result.ruleEvent && (userType === 'admin' || userType === 'official') && (
+            <Collapse ghost>
+              <Collapse.Panel 
+                header={<Typography.Text type="secondary">Technical Details</Typography.Text>} 
+                key="1"
+              >
+                <pre style={{ 
+                  whiteSpace: 'pre-wrap',
+                  backgroundColor: '#f6f8fa',
+                  padding: '12px',
+                  borderRadius: '4px',
+                  fontSize: '12px'
+                }}>
+                  {JSON.stringify(result.ruleEvent.params, null, 2)}
+                </pre>
+              </Collapse.Panel>
+            </Collapse>
+          )}
         </div>
       ) : (
         <Typography.Text type="secondary">No suggestion available</Typography.Text>

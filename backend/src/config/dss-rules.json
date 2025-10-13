@@ -9,10 +9,10 @@
     "event": {
       "type": "child-sexual-high",
       "params": {
-        "predictedRisk": "Sexual",
-        "riskLevel": "High",
-        "suggestion": "Child victim — high priority: ensure immediate safety, arrange medical/forensic exam, notify child protection and legal support.",
-        "requiresImmediate": true
+    "predictedRisk": "Sexual",
+  "riskLevel": "High",
+  "suggestion": "Child victim — high priority: ensure immediate safety, arrange medical/forensic exam, notify child protection and legal support.",
+  "requiresImmediate": true
       }
     }
   },
@@ -26,10 +26,10 @@
     "event": {
       "type": "child-physical-high",
       "params": {
-        "predictedRisk": "Physical",
-        "riskLevel": "High",
-        "suggestion": "Child victim with physical harm — urgent medical attention and child protection referral.",
-        "requiresImmediate": true
+    "predictedRisk": "Physical",
+  "riskLevel": "High",
+  "suggestion": "Child victim with physical harm — urgent medical attention and child protection referral.",
+  "requiresImmediate": true
       }
     }
   },
@@ -43,10 +43,10 @@
     "event": {
       "type": "child-psychological-high",
       "params": {
-        "predictedRisk": "Psychological",
-        "riskLevel": "High",
-        "suggestion": "Child victim showing psychological harm — prioritize safe environment and rapid child-focused psychosocial support.",
-        "requiresImmediate": true
+    "predictedRisk": "Psychological",
+  "riskLevel": "High",
+  "suggestion": "Child victim showing psychological harm — prioritize safe environment and rapid child-focused psychosocial support.",
+  "requiresImmediate": true
       }
     }
   },
@@ -60,10 +60,10 @@
     "event": {
       "type": "child-economic-high",
       "params": {
-        "predictedRisk": "Economic",
-        "riskLevel": "High",
-        "suggestion": "Child victim affected by economic abuse — prioritize basic needs and child protection measures.",
-        "requiresImmediate": true
+    "predictedRisk": "Economic",
+  "riskLevel": "High",
+  "suggestion": "Child victim affected by economic abuse — prioritize basic needs and child protection measures.",
+  "requiresImmediate": true
       }
     }
   },
@@ -77,10 +77,10 @@
     "event": {
       "type": "woman-sexual-high",
       "params": {
-        "predictedRisk": "Sexual",
-        "riskLevel": "High",
-        "suggestion": "Sexual incident involving an adult woman — immediate safety, medical/forensic exam and legal support recommended.",
-        "requiresImmediate": true
+  "predictedRisk": "Sexual",
+  "riskLevel": "High",
+  "suggestion": "Sexual incident involving an adult woman — immediate safety, medical/forensic exam and legal support recommended.",
+  "requiresImmediate": true
       }
     }
   },
@@ -94,10 +94,10 @@
     "event": {
       "type": "woman-physical-high",
       "params": {
-        "predictedRisk": "Physical",
-        "riskLevel": "High",
-        "suggestion": "Physical violence reported — prioritize medical attention and safety planning.",
-        "requiresImmediate": true
+  "predictedRisk": "Physical",
+  "riskLevel": "High",
+  "suggestion": "Physical violence reported — prioritize medical attention and safety planning.",
+  "requiresImmediate": true
       }
     }
   },
@@ -111,10 +111,10 @@
     "event": {
       "type": "woman-psychological-medium",
       "params": {
-        "predictedRisk": "Psychological",
-        "riskLevel": "Medium",
-        "suggestion": "Psychological harm for an adult woman — prioritize counseling and follow-up; escalate if symptoms worsen.",
-        "requiresImmediate": false
+  "predictedRisk": "Psychological",
+  "riskLevel": "Medium",
+  "suggestion": "Psychological harm for an adult woman — prioritize counseling and follow-up; escalate if symptoms worsen.",
+  "requiresImmediate": false
       }
     }
   },
@@ -128,10 +128,10 @@
     "event": {
       "type": "woman-economic-medium",
       "params": {
-        "predictedRisk": "Economic",
-        "riskLevel": "Medium",
-        "suggestion": "Economic abuse reported for an adult woman — connect to financial and social support services; monitor for escalation.",
-        "requiresImmediate": false
+  "predictedRisk": "Economic",
+  "riskLevel": "Medium",
+  "suggestion": "Economic abuse reported for an adult woman — connect to financial and social support services; monitor for escalation.",
+  "requiresImmediate": false
       }
     }
   },

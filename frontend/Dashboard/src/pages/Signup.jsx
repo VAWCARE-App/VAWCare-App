@@ -206,15 +206,8 @@ export default function Signup() {
         }
       const { data } = await api.post("/api/victims/register", victimData);
       if (data.success) {
-        // If this was a regular account, backend will send OTP to the provided email
-        if (victimData.victimAccount === 'regular') {
-          message.success(data.message || 'OTP sent to your email. Please verify to complete registration.');
-          // Navigate to 2FA page and pass the email so the user can enter the OTP
-          navigate('/2fa', { state: { email: victimData.victimEmail, purpose: 'register' } });
-          return;
-        }
-
-        // For anonymous flow, previous behavior (account created and possibly logged-in)
+        // For regular flow, backend now creates the account immediately (no OTP required).
+        // Continue with token exchange (if provided) and local storage similar to anonymous flow.
         if (data.data && data.data.token) {
           try {
             const idToken = await exchangeCustomTokenForIdToken(data.data.token);

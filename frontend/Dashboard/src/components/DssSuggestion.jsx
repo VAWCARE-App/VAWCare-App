@@ -13,38 +13,24 @@ export default function DssSuggestion({ caseData }) {
     const fetchSuggestion = async () => {
       setLoading(true);
       try {
-        // If a manual override was previously set and stored on the case, prefer the persisted DSS
-        // suggestion so we don't overwrite the manual change by re-evaluating rules without the
-        // riskLevel. Otherwise call the DSS API and include the case's riskLevel (if any) so the
-        // backend can respect manual overrides.
-        if (caseData.dssManualOverride) {
-          setResult({
-            predictedRisk: caseData.dssPredictedRisk || null,
-            ruleMatched: !!caseData.dssRuleMatched,
-            ruleEvent: caseData.dssChosenRule || null,
-            probabilities: caseData.dssProbabilities || [],
-            immediateAssistanceProbability: caseData.dssImmediateAssistanceProbability || 0,
-            suggestion: caseData.dssSuggestion || '',
-            requiresImmediateAssistance: (caseData.dssImmediateAssistanceProbability || 0) > 0.5,
-            manualOverride: true
-          });
-        } else {
-          const payload = {
-            incidentType: caseData.incidentType,
-            description: caseData.description,
-            assignedOfficer: caseData.assignedOfficer,
-            status: caseData.status,
-            perpetrator: caseData.perpetrator,
-            // include injury facts if present on the case so backend rules can match
-            injuries: caseData.injuries,
-            injurySeverity: caseData.injurySeverity,
-            victimId: caseData.victim || caseData.victimId || caseData.reportedBy,
-            // include explicit riskLevel so the backend can return a manual-override suggestion
-            riskLevel: caseData.riskLevel || null
-          };
-          const res = await api.post('/api/dss/suggest', payload);
-          setResult(res.data.data);
-        }
+        // Always call the DSS API so keyword-based suggestions are returned live.
+        const payload = {
+          incidentType: caseData.incidentType,
+          description: caseData.description,
+          assignedOfficer: caseData.assignedOfficer,
+          status: caseData.status,
+          perpetrator: caseData.perpetrator,
+          // include injury facts if present on the case so backend rules can match
+          injuries: caseData.injuries,
+          injurySeverity: caseData.injurySeverity,
+          victimId: caseData.victim || caseData.victimId || caseData.reportedBy,
+          // include victimType so DSS can tailor suggestions for Child vs Woman
+          victimType: caseData.victimType || null,
+          // include explicit riskLevel only if this was a manual override (so DSS can respect it)
+          riskLevel: caseData.dssManualOverride ? (caseData.riskLevel || null) : null
+        };
+        const res = await api.post('/api/dss/suggest', payload);
+        setResult(res.data.data);
       } catch (err) {
         console.warn('DSS suggestion failed', err?.response?.data || err.message);
         message.error('DSS suggestion unavailable');
@@ -65,6 +51,11 @@ export default function DssSuggestion({ caseData }) {
           {result.ruleMatched && result.ruleEvent ? (
             <div>
               <Tag color="purple">Rule: {result.ruleEvent.type}</Tag>
+            </div>
+          ) : null}
+          {result.keywordMatched && result.matchedKeyword ? (
+            <div>
+              <Tag color="magenta">Keyword: {result.matchedKeyword}</Tag>
             </div>
           ) : null}
           <div>

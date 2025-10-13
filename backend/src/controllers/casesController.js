@@ -47,9 +47,8 @@ exports.createCase = async (req, res, next) => {
       }
     }
 
-    // If client didn't provide a riskLevel, ask the DSS to suggest one and map it
+    // Always get DSS suggestions, whether riskLevel is provided or not
     try {
-      if (!payload.riskLevel) {
         const dssInput = {
           incidentType: payload.incidentType,
           description: payload.description,
@@ -57,10 +56,15 @@ exports.createCase = async (req, res, next) => {
           status: payload.status,
           perpetrator: payload.perpetrator,
           victimId: payload.victimID || payload.victimId || null,
-          victimType: payload.victimType || null
+          victimType: payload.victimType || null,
+          // Include riskLevel if it was manually provided
+          ...(payload.riskLevel ? { riskLevel: payload.riskLevel } : {})
         };
-        const dssRes = await dssService.suggestForCase(dssInput);
-        if (dssRes && dssRes.predictedRisk) {
+  const dssRes = await dssService.suggestForCase(dssInput);
+  console.log('DSS service response:', JSON.stringify(dssRes, null, 2));
+        
+        // If no riskLevel was provided, use DSS recommendation
+        if (!payload.riskLevel && dssRes && dssRes.predictedRisk) {
           // Map 4-class predictedRisk to existing 3-level stored riskLevel
           const mapToStored = (pred) => {
             const p = (pred || '').toLowerCase();
@@ -72,19 +76,21 @@ exports.createCase = async (req, res, next) => {
             return 'Low';
           };
           payload.riskLevel = mapToStored(dssRes.predictedRisk);
-          // Persist DSS suggestion details for auditing
-          try {
-            payload.dssPredictedRisk = dssRes.predictedRisk;
-            payload.dssStoredRisk = payload.riskLevel;
-            payload.dssProbabilities = Array.isArray(dssRes.probabilities) ? dssRes.probabilities : [];
-            payload.dssImmediateAssistanceProbability = dssRes.immediateAssistanceProbability || 0;
-            payload.dssSuggestion = dssRes.suggestion || '';
-            payload.dssRuleMatched = !!dssRes.ruleMatched;
-            payload.dssChosenRule = dssRes.chosenRuleEvent || dssRes.ruleEvent || null;
-            payload.dssManualOverride = !!dssRes.manualOverride;
-          } catch (err) { /* non-fatal */ }
         }
-      }
+
+        // Always populate DSS fields if we have a response
+        if (dssRes) {
+          // Map DSS response fields directly to schema fields
+          payload.dssPredictedRisk = payload.incidentType; // Use incident type as predicted risk
+          payload.dssStoredRisk = payload.riskLevel || dssRes.riskLevel || dssRes.dssStoredRisk;
+          payload.dssProbabilities = Array.isArray(dssRes.dssProbabilities) ? dssRes.dssProbabilities : [];
+          payload.dssImmediateAssistanceProbability = Number(dssRes.dssImmediateAssistanceProbability || 0);
+          payload.dssSuggestion = dssRes.suggestion || dssRes.dssSuggestion || '';
+          payload.dssRuleMatched = !!dssRes.dssRuleMatched;
+          payload.dssChosenRule = dssRes.ruleDetails || dssRes.dssChosenRule || null;
+          // Handle manual override - true if riskLevel was explicitly provided
+          payload.dssManualOverride = typeof payload.riskLevel === 'string' && payload.riskLevel.trim() !== '';
+        }
     } catch (e) {
       // Non-fatal: if DSS fails, continue with default riskLevel
       console.warn('DSS enrich failed during case creation', e?.message || e);
@@ -153,14 +159,14 @@ exports.updateCase = async (req, res, next) => {
           const dssRes = await dssService.suggestForCase(dssInput, null);
           if (dssRes) {
             // merge DSS results into updates so they are persisted
-            updates.dssPredictedRisk = dssRes.predictedRisk;
-            updates.dssStoredRisk = updates.riskLevel;
-            updates.dssProbabilities = Array.isArray(dssRes.probabilities) ? dssRes.probabilities : [];
-            updates.dssImmediateAssistanceProbability = dssRes.immediateAssistanceProbability || 0;
-            updates.dssSuggestion = dssRes.suggestion || '';
-            updates.dssRuleMatched = !!dssRes.ruleMatched;
-            updates.dssChosenRule = dssRes.chosenRuleEvent || dssRes.ruleEvent || null;
-            updates.dssManualOverride = !!dssRes.manualOverride || true;
+            updates.dssPredictedRisk = dssRes.predictedRisk || dssRes.dssPredictedRisk;
+            updates.dssStoredRisk = updates.riskLevel || dssRes.riskLevel || dssRes.dssStoredRisk;
+            updates.dssProbabilities = Array.isArray(dssRes.dssProbabilities) ? dssRes.dssProbabilities : [];
+            updates.dssImmediateAssistanceProbability = Number(dssRes.dssImmediateAssistanceProbability || 0);
+            updates.dssSuggestion = dssRes.suggestion || dssRes.dssSuggestion || '';
+            updates.dssRuleMatched = !!dssRes.dssRuleMatched;
+            updates.dssChosenRule = dssRes.ruleDetails || dssRes.dssChosenRule || null;
+            updates.dssManualOverride = typeof updates.riskLevel === 'string' && updates.riskLevel.trim() !== '';
           }
         }
       } catch (e) {

@@ -818,6 +818,15 @@ async function suggestForCase(payload = {}, modelObj = null) {
   const finalSuggestion = getSolutionSuggestion(adjustedRisk, payload.incidentType, victimType);
 
   // Return object with proper handling of incident type and risk level
+  // Build human-readable explanations for the probability vector (keeps numeric array in `dssProbabilities`)
+  const canonicalTypes = ['Economic', 'Psychological', 'Physical', 'Sexual'];
+  const dssProbabilitiesExplanation = canonicalTypes.map((label, i) => ({
+    label,
+    probability: Number((probs[i] || 0).toFixed(3)),
+    description: `Estimated probability the case involves ${label.toLowerCase()} harm based on rule-based and heuristic analysis.`,
+    recommendedAction: label === 'Sexual' || label === 'Physical' ? 'Prioritize immediate safety and medical/legal referral' : 'Provide counseling/support and monitor for escalation'
+  }));
+
   return {
     predictedRisk: originalIncidentType || 'Unknown',
     incidentType: originalIncidentType,
@@ -830,6 +839,7 @@ async function suggestForCase(payload = {}, modelObj = null) {
     dssPredictedRisk: originalIncidentType || 'Unknown',
     dssStoredRisk: adjustedRisk,
     dssProbabilities: probs,
+  dssProbabilitiesExplanation: dssProbabilitiesExplanation,
     dssImmediateAssistanceProbability: finalImmediateProb,
     dssSuggestion: finalSuggestion || suggestion || 'Based on the case details, a specific recommendation will be provided by the assigned officer.',
     dssRuleMatched: ruleResult.matched,

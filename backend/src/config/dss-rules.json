@@ -1,6 +1,133 @@
 [
   {
     "conditions": {
+      "any": [
+        {
+          "all": [
+            { "fact": "victimType", "operator": "equal", "value": "Child" },
+            { "fact": "incidentType", "operator": "equal", "value": "Psychological" }
+          ]
+        },
+        {
+          "all": [
+            { "fact": "victimType", "operator": "equal", "value": "child" },
+            { "fact": "incidentType", "operator": "equal", "value": "psychological" }
+          ]
+        }
+      ]
+    },
+    "event": {
+      "type": "child-psychological-base",
+      "params": {
+        "predictedRisk": "Psychological",
+        "riskLevel": "Medium",
+        "suggestion": "Child experiencing psychological abuse. Begin counseling support. Monitor school performance and behavior changes. Create support plan with guardians.",
+        "requiresImmediate": false
+      }
+    }
+  },
+  {
+    "conditions": {
+      "all": [
+        { "fact": "incidentType", "operator": "equal", "value": "Psychological" }
+      ]
+    },
+    "event": {
+      "type": "psychological-fallback",
+      "params": {
+        "predictedRisk": "Psychological",
+        "riskLevel": "Medium",
+        "suggestion": "Psychological abuse suspected — provide counseling resources and monitor for escalation.",
+        "requiresImmediate": false
+      }
+    }
+  },
+  {
+    "conditions": {
+      "all": [
+        { "fact": "incidentType", "operator": "equal", "value": "Sexual" }
+      ]
+    },
+    "event": {
+      "type": "sexual-fallback",
+      "params": {
+        "predictedRisk": "Sexual",
+        "riskLevel": "High",
+        "suggestion": "Sexual violence suspected — ensure safety and arrange medical/forensic examination where appropriate.",
+        "requiresImmediate": true
+      }
+    }
+  },
+  {
+    "conditions": {
+      "all": [
+        { "fact": "incidentType", "operator": "equal", "value": "Physical" }
+      ]
+    },
+    "event": {
+      "type": "physical-fallback",
+      "params": {
+        "predictedRisk": "Physical",
+        "riskLevel": "High",
+        "suggestion": "Physical harm suspected — arrange medical attention and safety planning.",
+        "requiresImmediate": true
+      }
+    }
+  },
+  {
+    "conditions": {
+      "all": [
+        { "fact": "incidentType", "operator": "equal", "value": "Economic" }
+      ]
+    },
+    "event": {
+      "type": "economic-fallback",
+      "params": {
+        "predictedRisk": "Economic",
+        "riskLevel": "Medium",
+        "suggestion": "Economic abuse reported — connect to financial assistance and case management.",
+        "requiresImmediate": false
+      }
+    }
+  },
+  {
+    "conditions": {
+      "all": [
+        { "fact": "victimType", "operator": "equal", "value": "Child" },
+        { "fact": "incidentType", "operator": "equal", "value": "Sexual" },
+        { "fact": "descriptionLower", "operator": "contains", "value": "online" }
+      ]
+    },
+    "event": {
+      "type": "child-osec-critical",
+      "params": {
+        "predictedRisk": "Sexual",
+        "riskLevel": "High",
+        "suggestion": "OSEC (Online Sexual Exploitation of Children) case detected. Contact PNP Anti-Cybercrime Group immediately. Preserve digital evidence and ensure victim's online safety.",
+        "requiresImmediate": true
+      }
+    }
+  },
+  {
+    "conditions": {
+      "all": [
+        { "fact": "victimType", "operator": "equal", "value": "Child" },
+        { "fact": "incidentType", "operator": "equal", "value": "Sexual" },
+        { "fact": "recentReports", "operator": "greaterThan", "value": 1 }
+      ]
+    },
+    "event": {
+      "type": "child-sexual-repeat-critical",
+      "params": {
+        "predictedRisk": "Sexual",
+        "riskLevel": "High",
+        "suggestion": "URGENT: Repeat sexual abuse of child victim. Contact DSWD immediately for protective custody assessment. Notify PNP Women and Children Protection Center.",
+        "requiresImmediate": true
+      }
+    }
+  },
+  {
+    "conditions": {
       "all": [
         { "fact": "victimType", "operator": "equal", "value": "Child" },
         { "fact": "incidentType", "operator": "equal", "value": "Sexual" }
@@ -19,6 +146,41 @@
   {
     "conditions": {
       "all": [
+        { "fact": "victimType", "operator": "equal", "value": "Woman" },
+        { "fact": "descriptionLower", "operator": "contains", "value": "trafficking" }
+      ]
+    },
+    "event": {
+      "type": "woman-trafficking-critical",
+      "params": {
+        "predictedRisk": "Sexual",
+        "riskLevel": "High",
+        "suggestion": "Possible human trafficking case. Contact IACAT (Inter-Agency Council Against Trafficking) hotline 1343. Coordinate with DSWD for victim protection.",
+        "requiresImmediate": true
+      }
+    }
+  },
+  {
+    "conditions": {
+      "all": [
+        { "fact": "victimType", "operator": "equal", "value": "Woman" },
+        { "fact": "descriptionLower", "operator": "contains", "value": "domestic" },
+        { "fact": "injuries", "operator": "equal", "value": true }
+      ]
+    },
+    "event": {
+      "type": "woman-domestic-violence-urgent",
+      "params": {
+        "predictedRisk": "Physical",
+        "riskLevel": "High",
+        "suggestion": "Domestic violence with injuries. Contact nearest VAWC Desk or Women's Desk. Consider Barangay Protection Order (BPO) or Temporary Protection Order (TPO).",
+        "requiresImmediate": true
+      }
+    }
+  },
+  {
+    "conditions": {
+      "all": [
         { "fact": "victimType", "operator": "equal", "value": "Child" },
         { "fact": "incidentType", "operator": "equal", "value": "Physical" }
       ]
@@ -26,10 +188,10 @@
     "event": {
       "type": "child-physical-high",
       "params": {
-    "predictedRisk": "Physical",
-  "riskLevel": "High",
-  "suggestion": "Child victim with physical harm — urgent medical attention and child protection referral.",
-  "requiresImmediate": true
+        "predictedRisk": "Physical",
+        "riskLevel": "High",
+        "suggestion": "Child abuse case - Contact local DSWD office and Barangay Council for the Protection of Children (BCPC). Ensure immediate medical attention if needed.",
+        "requiresImmediate": true
       }
     }
   },

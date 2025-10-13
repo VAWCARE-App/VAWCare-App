@@ -206,25 +206,32 @@ export default function Signup() {
         }
       const { data } = await api.post("/api/victims/register", victimData);
       if (data.success) {
-        // If backend returned a Firebase custom token, exchange it for an ID token here so the user is authenticated client-side
-        if (data.data.token) {
+        // If this was a regular account, backend will send OTP to the provided email
+        if (victimData.victimAccount === 'regular') {
+          message.success(data.message || 'OTP sent to your email. Please verify to complete registration.');
+          // Navigate to 2FA page and pass the email so the user can enter the OTP
+          navigate('/2fa', { state: { email: victimData.victimEmail, purpose: 'register' } });
+          return;
+        }
+
+        // For anonymous flow, previous behavior (account created and possibly logged-in)
+        if (data.data && data.data.token) {
           try {
             const idToken = await exchangeCustomTokenForIdToken(data.data.token);
             if (idToken) {
               saveToken(idToken);
             } else {
-              // If exchange unexpectedly returned no idToken, throw to handle below
               throw new Error('Token exchange failed');
             }
           } catch (ex) {
-            // Exchange failed — surface friendly error and do not redirect
             message.error('Authentication failed after registration. Please try logging in.');
             console.error('Token exchange error:', ex);
             setLoading(false);
             return;
           }
         }
-        localStorage.setItem("user", JSON.stringify(data.data.victim));
+
+        if (data.data && data.data.victim) localStorage.setItem("user", JSON.stringify(data.data.victim));
         try {
           if (data.data && data.data.victim && data.data.victim.id) {
             localStorage.setItem('actorId', String(data.data.victim.id));
@@ -240,8 +247,7 @@ export default function Signup() {
           console.warn('Unable to persist actorBusinessId on signup', e && e.message);
         }
         message.success("Account created successfully!");
-        // If this was an anonymous signup, go directly to the report page
-  const redirect = data.data.victim?.victimAccount === "anonymous" ? "/victim/report" : "/victim/victim-test";
+        const redirect = data.data.victim?.victimAccount === "anonymous" ? "/victim/report" : "/victim/victim-test";
         navigate(redirect);
       } else throw new Error(data.message || "Registration failed");
     } catch (err) {

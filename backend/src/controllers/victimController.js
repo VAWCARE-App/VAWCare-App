@@ -6,12 +6,8 @@ const Chatbot = require('../models/Chatbot');
 const admin = require('../config/firebase-config');
 const { sendMail } = require('../utils/sendmail');
 
-// In-memory pending registrations store: { [email]: { otp, expires, payload } }
-// Note: This is ephemeral and will be lost on server restart. For production, use persistent store (Redis/DB).
-const pendingRegistrations = {};
-
-// @desc    Register victim (initial step)
-// @route   POST /api/victims/register
+// @desc    Register victim
+// @route   POST /api/victims/register  
 // @access  Public
 const registerVictim = asyncHandler(async (req, res) => {
     const body = req.body || {};
@@ -78,38 +74,6 @@ const registerVictim = asyncHandler(async (req, res) => {
                 res.status(400);
                 throw new Error('Email already registered');
             }
-
-            // Instead of immediately creating the account, send OTP to verify that the email is real
-            try {
-                // If there's already a pending registration with a valid OTP, don't send another one
-                const existingPending = pendingRegistrations[victimEmail];
-                if (existingPending && existingPending.expires && existingPending.expires > Date.now()) {
-                    console.log('OTP already sent and still valid for', victimEmail);
-                    return res.status(200).json({ success: true, message: 'OTP already sent. Please check your email.' });
-                }
-                const otp = Math.floor(100000 + Math.random() * 900000).toString();
-                const expires = Date.now() + 5 * 60 * 1000; // 5 minutes
-
-                // store pending registration payload (exclude password hashing etc.)
-                pendingRegistrations[victimEmail] = {
-                    otp,
-                    expires,
-                    payload: { victimUsername, victimPassword, victimAccount, victimType, victimEmail, firstName, middleInitial, lastName, address, contactNumber, emergencyContacts, location }
-                };
-
-                // send OTP email using existing sendMail util
-                await sendMail(
-                    victimEmail,
-                    'Verify your email - VAWCare registration',
-                    `<p>Please use the following one-time code to verify your email and complete registration: <b>${otp}</b></p><p>This code expires in 5 minutes.</p>`
-                );
-
-                return res.status(200).json({ success: true, message: 'OTP sent to email. Please verify to complete registration.' });
-            } catch (mailErr) {
-                console.error('Failed to send registration OTP:', mailErr && mailErr.message);
-                // If email failed to send, treat as non-existing email per user request
-                return res.status(400).json({ success: false, message: 'Failed to send verification email. Please provide a valid existing email.' });
-            }
         }
 
         console.log(`Attempting to register new ${victimAccount} victim:`);
@@ -158,8 +122,8 @@ const registerVictim = asyncHandler(async (req, res) => {
             }
         }
 
-    const victim = new Victim(victimData);
-    await victim.save(); // This triggers the pre-save middleware for password hashing
+        const victim = new Victim(victimData);
+        await victim.save(); // This triggers the pre-save middleware for password hashing
 
         console.log('\nMongoDB Registration Success:');
         console.log('- Victim ID:', victim._id);
@@ -768,117 +732,9 @@ const updateReport = asyncHandler(async (req, res) => {
         throw new Error('Error updating report');
     }
 });
-
-// Verify registration OTP and finalize creating the victim account
-const verifyRegistration = asyncHandler(async (req, res) => {
-    const { email, otp } = req.body || {};
-
-    if (!email || !otp) {
-        return res.status(400).json({ success: false, message: 'Email and OTP are required' });
-    }
-
-    const pending = pendingRegistrations[email];
-    if (!pending) {
-        return res.status(400).json({ success: false, message: 'No pending registration for this email. Please register first.' });
-    }
-
-    if (String(pending.otp) !== String(otp)) {
-        return res.status(400).json({ success: false, message: 'Invalid OTP' });
-    }
-
-    if (pending.expires < Date.now()) {
-        delete pendingRegistrations[email];
-        return res.status(400).json({ success: false, message: 'OTP expired. Please register again.' });
-    }
-
-    // Proceed to create the victim using the payload stored
-    const payload = pending.payload;
-
-    try {
-        // Double-check uniqueness
-        const existingUsername = await Victim.findOne({ victimUsername: payload.victimUsername });
-        if (existingUsername) return res.status(400).json({ success: false, message: 'Username already exists' });
-
-        const existingEmail = await Victim.findOne({ victimEmail: payload.victimEmail });
-        if (existingEmail) return res.status(400).json({ success: false, message: 'Email already registered' });
-
-        const victimData = {
-            victimAccount: payload.victimAccount,
-            victimUsername: payload.victimUsername,
-            victimPassword: payload.victimPassword,
-            firstName: payload.firstName || undefined,
-            middleInitial: payload.middleInitial || '',
-            lastName: payload.lastName || undefined,
-            address: payload.address || undefined,
-            contactNumber: payload.contactNumber || undefined,
-            ...(payload.location && typeof payload.location === 'object' && (payload.location.lat !== undefined && payload.location.lng !== undefined) ? { location: payload.location } : {}),
-            firebaseUid: null
-        };
-
-        if (payload.victimAccount === 'regular') {
-            victimData.victimType = payload.victimType;
-            victimData.victimEmail = payload.victimEmail;
-            victimData.emergencyContacts = payload.emergencyContacts || [];
-        }
-
-        const victim = new Victim(victimData);
-        await victim.save();
-
-        // Try firebase create
-        let firebaseUid = null;
-        let customToken = null;
-        try {
-            if (admin && admin.auth) {
-                if (victim.victimAccount === 'regular' && victim.victimEmail) {
-                    const userRecord = await admin.auth().createUser({
-                        email: victim.victimEmail,
-                        password: payload.victimPassword,
-                        displayName: `${victim.firstName || ''} ${victim.lastName || ''}`.trim(),
-                        emailVerified: false
-                    });
-                    firebaseUid = userRecord.uid;
-
-                    await admin.auth().setCustomUserClaims(userRecord.uid, {
-                        role: 'victim',
-                        isAnonymous: false
-                    });
-                } else {
-                    const userRecord = await admin.auth().createUser({
-                        displayName: `Anonymous User`,
-                        password: payload.victimPassword
-                    });
-                    firebaseUid = userRecord.uid;
-
-                    await admin.auth().setCustomUserClaims(userRecord.uid, {
-                        role: 'victim',
-                        isAnonymous: true,
-                        victimUsername: victim.victimUsername
-                    });
-                }
-
-                customToken = await admin.auth().createCustomToken(firebaseUid);
-
-                victim.firebaseUid = firebaseUid;
-                await victim.save();
-            }
-        } catch (firebaseError) {
-            console.log('\nFirebase Error (registration verify):', firebaseError && firebaseError.message);
-        }
-
-        // clear pending
-        delete pendingRegistrations[email];
-
-        return res.status(201).json({ success: true, message: 'Victim registered successfully', data: { token: customToken, victim: { id: victim._id, victimID: victim.victimID, victimAccount: victim.victimAccount, victimUsername: victim.victimUsername, firebaseUid: victim.firebaseUid, firstName: victim.firstName } } });
-
-    } catch (err) {
-        console.error('Error finalizing registration:', err && err.message);
-        return res.status(500).json({ success: false, message: 'Server error while creating account' });
-    }
-});
-
 module.exports = {
     registerVictim,
-    verifyRegistration,
+
     loginVictim,
     getProfile,
     getMetrics,

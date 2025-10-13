@@ -1,5 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import { App as AntApp, Button, Card, Input, Typography, Grid, Modal } from "antd";
+import { useLocation, useNavigate } from 'react-router-dom';
+import { api } from '../lib/api';
+import { exchangeCustomTokenForIdToken } from '../lib/firebase';
+import { saveToken } from '../lib/api';
 import Logo from "../assets/logo1.svg?react";
 
 /* ---------- Background Carousel Layer ---------- */
@@ -142,6 +146,10 @@ export default function TwoFactor() {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
   const inputsRef = useRef([]);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const email = location?.state?.email || null;
+  const purpose = location?.state?.purpose || null; // 'register' etc.
 
   useEffect(() => {
     // ensure refs array length
@@ -154,12 +162,53 @@ export default function TwoFactor() {
   const submitCode = async () => {
     try {
       setLoading(true);
-      // Placeholder: wire this to your API (e.g., POST /api/admin/login with loginCode)
+      if (purpose === 'register') {
+        if (!email) {
+          throw new Error('Missing email context for registration verification');
+        }
+        const { data } = await api.post('/api/victims/register/verify', { email, otp: code });
+        if (!data || !data.success) {
+          throw new Error(data?.message || 'Verification failed');
+        }
+
+        // If backend created a Firebase custom token, exchange it for an ID token and save
+        if (data.data && data.data.token) {
+          try {
+            const idToken = await exchangeCustomTokenForIdToken(data.data.token);
+            if (idToken) {
+              saveToken(idToken);
+            } else {
+              throw new Error('Token exchange failed');
+            }
+          } catch (ex) {
+            console.error('Token exchange error after registration verify:', ex);
+            message.error('Verification succeeded but authentication failed. Please login.');
+            setLoading(false);
+            return;
+          }
+        }
+
+        // persist user info if returned
+        if (data.data && data.data.victim) localStorage.setItem('user', JSON.stringify(data.data.victim));
+        if (data.data && data.data.victim && data.data.victim.id) {
+          localStorage.setItem('actorId', String(data.data.victim.id));
+          localStorage.setItem('actorType', 'victim');
+        }
+        if (data.data && data.data.victim && data.data.victim.victimID) {
+          localStorage.setItem('actorBusinessId', String(data.data.victim.victimID));
+        }
+
+        message.success('Email verified and account created');
+        navigate('/victim/victim-test');
+        return;
+      }
+
+      // fallback behavior
       console.log('Submitted code:', code);
-      // Simulate success
       message.success('Code submitted (placeholder)');
     } catch (err) {
-      setModalMessage('Verification failed');
+      console.error('2FA submit error:', err);
+      setModalMessage(err?.response?.data?.message || err.message || 'Verification failed');
       setModalVisible(true);
     } finally {
       setLoading(false);
@@ -185,7 +234,9 @@ export default function TwoFactor() {
           }}
         >
           <div style={{ textAlign: 'center', marginBottom: 8 }}>
-            <Logo style={{ width: 80 }} />
+            {/* Force logo to use brand pink color */}
+            <Logo style={{ width: 80, height: 80, color: '#e91e63' }} className="vawc-logo-pink" />
+            <style>{`.vawc-logo-pink svg, .vawc-logo-pink path, .vawc-logo-pink circle, .vawc-logo-pink rect { fill: #e91e63 !important; stroke: #e91e63 !important; }`}</style>
           </div>
           <Typography.Title level={3} style={{ textAlign: 'center', marginBottom: 6 }}>Two-Factor Authentication</Typography.Title>
           <Typography.Paragraph style={{ textAlign: 'center', color: '#555', marginBottom: 18 }}>Enter the 6-digit code sent to your email or authenticator app.</Typography.Paragraph>

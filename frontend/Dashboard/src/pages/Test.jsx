@@ -24,7 +24,9 @@ const { Title, Text } = Typography;
 export default function Test() {
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0); // Add this
   const screens = Grid.useBreakpoint();
+
 
   const BRAND = {
     violet: "#7A5AF8",
@@ -43,6 +45,7 @@ export default function Test() {
 
   const handleRefresh = () => {
     setLoading(true);
+    setRefreshKey((k) => k + 1); // Change key to trigger remount
     setTimeout(() => setLoading(false), 1000); // fake loading
   };
 
@@ -105,7 +108,7 @@ export default function Test() {
       </Header>
 
       {/* Tabs */}
-      <Content style={{ padding: 12 }}>
+      <Content style={{ padding: 12, paddingLeft: 52, paddingRight: 52 }}>
         <div
           className="custom-tabs"
           style={{
@@ -134,11 +137,11 @@ export default function Test() {
                     boxShadow: "inset 0 0 8px rgba(0,0,0,0.05)",
                   }}
                 >
-                  {t.key === "overview" && <UserInsights />}
-                  {t.key === "users" && <UserInsights />}
-                  {t.key === "reports" && <UserInsights />}
-                  {t.key === "cases" && <UserInsights />}
-                  {t.key === "alerts" && <UserInsights />}
+                  {t.key === "overview" && <UserInsights key={refreshKey} />}
+                  {t.key === "users" && <UserInsights key={refreshKey} />}
+                  {t.key === "reports" && <UserInsights key={refreshKey} />}
+                  {t.key === "cases" && <UserInsights key={refreshKey} />}
+                  {t.key === "alerts" && <UserInsights key={refreshKey} />}
                 </div>
               ),
             }))}

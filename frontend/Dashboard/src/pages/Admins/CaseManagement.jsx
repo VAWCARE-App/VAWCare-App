@@ -155,12 +155,14 @@ export default function CaseManagement() {
         perpetrator: rep.perpetrator || '',
         location: rep.location || '',
   victimName: composedName,
-  // only prefill victimType when available on the report; otherwise leave empty so the Select shows nothing
-  ...(rep.victim?.victimType ? { victimType: rep.victim.victimType } : {}),
+  // If report has victimType, use it; otherwise treat the report as anonymous and set victimType to 'anonymous'
+  victimType: rep.victim?.victimType || 'anonymous',
         // Auto-map incidentType -> riskLevel (economic->Low, psychological->Medium, physical->High, sexual->High)
+        // If the incident is an Emergency, do not auto-fill riskLevel so the officer can choose.
         riskLevel: (function(it) {
           if (!it) return 'Low';
           const l = String(it).toLowerCase();
+          if (l.includes('emerg')) return undefined; // let officer choose
           if (l.includes('economic') || l.includes('financial')) return 'Low';
           if (l.includes('psych') || l.includes('psychological')) return 'Medium';
           if (l.includes('physical')) return 'High';
@@ -177,7 +179,7 @@ export default function CaseManagement() {
       let payload;
       if (selectedReport) {
         // build payload: include reportID and fields from selected report
-        payload = {
+          payload = {
           caseID: vals.caseID,
           reportID: selectedReport.reportID,
           victimID: selectedReport.raw.victimID?._id || selectedReport.raw.victimID || null,
@@ -189,7 +191,8 @@ export default function CaseManagement() {
           dateReported: selectedReport.dateReported || new Date().toISOString(),
           status: vals.status || 'Open',
           assignedOfficer: vals.assignedOfficer || '',
-          riskLevel: vals.riskLevel || 'Low',
+          // If riskLevel is not explicitly set in the form (undefined), don't force a default here so the backend DSS can compute suggestion.
+          riskLevel: typeof vals.riskLevel === 'undefined' ? undefined : (vals.riskLevel || 'Low'),
           victimType: vals.victimType || selectedReport.victim?.victimType || 'anonymous',
         };
       } else {
@@ -206,7 +209,7 @@ export default function CaseManagement() {
           dateReported: vals.dateReported || new Date().toISOString(),
           status: vals.status || 'Open',
           assignedOfficer: vals.assignedOfficer || '',
-          riskLevel: vals.riskLevel || 'Low',
+          riskLevel: typeof vals.riskLevel === 'undefined' ? undefined : (vals.riskLevel || 'Low'),
           victimType: vals.victimType || 'anonymous',
         };
       }

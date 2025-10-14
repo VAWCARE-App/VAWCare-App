@@ -1,141 +1,185 @@
-// src/pages/LandingPage.js
-import React from "react";
-import { Button, Typography, Row, Col, Card } from "antd";
-import { useNavigate } from "react-router-dom";
+import React, { useState } from "react";
 import {
-  HeartOutlined,
-  SafetyCertificateOutlined,
-  TeamOutlined,
-  LoginOutlined,
-  UserAddOutlined,
+  Layout,
+  Tabs,
+  Typography,
+  Space,
+  Input,
+  Button,
+  Grid,
+} from "antd";
+import {
+  ReloadOutlined,
+  SearchOutlined,
+  UserOutlined,
+  FileTextOutlined,
+  FolderOpenOutlined,
+  BellOutlined,
 } from "@ant-design/icons";
+import UserInsights from "./Insights/UserInsights";
 
-const { Title, Text, Paragraph } = Typography;
+const { Header, Content } = Layout;
+const { Title, Text } = Typography;
 
 export default function Test() {
-  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState("overview");
+  const [loading, setLoading] = useState(false);
+  const screens = Grid.useBreakpoint();
+
+  const BRAND = {
+    violet: "#7A5AF8",
+    soft: "rgba(122,90,248,0.18)",
+    bg: "linear-gradient(180deg, #ffffff 0%, #faf7ff 60%, #f6f3ff 100%)",
+    light: "#f6f3ff",
+  };
+
+  const tabs = [
+    { key: "overview", label: "Overview", icon: <FolderOpenOutlined /> },
+    { key: "users", label: "Users", icon: <UserOutlined /> },
+    { key: "reports", label: "Reports", icon: <FileTextOutlined /> },
+    { key: "cases", label: "Cases", icon: <FolderOpenOutlined /> },
+    { key: "alerts", label: "Alerts", icon: <BellOutlined /> },
+  ];
+
+  const handleRefresh = () => {
+    setLoading(true);
+    setTimeout(() => setLoading(false), 1000); // fake loading
+  };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "linear-gradient(180deg, #fff 0%, #ffe6ef 100%)",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      {/* Hero Section */}
-      <div
+    <Layout style={{ minHeight: "100vh", background: BRAND.bg }}>
+      {/* Header */}
+      <Header
         style={{
-          flex: "1 0 auto",
+          position: "sticky",
+          top: 0,
+          zIndex: 5,
+          background: BRAND.bg,
+          borderBottom: `1px solid ${BRAND.soft}`,
           display: "flex",
-          flexDirection: "column",
           alignItems: "center",
-          justifyContent: "center",
-          textAlign: "center",
-          padding: "48px 16px",
+          justifyContent: "space-between",
+          paddingInline: 16,
+          paddingBlock: screens.md ? 12 : 10,
+          height: "auto",
+          lineHeight: 1.2,
         }}
       >
-        <Title level={1} style={{ color: "#e91e63", marginBottom: 16 }}>
-          Welcome to VAWCare 💖
-        </Title>
-        <Paragraph style={{ fontSize: 18, maxWidth: 700, margin: "0 auto" }}>
-          A safe space where victims of violence can easily report incidents,
-          get help from barangay officials, and connect to support services.
-          You are not alone — we are here to help.
-        </Paragraph>
+        <Space direction="vertical" size={0}>
+          <Title
+            level={screens.md ? 4 : 5}
+            style={{
+              margin: 0,
+              color: BRAND.violet,
+              fontSize: "clamp(18px,2.2vw,22px)",
+              fontWeight: 700,
+            }}
+          >
+            Primary Dashboard
+          </Title>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            Overview • Users • Cases • Activity
+          </Text>
+        </Space>
 
-        {/* Call to Actions */}
-        <div style={{ marginTop: 32, display: "flex", gap: 16, flexWrap: "wrap" }}>
+        <Space>
+          <Input
+            allowClear
+            placeholder="Search…"
+            suffix={<SearchOutlined />}
+            style={{ borderRadius: 999, width: 220 }}
+          />
           <Button
-            type="primary"
-            size="large"
-            icon={<LoginOutlined />}
-            onClick={() => navigate("/login")}
+            icon={<ReloadOutlined />}
+            onClick={handleRefresh}
+            loading={loading}
             style={{
-              background: "#e91e63",
-              borderColor: "#e91e63",
-              borderRadius: 8,
-              padding: "0 32px",
+              borderColor: BRAND.violet,
+              color: BRAND.violet,
+              borderRadius: 999,
             }}
           >
-            Victim Login
+            Refresh
           </Button>
-          <Button
-            size="large"
-            icon={<UserAddOutlined />}
-            onClick={() => navigate("/register")}
-            style={{
-              borderColor: "#e91e63",
-              color: "#e91e63",
-              borderRadius: 8,
-              padding: "0 32px",
+        </Space>
+      </Header>
+
+      {/* Tabs */}
+      <Content style={{ padding: 12 }}>
+        <div
+          className="custom-tabs"
+          style={{
+            background: "#fff",
+            borderRadius: 16,
+          }}
+        >
+          <Tabs
+            activeKey={activeTab}
+            onChange={setActiveTab}
+            centered
+            tabBarGutter={24}
+            items={tabs.map((t) => ({
+              key: t.key,
+              label: (
+                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  {t.icon} {t.label}
+                </span>
+              ),
+              children: (
+                <div
+                  style={{
+                    marginTop: 16,
+                    background: "#F8F4FF",
+                    minHeight: "60vh",
+                    boxShadow: "inset 0 0 8px rgba(0,0,0,0.05)",
+                  }}
+                >
+                  {t.key === "overview" && <UserInsights />}
+                  {t.key === "users" && <UserInsights />}
+                  {t.key === "reports" && <UserInsights />}
+                  {t.key === "cases" && <UserInsights />}
+                  {t.key === "alerts" && <UserInsights />}
+                </div>
+              ),
+            }))}
+            tabBarStyle={{
+              background: BRAND.light,
+              borderRadius: 10,
+              padding: "6px 12px",
+              marginBottom: 12,
             }}
-          >
-            Register
-          </Button>
-          <Button
-            size="large"
-            onClick={() => navigate("/admin/login")}
-            style={{
-              borderColor: "#555",
-              color: "#555",
-              borderRadius: 8,
-              padding: "0 32px",
-            }}
-          >
-            Admin / Barangay
-          </Button>
+          />
         </div>
-      </div>
+      </Content>
 
-      {/* Features Section */}
-      <div style={{ padding: "48px 16px", background: "#fff" }}>
-        <Row gutter={[24, 24]} justify="center">
-          <Col xs={24} sm={12} md={8}>
-            <Card hoverable bordered={false} style={{ borderRadius: 12 }}>
-              <HeartOutlined style={{ fontSize: 40, color: "#e91e63" }} />
-              <Title level={4} style={{ marginTop: 12 }}>
-                Safe & Confidential
-              </Title>
-              <Text>All reports are handled privately with barangay officials.</Text>
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={8}>
-            <Card hoverable bordered={false} style={{ borderRadius: 12 }}>
-              <SafetyCertificateOutlined style={{ fontSize: 40, color: "#2196f3" }} />
-              <Title level={4} style={{ marginTop: 12 }}>
-                One-Tap Emergency
-              </Title>
-              <Text>Send an emergency alert instantly to your barangay.</Text>
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={8}>
-            <Card hoverable bordered={false} style={{ borderRadius: 12 }}>
-              <TeamOutlined style={{ fontSize: 40, color: "#4caf50" }} />
-              <Title level={4} style={{ marginTop: 12 }}>
-                Connected Support
-              </Title>
-              <Text>Access barangay contacts, chatbot, and help lines easily.</Text>
-            </Card>
-          </Col>
-        </Row>
-      </div>
-
-      {/* Hotline Footer */}
-      <footer
-        style={{
-          background: "#e91e63",
-          padding: 20,
-          textAlign: "center",
-          color: "#fff",
-          marginTop: "auto",
-        }}
-      >
-        <Text style={{ color: "#fff", fontSize: 16 }}>
-          💡 Need immediate help? Call <b>1553 (VAWC Hotline)</b>
-        </Text>
-      </footer>
-    </div>
+      {/* Inline Style Overrides for Tab Look */}
+      <style>
+        {`
+          .ant-tabs-nav-list {
+            display: flex;
+            gap: 8px;
+          }
+          .ant-tabs-tab {
+            background: transparent;
+            border-radius: 999px;
+            padding: 6px 14px !important;
+            font-weight: 500;
+            transition: all 0.25s ease;
+          }
+          .ant-tabs-tab:hover {
+            background: ${BRAND.soft};
+            color: ${BRAND.violet};
+          }
+          .ant-tabs-tab-active {
+            background: ${BRAND.soft};
+            color: white !important;
+            font-weight: 600;
+          }
+          .ant-tabs-ink-bar {
+            display: none !important;
+          }
+        `}
+      </style>
+    </Layout>
   );
 }

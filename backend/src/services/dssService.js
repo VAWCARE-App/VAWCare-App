@@ -60,7 +60,7 @@ const SEVERITY_KEYWORDS = {
   High: {
     Sexual: [
       // Tagalog
-      'ginahasa', 'nirape', 'hinalay', 'hinipuan', 'pinagsamantalahan', 'sekswal na karahasan', 
+      'ginahasa', 'nirape','rape', 'hinalay', 'hinipuan', 'pinagsamantalahan', 'sekswal na karahasan', 
       'inabuso', 'kinantot', 'tinira', 'pinilit makipagtalik', 'pinagsamantalahan', 'kinikilan',
       // English
       'rape', 'molested', 'sexual assault', 'forced sex', 'sexually abused', 'gang rape',
@@ -948,7 +948,7 @@ async function suggestForCase(payload = {}, modelObj = null) {
     dssImmediateAssistanceProbability: finalImmediateProb,
     dssSuggestion: finalSuggestion || 'Review the report and coordinate with MSWD or PNP-WCPD for proper intervention and documentation.',
     dssRuleMatched: ruleResult.matched,
-    dssChosenRule: ruleResult.matched && ruleResult.events.length > 0 ? ruleResult.events[0] : null,
+  // dssChosenRule will be set below after selecting an authoritative event
     dssManualOverride: !!payload.riskLevel,
 
     // API-friendly fields
@@ -958,6 +958,40 @@ async function suggestForCase(payload = {}, modelObj = null) {
     severity,
     victimType: resolvedVictimType || victimType,
   };
+
+  // Choose a single authoritative rule event from any matched events.
+  // Prefer non-fallback events (rule types that do NOT include 'fallback') so that
+  // specific keyword/escalation rules override generic fallbacks when both match.
+  const allEvents = Array.isArray(ruleResult.events) ? ruleResult.events : [];
+  let chosenEvent = null;
+  if (allEvents.length > 0) {
+    // Prefer the first event whose type does not include 'fallback'
+    chosenEvent = allEvents.find(e => {
+      try { return !String(e.type || '').toLowerCase().includes('fallback'); } catch (e) { return true; }
+    }) || allEvents[0];
+  }
+
+  // Attach both the primary chosen rule and the full events list for auditing
+  response.dssChosenRule = chosenEvent || null;
+  response.ruleDetails = chosenEvent || null;
+  response.dssAllMatchedRules = allEvents;
+
+  // Compute detectionMethod for clarity in the UI (deterministic, no 'unknown')
+  let detectionMethod = 'heuristic';
+  if (isManualOverride) {
+    detectionMethod = 'manual_override';
+  } else if (mlPrediction && typeof confidence === 'number' && confidence > 0.8) {
+    detectionMethod = `ml_high_confidence:${mlPrediction}`;
+  } else if (chosenEvent) {
+    // Use the selected authoritative event (chosenEvent) rather than the raw first event
+    detectionMethod = `rule_engine:${chosenEvent.type}`;
+  } else if (payload && payload.description && payload.description.length > 0) {
+    // If we have text but no rules/ML/manual, it's likely keyword/heuristic based
+    detectionMethod = 'heuristic';
+  } else {
+    detectionMethod = 'heuristic';
+  }
+  response.detectionMethod = detectionMethod;
 
   return response;
 }

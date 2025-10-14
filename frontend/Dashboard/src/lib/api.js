@@ -18,6 +18,7 @@ api.interceptors.request.use(
     const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+        return config;
     }
     // Attach actor information from localStorage so backend can persist actorBusinessId
     try {

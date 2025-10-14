@@ -90,6 +90,22 @@
       }
     }
   },
+    {
+      "conditions": {
+        "all": [
+          { "fact": "incidentType", "operator": "equal", "value": "Emergency" }
+        ]
+      },
+      "event": {
+        "type": "emergency-fallback",
+        "params": {
+          "predictedRisk": "Emergency",
+          "riskLevel": "High",
+          "suggestion": "Emergency incident reported — immediate response required. Contact emergency services and prioritize victim safety.",
+          "requiresImmediate": true
+        }
+      }
+    },
   {
     "conditions": {
       "all": [

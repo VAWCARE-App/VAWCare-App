@@ -37,7 +37,7 @@ function mapIncidentToBaseRisk(type, severity, manualRisk = null) {
   return 'Medium'; // Default to Medium for safety
 }
 
-function adjustRiskForVictimType(baseRisk, victimType, isManualOverride = false) {
+function adjustRiskForVictimType(baseRisk, victimType, incidentType, isManualOverride = false) {
   // If it's a manual override, don't adjust the risk level
   if (isManualOverride) {
     return baseRisk;
@@ -45,8 +45,15 @@ function adjustRiskForVictimType(baseRisk, victimType, isManualOverride = false)
 
   const vt = normalizeVictimType(victimType);
   if (vt === 'child') {
-    // Children always get elevated risk (unless manual override)
+    // Only escalate children for incidents where escalation is desired (sexual, physical, emergency).
+    // Suppress elevation for economic and psychological incidents per user request.
+    const it = (incidentType || '').toString().toLowerCase();
+    if (it === 'economic' || it === 'psychological') {
+      return baseRisk;
+    }
+    // For remaining incident types (sexual, physical, emergency, etc.) apply elevation:
     if (baseRisk === 'Low') return 'Medium';
+    if (baseRisk === 'Medium') return 'High';
     return 'High';
   }
   if (vt === 'anonymous') {
@@ -768,7 +775,7 @@ async function suggestForCase(payload = {}, modelObj = null) {
   
   // Adjust for victim type (children get higher risk), respecting manual override
   // Use `let` because ML prediction logic below may update this value conditionally
-  let adjustedRisk = adjustRiskForVictimType(baseRisk, victimType, isManualOverride);
+  let adjustedRisk = adjustRiskForVictimType(baseRisk, victimType, payload.incidentType, isManualOverride);
   console.log('Adjusted risk:', adjustedRisk);
   
   // (defer suggestion lookup until we've attempted to resolve victim type from DB)
@@ -837,6 +844,11 @@ async function suggestForCase(payload = {}, modelObj = null) {
   
   // Calculate probabilities for the risk levels
   const probs = synthesizeProbabilities(payload.incidentType, adjustedRisk);
+
+  // Format incident type to Title Case (match rule values like 'Psychological')
+  const formattedIncidentType = payload.incidentType ? (
+    payload.incidentType.split(/\s+/).map(s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()).join(' ')
+  ) : '';
   
   // Handle immediate assistance probability based on risk level and manual override
   let immediateProb = 0;
@@ -850,13 +862,31 @@ async function suggestForCase(payload = {}, modelObj = null) {
       default: immediateProb = 0;
     }
   } else {
-    // Original calculation for automated assessment
-    immediateProb = (probs[2] || 0) + (probs[3] || 0) + (adjustedRisk === 'High' ? 0.3 : 0);
+    // Calculate immediate probability in a way that depends on the incident type
+    // so an Economic case does not become immediate just because physical/sexual probabilities
+    // have non-zero base values. Use the probability for the reported incidentType and
+    // for special handling of Physical/Sexual/Emergency keep the original aggregation.
+    const canonical = ['Economic', 'Psychological', 'Physical', 'Sexual'];
+    const it = (payload.incidentType || '').toString();
+    const itIndex = canonical.indexOf(it);
+
+    if (['Physical', 'Sexual', 'Emergency'].includes(it)) {
+      // For high-severity incident types, consider combined probability of physical/sexual
+      immediateProb = (probs[2] || 0) + (probs[3] || 0) + (adjustedRisk === 'High' ? 0.3 : 0);
+    } else if (itIndex >= 0) {
+      // Use the probability for the specific incident type
+      immediateProb = (probs[itIndex] || 0) + (adjustedRisk === 'High' ? 0.3 : 0);
+    } else {
+      // Fallback: conservative mix
+      immediateProb = (probs[2] || 0) + (probs[3] || 0) + (adjustedRisk === 'High' ? 0.3 : 0);
+    }
   }
   
-  // Adjust for children, but respect manual override
-  const finalImmediateProb = (!isManualOverride && victimType === 'child') ? 
-    Math.max(immediateProb, 0.6) : immediateProb;
+  // Adjust for children, but respect manual override.
+  // Do NOT apply the child immediate-probability floor for Economic or Psychological incident types
+  const incidentLower = (formattedIncidentType || '').toLowerCase();
+  const childImmediateAllowed = victimType === 'child' && !isManualOverride && !['economic', 'psychological'].includes(incidentLower);
+  const finalImmediateProb = childImmediateAllowed ? Math.max(immediateProb, 0.6) : immediateProb;
   
   // Initialize rules engine and evaluate rules
   const { initEngine, evaluateRules } = require('./rulesEngine');
@@ -888,11 +918,6 @@ async function suggestForCase(payload = {}, modelObj = null) {
 
   const vtForRules = resolvedVictimType === 'child' ? 'Child' : 
                     resolvedVictimType === 'woman' ? 'Woman' : 'Anonymous';
-  
-  // Format incident type to Title Case (match rule values like 'Psychological')
-  const formattedIncidentType = payload.incidentType ? (
-    payload.incidentType.split(/\s+/).map(s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()).join(' ')
-  ) : '';
   
   // Create facts object with all necessary information
   const facts = {
@@ -992,6 +1017,29 @@ async function suggestForCase(payload = {}, modelObj = null) {
     detectionMethod = 'heuristic';
   }
   response.detectionMethod = detectionMethod;
+
+  // Recompute explicit immediate-assistance decision now that we know the
+  // authoritative rule (chosenEvent) and detection method. This lets rules
+  // that explicitly require immediate action take precedence and prevents
+  // medium-confidence heuristic probabilities from automatically forcing an
+  // "immediate" label (e.g. Psychological: Medium should not always be immediate).
+  // Priority order:
+  // 1. Manual override -> immediate only if override is High
+  // 2. If chosen rule explicitly requires immediate -> immediate
+  // 3. Otherwise require a higher probability threshold to count as immediate
+  //    (use 0.75 to avoid Medium risk being classified as immediate by default)
+  let requiresImmediate = false;
+  if (isManualOverride) {
+    requiresImmediate = (adjustedRisk === 'High');
+  } else if (response.dssChosenRule && response.dssChosenRule.params && response.dssChosenRule.params.requiresImmediate) {
+    requiresImmediate = true;
+  } else {
+    // Use a stricter threshold for automatic immediate classification
+    const IMMEDIATE_THRESHOLD = 0.75;
+    requiresImmediate = (finalImmediateProb >= IMMEDIATE_THRESHOLD) || (adjustedRisk === 'High');
+  }
+
+  response.requiresImmediateAssistance = requiresImmediate;
 
   return response;
 }

@@ -25,6 +25,14 @@ const CasesSchema = new mongoose.Schema({
 		required: [true, 'Victim name is required'],
 		trim: true,
 	},
+	victimType: {
+		type: String,
+		enum: ['child', 'woman', 'anonymous'],
+		// Make optional and default to 'anonymous' so case creation doesn't fail when frontend omits this
+		required: false,
+		default: 'anonymous',
+		trim: true,
+	},
 	incidentType: {
 		type: String,
 		required: [true, 'Incident type is required'],

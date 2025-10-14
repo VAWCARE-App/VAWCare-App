@@ -96,7 +96,37 @@ exports.createCase = async (req, res, next) => {
       console.warn('DSS enrich failed during case creation', e?.message || e);
     }
 
-    const created = await Cases.create(payload);
+    // Normalize victimType to canonical lowercase enum values expected by the schema
+    try {
+      if (payload.victimType) {
+        payload.victimType = String(payload.victimType).trim().toLowerCase();
+      }
+    } catch (e) {
+      // ignore normalization failures and proceed (will be caught by validation)
+    }
+
+    let created;
+    try {
+      created = await Cases.create(payload);
+    } catch (createErr) {
+      // Log payload and full error for debugging
+      console.error('Failed to create case. Payload:', JSON.stringify(payload, null, 2));
+      console.error('Cases.create error:', createErr && createErr.message ? createErr.message : createErr);
+      // If duplicate key, provide more context
+      if (createErr && createErr.code === 11000) {
+        const dupField = Object.keys(createErr.keyValue || {}).join(', ');
+        return res.status(400).json({ success: false, message: `Duplicate value for unique field(s): ${dupField}`, error: createErr });
+      }
+      // If validation error, return 400 with details
+      if (createErr && createErr.name === 'ValidationError') {
+        const details = Object.keys(createErr.errors || {}).reduce((acc, k) => {
+          acc[k] = createErr.errors[k].message || createErr.errors[k].name;
+          return acc;
+        }, {});
+        return res.status(400).json({ success: false, message: 'Validation failed', errors: details, error: createErr.message });
+      }
+      return res.status(500).json({ success: false, message: 'Failed to create case', error: createErr && createErr.message ? createErr.message : createErr });
+    }
     // Log case creation/view as appropriate
     try {
       await recordLog({ req, actorType: req.user?.role || 'official', actorId: req.user?.officialID || req.user?.adminID, action: 'view_case', details: `Created case ${created.caseID || created._id}` });

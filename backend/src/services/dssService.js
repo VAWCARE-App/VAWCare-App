@@ -29,6 +29,8 @@ function mapIncidentToBaseRisk(type, severity, manualRisk = null) {
 
   const t = (type || '').toLowerCase();
   // Default risk levels based on incident type
+  // Emergency should always be treated as High risk
+  if (t === 'emergency') return 'High';
   if (t === 'sexual' || t === 'physical') return 'High';
   if (t === 'psychological') return 'Medium';
   if (t === 'economic') return 'Low';
@@ -187,259 +189,358 @@ function getSolutionSuggestion(risk, incidentType, victimType) {
   const solutions = {
     child: {
       High: {
-        sexual: 'URGENT: Immediate child protection and medical response required.\n' +
-               '1. Contact child protection services immediately\n' +
-               '2. Arrange emergency medical exam and documentation\n' +
-               '3. Secure safe placement away from perpetrator\n' +
-               '4. Coordinate with police and legal services\n' +
-               '5. Assign emergency case worker for 24/7 support\n' +
-               '6. Arrange trauma-informed counseling',
-        physical: 'URGENT: Immediate protective intervention needed.\n' +
-                 '1. Document injuries and arrange medical care\n' +
-                 '2. Contact child protection services\n' +
-                 '3. Remove child from dangerous environment\n' +
-                 '4. File police report and gather evidence\n' +
-                 '5. Arrange emergency shelter if needed\n' +
-                 '6. Begin trauma-informed support',
-        psychological: 'HIGH RISK: Urgent mental health intervention required.\n' +
-                      '1. Assess suicide/self-harm risk immediately\n' +
-                      '2. Contact child protection services\n' +
-                      '3. Arrange emergency counseling\n' +
-                      '4. Create safety plan with guardians\n' +
-                      '5. Monitor closely and follow up daily',
-        economic: 'URGENT: Basic needs and safety at risk.\n' +
-                 '1. Assess immediate needs (food, shelter, medical)\n' +
-                 '2. Contact child welfare services\n' +
-                 '3. Arrange emergency assistance\n' +
-                 '4. Ensure school continuity\n' +
-                 '5. Connect to social services'
+        emergency:
+          'EMERGENCY: Immediate child-safety action (RA 7610/RA 9344).\n' +
+          '1. Activate WCPU/RHU for urgent medical exam; preserve evidence (no washing, clothes bagged)\n' +
+          '2. Notify/coordinate with WCPD-PNP; record in blotter and secure scene if applicable\n' +
+          '3. Contact MSWDO/DSWD for immediate protective custody and safety placement\n' +
+          '4. Conduct brief risk/ lethality screen; remove child from perpetrator\n' +
+          '5. Start child-friendly intake; obtain consent/assent; assign case officer on 24/7 standby\n' +
+          '6. Prepare referrals (medical, psychosocial, legal); schedule case conference within 24 hours',
+        sexual:
+          'URGENT: Child sexual abuse protocol (within 72 hrs if possible).\n' +
+          '1. Arrange WCPU/RHU medico-legal exam; instruct evidence preservation\n' +
+          '2. Coordinate WCPD for investigation and in-camera child interview\n' +
+          '3. Ensure immediate safety placement (relative/DSWD shelter) away from suspect\n' +
+          '4. Begin trauma-informed counseling; brief caregiver on do’s/don’ts\n' +
+          '5. Document with standardized child intake; set follow-up within 24–48 hours',
+        physical:
+          'URGENT: Protective intervention for child.\n' +
+          '1. Photograph/document injuries; send to RHU/WCPU for treatment and MLE\n' +
+          '2. Notify WCPD; assess risk and separate from alleged perpetrator\n' +
+          '3. Coordinate MSWDO/DSWD for temporary custody/kinship care\n' +
+          '4. Start safety plan with caregiver; daily check-ins for 3 days\n' +
+          '5. Prepare referrals (counseling, legal) and case conference schedule',
+        psychological:
+          'HIGH RISK: Immediate MH support and safety stabilization.\n' +
+          '1. Screen for self-harm/suicide; escalate to RHU MH provider if positive\n' +
+          '2. Notify MSWDO for home visit and safety planning with caregiver\n' +
+          '3. Start child-focused counseling; engage school guidance\n' +
+          '4. Document incidents; set daily monitoring for 3–5 days\n' +
+          '5. Coordinate WCPD if threats/coercion persist',
+        economic:
+          'URGENT: Basic-needs/security compromise.\n' +
+          '1. Rapid needs assessment (food/shelter/medicine); provide emergency assistance\n' +
+          '2. Engage MSWDO for AICS/DSWD support and education continuity\n' +
+          '3. Verify caregiver capacity; evaluate temporary placement if unsafe\n' +
+          '4. Document and link to livelihood/aid; schedule welfare checks within 48 hours\n' +
+          '5. Monitor for neglect/abuse indicators; escalate as needed'
       },
       Medium: {
-        sexual: 'PRIORITY: Protective intervention needed.\n' +
-               '1. Report to child protection services\n' +
-               '2. Arrange medical check and documentation\n' +
-               '3. Begin counseling and support services\n' +
-               '4. Create safety plan with family/guardians\n' +
-               '5. Monitor situation closely',
-        physical: 'PRIORITY: Protection and support needed.\n' +
-                 '1. Document any injuries\n' +
-                 '2. Arrange medical check if needed\n' +
-                 '3. Contact child protection services\n' +
-                 '4. Begin regular monitoring\n' +
-                 '5. Arrange counseling support',
-        psychological: 'PRIORITY: Mental health support needed.\n' +
-                      '1. Begin regular counseling\n' +
-                      '2. Assess home environment\n' +
-                      '3. Create support plan with guardians\n' +
-                      '4. Monitor school performance\n' +
-                      '5. Schedule weekly check-ins',
-        economic: 'PRIORITY: Support services needed.\n' +
-                 '1. Assess family resources\n' +
-                 '2. Connect to assistance programs\n' +
-                 '3. Ensure educational access\n' +
-                 '4. Monitor basic needs\n' +
-                 '5. Regular welfare checks'
+        emergency:
+          'EMERGENCY (Priority): Rapid child-safety response.\n' +
+          '1. Alert MSWDO/WCPD; validate immediate risks and protective factors\n' +
+          '2. Arrange prompt medical check and basic evidence documentation\n' +
+          '3. Draft interim safety plan with caregiver; identify safe alternate carer\n' +
+          '4. Provide counseling referral; follow-up within 24–48 hours\n' +
+          '5. Prepare contingency for protective custody if risks increase',
+        sexual:
+          'PRIORITY: Protective measures and evidence care.\n' +
+          '1. Refer to WCPU/RHU for exam; brief on evidence preservation\n' +
+          '2. Coordinate WCPD for case build-up; use child-sensitive interview\n' +
+          '3. Establish safety plan and supervised contact rules\n' +
+          '4. Initiate psychosocial support; set weekly monitoring\n' +
+          '5. Document thoroughly using child intake forms',
+        physical:
+          'PRIORITY: Injury verification and safety planning.\n' +
+          '1. Document injuries; RHU check if indicated\n' +
+          '2. Notify WCPD; assess home safety and proximity to perpetrator\n' +
+          '3. Engage MSWDO; agree on supervision and safe caregiver\n' +
+          '4. Counseling referral; schedule twice-weekly check-ins\n' +
+          '5. Prepare escalation path if new harm occurs',
+        psychological:
+          'PRIORITY: MH support and school coordination.\n' +
+          '1. Start regular counseling; provide coping tools to child/caregiver\n' +
+          '2. Home environment assessment via MSWDO\n' +
+          '3. Link with school guidance for monitoring\n' +
+          '4. Weekly check-ins for 4 weeks; adjust plan if symptoms worsen\n' +
+          '5. WCPD referral if threats/harassment present',
+        economic:
+          'PRIORITY: Stabilize basic needs and routines.\n' +
+          '1. MSWDO assessment for assistance (AICS/food/transport)\n' +
+          '2. Ensure school continuity; coordinate learning support\n' +
+          '3. Link to NGO/government programs; document commitments\n' +
+          '4. Biweekly welfare checks; update support plan\n' +
+          '5. Monitor for neglect risks'
       },
       Low: {
-        sexual: 'MONITOR: Preventive intervention needed.\n' +
-               '1. Document concerns\n' +
-               '2. Begin preventive counseling\n' +
-               '3. Educate about boundaries\n' +
-               '4. Create safety awareness plan\n' +
-               '5. Schedule regular check-ins',
-        physical: 'MONITOR: Support and prevention needed.\n' +
-                 '1. Document situation\n' +
-                 '2. Begin family support services\n' +
-                 '3. Arrange counseling\n' +
-                 '4. Create safety plan\n' +
-                 '5. Regular monitoring',
-        psychological: 'MONITOR: Support services recommended.\n' +
-                      '1. Begin counseling support\n' +
-                      '2. Create coping strategies\n' +
-                      '3. Work with family/school\n' +
-                      '4. Regular check-ins\n' +
-                      '5. Monitor behavior changes',
-        economic: 'MONITOR: Support services recommended.\n' +
-                 '1. Assess needs\n' +
-                 '2. Connect to resources\n' +
-                 '3. Monitor school attendance\n' +
-                 '4. Regular welfare checks\n' +
-                 '5. Provide family support'
+        emergency:
+          'EMERGENCY (Monitor): Reported as emergency; current severity lower.\n' +
+          '1. Validate details with caregiver/MSWDO; confirm safety\n' +
+          '2. Provide hotlines and clear escalation steps\n' +
+          '3. Offer fast-track counseling/medical check if needed\n' +
+          '4. Schedule follow-up within 24–48 hours\n' +
+          '5. Keep contact line open for urgent changes',
+        sexual:
+          'MONITOR: Preventive protection and education.\n' +
+          '1. Record concerns; advise evidence consciousness if risk rises\n' +
+          '2. Start counseling; educate on boundaries/body safety\n' +
+          '3. Safety awareness plan with caregiver\n' +
+          '4. Biweekly check-ins; school coordination as needed\n' +
+          '5. Escalate to WCPD if new incidents occur',
+        physical:
+          'MONITOR: Family support and prevention.\n' +
+          '1. Document history; provide RHU referral if bruising/pain\n' +
+          '2. MSWDO family session on non-violent discipline\n' +
+          '3. Child safety plan and trusted-adult mapping\n' +
+          '4. Regular monitoring for 4 weeks\n' +
+          '5. Escalate upon signs of harm',
+        psychological:
+          'MONITOR: Counseling and home/school support.\n' +
+          '1. Initiate counseling; develop coping strategies\n' +
+          '2. Coordinate with caregiver and school guidance\n' +
+          '3. Scheduled check-ins; mood/behavior tracker\n' +
+          '4. Reinforce safety plan and hotline use\n' +
+          '5. Escalate if ideation/threats appear',
+        economic:
+          'MONITOR: Link to services and welfare checks.\n' +
+          '1. Assess needs; connect to MSWDO aid and feeding programs\n' +
+          '2. Ensure school attendance and transport solutions\n' +
+          '3. Monthly welfare checks; adjust support plan\n' +
+          '4. Document progress; escalate if neglect indicators emerge\n' +
+          '5. Maintain caregiver coaching'
       }
     },
     woman: {
       High: {
-        sexual: 'URGENT: Immediate intervention required.\n' +
-               '1. Arrange emergency medical exam\n' +
-               '2. Contact police/legal services\n' +
-               '3. Secure safe accommodation\n' +
-               '4. Begin crisis counseling\n' +
-               '5. Create safety plan\n' +
-               '6. Connect to support services',
-        physical: 'URGENT: Immediate safety measures needed.\n' +
-                 '1. Document injuries and evidence\n' +
-                 '2. Arrange medical care\n' +
-                 '3. Contact police if desired\n' +
-                 '4. Secure safe shelter\n' +
-                 '5. Create escape plan\n' +
-                 '6. Begin support services',
-        psychological: 'HIGH RISK: Urgent support needed.\n' +
-                      '1. Assess suicide/harm risk\n' +
-                      '2. Begin crisis counseling\n' +
-                      '3. Create safety plan\n' +
-                      '4. Connect to support services\n' +
-                      '5. Regular monitoring',
-        economic: 'URGENT: Critical support needed.\n' +
-                 '1. Assess immediate needs\n' +
-                 '2. Arrange emergency assistance\n' +
-                 '3. Connect to shelter services\n' +
-                 '4. Begin financial counseling\n' +
-                 '5. Create independence plan'
+        emergency:
+          'EMERGENCY: Immediate safety (RA 9262/Barangay Protocols).\n' +
+          '1. Issue/assist Temporary BPO if criteria met; record blotter\n' +
+          '2. Arrange secure transport to shelter/relative; separate from aggressor\n' +
+          '3. RHU/WCPU medico-legal; preserve evidence; photo-document\n' +
+          '4. Coordinate WCPD for protection/filing; brief on rights and remedies\n' +
+          '5. Crisis counseling; individualized Safety Plan with lethality screen\n' +
+          '6. Prepare referrals (legal aid, DSWD shelter, psychosocial); 24-hour follow-up',
+        sexual:
+          'URGENT: Sexual violence response (within 72 hrs if possible).\n' +
+          '1. RHU/WCPU exam, PEP/EC counseling; evidence preservation guidance\n' +
+          '2. WCPD coordination for statement and case build-up\n' +
+          '3. Safe accommodation (DSWD facility/relative); no contact with suspect\n' +
+          '4. Crisis counseling and trauma care; inform rights under RA 8353/9262\n' +
+          '5. Schedule follow-up within 24–48 hours and legal consult',
+        physical:
+          'URGENT: Safety and documentation.\n' +
+          '1. Photograph/document injuries; RHU treatment and MLE\n' +
+          '2. Consider BPO issuance; assess high-risk indicators\n' +
+          '3. WCPD referral; discuss filing options and safety escort\n' +
+          '4. Arrange temporary shelter/safe house\n' +
+          '5. Start counseling; finalize Safety Plan with emergency contacts',
+        psychological:
+          'HIGH RISK: Mental health stabilization and protection.\n' +
+          '1. Screen for suicide/lethality; urgent MH referral if positive\n' +
+          '2. Enforce BPO/safety measures if threats persist\n' +
+          '3. Begin counseling (trauma-informed); peer support linkage\n' +
+          '4. Daily check-ins for 3 days; then every 2–3 days\n' +
+          '5. WCPD involvement if coercion/harassment continues',
+        economic:
+          'URGENT: Stabilize needs and independence.\n' +
+          '1. Rapid needs assessment; provide immediate assistance (AICS)\n' +
+          '2. Secure shelter/transport/childcare arrangements\n' +
+          '3. Link to livelihood/financial counseling; apply to gov’t programs\n' +
+          '4. Integrate economic steps in Safety Plan; monitor weekly\n' +
+          '5. Coordinate legal remedies for support/maintenance'
       },
       Medium: {
-        sexual: 'PRIORITY: Protection and support needed.\n' +
-               '1. Document incidents\n' +
-               '2. Arrange counseling\n' +
-               '3. Create safety plan\n' +
-               '4. Connect to support groups\n' +
-               '5. Discuss reporting options',
-        physical: 'PRIORITY: Safety planning needed.\n' +
-                 '1. Document incidents\n' +
-                 '2. Create safety plan\n' +
-                 '3. Connect to support services\n' +
-                 '4. Begin counseling\n' +
-                 '5. Discuss legal options',
-        psychological: 'PRIORITY: Support services needed.\n' +
-                      '1. Begin counseling\n' +
-                      '2. Create coping strategies\n' +
-                      '3. Build support network\n' +
-                      '4. Regular check-ins\n' +
-                      '5. Safety planning',
-        economic: 'PRIORITY: Support services needed.\n' +
-                 '1. Financial counseling\n' +
-                 '2. Job search assistance\n' +
-                 '3. Connect to resources\n' +
-                 '4. Create budget plan\n' +
-                 '5. Regular monitoring'
+        emergency:
+          'EMERGENCY (Priority): Rapid support with safeguards.\n' +
+          '1. Validate risk; consider BPO and safe accompaniment\n' +
+          '2. RHU check if injury/somatic symptoms; document properly\n' +
+          '3. Counseling and Safety Plan; concealment strategies if cohabiting\n' +
+          '4. Connect to legal aid/NGOs; schedule close follow-up (48–72 hrs)\n' +
+          '5. Escalate to WCPD if risk rises',
+        sexual:
+          'PRIORITY: Protection, documentation, options.\n' +
+          '1. Document account; offer RHU/WCPU exam and psychosocial support\n' +
+          '2. Safety plan and supervised/no-contact arrangements\n' +
+          '3. WCPD/legal options discussion; assist if choosing to file\n' +
+          '4. Weekly monitoring and referral updates\n' +
+          '5. Record consent preferences clearly',
+        physical:
+          'PRIORITY: Safety planning and evidence.\n' +
+          '1. Record/photograph injuries; RHU visit if needed\n' +
+          '2. Draft Safety Plan (escape routes, code words, go-bag)\n' +
+          '3. Counseling referral and support-group linkage\n' +
+          '4. Discuss legal pathways (BPO, complaints)\n' +
+          '5. Twice-weekly check-ins for 2 weeks',
+        psychological:
+          'PRIORITY: Counseling and network building.\n' +
+          '1. Start counseling; teach coping/grounding techniques\n' +
+          '2. Build support network (family/peers/faith-based, if desired)\n' +
+          '3. Weekly check-ins; adjust plan per symptom changes\n' +
+          '4. Consider MH referral if moderate/severe symptoms\n' +
+          '5. Safety reminders for stalking/harassment',
+        economic:
+          'PRIORITY: Resource linkage and planning.\n' +
+          '1. Financial counseling and budgeting; explore livelihood programs\n' +
+          '2. Map support (food, transport, child needs)\n' +
+          '3. Apply for assistance; track commitments\n' +
+          '4. Biweekly monitoring; update independence milestones\n' +
+          '5. Coordinate legal remedies for support'
       },
       Low: {
-        sexual: 'MONITOR: Support recommended.\n' +
-               '1. Document concerns\n' +
-               '2. Discuss boundaries\n' +
-               '3. Connect to counseling\n' +
-               '4. Create safety awareness\n' +
-               '5. Regular check-ins',
-        physical: 'MONITOR: Prevention needed.\n' +
-                 '1. Document situation\n' +
-                 '2. Create safety plan\n' +
-                 '3. Connect to counseling\n' +
-                 '4. Build support network\n' +
-                 '5. Regular check-ins',
-        psychological: 'MONITOR: Support recommended.\n' +
-                      '1. Begin counseling\n' +
-                      '2. Build coping skills\n' +
-                      '3. Create support network\n' +
-                      '4. Regular check-ins\n' +
-                      '5. Monitor changes',
-        economic: 'MONITOR: Support recommended.\n' +
-                 '1. Financial counseling\n' +
-                 '2. Resource connection\n' +
-                 '3. Skills development\n' +
-                 '4. Create action plan\n' +
-                 '5. Regular monitoring'
+        emergency:
+          'EMERGENCY (Monitor): Reported emergency; current severity lower.\n' +
+          '1. Provide hotlines, BPO info, and discreet safety tips\n' +
+          '2. Offer rapid counseling and RHU referral if needed\n' +
+          '3. Schedule follow-up within 24–48 hours\n' +
+          '4. Keep lines open for escalation; document consent choices',
+        sexual:
+          'MONITOR: Support and preparedness.\n' +
+          '1. Document concerns; explain exam/time windows if future harm occurs\n' +
+          '2. Counseling referral and safety awareness\n' +
+          '3. Options talk (WCPD/legal) without pressure\n' +
+          '4. Regular check-ins; adjust if risk increases\n' +
+          '5. Maintain confidentiality per consent',
+        physical:
+          'MONITOR: Prevention and documentation.\n' +
+          '1. Record incidents; advise safe evidence keeping\n' +
+          '2. Create Safety Plan; identify safe contacts/places\n' +
+          '3. Counseling and support-group linkage\n' +
+          '4. Regular check-ins; escalate if pattern escalates\n' +
+          '5. Discuss BPO options when ready',
+        psychological:
+          'MONITOR: Psychosocial support.\n' +
+          '1. Begin counseling; coping and stress-management tools\n' +
+          '2. Build support network; hotline awareness\n' +
+          '3. Weekly check-ins for one month\n' +
+          '4. MH referral if symptoms persist/worsen\n' +
+          '5. Reassess safety if threats emerge',
+        economic:
+          'MONITOR: Gradual stabilization.\n' +
+          '1. Basic resource mapping and referrals\n' +
+          '2. Budgeting and skills training options\n' +
+          '3. Monthly monitoring; update action plan\n' +
+          '4. Track applications to assistance programs\n' +
+          '5. Encourage savings/ID and document security'
       }
     },
     anonymous: {
       High: {
-        sexual: 'URGENT RESPONSE NEEDED\n' +
-               '1. Document all available details\n' +
-               '2. Attempt to identify victim safely\n' +
-               '3. Contact authorities if location known\n' +
-               '4. Mobilize local support services\n' +
-               '5. Monitor for additional reports\n' +
-               '6. Keep report channel open',
-        physical: 'URGENT RESPONSE NEEDED\n' +
-                 '1. Document reported violence\n' +
-                 '2. Alert local authorities if location known\n' +
-                 '3. Attempt to establish safe contact\n' +
-                 '4. Monitor situation\n' +
-                 '5. Keep report channel open',
-        psychological: 'HIGH RISK SITUATION\n' +
-                      '1. Document reported threats\n' +
-                      '2. Attempt to establish safe contact\n' +
-                      '3. Provide crisis hotline information\n' +
-                      '4. Monitor for escalation\n' +
-                      '5. Keep communication open',
-        economic: 'URGENT SUPPORT NEEDED\n' +
-                 '1. Document reported situation\n' +
-                 '2. Provide resource information\n' +
-                 '3. List local support services\n' +
-                 '4. Keep report channel open\n' +
-                 '5. Monitor for updates'
+        emergency:
+          'EMERGENCY: High-risk anonymous report; act on available data.\n' +
+          '1. Capture details (time/place/pattern); tag for rapid triage\n' +
+          '2. If location known, alert WCPD/EMS; document in blotter\n' +
+          '3. Broadcast hotlines and safe-contact instructions (no retaliation)\n' +
+          '4. Coordinate MSWDO/DSWD for possible outreach/shelter readiness\n' +
+          '5. Keep reporting channel open; set 12–24h active monitoring',
+        sexual:
+          'URGENT RESPONSE NEEDED (Anonymous).\n' +
+          '1. Record specifics; note timeframe (72-hr exam window)\n' +
+          '2. Share discreet instructions for evidence preservation and WCPU access\n' +
+          '3. If site identifiable, coordinate WCPD patrol/visibility\n' +
+          '4. Keep line open; encourage safe direct contact\n' +
+          '5. Flag case for daily review until stabilized',
+        physical:
+          'URGENT RESPONSE NEEDED (Anonymous).\n' +
+          '1. Log details; check recurrence patterns/locations\n' +
+          '2. Alert WCPD for patrol if area known; document blotter entry\n' +
+          '3. Publish safety tips and hotline discreetly\n' +
+          '4. Maintain open channel; 24h follow-up tickler\n' +
+          '5. Prepare referral kit for when victim surfaces',
+        psychological:
+          'HIGH RISK SITUATION (Anonymous).\n' +
+          '1. Document threats/harassment indicators\n' +
+          '2. Provide MH/crisis hotlines and covert contact options\n' +
+          '3. Monitor for escalation or corroborating reports\n' +
+          '4. Coordinate WCPD if stalking/credible threats noted\n' +
+          '5. Keep channel open for direct outreach',
+        economic:
+          'URGENT SUPPORT NEEDED (Anonymous).\n' +
+          '1. Log situation; share how to access AICS/aid discreetly\n' +
+          '2. Provide directory of services (RHU, MSWDO, shelters)\n' +
+          '3. Encourage safe callback/contact; no-identification options\n' +
+          '4. Monitor for updates and cross-reports\n' +
+          '5. Keep channel open; prep referral package'
       },
       Medium: {
-        sexual: 'PRIORITY RESPONSE\n' +
-               '1. Document reported harassment\n' +
-               '2. Provide safety resources\n' +
-               '3. List support services\n' +
-               '4. Monitor situation\n' +
-               '5. Keep channel open',
-        physical: 'PRIORITY RESPONSE\n' +
-                 '1. Document reported incidents\n' +
-                 '2. Provide safety planning info\n' +
-                 '3. List local resources\n' +
-                 '4. Monitor situation\n' +
-                 '5. Maintain open channel',
-        psychological: 'SUPPORT NEEDED\n' +
-                      '1. Document reported abuse\n' +
-                      '2. Provide counseling resources\n' +
-                      '3. Share coping strategies\n' +
-                      '4. List support services\n' +
-                      '5. Keep channel open',
-        economic: 'SUPPORT NEEDED\n' +
-                 '1. Document situation\n' +
-                 '2. Provide resource list\n' +
-                 '3. Share support options\n' +
-                 '4. Monitor for changes\n' +
-                 '5. Maintain contact'
+        emergency:
+          'EMERGENCY (Priority): Rapid outreach despite anonymity.\n' +
+          '1. Offer hotlines and safe-contact paths; capture any new details\n' +
+          '2. Push situational safety tips for the described context\n' +
+          '3. Stand up monitoring for 48–72 hours; tag for escalation\n' +
+          '4. Coordinate quiet patrols if area is indicated',
+        sexual:
+          'PRIORITY RESPONSE (Anonymous).\n' +
+          '1. Log report; share WCPU/RHU access steps and time sensitivity\n' +
+          '2. Provide safety planning guide; encourage evidence care\n' +
+          '3. Offer legal/WCPD options overview\n' +
+          '4. Keep channel open; review every 48 hours\n' +
+          '5. Update record upon any new detail',
+        physical:
+          'PRIORITY RESPONSE (Anonymous).\n' +
+          '1. Record incidents; note hotspots and time patterns\n' +
+          '2. Disseminate safety tips/hotlines in the vicinity when safe\n' +
+          '3. Quiet WCPD visibility if feasible\n' +
+          '4. Maintain open line; scheduled follow-up ping\n' +
+          '5. Prepare referrals for rapid activation',
+        psychological:
+          'SUPPORT NEEDED (Anonymous).\n' +
+          '1. Log concerns; provide MH and VAWC hotlines\n' +
+          '2. Share coping/safety strategies for stalking/harassment\n' +
+          '3. Encourage direct contact when safe\n' +
+          '4. Review case in 2–3 days for signals of escalation\n' +
+          '5. Update instructions as details emerge',
+        economic:
+          'SUPPORT NEEDED (Anonymous).\n' +
+          '1. Record need; provide step-by-step access to aid\n' +
+          '2. Share low-barrier services (feeding, shelter, transport)\n' +
+          '3. Keep channel open; invite safe callback\n' +
+          '4. Reassess in 2–3 days; prepare targeted referrals\n' +
+          '5. Document any new identifiers'
       },
       Low: {
-        sexual: 'MONITOR SITUATION\n' +
-               '1. Document reported concerns\n' +
-               '2. Provide safety information\n' +
-               '3. List available resources\n' +
-               '4. Keep channel open\n' +
-               '5. Monitor for escalation',
-        physical: 'MONITOR SITUATION\n' +
-                 '1. Document reports\n' +
-                 '2. Share safety resources\n' +
-                 '3. List support services\n' +
-                 '4. Keep channel open\n' +
-                 '5. Watch for changes',
-        psychological: 'MONITOR SITUATION\n' +
-                      '1. Document concerns\n' +
-                      '2. Provide support resources\n' +
-                      '3. Share coping information\n' +
-                      '4. Keep channel open\n' +
-                      '5. Monitor reports',
-        economic: 'MONITOR SITUATION\n' +
-                 '1. Document reports\n' +
-                 '2. Share resource list\n' +
-                 '3. Provide support options\n' +
-                 '4. Keep channel open\n' +
-                 '5. Watch for changes'
+        emergency:
+          'EMERGENCY (Monitor): Anonymous, low-severity at present.\n' +
+          '1. Provide hotlines and clear escalation cues\n' +
+          '2. Offer counseling/medical referral options\n' +
+          '3. Schedule periodic check-ins via channel\n' +
+          '4. Maintain monitoring flag for new intel',
+        sexual:
+          'MONITOR SITUATION (Anonymous).\n' +
+          '1. Log concerns; share WCPU access info discreetly\n' +
+          '2. Provide safety and evidence-preservation guidance\n' +
+          '3. Keep line open; encourage details when safe\n' +
+          '4. Elevate if corroborated by new reports\n' +
+          '5. Refresh advice as facts update',
+        physical:
+          'MONITOR SITUATION (Anonymous).\n' +
+          '1. Record report; keep index of time/place cues\n' +
+          '2. Share safety planning resources\n' +
+          '3. Maintain channel; send reminder check-in\n' +
+          '4. Escalate to WCPD upon new risk indicators\n' +
+          '5. Prepare info pack for immediate use',
+        psychological:
+          'MONITOR SITUATION (Anonymous).\n' +
+          '1. Log threats/harassment themes\n' +
+          '2. Provide MH/crisis lines and stalking safety tips\n' +
+          '3. Keep channel open; recheck in 3–5 days\n' +
+          '4. Escalate if threats become specific/credible\n' +
+          '5. Update safety script as needed',
+        economic:
+          'MONITOR SITUATION (Anonymous).\n' +
+          '1. Note needs; send directory of aid with low ID requirements\n' +
+          '2. Encourage safe follow-up; maintain confidentiality\n' +
+          '3. Recheck in one week for changes\n' +
+          '4. Escalate if minors/neglect indicators surface\n' +
+          '5. Keep channel open for immediate activation'
       }
     }
   };
 
-  const defaultResponse = 'Review case and provide appropriate support or referrals. Assign case officer to follow up.';
+  const defaultResponse =
+    'Review case using barangay VAW Desk protocol. Document, assess risk, offer referrals (medical/psychosocial/legal), and assign a case officer for follow-up.';
 
+  // Normalize incidentType to a canonical key for lookup (Emergency).
+  const itKey = it && it.includes('emergency') ? 'emergency' : it;
   try {
-    return solutions[vt][risk][it] || solutions[vt][risk]['physical'] || defaultResponse;
+    const bucket = (solutions[vt] && solutions[vt][risk]) ? solutions[vt][risk] : null;
+    if (!bucket) return defaultResponse;
+    return bucket[itKey] || bucket[it] || bucket['emergency'] || bucket['physical'] || defaultResponse;
   } catch (e) {
     return defaultResponse;
   }
 }
+
 
 function synthesizeProbabilities(incidentType, storedRisk) {
   // Map incidentType to index: Economic, Psychological, Physical, Sexual
@@ -666,12 +767,11 @@ async function suggestForCase(payload = {}, modelObj = null) {
   console.log('Base risk:', baseRisk);
   
   // Adjust for victim type (children get higher risk), respecting manual override
-  const adjustedRisk = adjustRiskForVictimType(baseRisk, victimType, isManualOverride);
+  // Use `let` because ML prediction logic below may update this value conditionally
+  let adjustedRisk = adjustRiskForVictimType(baseRisk, victimType, isManualOverride);
   console.log('Adjusted risk:', adjustedRisk);
   
-  // Get specific solution-focused suggestion
-  console.log('Getting suggestion for:', { risk: adjustedRisk, incidentType: payload.incidentType, victimType });
-  const suggestion = getSolutionSuggestion(adjustedRisk, payload.incidentType, victimType);
+  // (defer suggestion lookup until we've attempted to resolve victim type from DB)
   
   // ML-enhanced risk assessment
   let mlPrediction = null;
@@ -698,34 +798,39 @@ async function suggestForCase(payload = {}, modelObj = null) {
         timeOfDay
       ];
       
-      // Get ML prediction
-      const prediction = mlModel.predict(tf.tensor2d([features]));
-      const probs = Array.from(prediction.dataSync());
-      
-      // Map probabilities to risk levels
-      const riskLevels = ['Low', 'Medium', 'High'];
-      const maxProb = Math.max(...probs);
-      const maxIndex = probs.indexOf(maxProb);
-      
-      mlPrediction = riskLevels[maxIndex];
-      confidence = maxProb;
-      
-      // Blend ML prediction with rule-based assessment
-      if (confidence > 0.8) {
-        // High confidence ML prediction
-        if (victimType === 'child') {
-          // For children, take the higher risk level
-          adjustedRisk = ['Low', 'Medium', 'High'].indexOf(mlPrediction) >
-                        ['Low', 'Medium', 'High'].indexOf(adjustedRisk) ?
-                        mlPrediction : adjustedRisk;
-        } else {
-          // For others, use ML prediction with high confidence
-          adjustedRisk = mlPrediction;
+      // Guard ML execution to avoid unexpected runtime errors
+      try {
+        const prediction = mlModel.predict(tf.tensor2d([features]));
+        const probs = Array.from(prediction.dataSync());
+        
+        // Map probabilities to risk levels
+        const riskLevels = ['Low', 'Medium', 'High'];
+        const maxProb = Math.max(...probs);
+        const maxIndex = probs.indexOf(maxProb);
+        
+        mlPrediction = riskLevels[maxIndex];
+        confidence = maxProb;
+
+        // Blend ML prediction with rule-based assessment
+        if (confidence > 0.8) {
+          // High confidence ML prediction
+          if (victimType === 'child') {
+            // For children, take the higher risk level
+            adjustedRisk = ['Low', 'Medium', 'High'].indexOf(mlPrediction) >
+                          ['Low', 'Medium', 'High'].indexOf(adjustedRisk) ?
+                          mlPrediction : adjustedRisk;
+          } else {
+            // For others, use ML prediction with high confidence
+            adjustedRisk = mlPrediction;
+          }
         }
+      } catch (mlErr) {
+        // Log ML-specific errors but continue processing with rule-based values
+        console.warn('DSS ML prediction failed, falling back to rules:', mlErr && mlErr.message ? mlErr.message : mlErr);
       }
-      // If confidence is low, stick with rule-based assessment
+      // If confidence is low or ML failed, stick with rule-based assessment
     } catch (error) {
-      console.error('ML prediction error:', error);
+      console.error('DSS feature-prep error:', error);
       // Continue with rule-based assessment
     }
   }
@@ -815,7 +920,8 @@ async function suggestForCase(payload = {}, modelObj = null) {
   });
 
   // Get specific solution-focused suggestion from detailed suggestions map
-  const finalSuggestion = getSolutionSuggestion(adjustedRisk, payload.incidentType, victimType);
+  // Use resolvedVictimType (may have been fetched from Victims model) to pick the correct bucket
+  const finalSuggestion = getSolutionSuggestion(adjustedRisk, payload.incidentType, resolvedVictimType || victimType);
 
   // Return object with proper handling of incident type and risk level
   // Build human-readable explanations for the probability vector (keeps numeric array in `dssProbabilities`)
@@ -827,38 +933,33 @@ async function suggestForCase(payload = {}, modelObj = null) {
     recommendedAction: label === 'Sexual' || label === 'Physical' ? 'Prioritize immediate safety and medical/legal referral' : 'Provide counseling/support and monitor for escalation'
   }));
 
-  return {
+  // Build a concise, unambiguous response object (avoid duplicate keys)
+  const response = {
     predictedRisk: originalIncidentType || 'Unknown',
     incidentType: originalIncidentType,
     riskLevel: adjustedRisk,
-    mlPrediction: mlPrediction ? {
-      risk: mlPrediction,
-      confidence: confidence
-    } : null,
-    // DSS fields that match the schema
+    mlPrediction: mlPrediction ? { risk: mlPrediction, confidence } : null,
+
+    // DSS fields that map to database/case schema
     dssPredictedRisk: originalIncidentType || 'Unknown',
     dssStoredRisk: adjustedRisk,
     dssProbabilities: probs,
-  dssProbabilitiesExplanation: dssProbabilitiesExplanation,
+    dssProbabilitiesExplanation,
     dssImmediateAssistanceProbability: finalImmediateProb,
-    dssSuggestion: finalSuggestion || suggestion || 'Based on the case details, a specific recommendation will be provided by the assigned officer.',
+    dssSuggestion: finalSuggestion || 'Review the report and coordinate with MSWD or PNP-WCPD for proper intervention and documentation.',
     dssRuleMatched: ruleResult.matched,
     dssChosenRule: ruleResult.matched && ruleResult.events.length > 0 ? ruleResult.events[0] : null,
-    dssManualOverride: isManualOverride,
-    // Additional fields for API response
-    suggestion: finalSuggestion || suggestion || 'Based on the case details, a specific recommendation will be provided by the assigned officer.',
+    dssManualOverride: !!payload.riskLevel,
+
+    // API-friendly fields
+    suggestion: finalSuggestion || 'Review the report and coordinate with MSWD or PNP-WCPD for proper intervention and documentation.',
     requiresImmediateAssistance: isManualOverride ? (adjustedRisk === 'High') : (finalImmediateProb >= 0.5 || adjustedRisk === 'High'),
     ruleDetails: ruleResult.matched && ruleResult.events.length > 0 ? ruleResult.events[0] : null,
     severity,
-    victimType,
-    // Add database fields with correct names
-    dssPredictedRisk: originalIncidentType,
-    dssStoredRisk: adjustedRisk,
-    dssSuggestion: suggestion || '',
-    dssRuleMatched: ruleResult.matched,
-    dssChosenRule: ruleResult.matched && ruleResult.events.length > 0 ? ruleResult.events[0] : null,
-    dssManualOverride: !!payload.riskLevel  // true if risk level was manually provided
+    victimType: resolvedVictimType || victimType,
   };
+
+  return response;
 }
 
 // Retrain model periodically or on demand

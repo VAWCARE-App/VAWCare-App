@@ -162,19 +162,41 @@ export default function DssSuggestion({ caseData }) {
                 </div>
               </div>
 
-              {/* Detection Method */}
+              {/* Detection Method(s) — show all sources so staff see what contributed */}
               <div>
                 <Typography.Text type="secondary">Detection Method:</Typography.Text>
-                <div style={{ marginTop: 4 }}>
-                  {result.ruleMatched && result.ruleEvent && (
-                    <Tag color="purple" icon={<CheckCircleOutlined />}>
-                      Rule Match: {result.ruleEvent.type}
-                    </Tag>
+                <div style={{ marginTop: 6, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {/* Primary detection method tag (friendly) */}
+                  {(() => {
+                    const dmRaw = String(result.detectionMethod || '').trim();
+                    if (dmRaw === 'manual_override') return <Tag color="volcano" icon={<InfoCircleOutlined />}>Manual override</Tag>;
+                    if (dmRaw.startsWith('ml_high_confidence')) {
+                      const parts = dmRaw.split(':');
+                      return <Tag color="geekblue" icon={<ThunderboltOutlined />}>ML (high confidence): {parts[1] || ''}</Tag>;
+                    }
+                    if (dmRaw.startsWith('rule_engine:')) {
+                      const parts = dmRaw.split(':');
+                      return <Tag color="purple" icon={<CheckCircleOutlined />}>Rule Engine: {parts[1] || ''}</Tag>;
+                    }
+                    if (dmRaw === 'heuristic') return <Tag color="default">Heuristic</Tag>;
+                    return null;
+                  })()}
+
+                  {/* Explicit extra sources (always show when present) */}
+                  {result.dssManualOverride && result.detectionMethod !== 'manual_override' && (
+                    <Tag color="volcano" icon={<InfoCircleOutlined />}>Manual override</Tag>
                   )}
-                  {result.keywordMatched && result.matchedKeyword && (
-                    <Tag color="magenta" icon={<InfoCircleOutlined />}>
-                      Keyword: {result.matchedKeyword}
-                    </Tag>
+
+                  {result.mlPrediction && result.mlPrediction.risk && (
+                    <Tag color="geekblue" icon={<ThunderboltOutlined />}>ML: {result.mlPrediction.risk} ({Math.round((result.mlPrediction.confidence || 0) * 100)}%)</Tag>
+                  )}
+
+                  {result.dssRuleMatched && result.dssChosenRule && !(String(result.detectionMethod || '').startsWith('rule_engine:')) && (
+                    <Tag color="purple" icon={<CheckCircleOutlined />}>Rule Engine: {result.dssChosenRule.type || result.ruleDetails?.type}</Tag>
+                  )}
+
+                  {result.matchedKeyword && (
+                    <Tag color="magenta" icon={<InfoCircleOutlined />}>Keyword: {result.matchedKeyword}</Tag>
                   )}
                 </div>
               </div>

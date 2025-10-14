@@ -43,9 +43,9 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         await Promise.race([
           api.post("/api/auth/logout"),
           new Promise((r) => setTimeout(r, 1500)),
-        ]).catch(() => {});
+        ]).catch(() => { });
       }
-    } catch {}
+    } catch { }
     clearToken();
     localStorage.clear();
     navigate("/");
@@ -290,11 +290,29 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       </div>
 
       {/* FOOTER */}
-      <div className="footer">
-        <div className="user-chip">
+      <div
+        className="footer"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: collapsed ? "center" : "flex-start",
+          padding: "8px 12px",
+        }}
+      >
+        <div
+          className="user-chip"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            justifyContent: collapsed ? "center" : "flex-start",
+            width: "100%",
+          }}
+        >
           <Avatar style={{ background: BRAND.primary, fontWeight: 700 }} size={30}>
             {initials}
           </Avatar>
+
           {!collapsed && (
             <div style={{ lineHeight: 1 }}>
               <Text strong style={{ fontSize: 12 }}>
@@ -311,6 +329,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           )}
         </div>
       </div>
+
 
       {/* STYLES */}
       <style>{`

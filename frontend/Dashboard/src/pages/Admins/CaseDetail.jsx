@@ -1,6 +1,6 @@
 // src/pages/barangay/CaseDetail.js
 import React, { useEffect, useRef, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   Descriptions,
   Button,
@@ -35,6 +35,7 @@ export default function CaseDetail() {
   const [form] = Form.useForm();
   const printRef = useRef();
   const userType = getUserType();
+  const location = useLocation();
 
   useEffect(() => {
     const fetchCase = async () => {
@@ -47,6 +48,13 @@ export default function CaseDetail() {
       }
     };
     fetchCase();
+    // If URL contains ?edit=true, enable edit mode automatically
+    try {
+      const qp = new URLSearchParams(location.search);
+      if (qp.get('edit') === 'true') setEditing(true);
+    } catch (e) {
+      // ignore
+    }
   }, [id, form]);
 
   const handleSave = async () => {
@@ -113,6 +121,13 @@ export default function CaseDetail() {
 
         {editing ? (
           <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+            <Form.Item name="victimType" label="Victim Type">
+              <Select>
+                <Select.Option value="child">Child</Select.Option>
+                <Select.Option value="woman">Woman</Select.Option>
+                <Select.Option value="anonymous">Anonymous</Select.Option>
+              </Select>
+            </Form.Item>
             <Form.Item name="victimName" label="Victim">
               <Input />
             </Form.Item>
@@ -164,6 +179,9 @@ export default function CaseDetail() {
               column={1}
               labelStyle={{ width: 220, background: "#fafafa" }}
             >
+              <Descriptions.Item label="Victim Type">
+                {caseData.victimType ? (caseData.victimType.charAt(0).toUpperCase() + caseData.victimType.slice(1)) : ''}
+              </Descriptions.Item>
               <Descriptions.Item label="Case ID">
                 {caseData.caseID}
               </Descriptions.Item>

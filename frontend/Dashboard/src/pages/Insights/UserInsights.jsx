@@ -155,7 +155,7 @@ export default function UserInsights() {
     );
 
     return (
-        <Layout style={{ minHeight: "100vh", background: "#faf7ff" }}>
+        <Layout style={{ minHeight: "100vh", background: "transparent" }}>
             <Content>
                 <Row gutter={[16, 16]}>
                     <Col xs={24} md={8}>
@@ -238,7 +238,7 @@ export default function UserInsights() {
                     </Col>
 
                     {/* Line chart: Registrations over time */}
-                    <Col xs={24}>
+                    <Col xs={24} md={16}>
                         <Card
                             title="User Registrations Over Time"
                             bordered
@@ -263,30 +263,36 @@ export default function UserInsights() {
                     </Col>
 
                     {/* Recent Users */}
-                    <Col xs={24}>
+                    <Col xs={24} md={8}>
                         <Card
                             title="Recent Users"
                             bordered
-                            style={{ borderRadius: 16, borderColor: BRAND.soft }}
-                            bodyStyle={{ padding: 0 }}
+                            style={{ borderRadius: 16, borderColor: BRAND.soft, overflow: "hidden" }}
+                            bodyStyle={{ padding: 8 }}
                         >
                             {loading ? (
                                 <Skeleton active />
                             ) : (
                                 <List
+                                    style={{ padding: 0, margin: 0 }}
                                     dataSource={[...data.admins, ...data.victims]
                                         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
                                         .slice(0, 5)}
                                     renderItem={(u) => (
-                                        <List.Item>
+                                        <List.Item style={{ padding: "8px 12px" }}>
                                             <List.Item.Meta
                                                 avatar={
                                                     <Avatar
                                                         style={{
                                                             background: u.victimID ? BRAND.pink : BRAND.violet,
-                                                            maxWidth: 40,
-                                                            maxHeight: 40,
+                                                            width: 40,
+                                                            height: 40,
+                                                            fontSize: 20,
                                                             overflow: "hidden",
+                                                            flex: "none",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            justifyContent: "center",
                                                         }}
                                                         icon={<UserOutlined />}
                                                     />
@@ -298,7 +304,6 @@ export default function UserInsights() {
                                                 }
                                                 description={new Date(u.createdAt).toLocaleString()}
                                             />
-
                                             <Tag color={u.victimID ? "magenta" : "purple"}>
                                                 {u.victimID ? (u.isAnonymous ? "Anonymous" : "Victim") : "Admin"}
                                             </Tag>

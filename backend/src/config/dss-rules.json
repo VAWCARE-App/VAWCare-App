@@ -219,12 +219,12 @@
       ]
     },
     "event": {
-      "type": "child-psychological-high",
+      "type": "child-psychological-medium",
       "params": {
     "predictedRisk": "Psychological",
-  "riskLevel": "High",
-  "suggestion": "Child victim showing psychological harm — prioritize safe environment and rapid child-focused psychosocial support.",
-  "requiresImmediate": true
+  "riskLevel": "Medium",
+  "suggestion": "PRIORITY: MH support and school coordination.\n1. Start regular counseling; provide coping tools to child/caregiver\n2. Home environment assessment via MSWDO\n3. Link with school guidance for monitoring\n4. Weekly check-ins for 4 weeks; adjust plan if symptoms worsen\n5. WCPD referral if threats/harassment present",
+  "requiresImmediate": false
       }
     }
   },
@@ -236,12 +236,12 @@
       ]
     },
     "event": {
-      "type": "child-economic-high",
+      "type": "child-economic-medium",
       "params": {
     "predictedRisk": "Economic",
-  "riskLevel": "High",
+  "riskLevel": "Medium",
   "suggestion": "Child victim affected by economic abuse — prioritize basic needs and child protection measures.",
-  "requiresImmediate": true
+  "requiresImmediate": false
       }
     }
   },

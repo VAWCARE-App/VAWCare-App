@@ -25,6 +25,14 @@ const CasesSchema = new mongoose.Schema({
 		required: [true, 'Victim name is required'],
 		trim: true,
 	},
+	victimType: {
+		type: String,
+		enum: ['child', 'woman', 'anonymous'],
+		// Make optional and default to 'anonymous' so case creation doesn't fail when frontend omits this
+		required: false,
+		default: 'anonymous',
+		trim: true,
+	},
 	incidentType: {
 		type: String,
 		required: [true, 'Incident type is required'],
@@ -87,5 +95,17 @@ const CasesSchema = new mongoose.Schema({
 	CasesSchema.add({
 		createdAt: { type: Date, default: Date.now }
 	});
+
+// DSS suggestion / metadata fields persisted for each case
+CasesSchema.add({
+    dssPredictedRisk: { type: String, required: false, trim: true },
+    dssStoredRisk: { type: String, required: false, trim: true },
+    dssProbabilities: { type: Array, required: false, default: [] },
+    dssImmediateAssistanceProbability: { type: Number, required: false, default: 0 },
+    dssSuggestion: { type: String, required: false, trim: true },
+    dssRuleMatched: { type: Boolean, required: false, default: false },
+    dssChosenRule: { type: mongoose.Schema.Types.Mixed, required: false },
+    dssManualOverride: { type: Boolean, required: false, default: false }
+});
 
 module.exports = mongoose.model('Cases', CasesSchema);

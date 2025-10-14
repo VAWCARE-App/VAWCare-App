@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Tag, Layout, Input, Space, Tooltip, Row, Col, Modal, Typography } from 'antd';
+import { Table, Button, Tag, Layout, Input, Space, Tooltip, Row, Col, Typography } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { api } from '../../lib/api';
 
@@ -30,24 +30,6 @@ export default function AlertsManagement() {
     }
   };
 
-  useEffect(() => { load(); }, []);
-
-  const handleResolve = (record) => {
-    Modal.confirm({
-      title: `Resolve alert ${record.alertID || record._id}?`,
-      okText: 'Resolve',
-      okType: 'danger',
-      onOk: async () => {
-        try {
-          await api.put(`/api/alerts/${record._id}/resolve`);
-          load();
-        } catch (err) {
-          console.error('Resolve failed', err);
-        }
-      }
-    });
-  };
-
   const onSearch = (val) => {
     if (!val) return setFiltered(alerts);
     const lower = val.toLowerCase();
@@ -62,8 +44,7 @@ export default function AlertsManagement() {
     { title: 'Status', dataIndex: 'status', key: 'status', render: (s) => s === 'Active' ? <Tag color="red">Active</Tag> : <Tag color="green">Resolved</Tag> },
     { title: 'Created', dataIndex: 'createdAt', key: 'createdAt', render: (d) => d ? new Date(d).toLocaleString() : '—' },
     { title: 'Resolved', dataIndex: 'resolvedAt', key: 'resolvedAt', render: (d) => d ? new Date(d).toLocaleString() : '—' },
-    { title: 'Duration', dataIndex: 'durationStr', key: 'durationStr', render: (s, r) => s || (r.durationMs ? `${Math.round(r.durationMs/1000)}s` : '—') },
-    { title: 'Actions', key: 'actions', render: (_, r) => r.status === 'Active' ? <Button danger onClick={() => handleResolve(r)}>Resolve</Button> : null }
+    { title: 'Duration', dataIndex: 'durationStr', key: 'durationStr', render: (s, r) => s || (r.durationMs ? `${Math.round(r.durationMs/1000)}s` : '—') }
   ];
 
   return (

@@ -163,20 +163,21 @@ export default function LandingPage() {
 
           /* layout helpers */
           .shell { position: relative; z-index: 1; }
-          .container { width: 100%; max-width: 1200px; margin: 0 auto; }
+          .container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+          @media (min-width: 576px) { .container { padding: 0 20px; } }
+          @media (min-width: 992px) { .container { padding: 0 24px; } }
 
           /* Equal-height utilities (flex lock) */
           .equal-row { display: flex; flex-wrap: wrap; align-items: stretch; }
           .equal-col { display: flex; }
           .equal-card { flex: 1; height: 100%; border-radius: 16px; border-color: var(--border); background: var(--card); }
-          /* Make ALL AntD cards evenly stretch inside */
           .equal-card .ant-card-body { display: flex; flex-direction: column; gap: 8px; height: 100%; }
 
           /* Specific size anchors so boxes match */
           .kpi-min { min-height: 120px; }
-          .feature-h { min-height: 200px; } /* 3 feature boxes */
-          .audience-h { min-height: 140px; } /* right column boxes */
-          .howit-h { min-height: 160px; } /* steps */
+          .feature-h { min-height: 200px; }
+          .audience-h { min-height: 140px; }
+          .howit-h { min-height: 160px; }
 
           @media (max-width: 767px){
             .feature-h { min-height: 180px; }
@@ -198,6 +199,10 @@ export default function LandingPage() {
           .btn-primary { background: var(--brand) !important; border-color: var(--brand) !important; box-shadow: 0 10px 20px rgba(233,30,99,.15); }
           .btn-dark { background:#111; border-color:#111; color:#fff; }
           .btn-dark:hover { filter: brightness(1.05); }
+          .cta-group { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+          @media (max-width: 575px){
+            .cta-group .ant-btn { width: 100%; }
+          }
 
           /* Hero eyebrow & brand tag */
           .eyebrow {
@@ -213,12 +218,35 @@ export default function LandingPage() {
 
           /* Section headings */
           .section-title { color: var(--ink); }
-          .muted { color: var(--text-muted); }
 
           /* Numbered step circle */
           .stepball {
             width: 36px; height: 36px; border-radius: 999px; display: grid; place-items:center; font-weight: 700;
             background: var(--brand); color: #fff;
+          }
+
+          /* Muted text */
+          .muted { color: var(--text-muted); }
+
+          /* Responsive hero title */
+          .hero-title {
+            line-height: 1.08;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            font-size: clamp(28px, 6vw, 44px);
+          }
+
+          /* Theme switch placement */
+          .theme-toggle {
+            position: fixed; right: 16px; top: 16px; z-index: 5;
+          }
+          @media (max-width: 575px){
+            .theme-toggle { right: 12px; bottom: 12px; top: auto; }
+          }
+
+          /* Reduce visual load on tiny screens */
+          @media (max-width: 575px){
+            .orb, .bubble { opacity: 0.16; filter: blur(36px); }
           }
         `}</style>
 
@@ -236,7 +264,7 @@ export default function LandingPage() {
         <div className={`shell ${dark ? "theme-dark" : ""}`}>
           {/* Topbar + Theme Switch */}
           <Navbar dark={dark} onToggleTheme={() => setDark((v) => !v)} />
-          <div style={{ position: "fixed", right: 16, top: 16, zIndex: 5 }}>
+          {/* <div className="theme-toggle">
             <Space>
               <BulbOutlined />
               <Switch
@@ -246,7 +274,7 @@ export default function LandingPage() {
                 onChange={(v) => setDark(Boolean(v))}
               />
             </Space>
-          </div>
+          </div> */}
 
           <Content id="home">
             {/* HERO */}
@@ -255,7 +283,7 @@ export default function LandingPage() {
                 minHeight: screens.md ? "72vh" : "62vh",
                 display: "grid",
                 placeItems: "center",
-                padding: screens.md ? "88px 24px 56px" : "56px 16px",
+                padding: screens.md ? "88px 24px 56px" : "56px 12px",
                 textAlign: "center",
               }}
             >
@@ -272,11 +300,7 @@ export default function LandingPage() {
                     <Text type="secondary" className="muted">Community Safety Platform</Text>
                   </div>
 
-                  <Title
-                    level={1}
-                    className="section-title"
-                    style={{ marginTop: 16, marginBottom: 8, lineHeight: 1.08, fontWeight: 900, letterSpacing: "-0.02em" }}
-                  >
+                  <Title level={1} className="section-title hero-title" style={{ marginTop: 16, marginBottom: 8 }}>
                     <span style={{ display: "block", opacity: 0.9 }}>VAWCare helps you speak up—</span>
                     <span style={{ display: "block", color: pastel.primary }}>and get the right help, fast.</span>
                   </Title>
@@ -285,20 +309,39 @@ export default function LandingPage() {
                     Report violence safely, coordinate with barangay officials, and track support—on phone or desktop, powered by VAWCare.
                   </Paragraph>
 
-                  <Space wrap style={{ marginTop: 20 }}>
-                    <Button size="large" className="btn-primary" type="primary" icon={<SafetyCertificateOutlined />} onClick={() => navigate("/login")}>
+                  <div className="cta-group" style={{ marginTop: 20 }}>
+                    <Button
+                      size="large"
+                      className="btn-primary"
+                      type="primary"
+                      icon={<SafetyCertificateOutlined />}
+                      onClick={() => navigate("/login")}
+                    >
                       Report / User Login
                     </Button>
-                    <Button size="large" className="btn-dark" icon={<UserSwitchOutlined />} onClick={() => navigate("/admin/login")}>
+                    <Button
+                      size="large"
+                      className="btn-dark"
+                      icon={<UserSwitchOutlined />}
+                      onClick={() => navigate("/admin/login")}
+                    >
                       Admin Login
                     </Button>
-                  </Space>
+                  </div>
 
-                  {/* KPIs — equal widths & heights */}
-                  <Row gutter={[16, 16]} style={{ marginTop: 28, maxWidth: 820, marginInline: "auto" }}>
+                  {/* KPIs — stack on phones */}
+                  <Row
+                    gutter={[16, 16]}
+                    style={{ marginTop: 28, maxWidth: 820, marginInline: "auto" }}
+                  >
                     {kpis.map((k) => (
-                      <Col xs={8} key={k.label}>
-                        <motion.div variants={prefersReduced ? undefined : fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }}>
+                      <Col xs={24} sm={8} key={k.label}>
+                        <motion.div
+                          variants={prefersReduced ? undefined : fadeUp}
+                          initial="hidden"
+                          whileInView="show"
+                          viewport={{ once: true }}
+                        >
                           <Card bordered className="glass kpi-min equal-card" bodyStyle={{ padding: 16 }}>
                             <Statistic title={k.label} value={k.value} />
                           </Card>
@@ -311,14 +354,14 @@ export default function LandingPage() {
             </section>
 
             {/* WHY VAWCARE — 3 equal feature boxes */}
-            <section style={{ padding: "0 16px 48px" }}>
+            <section style={{ padding: "0 12px 48px" }}>
               <div className="container">
                 <Row gutter={[16, 16]} className="equal-row">
                   <Col xs={24} md={8} className="equal-col">
                     <motion.div variants={prefersReduced ? undefined : fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }}>
                       <Card hoverable className="equal-card feature-h" bodyStyle={{ padding: 16 }}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                          <HeartOutlined style={{ fontSize: 36, color: pastel.primary }} />
+                          <HeartOutlined style={{ fontSize: 32, color: pastel.primary }} />
                           <Title level={4} className="section-title" style={{ margin: 0 }}>VAWCare Privacy</Title>
                           <Text className="muted">End-to-end safe reporting, visible only to authorized officials.</Text>
                         </div>
@@ -330,7 +373,7 @@ export default function LandingPage() {
                     <motion.div variants={prefersReduced ? undefined : fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }}>
                       <Card hoverable className="equal-card feature-h" bodyStyle={{ padding: 16 }}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                          <SafetyCertificateOutlined style={{ fontSize: 36, color: "#2196f3" }} />
+                          <SafetyCertificateOutlined style={{ fontSize: 32, color: "#2196f3" }} />
                           <Title level={4} className="section-title" style={{ margin: 0 }}>VAWCare Alerts</Title>
                           <Text className="muted">One-tap emergency notifications to your barangay and contacts.</Text>
                         </div>
@@ -342,7 +385,7 @@ export default function LandingPage() {
                     <motion.div variants={prefersReduced ? undefined : fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }}>
                       <Card hoverable className="equal-card feature-h" bodyStyle={{ padding: 16 }}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                          <TeamOutlined style={{ fontSize: 36, color: "#4caf50" }} />
+                          <TeamOutlined style={{ fontSize: 32, color: "#4caf50" }} />
                           <Title level={4} className="section-title" style={{ margin: 0 }}>VAWCare Support</Title>
                           <Text className="muted">Helplines, chatbot, resources—organized in one trusted place.</Text>
                         </div>
@@ -356,7 +399,7 @@ export default function LandingPage() {
             <Divider />
 
             {/* ABOUT */}
-            <section id="about" style={{ padding: "8px 16px 48px" }}>
+            <section id="about" style={{ padding: "8px 12px 48px" }}>
               <div className="container">
                 <Row gutter={[24, 24]} align="stretch">
                   {/* Left: mission & bullets */}
@@ -388,7 +431,7 @@ export default function LandingPage() {
                     </motion.div>
                   </Col>
 
-                  {/* Right: audience cards (equal height) */}
+                  {/* Right: audience cards */}
                   <Col xs={24} md={10}>
                     <motion.div variants={prefersReduced ? undefined : fadeUp} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.4 }}>
                       <Space direction="vertical" size={16} style={{ width: "100%" }}>
@@ -407,8 +450,8 @@ export default function LandingPage() {
               </div>
             </section>
 
-            {/* HOW IT WORKS — equal step cards */}
-            <section style={{ padding: "0 16px 56px" }}>
+            {/* HOW IT WORKS */}
+            <section style={{ padding: "0 12px 56px" }}>
               <div className="container">
                 <Title level={3} className="section-title" style={{ textAlign: "center", marginBottom: 24 }}>
                   How VAWCare Works
@@ -438,7 +481,7 @@ export default function LandingPage() {
             </section>
 
             {/* NEWS */}
-            <section id="news" style={{ padding: "0 16px 48px" }}>
+            <section id="news" style={{ padding: "0 12px 48px" }}>
               <div className="container">
                 <Row justify="center" gutter={[24, 24]}>
                   <Col xs={24} md={20} lg={16}>

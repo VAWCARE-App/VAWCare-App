@@ -160,6 +160,7 @@ export default function TwoFactor() {
       message.success('Code submitted (placeholder)');
     } catch (err) {
       setModalMessage('Verification failed');
+
       setModalVisible(true);
     } finally {
       setLoading(false);
@@ -186,6 +187,8 @@ export default function TwoFactor() {
         >
           <div style={{ textAlign: 'center', marginBottom: 8 }}>
             <Logo style={{ width: 80 }} />
+
+
           </div>
           <Typography.Title level={3} style={{ textAlign: 'center', marginBottom: 6 }}>Two-Factor Authentication</Typography.Title>
           <Typography.Paragraph style={{ textAlign: 'center', color: '#555', marginBottom: 18 }}>Enter the 6-digit code sent to your email or authenticator app.</Typography.Paragraph>

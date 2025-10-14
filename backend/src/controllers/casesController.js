@@ -5,6 +5,16 @@ const Victim = require('../models/Victims');
 const dssService = require('../services/dssService');
 const { recordLog } = require('../middleware/logger');
 
+// Helper: map an incident type (or 4-class predictedRisk) to stored riskLevel
+function mapToStored(pred) {
+  const p = (pred || '').toString().toLowerCase();
+  if (p === 'economic') return 'Low';
+  if (p === 'psychological') return 'Medium';
+  if (p === 'physical') return 'High';
+  if (p === 'sexual') return 'High';
+  return 'Low';
+}
+
 exports.createCase = async (req, res, next) => {
   try {
     const payload = { ...(req.body || {}) };
@@ -47,18 +57,34 @@ exports.createCase = async (req, res, next) => {
       }
     }
 
-    // If client didn't provide a riskLevel, ask the DSS to suggest one and map it
+    // Always get DSS suggestions, whether riskLevel is provided or not
     try {
-      if (!payload.riskLevel) {
+        // Determine actor role (admin/official) from request
+        const actorRole = req.user?.role || 'official';
+        const actorIsPrivileged = ['admin', 'official'].includes(String(actorRole).toLowerCase());
+
+        // Only treat provided riskLevel as a manual override if the actor is privileged and
+        // the provided riskLevel differs from the default mapping for the incidentType.
+        const providedRisk = typeof payload.riskLevel === 'string' && payload.riskLevel.trim() !== '' ? payload.riskLevel : null;
+        const defaultForIncident = mapToStored(payload.incidentType);
+        const isTrueManualOverride = actorIsPrivileged && providedRisk && providedRisk !== defaultForIncident;
+
         const dssInput = {
           incidentType: payload.incidentType,
           description: payload.description,
           assignedOfficer: payload.assignedOfficer,
           status: payload.status,
           perpetrator: payload.perpetrator,
+          victimId: payload.victimID || payload.victimId || null,
+          victimType: payload.victimType || null,
+          // Include riskLevel only when it's a privileged manual override
+          ...(isTrueManualOverride ? { riskLevel: providedRisk } : {})
         };
-        const dssRes = await dssService.suggestForCase(dssInput);
-        if (dssRes && dssRes.predictedRisk) {
+  const dssRes = await dssService.suggestForCase(dssInput);
+  console.log('DSS service response:', JSON.stringify(dssRes, null, 2));
+        
+        // If no riskLevel was provided, use DSS recommendation
+        if (!payload.riskLevel && dssRes && dssRes.predictedRisk) {
           // Map 4-class predictedRisk to existing 3-level stored riskLevel
           const mapToStored = (pred) => {
             const p = (pred || '').toLowerCase();
@@ -71,13 +97,56 @@ exports.createCase = async (req, res, next) => {
           };
           payload.riskLevel = mapToStored(dssRes.predictedRisk);
         }
-      }
+
+        // Always populate DSS fields if we have a response
+        if (dssRes) {
+          // Map DSS response fields directly to schema fields
+          payload.dssPredictedRisk = payload.incidentType; // Use incident type as predicted risk
+          payload.dssStoredRisk = payload.riskLevel || dssRes.riskLevel || dssRes.dssStoredRisk;
+          payload.dssProbabilities = Array.isArray(dssRes.dssProbabilities) ? dssRes.dssProbabilities : [];
+          payload.dssImmediateAssistanceProbability = Number(dssRes.dssImmediateAssistanceProbability || 0);
+          payload.dssSuggestion = dssRes.suggestion || dssRes.dssSuggestion || '';
+          payload.dssRuleMatched = !!dssRes.dssRuleMatched;
+          payload.dssChosenRule = dssRes.ruleDetails || dssRes.dssChosenRule || null;
+          // Handle manual override - true only if the actor provided a privileged override
+          payload.dssManualOverride = !!isTrueManualOverride;
+        }
     } catch (e) {
       // Non-fatal: if DSS fails, continue with default riskLevel
       console.warn('DSS enrich failed during case creation', e?.message || e);
     }
 
-    const created = await Cases.create(payload);
+    // Normalize victimType to canonical lowercase enum values expected by the schema
+    try {
+      if (payload.victimType) {
+        payload.victimType = String(payload.victimType).trim().toLowerCase();
+      }
+    } catch (e) {
+      // ignore normalization failures and proceed (will be caught by validation)
+    }
+
+    let created;
+    try {
+      created = await Cases.create(payload);
+    } catch (createErr) {
+      // Log payload and full error for debugging
+      console.error('Failed to create case. Payload:', JSON.stringify(payload, null, 2));
+      console.error('Cases.create error:', createErr && createErr.message ? createErr.message : createErr);
+      // If duplicate key, provide more context
+      if (createErr && createErr.code === 11000) {
+        const dupField = Object.keys(createErr.keyValue || {}).join(', ');
+        return res.status(400).json({ success: false, message: `Duplicate value for unique field(s): ${dupField}`, error: createErr });
+      }
+      // If validation error, return 400 with details
+      if (createErr && createErr.name === 'ValidationError') {
+        const details = Object.keys(createErr.errors || {}).reduce((acc, k) => {
+          acc[k] = createErr.errors[k].message || createErr.errors[k].name;
+          return acc;
+        }, {});
+        return res.status(400).json({ success: false, message: 'Validation failed', errors: details, error: createErr.message });
+      }
+      return res.status(500).json({ success: false, message: 'Failed to create case', error: createErr && createErr.message ? createErr.message : createErr });
+    }
     // Log case creation/view as appropriate
     try {
       await recordLog({ req, actorType: req.user?.role || 'official', actorId: req.user?.officialID || req.user?.adminID, action: 'view_case', details: `Created case ${created.caseID || created._id}` });
@@ -121,10 +190,50 @@ exports.updateCase = async (req, res, next) => {
     const query = mongoose.Types.ObjectId.isValid(id)
       ? { $or: [{ caseID: id }, { _id: id }], deleted: { $ne: true } }
       : { caseID: id, deleted: { $ne: true } };
+    // If a manual riskLevel is provided in updates, compute a DSS suggestion reflecting that override
+    if (updates && updates.riskLevel) {
+      try {
+        // Fetch existing case to enrich input where updates don't provide fields
+        const existing = await Cases.findOne(query).lean();
+        if (existing) {
+          const actorRole = req.user?.role || 'official';
+          const actorIsPrivileged = ['admin', 'official'].includes(String(actorRole).toLowerCase());
+          const providedRisk = typeof updates.riskLevel === 'string' && updates.riskLevel.trim() !== '' ? updates.riskLevel : null;
+          const defaultForIncident = mapToStored(updates.incidentType || existing.incidentType);
+          const isTrueManualOverride = actorIsPrivileged && providedRisk && providedRisk !== defaultForIncident;
+          const dssInput = {
+            incidentType: updates.incidentType || existing.incidentType,
+            description: updates.description || existing.description,
+            assignedOfficer: updates.assignedOfficer || existing.assignedOfficer,
+            status: updates.status || existing.status,
+            perpetrator: updates.perpetrator || existing.perpetrator,
+            victimId: updates.victimID || updates.victimId || existing.victimID || existing.victim || null,
+            victimType: updates.victimType || existing.victimType || null,
+            // Only include riskLevel in DSS input if this is a privileged override
+            ...(isTrueManualOverride ? { riskLevel: updates.riskLevel } : {})
+          };
+          const dssRes = await dssService.suggestForCase(dssInput, null);
+          if (dssRes) {
+            // merge DSS results into updates so they are persisted
+            updates.dssPredictedRisk = dssRes.predictedRisk || dssRes.dssPredictedRisk;
+            updates.dssStoredRisk = updates.riskLevel || dssRes.riskLevel || dssRes.dssStoredRisk;
+            updates.dssProbabilities = Array.isArray(dssRes.dssProbabilities) ? dssRes.dssProbabilities : [];
+            updates.dssImmediateAssistanceProbability = Number(dssRes.dssImmediateAssistanceProbability || 0);
+            updates.dssSuggestion = dssRes.suggestion || dssRes.dssSuggestion || '';
+            updates.dssRuleMatched = !!dssRes.dssRuleMatched;
+            updates.dssChosenRule = dssRes.ruleDetails || dssRes.dssChosenRule || null;
+            updates.dssManualOverride = !!isTrueManualOverride;
+          }
+        }
+      } catch (e) {
+        console.warn('DSS enrich during update failed', e && e.message);
+      }
+    }
+
     const item = await Cases.findOneAndUpdate(query, updates, { new: true }).lean();
     if (!item) return res.status(404).json({ success: false, message: 'Case not found or deleted' });
-      try { await recordLog({ req, actorType: req.user?.role || 'official', actorId: req.user?.officialID || req.user?.adminID, action: 'edit_case', details: `Edited case ${item.caseID || item._id}: ${JSON.stringify(updates)}` }); } catch(e) { console.warn('Failed to record case edit log', e && e.message); }
-      return res.json({ success: true, data: item });
+    try { await recordLog({ req, actorType: req.user?.role || 'official', actorId: req.user?.officialID || req.user?.adminID, action: 'edit_case', details: `Edited case ${item.caseID || item._id}: ${JSON.stringify(updates)}` }); } catch(e) { console.warn('Failed to record case edit log', e && e.message); }
+    return res.json({ success: true, data: item });
   } catch (err) {
     next(err);
   }

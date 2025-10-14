@@ -154,11 +154,15 @@ export default function CaseManagement() {
         description: rep.description,
         perpetrator: rep.perpetrator || '',
         location: rep.location || '',
-        victimName: composedName,
+  victimName: composedName,
+  // If report has victimType, use it; otherwise treat the report as anonymous and set victimType to 'anonymous'
+  victimType: rep.victim?.victimType || 'anonymous',
         // Auto-map incidentType -> riskLevel (economic->Low, psychological->Medium, physical->High, sexual->High)
+        // If the incident is an Emergency, do not auto-fill riskLevel so the officer can choose.
         riskLevel: (function(it) {
           if (!it) return 'Low';
           const l = String(it).toLowerCase();
+          if (l.includes('emerg')) return undefined; // let officer choose
           if (l.includes('economic') || l.includes('financial')) return 'Low';
           if (l.includes('psych') || l.includes('psychological')) return 'Medium';
           if (l.includes('physical')) return 'High';
@@ -175,7 +179,7 @@ export default function CaseManagement() {
       let payload;
       if (selectedReport) {
         // build payload: include reportID and fields from selected report
-        payload = {
+          payload = {
           caseID: vals.caseID,
           reportID: selectedReport.reportID,
           victimID: selectedReport.raw.victimID?._id || selectedReport.raw.victimID || null,
@@ -187,7 +191,9 @@ export default function CaseManagement() {
           dateReported: selectedReport.dateReported || new Date().toISOString(),
           status: vals.status || 'Open',
           assignedOfficer: vals.assignedOfficer || '',
-          riskLevel: vals.riskLevel || 'Low',
+          // If riskLevel is not explicitly set in the form (undefined), don't force a default here so the backend DSS can compute suggestion.
+          riskLevel: typeof vals.riskLevel === 'undefined' ? undefined : (vals.riskLevel || 'Low'),
+          victimType: vals.victimType || selectedReport.victim?.victimType || 'anonymous',
         };
       } else {
         // manual/walk-in case creation: use the form values
@@ -203,7 +209,8 @@ export default function CaseManagement() {
           dateReported: vals.dateReported || new Date().toISOString(),
           status: vals.status || 'Open',
           assignedOfficer: vals.assignedOfficer || '',
-          riskLevel: vals.riskLevel || 'Low',
+          riskLevel: typeof vals.riskLevel === 'undefined' ? undefined : (vals.riskLevel || 'Low'),
+          victimType: vals.victimType || 'anonymous',
         };
       }
       console.debug('Creating case payload', payload);
@@ -220,7 +227,28 @@ export default function CaseManagement() {
       }
     } catch (err) {
       console.error('Create case error', err.response || err);
-      message.error('Failed to create case');
+      // If backend returned validation errors or duplicate key info, show them inline on the add form
+      const resp = err?.response?.data;
+      if (resp) {
+        // Duplicate key error message from backend
+        if (resp.message && String(resp.message).toLowerCase().includes('duplicate')) {
+          // backend returns which field(s) conflict; prefer to set caseID specifically
+          addForm.setFields([{
+            name: 'caseID',
+            errors: [resp.message || 'Case ID already exists']
+          }]);
+          message.error(resp.message || 'Duplicate Case ID');
+        } else if (resp.errors && typeof resp.errors === 'object') {
+          // Map server-side validation errors to form fields
+          const fields = Object.keys(resp.errors).map((k) => ({ name: k, errors: [resp.errors[k]] }));
+          try { addForm.setFields(fields); } catch (e) { /* ignore */ }
+          message.error(resp.message || 'Validation failed');
+        } else {
+          message.error(resp.message || 'Failed to create case');
+        }
+      } else {
+        message.error('Failed to create case');
+      }
     } finally {
       setLoading(false);
     }
@@ -341,6 +369,14 @@ export default function CaseManagement() {
 
               <Form.Item name="victimName" label="Victim Name" rules={[{ required: true, message: 'Victim Name is required' }]}>
                 <Input />
+              </Form.Item>
+
+              <Form.Item name="victimType" label="Victim Type">
+                <Select placeholder="" allowClear>
+                  <Option value="child">Child</Option>
+                  <Option value="woman">Woman</Option>
+                  <Option value="anonymous">Anonymous</Option>
+                </Select>
               </Form.Item>
 
               <Form.Item name="incidentType" label="Incident Type" rules={[{ required: true, message: 'Incident Type is required' }]}>

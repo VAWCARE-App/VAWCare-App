@@ -5,6 +5,16 @@ const Victim = require('../models/Victims');
 const dssService = require('../services/dssService');
 const { recordLog } = require('../middleware/logger');
 
+// Helper: map an incident type (or 4-class predictedRisk) to stored riskLevel
+function mapToStored(pred) {
+  const p = (pred || '').toString().toLowerCase();
+  if (p === 'economic') return 'Low';
+  if (p === 'psychological') return 'Medium';
+  if (p === 'physical') return 'High';
+  if (p === 'sexual') return 'High';
+  return 'Low';
+}
+
 exports.createCase = async (req, res, next) => {
   try {
     const payload = { ...(req.body || {}) };
@@ -49,6 +59,16 @@ exports.createCase = async (req, res, next) => {
 
     // Always get DSS suggestions, whether riskLevel is provided or not
     try {
+        // Determine actor role (admin/official) from request
+        const actorRole = req.user?.role || 'official';
+        const actorIsPrivileged = ['admin', 'official'].includes(String(actorRole).toLowerCase());
+
+        // Only treat provided riskLevel as a manual override if the actor is privileged and
+        // the provided riskLevel differs from the default mapping for the incidentType.
+        const providedRisk = typeof payload.riskLevel === 'string' && payload.riskLevel.trim() !== '' ? payload.riskLevel : null;
+        const defaultForIncident = mapToStored(payload.incidentType);
+        const isTrueManualOverride = actorIsPrivileged && providedRisk && providedRisk !== defaultForIncident;
+
         const dssInput = {
           incidentType: payload.incidentType,
           description: payload.description,
@@ -57,8 +77,8 @@ exports.createCase = async (req, res, next) => {
           perpetrator: payload.perpetrator,
           victimId: payload.victimID || payload.victimId || null,
           victimType: payload.victimType || null,
-          // Include riskLevel if it was manually provided
-          ...(payload.riskLevel ? { riskLevel: payload.riskLevel } : {})
+          // Include riskLevel only when it's a privileged manual override
+          ...(isTrueManualOverride ? { riskLevel: providedRisk } : {})
         };
   const dssRes = await dssService.suggestForCase(dssInput);
   console.log('DSS service response:', JSON.stringify(dssRes, null, 2));
@@ -88,8 +108,8 @@ exports.createCase = async (req, res, next) => {
           payload.dssSuggestion = dssRes.suggestion || dssRes.dssSuggestion || '';
           payload.dssRuleMatched = !!dssRes.dssRuleMatched;
           payload.dssChosenRule = dssRes.ruleDetails || dssRes.dssChosenRule || null;
-          // Handle manual override - true if riskLevel was explicitly provided
-          payload.dssManualOverride = typeof payload.riskLevel === 'string' && payload.riskLevel.trim() !== '';
+          // Handle manual override - true only if the actor provided a privileged override
+          payload.dssManualOverride = !!isTrueManualOverride;
         }
     } catch (e) {
       // Non-fatal: if DSS fails, continue with default riskLevel
@@ -176,6 +196,11 @@ exports.updateCase = async (req, res, next) => {
         // Fetch existing case to enrich input where updates don't provide fields
         const existing = await Cases.findOne(query).lean();
         if (existing) {
+          const actorRole = req.user?.role || 'official';
+          const actorIsPrivileged = ['admin', 'official'].includes(String(actorRole).toLowerCase());
+          const providedRisk = typeof updates.riskLevel === 'string' && updates.riskLevel.trim() !== '' ? updates.riskLevel : null;
+          const defaultForIncident = mapToStored(updates.incidentType || existing.incidentType);
+          const isTrueManualOverride = actorIsPrivileged && providedRisk && providedRisk !== defaultForIncident;
           const dssInput = {
             incidentType: updates.incidentType || existing.incidentType,
             description: updates.description || existing.description,
@@ -184,7 +209,8 @@ exports.updateCase = async (req, res, next) => {
             perpetrator: updates.perpetrator || existing.perpetrator,
             victimId: updates.victimID || updates.victimId || existing.victimID || existing.victim || null,
             victimType: updates.victimType || existing.victimType || null,
-            riskLevel: updates.riskLevel
+            // Only include riskLevel in DSS input if this is a privileged override
+            ...(isTrueManualOverride ? { riskLevel: updates.riskLevel } : {})
           };
           const dssRes = await dssService.suggestForCase(dssInput, null);
           if (dssRes) {
@@ -196,7 +222,7 @@ exports.updateCase = async (req, res, next) => {
             updates.dssSuggestion = dssRes.suggestion || dssRes.dssSuggestion || '';
             updates.dssRuleMatched = !!dssRes.dssRuleMatched;
             updates.dssChosenRule = dssRes.ruleDetails || dssRes.dssChosenRule || null;
-            updates.dssManualOverride = typeof updates.riskLevel === 'string' && updates.riskLevel.trim() !== '';
+            updates.dssManualOverride = !!isTrueManualOverride;
           }
         }
       } catch (e) {

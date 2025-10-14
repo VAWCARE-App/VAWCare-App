@@ -30,6 +30,10 @@ export default function AlertsManagement() {
     }
   };
 
+  useEffect(() => {
+    load();
+  }, []);
+
   const onSearch = (val) => {
     if (!val) return setFiltered(alerts);
     const lower = val.toLowerCase();
@@ -39,12 +43,12 @@ export default function AlertsManagement() {
   const columns = [
     { title: 'Alert ID', dataIndex: 'alertID', key: 'alertID' },
     { title: 'Type', dataIndex: 'type', key: 'type' },
-    { title: 'Victim', dataIndex: ['victimID','victimID'], key: 'victimID', render: (_, r) => r.victimID?.victimID || (r.victimID?.firstName ? `${r.victimID.firstName} ${r.victimID.lastName || ''}` : r.victimID?._id) || '—' },
+    { title: 'Victim', dataIndex: ['victimID', 'victimID'], key: 'victimID', render: (_, r) => r.victimID?.victimID || (r.victimID?.firstName ? `${r.victimID.firstName} ${r.victimID.lastName || ''}` : r.victimID?._id) || '—' },
     { title: 'Location', dataIndex: 'location', key: 'location', render: (loc) => loc ? `${loc.latitude?.toFixed?.(6) || loc.latitude}, ${loc.longitude?.toFixed?.(6) || loc.longitude}` : '—' },
     { title: 'Status', dataIndex: 'status', key: 'status', render: (s) => s === 'Active' ? <Tag color="red">Active</Tag> : <Tag color="green">Resolved</Tag> },
     { title: 'Created', dataIndex: 'createdAt', key: 'createdAt', render: (d) => d ? new Date(d).toLocaleString() : '—' },
     { title: 'Resolved', dataIndex: 'resolvedAt', key: 'resolvedAt', render: (d) => d ? new Date(d).toLocaleString() : '—' },
-    { title: 'Duration', dataIndex: 'durationStr', key: 'durationStr', render: (s, r) => s || (r.durationMs ? `${Math.round(r.durationMs/1000)}s` : '—') }
+    { title: 'Duration', dataIndex: 'durationStr', key: 'durationStr', render: (s, r) => s || (r.durationMs ? `${Math.round(r.durationMs / 1000)}s` : '—') }
   ];
 
   return (

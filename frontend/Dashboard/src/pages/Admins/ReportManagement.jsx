@@ -97,12 +97,12 @@ export default function ReportManagement() {
   };
 
   const handleEditReport = (record) => {
-  // Make sure the perpetrator field exists (use empty string if missing)
-  const patchedRecord = { ...record, perpetrator: record.perpetrator || '' };
-  setEditingReport(patchedRecord);
-  form.setFieldsValue(patchedRecord);
-  setIsViewMode(false);
-  setEditModalVisible(true);
+    // Make sure the perpetrator field exists (use empty string if missing)
+    const patchedRecord = { ...record, perpetrator: record.perpetrator || '' };
+    setEditingReport(patchedRecord);
+    form.setFieldsValue(patchedRecord);
+    setIsViewMode(false);
+    setEditModalVisible(true);
   };
 
   const handleDeleteReport = async (record) => {
@@ -174,8 +174,8 @@ export default function ReportManagement() {
         return 'green';
       case 'closed':
         return 'red';
-    case 'pending':
-      return 'default';
+      case 'pending':
+        return 'default';
       default:
         return 'default';
     }
@@ -225,7 +225,7 @@ export default function ReportManagement() {
       key: "location",
       render: (loc) => <Tag icon={<EnvironmentOutlined />} color="geekblue">{loc}</Tag>
     },
-                
+
     {
       title: "Status",
       dataIndex: "status",
@@ -236,7 +236,7 @@ export default function ReportManagement() {
         </Tag>
       ),
     },
-    
+
     {
       title: "Date Reported",
       dataIndex: "dateReported",
@@ -394,17 +394,17 @@ export default function ReportManagement() {
             footer={
               isViewMode
                 ? [
-                    <Button
-                      key="close"
-                      onClick={() => {
-                        setEditModalVisible(false);
-                        setEditingReport(null);
-                        setIsViewMode(false);
-                      }}
-                    >
-                      Close
-                    </Button>,
-                  ]
+                  <Button
+                    key="close"
+                    onClick={() => {
+                      setEditModalVisible(false);
+                      setEditingReport(null);
+                      setIsViewMode(false);
+                    }}
+                  >
+                    Close
+                  </Button>,
+                ]
                 : undefined
             }
             okText="Save"
@@ -419,8 +419,18 @@ export default function ReportManagement() {
               wrapperCol={{ flex: 1 }}
               labelAlign="left"
             >
-              <Form.Item name="incidentType" label="Incident Type" rules={[{ required: true }]} style={{ marginBottom: 12, marginTop: 20 }}>
-                <Input disabled={isViewMode} />
+              <Form.Item
+                name="incidentType"
+                label="Incident Type"
+                rules={[{ required: true, message: "Please select the type of incident" }]}
+                style={{ marginBottom: 12, marginTop: 20 }}
+              >
+                <Select placeholder="Select type" disabled={isViewMode}>
+                  <Option value="Physical">Physical</Option>
+                  <Option value="Sexual">Sexual</Option>
+                  <Option value="Psychological">Psychological</Option>
+                  <Option value="Economic">Economic</Option>
+                </Select>
               </Form.Item>
               <Form.Item name="location" label="Location" rules={[{ required: true }]} style={{ marginBottom: 12 }}>
                 <Input disabled={isViewMode} />
@@ -441,7 +451,7 @@ export default function ReportManagement() {
                   <Option value="Closed">Closed</Option>
                 </Select>
               </Form.Item>
-              
+
             </Form>
           </Modal>
         </Card>

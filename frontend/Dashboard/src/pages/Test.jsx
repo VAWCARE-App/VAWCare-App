@@ -16,7 +16,10 @@ import {
   FolderOpenOutlined,
   BellOutlined,
 } from "@ant-design/icons";
+
 import UserInsights from "./Insights/UserInsights";
+import ReportsInsights from "./Insights/ReportsInsights";
+import CasesInsights from "./Insights/CasesInsights";
 
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;
@@ -50,7 +53,7 @@ export default function Test() {
   };
 
   return (
-    <Layout style={{ minHeight: "100vh", background: BRAND.bg }}>
+    <Layout style={{ minHeight: "100vh", background: "#fff" }}>
       {/* Header */}
       <Header
         style={{
@@ -139,8 +142,8 @@ export default function Test() {
                 >
                   {t.key === "overview" && <UserInsights key={refreshKey} />}
                   {t.key === "users" && <UserInsights key={refreshKey} />}
-                  {t.key === "reports" && <UserInsights key={refreshKey} />}
-                  {t.key === "cases" && <UserInsights key={refreshKey} />}
+                  {t.key === "reports" && <ReportsInsights key={refreshKey} />}
+                  {t.key === "cases" && <CasesInsights key={refreshKey} />}
                   {t.key === "alerts" && <UserInsights key={refreshKey} />}
                 </div>
               ),

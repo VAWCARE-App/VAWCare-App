@@ -155,7 +155,7 @@ export default function UserInsights() {
     );
 
     return (
-        <Layout style={{ minHeight: "100vh", background: "transparent" }}>
+        <Layout style={{ minHeight: "100vh", background: "#fff" }}>
             <Content>
                 <Row gutter={[16, 16]}>
                     <Col xs={24} md={8}>

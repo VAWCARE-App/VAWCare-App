@@ -11,6 +11,7 @@ import {
   Select,
   Space,
   Tooltip,
+  Descriptions,
   Modal,
   Form,
   Row,
@@ -379,38 +380,87 @@ export default function ReportManagement() {
             scroll={{ x: "max-content", y: 480 }}
           />
 
+          {/* VIEW MODAL */}
           <Modal
-            title={
-              editingReport
-                ? `${isViewMode ? "View" : "Edit"} Report - ${editingReport.reportID}`
-                : "Edit Report"
-            }
-            open={editModalVisible}
+            title={`Report Details - ${editingReport?.reportID}`}
+            open={isViewMode && editModalVisible}
             onCancel={() => {
               setEditModalVisible(false);
               setEditingReport(null);
               setIsViewMode(false);
             }}
-            footer={
-              isViewMode
-                ? [
-                  <Button
-                    key="close"
-                    onClick={() => {
-                      setEditModalVisible(false);
-                      setEditingReport(null);
-                      setIsViewMode(false);
-                    }}
+            footer={[
+              <Button key="close" onClick={() => setEditModalVisible(false)}>
+                Close
+              </Button>,
+            ]}
+            width={600}
+          >
+            {editingReport && (
+              <Descriptions
+                bordered
+                column={1}
+                size="middle"
+                labelStyle={{ fontWeight: 600, width: 160 }}
+              >
+                <Descriptions.Item label="Report ID">
+                  <Tag color="blue">{editingReport.reportID}</Tag>
+                </Descriptions.Item>
+
+                <Descriptions.Item label="Victim ID">
+                  {editingReport.victimID?.victimID ? (
+                    <Tag color="magenta">{editingReport.victimID.victimID}</Tag>
+                  ) : (
+                    "N/A"
+                  )}
+                </Descriptions.Item>
+
+                <Descriptions.Item label="Incident Type">
+                  {editingReport.incidentType}
+                </Descriptions.Item>
+
+                <Descriptions.Item label="Location">
+                  <Tag icon={<EnvironmentOutlined />} color="geekblue">
+                    {editingReport.location}
+                  </Tag>
+                </Descriptions.Item>
+
+                <Descriptions.Item label="Description">
+                  <Typography.Paragraph
+                    style={{ whiteSpace: "pre-line", marginBottom: 0 }}
                   >
-                    Close
-                  </Button>,
-                ]
-                : undefined
-            }
-            okText="Save"
-            onOk={() => {
-              form.validateFields().then((vals) => handleUpdateReport(vals));
+                    {editingReport.description || "No description provided."}
+                  </Typography.Paragraph>
+                </Descriptions.Item>
+
+                <Descriptions.Item label="Perpetrator">
+                  {editingReport.perpetrator || "N/A"}
+                </Descriptions.Item>
+
+                <Descriptions.Item label="Status">
+                  <Tag color={getStatusColor(editingReport.status)}>
+                    {editingReport.status}
+                  </Tag>
+                </Descriptions.Item>
+
+                <Descriptions.Item label="Date Reported">
+                  {new Date(editingReport.dateReported).toLocaleString()}
+                </Descriptions.Item>
+              </Descriptions>
+            )}
+          </Modal>
+
+          {/* EDIT MODAL */}
+          <Modal
+            title={`Edit Report - ${editingReport?.reportID}`}
+            open={!isViewMode && editModalVisible}
+            onCancel={() => {
+              setEditModalVisible(false);
+              setEditingReport(null);
+              setIsViewMode(false);
             }}
+            okText="Save"
+            onOk={() => form.validateFields().then((vals) => handleUpdateReport(vals))}
           >
             <Form
               form={form}
@@ -425,25 +475,25 @@ export default function ReportManagement() {
                 rules={[{ required: true, message: "Please select the type of incident" }]}
                 style={{ marginBottom: 12, marginTop: 20 }}
               >
-                <Select placeholder="Select type" disabled={isViewMode}>
+                <Select placeholder="Select type">
                   <Option value="Physical">Physical</Option>
                   <Option value="Sexual">Sexual</Option>
                   <Option value="Psychological">Psychological</Option>
                   <Option value="Economic">Economic</Option>
                 </Select>
               </Form.Item>
+
               <Form.Item name="location" label="Location" rules={[{ required: true }]} style={{ marginBottom: 12 }}>
-                <Input disabled={isViewMode} />
+                <Input />
               </Form.Item>
               <Form.Item name="description" label="Description" style={{ marginBottom: 12 }}>
-                <Input.TextArea rows={3} disabled={isViewMode} />
+                <Input.TextArea rows={3} />
               </Form.Item>
               <Form.Item name="perpetrator" label="Perpetrator" style={{ marginBottom: 12 }}>
-                <Input disabled={isViewMode} />
+                <Input />
               </Form.Item>
-              {/* assignedOfficer and riskLevel removed from UI - schema no longer includes them */}
               <Form.Item name="status" label="Status" style={{ marginBottom: 12 }}>
-                <Select disabled={isViewMode}>
+                <Select>
                   <Option value="Pending">Pending</Option>
                   <Option value="Open">Open</Option>
                   <Option value="Under Investigation">In-Progress</Option>
@@ -451,9 +501,9 @@ export default function ReportManagement() {
                   <Option value="Closed">Closed</Option>
                 </Select>
               </Form.Item>
-
             </Form>
           </Modal>
+
         </Card>
       </Content>
     </Layout>

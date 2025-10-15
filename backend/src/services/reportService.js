@@ -96,7 +96,7 @@ async function updateReport(id, updates) {
 
   if (ns) normalized.status = ns;
 
-  const allowed = ["status", "description", "location", "perpetrator"];
+  const allowed = ["status", "description", "location", "perpetrator", "incidentType"];
   allowed.forEach((k) => {
     if (normalized[k] !== undefined) report[k] = normalized[k];
   });

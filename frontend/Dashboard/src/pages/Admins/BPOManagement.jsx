@@ -112,7 +112,7 @@ export default function BPOManagement() {
       render: (_, r) => (
         <Space>
           <Tooltip title="View">
-            <Button type="link" icon={<EyeOutlined />} onClick={() => window.open(`bpo/${r.bpoID || r._id}`, '_blank')} />
+            <Button type="link" icon={<EyeOutlined />} onClick={() => navigate(`/admin/bpo/${r.bpoID || r._id}`)} />
           </Tooltip>
           <Tooltip title="Edit status">
             <Button type="link" icon={<EditOutlined />} onClick={() => {

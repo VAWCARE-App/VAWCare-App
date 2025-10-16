@@ -21,9 +21,6 @@ export default function DssSuggestion({ caseData }) {
           assignedOfficer: caseData.assignedOfficer,
           status: caseData.status,
           perpetrator: caseData.perpetrator,
-          // include injury facts if present on the case so backend rules can match
-          injuries: caseData.injuries,
-          injurySeverity: caseData.injurySeverity,
           victimId: caseData.victim || caseData.victimId || caseData.reportedBy,
           // include victimType so DSS can tailor suggestions for Child vs Woman
           victimType: caseData.victimType || null,
@@ -222,50 +219,7 @@ export default function DssSuggestion({ caseData }) {
             </Typography.Paragraph>
           </Card>
 
-          {/* Probability Breakdown (collapsible, closed by default) */}
-          {Array.isArray(result.dssProbabilitiesExplanation) && result.dssProbabilitiesExplanation.length > 0 && (
-            <Collapse ghost defaultActiveKey={[]} style={{ marginTop: 12 }}>
-              <Collapse.Panel
-                key="probability-breakdown"
-                header={
-                  <Space>
-                    <ClockCircleOutlined style={{ color: '#595959' }} />
-                    <span>Probability Breakdown</span>
-                  </Space>
-                }
-              >
-                <Space direction="vertical" style={{ width: '100%' }} size={12}>
-                  {result.dssProbabilitiesExplanation.map((p, idx) => {
-                    const label = p.label || p.type || 'Unknown';
-                    const meta = labelMeta[label] || { color: 'default', icon: null };
-                    return (
-                      <Card type="inner" key={idx} style={{ padding: 12 }}>
-                        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', width: '100%' }}>
-                          <div style={{ minWidth: 160 }}>
-                            <Space>
-                              {meta.icon}
-                              <Typography.Text strong>{label}</Typography.Text>
-                            </Space>
-                            <div style={{ marginTop: 4 }}>
-                              <Tag color={meta.color === 'default' ? undefined : meta.color}>{Math.round((p.probability || 0) * 100)}%</Tag>
-                            </div>
-                          </div>
-                          <div style={{ flex: 1 }}>
-                            <Typography.Text type="secondary" style={{ display: 'block' }}>{p.description || p.explanation || ''}</Typography.Text>
-                            {p.recommendedAction && (
-                              <Typography.Paragraph style={{ marginTop: 8, marginBottom: 0, backgroundColor: '#fafafa', padding: 8, borderRadius: 4 }}>
-                                <strong>Recommended:</strong> {p.recommendedAction}
-                              </Typography.Paragraph>
-                            )}
-                          </div>
-                        </div>
-                      </Card>
-                    );
-                  })}
-                </Space>
-              </Collapse.Panel>
-            </Collapse>
-          )}
+          {/* Probability breakdown removed: DSS no longer returns probability vectors */}
 
           {/* Administrative Actions */}
           {userType === 'admin' && (

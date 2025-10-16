@@ -45,9 +45,8 @@ export default function BPO() {
   };
 
   const openBpoDetail = (id) => {
-    // Open a new tab to a BPO detail route if you implement one later
-    // For now it will open a /bpo/:id path in the same app (may 404 until route exists)
-    window.open(`/bpo/${id}`, '_blank');
+    // Navigate to the BPO detail route within the current tab
+    navigate(`/admin/bpo/${id}`);
   };
 
   const update = (k) => (e) => {

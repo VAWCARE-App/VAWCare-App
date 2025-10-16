@@ -17,7 +17,9 @@ async function sendMail(to, subject, html) {
       subject,
       html,
     });
-    console.log(`✅ Email sent to ${to}`);
+    if (process.env.SOS_DEBUG && String(process.env.SOS_DEBUG).toLowerCase() !== 'false') {
+      console.log(`✅ Email sent to ${to}`);
+    }
   } catch (error) {
     console.error("❌ Error sending email:", error);
     throw new Error("Failed to send email");

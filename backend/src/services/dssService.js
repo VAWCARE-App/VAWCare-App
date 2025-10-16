@@ -171,16 +171,78 @@ const SEVERITY_KEYWORDS = {
 function detectSeverityFromKeywords(description, incidentType) {
   const desc = (description || '').toLowerCase();
   const type = (incidentType || '').toLowerCase();
-  
+  // --- Fuzzy matching helpers ---
+  // Simple Levenshtein distance implementation
+  function levenshtein(a, b) {
+    if (!a || !b) return (a || b) ? Math.max((a||'').length, (b||'').length) : 0;
+    const al = a.length;
+    const bl = b.length;
+    const dp = Array(al + 1).fill(null).map(() => Array(bl + 1).fill(0));
+    for (let i = 0; i <= al; i++) dp[i][0] = i;
+    for (let j = 0; j <= bl; j++) dp[0][j] = j;
+    for (let i = 1; i <= al; i++) {
+      for (let j = 1; j <= bl; j++) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        dp[i][j] = Math.min(
+          dp[i - 1][j] + 1,
+          dp[i][j - 1] + 1,
+          dp[i - 1][j - 1] + cost
+        );
+      }
+    }
+    return dp[al][bl];
+  }
+
+  // Return true when two strings are sufficiently similar (threshold is conservative)
+  function isFuzzyEqual(a, b, threshold = 0.72) {
+    if (!a || !b) return false;
+    if (a === b) return true;
+    const maxLen = Math.max(a.length, b.length);
+    if (maxLen === 0) return true;
+    const dist = levenshtein(a, b);
+    const ratio = 1 - dist / maxLen; // 1.0 means identical
+    return ratio >= threshold;
+  }
+
+  // Tokenize description into words for individual comparisons
+  const descTokens = desc.split(/\W+/).filter(Boolean);
+
+  // Helper to check if the description contains the keyword either exactly
+  // (substring) or via a fuzzy match against individual tokens.
+  function matchesKeywordFuzzy(keyword) {
+    const kw = (keyword || '').toLowerCase().trim();
+    if (!kw) return false;
+    // Exact substring match (covers multi-word phrases)
+    if (desc.includes(kw)) return true;
+    // For multi-word keyword, also check each component fuzzily
+    const kwParts = kw.split(/\s+/).filter(Boolean);
+    if (kwParts.length > 1) {
+      // If every part fuzzy-matches some token, consider it a match
+      const allPartsMatch = kwParts.every(part => descTokens.some(t => isFuzzyEqual(part, t)));
+      if (allPartsMatch) return true;
+    }
+    // For single-word keywords, compare against tokens fuzzily
+    if (kwParts.length === 1) {
+      const part = kwParts[0];
+      // Only compare reasonable-length tokens
+      for (const t of descTokens) {
+        // skip very short tokens
+        if (t.length < 2) continue;
+        if (isFuzzyEqual(part, t)) return true;
+      }
+    }
+    return false;
+  }
+
   // Check high severity first
   for (const kw of SEVERITY_KEYWORDS.High[type] || []) {
-    if (desc.includes(kw.toLowerCase())) return 'High';
+    if (matchesKeywordFuzzy(kw)) return 'High';
   }
   for (const kw of SEVERITY_KEYWORDS.Medium[type] || []) {
-    if (desc.includes(kw.toLowerCase())) return 'Medium';
+    if (matchesKeywordFuzzy(kw)) return 'Medium';
   }
   for (const kw of SEVERITY_KEYWORDS.Low[type] || []) {
-    if (desc.includes(kw.toLowerCase())) return 'Low';
+    if (matchesKeywordFuzzy(kw)) return 'Low';
   }
   
   // Default severities by type

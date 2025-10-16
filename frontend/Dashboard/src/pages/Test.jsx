@@ -20,6 +20,7 @@ import {
 import UserInsights from "./Insights/UserInsights";
 import ReportsInsights from "./Insights/ReportsInsights";
 import CasesInsights from "./Insights/CasesInsights";
+import AlertsInsights from "./Insights/AlertsInsights";
 
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;
@@ -144,7 +145,7 @@ export default function Test() {
                   {t.key === "users" && <UserInsights key={refreshKey} />}
                   {t.key === "reports" && <ReportsInsights key={refreshKey} />}
                   {t.key === "cases" && <CasesInsights key={refreshKey} />}
-                  {t.key === "alerts" && <UserInsights key={refreshKey} />}
+                  {t.key === "alerts" && <AlertsInsights key={refreshKey} />}
                 </div>
               ),
             }))}

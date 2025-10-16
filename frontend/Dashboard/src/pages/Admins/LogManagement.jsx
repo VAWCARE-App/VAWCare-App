@@ -47,14 +47,20 @@ export default function LogManagement(){
       const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
       setLogs(data);
     } catch (e) {
-      // If the token is invalid or expired, clear it so we stop producing
-      // repeated 401s on protected endpoints and surface a user-visible message.
+      // NOTE: Temporarily disabled automatic session-expire handling here.
+      // The app is moving session-expiry handling to a centralized location
+      // (in `src/lib/api.js` and a top-level listener) to avoid multiple
+      // components clearing tokens concurrently during background requests.
+      // If you need to re-enable per-component behavior, restore the
+      // following block that clears the token and shows a warning on 401:
+      /*
       if (e?.response?.status === 401) {
-        try { clearToken(); } catch (ex) { /* ignore */ }
-        try { messageApi?.warning('Session expired or invalid. Please sign in again.'); } catch (mErr) { /* ignore */ }
+        try { clearToken(); } catch (ex) { /\* ignore *\/ }
+        try { messageApi?.warning('Session expired or invalid. Please sign in again.'); } catch (mErr) { /\* ignore *\/ }
         console.warn('Cleared invalid auth token after 401 from /api/logs');
         return;
       }
+      */
       console.error('Failed to load logs', e, e.response?.data || e.message);
     } finally { setLoading(false); }
   };

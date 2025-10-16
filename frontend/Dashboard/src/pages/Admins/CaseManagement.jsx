@@ -338,7 +338,7 @@ export default function CaseManagement() {
         </Space>
       </Header>
       <Content style={{ padding: 16 }}>
-        <Card title="All Cases" extra={<Space><Search placeholder="Search cases..." style={{ width: 240 }} onChange={(e) => setSearchText(e.target.value)} /><Select value={filterType} onChange={setFilterType}><Option value="all">All Cases</Option><Option value="Open">Open</Option><Option value="Under Investigation">In-Progress</Option><Option value="Resolved">Resolved</Option><Option value="Closed">Closed</Option></Select></Space>}>
+        <Card title="All Cases" extra={<Space><Search placeholder="Search cases..." style={{ width: 240 }} onChange={(e) => setSearchText(e.target.value)} /><Select value={filterType} onChange={setFilterType}><Option value="all">All Cases</Option><Option value="Open">Open</Option><Option value="Under Investigation">In-Progress</Option><Option value="Resolved">Resolved</Option><Option value="Cancelled">Cancelled</Option></Select></Space>}>
           <Table columns={columns} dataSource={filteredCases} loading={loading} pagination={{ pageSize: 8 }} scroll={{ y: 480 }} />
 
           <Modal title={editingCase ? `${isViewMode ? 'View' : 'Edit'} Case - ${editingCase?.caseID}` : 'Case'} open={editModalVisible} onCancel={() => { setEditModalVisible(false); setEditingCase(null); setIsViewMode(false); }} okText="Save" onOk={() => { form.validateFields().then((v) => handleUpdateCase(v)); }}>
@@ -352,7 +352,7 @@ export default function CaseManagement() {
               <Form.Item name="perpetrator" label="Perpetrator"><Input disabled={isViewMode} /></Form.Item>
               <Form.Item name="assignedOfficer" label="Assigned Officer"><Input disabled={isViewMode} /></Form.Item>
               <Form.Item name="riskLevel" label="Risk Level"><Select disabled={isViewMode}><Option value="Low">Low</Option><Option value="Medium">Medium</Option><Option value="High">High</Option></Select></Form.Item>
-              <Form.Item name="status" label="Status"><Select disabled={isViewMode}><Option value="Open">Open</Option><Option value="Under Investigation">In-Progress</Option><Option value="Resolved">Resolved</Option><Option value="Closed">Closed</Option></Select></Form.Item>
+              <Form.Item name="status" label="Status"><Select disabled={isViewMode}><Option value="Open">Open</Option><Option value="Under Investigation">In-Progress</Option><Option value="Resolved">Resolved</Option><Option value="Cancelled">Cancelled</Option></Select></Form.Item>
             </Form>
           </Modal>
 
@@ -380,7 +380,13 @@ export default function CaseManagement() {
               </Form.Item>
 
               <Form.Item name="incidentType" label="Incident Type" rules={[{ required: true, message: 'Incident Type is required' }]}>
-                <Input />
+                 <Select>
+                  <Option value="Economic">Economic</Option>
+                  <Option value="Psychological">Psychological</Option>
+                  <Option value="Physical">Physical</Option>
+                  <Option value="Sexual">Sexual</Option>
+                  <Option value="Emergency">Emergency</Option>
+                </Select>
               </Form.Item>
 
               <Form.Item name="location" label="Location">
@@ -416,7 +422,7 @@ export default function CaseManagement() {
                   <Option value="Open">Open</Option>
                   <Option value="Under Investigation">In-Progress</Option>
                   <Option value="Resolved">Resolved</Option>
-                  <Option value="Closed">Closed</Option>
+                  <Option value="Cancelled">Cancelled</Option>
                 </Select>
               </Form.Item>
             </Form>

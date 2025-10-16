@@ -1,7 +1,8 @@
 // src/lib/api.js
 import axios from "axios";
 import { message } from 'antd';
-import { exchangeCustomTokenForIdToken } from './firebase';
+import { exchangeCustomTokenForIdToken, initFirebase } from './firebase';
+import { getAuth } from 'firebase/auth';
 
 const baseURL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -69,17 +70,38 @@ export const isTokenProbablyJwt = (token) => {
 // Add an axios response interceptor to handle unauthorized responses
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    // Previously we cleared tokens and redirected here. That caused immediate sign-out
-    // when some protected endpoints returned 401 during development. Delegate handling
-    // to the calling component so pages can retry or show friendly UI.
-    if (error.response?.status === 401) {
+  async (error) => {
+    // Attempt to recover from a 401 by refreshing the Firebase ID token (if available)
+    const status = error.response?.status;
+    const originalRequest = error.config;
+    if (status === 401 && originalRequest && !originalRequest._retry) {
+      originalRequest._retry = true;
       try {
-        // Show a non-intrusive message; don't clear token or redirect here.
+        // Ensure Firebase is initialized, then try to refresh the current user's ID token
+        initFirebase();
+        const auth = getAuth();
+        const currentUser = auth.currentUser;
+        if (currentUser && typeof currentUser.getIdToken === 'function') {
+          const freshToken = await currentUser.getIdToken(true);
+          if (freshToken) {
+            saveToken(freshToken);
+            // attach refreshed token to the original request and retry
+            originalRequest.headers = originalRequest.headers || {};
+            originalRequest.headers.Authorization = `Bearer ${freshToken}`;
+            console.debug('[api] Retrying original request after refreshing ID token');
+            return api(originalRequest);
+          }
+        }
+      } catch (refreshErr) {
+        // Refresh failed — fall through to delegate handling to caller
+        console.debug('[api] token refresh attempt failed', refreshErr && refreshErr.message);
+      }
+    }
+    // Delegate 401 handling to the caller when refresh isn't possible or failed
+    if (status === 401) {
+      try {
         const requestUrl = error.config?.url || '';
         console.warn(`[api] 401 response for ${requestUrl}`);
-        // Optionally show a warning for visibility during dev
-        // message.warning('Session invalid or expired. Please sign in again.');
       } catch (e) {
         console.debug('Failed to log 401 handling', e && e.message);
       }

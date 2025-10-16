@@ -120,57 +120,108 @@ export default function CaseDetail() {
         </Space>
 
         {editing ? (
-          <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-            <Form.Item name="victimType" label="Victim Type">
-              <Select>
-                <Select.Option value="child">Child</Select.Option>
-                <Select.Option value="woman">Woman</Select.Option>
-                <Select.Option value="anonymous">Anonymous</Select.Option>
-              </Select>
-            </Form.Item>
-            <Form.Item name="victimName" label="Victim">
-              <Input />
-            </Form.Item>
-            <Form.Item name="incidentType" label="Incident Type">
-              <Select
-                options={[
-                  { value: "Physical", label: "Physical" },
-                  { value: "Verbal", label: "Verbal" },
-                  { value: "Other", label: "Other" },
-                ]}
-              />
-            </Form.Item>
-            <Form.Item name="description" label="Description">
-              <Input.TextArea rows={3} />
-            </Form.Item>
-            <Form.Item name="perpetrator" label="Perpetrator">
-              <Input />
-            </Form.Item>
-            <Form.Item name="location" label="Location">
-              <Input />
-            </Form.Item>
-            <Form.Item name="status" label="Status">
-              <Select
-                options={[
-                  { value: "Open", label: "Open" },
-                  { value: "In Progress", label: "In Progress" },
-                  { value: "Closed", label: "Closed" },
-                ]}
-              />
-            </Form.Item>
-            <Form.Item name="assignedOfficer" label="Assigned Officer">
-              <Input />
-            </Form.Item>
-            <Form.Item name="riskLevel" label="Risk Level">
-              <Select
-                options={[
-                  { value: "Low", label: "Low" },
-                  { value: "Medium", label: "Medium" },
-                  { value: "High", label: "High" },
-                ]}
-              />
-            </Form.Item>
-          </Form>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              width: "100%",
+            }}
+          >
+            <div
+              style={{
+                width: "100%",
+                maxWidth: 800,
+                background: "#fff",
+                padding: 24,
+                borderRadius: 12,
+                boxShadow: "0 6px 16px rgba(233, 30, 99, 0.1)",
+                border: "1px solid #f9c4d2",
+              }}
+            >
+              <Typography.Title
+                level={4}
+                style={{
+                  color: "#e91e63",
+                  marginBottom: 24,
+                  textAlign: "center",
+                }}
+              >
+                Edit Case Information
+              </Typography.Title>
+
+              <Form
+                form={form}
+                layout="vertical"
+                style={{ width: "100%" }}
+              >
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                    gap: 20,
+                  }}
+                >
+                  <Form.Item name="victimType" label="Victim Type">
+                    <Select>
+                      <Select.Option value="child">Child</Select.Option>
+                      <Select.Option value="woman">Woman</Select.Option>
+                      <Select.Option value="anonymous">Anonymous</Select.Option>
+                    </Select>
+                  </Form.Item>
+
+                  <Form.Item name="victimName" label="Victim Name">
+                    <Input />
+                  </Form.Item>
+
+                  <Form.Item name="incidentType" label="Incident Type">
+                    <Select
+                      options={[
+                        { value: "Physical", label: "Physical" },
+                        { value: "Verbal", label: "Verbal" },
+                        { value: "Other", label: "Other" },
+                      ]}
+                    />
+                  </Form.Item>
+
+                  <Form.Item name="perpetrator" label="Perpetrator">
+                    <Input />
+                  </Form.Item>
+
+                  <Form.Item name="location" label="Location">
+                    <Input />
+                  </Form.Item>
+
+                  <Form.Item name="status" label="Status">
+                    <Select
+                      options={[
+                        { value: "Open", label: "Open" },
+                        { value: "In Progress", label: "In Progress" },
+                        { value: "Closed", label: "Closed" },
+                      ]}
+                    />
+                  </Form.Item>
+
+                  <Form.Item name="assignedOfficer" label="Assigned Officer">
+                    <Input />
+                  </Form.Item>
+
+                  <Form.Item name="riskLevel" label="Risk Level">
+                    <Select
+                      options={[
+                        { value: "Low", label: "Low" },
+                        { value: "Medium", label: "Medium" },
+                        { value: "High", label: "High" },
+                      ]}
+                    />
+                  </Form.Item>
+                </div>
+
+                <Form.Item name="description" label="Description">
+                  <Input.TextArea rows={4} />
+                </Form.Item>
+              </Form>
+            </div>
+          </div>
         ) : (
           <div ref={printRef} style={{ marginTop: 16 }}>
             <Descriptions
@@ -209,8 +260,8 @@ export default function CaseDetail() {
                     caseData.status === "Open"
                       ? "red"
                       : caseData.status === "Closed"
-                      ? "green"
-                      : "blue"
+                        ? "green"
+                        : "blue"
                   }
                 >
                   {caseData.status}
@@ -225,8 +276,8 @@ export default function CaseDetail() {
                     caseData.riskLevel === "High"
                       ? "red"
                       : caseData.riskLevel === "Medium"
-                      ? "orange"
-                      : "green"
+                        ? "orange"
+                        : "green"
                   }
                 >
                   {caseData.riskLevel}

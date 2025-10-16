@@ -8,8 +8,9 @@ export default function EmergencyButton() {
   const [pulsing, setPulsing] = useState(false);
   const [activeAlertId, setActiveAlertId] = useState(null);
   const [activeAlertStart, setActiveAlertStart] = useState(null);
+  const [messageApi, contextHolder] = message.useMessage();
   const submittingRef = useRef(false); // synchronous guard to prevent double-submit
-  const autoResolveTimerRef = useRef(null);
+  // client-side auto-resolve removed to keep alert active on server when browser is backgrounded
 
   // Format milliseconds to HH:MM:SS
   const formatDuration = (ms) => {
@@ -26,30 +27,28 @@ export default function EmergencyButton() {
     // Prevent re-entry (covers very fast double/tap events)
     if (submittingRef.current) return;
     // If already pulsing, this click should resolve the active alert
-    if (pulsing && activeAlertId) {
+  if (pulsing && activeAlertId) {
       // mark submitting so resolve can't be re-triggered
       submittingRef.current = true;
       // Stop pulsing immediately in UI
       setPulsing(false);
-      // clear auto-resolve timer if any
-      if (autoResolveTimerRef.current) { clearTimeout(autoResolveTimerRef.current); autoResolveTimerRef.current = null; }
       setLoading(true);
       try {
         // compute client-measured duration and send it to server
         const durationMs = activeAlertStart ? (Date.now() - new Date(activeAlertStart).getTime()) : null;
         const { data } = await api.put(`/api/alerts/${activeAlertId}/resolve`, { durationMs });
-        message.success('Alert resolved');
+        messageApi.success('Alert resolved');
         // clear stored active alert and start time
         setActiveAlertId(null);
         setActiveAlertStart(null);
         // optionally show duration if returned
         const duration = data?.data?.durationMs;
         if (typeof duration === 'number') {
-          message.info(`Alert active for ${formatDuration(duration)}`);
+          messageApi.info(`Alert active for ${formatDuration(duration)}`);
         }
       } catch (err) {
         console.error('Failed to resolve alert', err);
-        message.error(err?.response?.data?.message || 'Failed to resolve alert');
+        messageApi.error(err?.response?.data?.message || 'Failed to resolve alert');
       } finally {
         setLoading(false);
         submittingRef.current = false;
@@ -66,81 +65,109 @@ export default function EmergencyButton() {
 
       //sends location to backend
       if (!navigator.geolocation) {
-        message.error("Geolocation is not supported by your browser.");
+        messageApi.error("Geolocation is not supported by your browser.");
         return;
       }
 
   setLoading(true);
 
-      // Wrap geolocation in a Promise so we can await coordinates
-      const getPosition = () =>
+      // Try to collect multiple high-accuracy samples and pick the best one
+      const getBestPosition = (opts = {}) =>
         new Promise((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(
-            (position) => resolve(position),
-            (error) => reject(error),
-            { enableHighAccuracy: true, timeout: 10000 }
-          );
+          const maxSamples = opts.maxSamples || 6;
+          const maxTime = opts.maxTime || 8000; // ms
+          const positions = [];
+          let watchId = null;
+          let finished = false;
+
+          function done() {
+            if (finished) return;
+            finished = true;
+            if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+            if (positions.length === 0) return reject(new Error('No position samples collected'));
+            // pick the sample with smallest accuracy (in meters) when available
+            positions.sort((a, b) => {
+              const aa = (a.coords && typeof a.coords.accuracy === 'number') ? a.coords.accuracy : Infinity;
+              const bb = (b.coords && typeof b.coords.accuracy === 'number') ? b.coords.accuracy : Infinity;
+              return aa - bb;
+            });
+            resolve(positions[0]);
+          }
+
+          try {
+            watchId = navigator.geolocation.watchPosition(
+              (position) => {
+                positions.push(position);
+                // if we have enough samples, finish early
+                if (positions.length >= maxSamples) done();
+              },
+              (err) => {
+                // on errors, if we already have samples resolve, otherwise reject
+                if (positions.length > 0) return done();
+                reject(err);
+              },
+              { enableHighAccuracy: true, maximumAge: 0, timeout: opts.sampleTimeout || 2500 }
+            );
+          } catch (e) {
+            return reject(e);
+          }
+
+          // also set an overall timeout
+          const to = setTimeout(() => {
+            clearTimeout(to);
+            done();
+          }, maxTime);
         });
 
       try {
-  const pos = await getPosition();
-        const { latitude, longitude } = pos.coords;
-        const locationString = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-        console.log("Emergency alert sent:", { latitude, longitude });
+        let pos = null;
+        try {
+          pos = await getBestPosition({ maxSamples: 6, maxTime: 8000 });
+        } catch (err) {
+          // If sampler timed out (code 3) try a single getCurrentPosition with cached option as a fallback
+          if (err && err.code === 3) {
+            try {
+              pos = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, maximumAge: 60000, timeout: 5000 });
+              });
+            } catch (fallbackErr) {
+              throw err; // rethrow original
+            }
+          } else {
+            throw err;
+          }
+        }
+        const { latitude, longitude, accuracy } = pos.coords;
+        const timestamp = pos.timestamp || Date.now();
+        const locationString = `${latitude.toFixed(6)}, ${longitude.toFixed(6)} (±${typeof accuracy === 'number' ? Math.round(accuracy) + 'm' : 'unknown'})`;
+        console.log('Emergency alert sent (best sample):', { latitude, longitude, accuracy, timestamp });
 
         // For emergency one-click alerts we send an anonymous alert payload
         const user = JSON.parse(localStorage.getItem("user") || "{}");
         const victimID = user && (user._id || user.id);
 
         const payload = {
-          location: { latitude, longitude },
+          location: { latitude, longitude, accuracy: (typeof accuracy === 'number' ? Math.round(accuracy) : null), timestamp },
           alertType: "Emergency",
           // include victimID when available; the backend Alert model requires it
           ...(victimID ? { victimID } : {})
         };
 
-  const { data } = await api.post("/api/victims/anonymous/alert", payload);
+        const { data } = await api.post("/api/victims/anonymous/alert", payload); // No change here
   // backend returns created alert id and createdAt in data.data
   const alertId = data?.data?.alertId || data?.alertId || (data && data._id);
   const createdAt = data?.data?.createdAt || data?.createdAt || null;
   if (alertId) setActiveAlertId(alertId);
   if (createdAt) setActiveAlertStart(new Date(createdAt));
   // Start pulsing only after backend confirms the alert was saved
-  // start auto-resolve timer to stop the alert after 5 minutes
-  if (autoResolveTimerRef.current) { clearTimeout(autoResolveTimerRef.current); }
-  autoResolveTimerRef.current = setTimeout(async () => {
-    try {
-      if (!activeAlertId && alertId) {
-        // resolve the alert we just created
-        const durationMs = 300000; // exact 5 minutes mark
-        await api.put(`/api/alerts/${alertId}/resolve`, { durationMs });
-        // update UI
-        setPulsing(false);
-        setActiveAlertId(null);
-        setActiveAlertStart(null);
-        message.info('Alert auto-resolved after 5 minutes');
-      } else if (activeAlertId) {
-        const durationMs = 300000;
-        await api.put(`/api/alerts/${activeAlertId}/resolve`, { durationMs });
-        setPulsing(false);
-        setActiveAlertId(null);
-        setActiveAlertStart(null);
-        message.info('Alert auto-resolved after 5 minutes');
-      }
-    } catch (e) {
-      console.warn('Auto-resolve failed', e && e.message);
-    } finally {
-      submittingRef.current = false;
-      if (autoResolveTimerRef.current) { clearTimeout(autoResolveTimerRef.current); autoResolveTimerRef.current = null; }
-    }
-  }, 300000);
-  message.success("🚨 Emergency alert sent!");
+  // Do NOT start a client-side auto-resolve timer — server should be authoritative so alerts remain active
+        messageApi.success("🚨 Emergency alert sent!");
       } catch (err) {
         console.error(err);
         const errMsg = err?.response?.data?.message || err?.message || "Emergency report failed. Try again.";
         // revert optimistic pulsing on error
         setPulsing(false);
-        message.error(errMsg);
+        messageApi.error(errMsg);
       } finally {
         setLoading(false);
         submittingRef.current = false;
@@ -149,7 +176,9 @@ export default function EmergencyButton() {
   };
 
   return (
-    <div
+    <>
+      {contextHolder}
+      <div
       style={{
         minHeight: "100vh",
         display: "flex",
@@ -238,5 +267,6 @@ export default function EmergencyButton() {
         `}
       </style>
     </div>
+    </>
   );
 }

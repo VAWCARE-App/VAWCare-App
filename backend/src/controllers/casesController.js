@@ -103,7 +103,6 @@ exports.createCase = async (req, res, next) => {
           // Map DSS response fields directly to schema fields
           payload.dssPredictedRisk = payload.incidentType; // Use incident type as predicted risk
           payload.dssStoredRisk = payload.riskLevel || dssRes.riskLevel || dssRes.dssStoredRisk;
-          payload.dssProbabilities = Array.isArray(dssRes.dssProbabilities) ? dssRes.dssProbabilities : [];
           payload.dssImmediateAssistanceProbability = Number(dssRes.dssImmediateAssistanceProbability || 0);
           payload.dssSuggestion = dssRes.suggestion || dssRes.dssSuggestion || '';
           payload.dssRuleMatched = !!dssRes.dssRuleMatched;
@@ -217,7 +216,6 @@ exports.updateCase = async (req, res, next) => {
             // merge DSS results into updates so they are persisted
             updates.dssPredictedRisk = dssRes.predictedRisk || dssRes.dssPredictedRisk;
             updates.dssStoredRisk = updates.riskLevel || dssRes.riskLevel || dssRes.dssStoredRisk;
-            updates.dssProbabilities = Array.isArray(dssRes.dssProbabilities) ? dssRes.dssProbabilities : [];
             updates.dssImmediateAssistanceProbability = Number(dssRes.dssImmediateAssistanceProbability || 0);
             updates.dssSuggestion = dssRes.suggestion || dssRes.dssSuggestion || '';
             updates.dssRuleMatched = !!dssRes.dssRuleMatched;

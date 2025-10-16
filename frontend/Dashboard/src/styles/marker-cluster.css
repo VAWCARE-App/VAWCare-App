@@ -1,0 +1,15 @@
+.leaflet-marker-icon {
+  border-radius: 50%;
+}
+
+.marker-cluster-small {
+  background-color: #5AD8A6;
+}
+
+.marker-cluster-medium {
+  background-color: #FFB347;
+}
+
+.marker-cluster-large {
+  background-color: #FF6EA9;
+}

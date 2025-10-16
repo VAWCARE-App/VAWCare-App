@@ -29,6 +29,16 @@ const alertSchema = new mongoose.Schema({
             type: Number,
             required: [true, 'Longitude is required']
         }
+    ,
+        // optional accuracy in meters reported by device and sample timestamp
+        accuracy: {
+            type: Number,
+            required: false
+        },
+        timestamp: {
+            type: Number,
+            required: false
+        }
     },
     status: {
         type: String,

@@ -77,7 +77,7 @@ const resolveAlert = asyncHandler(async (req, res) => {
   }
 
   const now = new Date();
-  alert.status = 'Resolved';
+  // Determine durationMs preferring client-supplied value
   alert.resolvedAt = now;
   // Prefer client-provided durationMs if present and plausible
   const clientDuration = Number(req.body?.durationMs);
@@ -93,6 +93,24 @@ const resolveAlert = asyncHandler(async (req, res) => {
   } catch (e) {
     alert.durationMs = null;
   }
+
+  // Decide whether this is a cancellation: short duration means accidental press
+  const CANCEL_WINDOW_MS = Number.isFinite(parseInt(process.env.ALERT_CANCEL_WINDOW_MS, 10)) ? parseInt(process.env.ALERT_CANCEL_WINDOW_MS, 10) : 3000; // 3s by default
+  const isCancelled = (typeof alert.durationMs === 'number') && (alert.durationMs < CANCEL_WINDOW_MS);
+
+  // Diagnostic logging for quick debugging when durations are unexpectedly 0 or status mismatches
+  try {
+    console.log('resolveAlert debug:', {
+      alertId: alert._id,
+      clientProvided: req.body?.durationMs,
+      durationMs: alert.durationMs,
+      cancelWindowMs: CANCEL_WINDOW_MS,
+      isCancelled
+    });
+  } catch (e) { /* ignore logging errors */ }
+
+  // Set status based on cancellation window
+  alert.status = isCancelled ? 'Cancelled' : 'Resolved';
 
   // compute durationStr HH:MM:SS
   if (typeof alert.durationMs === 'number') {
@@ -111,11 +129,12 @@ const resolveAlert = asyncHandler(async (req, res) => {
   // After saving, decide whether to send SOS emails based on duration threshold
   try {
     const THRESH_MS = parseInt(process.env.SOS_DURATION_MS, 10) || 3000;
-    if (typeof alert.durationMs === 'number' && alert.durationMs >= THRESH_MS) {
+    // Only send SOS emails when not cancelled and duration passes threshold
+    if (!isCancelled && typeof alert.durationMs === 'number' && alert.durationMs >= THRESH_MS) {
       // fire-and-forget
       sendEmailsForAlert(alert, req).catch((e) => console.warn('sendEmailsForAlert failed', e && e.message));
     } else {
-      console.log('Skipping SOS emails on resolve: duration below threshold', alert._id, alert.durationMs);
+      console.log('Skipping SOS emails on resolve/cancel: cancelled=', isCancelled, 'durationMs=', alert.durationMs);
     }
   } catch (e) { console.warn('Error deciding SOS send on resolve', e && e.message); }
 
@@ -127,7 +146,7 @@ const resolveAlert = asyncHandler(async (req, res) => {
     console.warn('Failed to record alert resolved log', e && e.message);
   }
 
-  res.status(200).json({ success: true, message: 'Alert resolved', data: { id: alert._id, alertID: alert.alertID, resolvedAt: alert.resolvedAt, durationMs: alert.durationMs, durationStr: alert.durationStr } });
+  res.status(200).json({ success: true, message: 'Alert resolved', data: { id: alert._id, alertID: alert.alertID, resolvedAt: alert.resolvedAt, durationMs: alert.durationMs, durationStr: alert.durationStr, status: alert.status } });
 });
 
 // List alerts with optional filters (status)

@@ -3,7 +3,10 @@ const path = require('path');
 let tf = null;
 try {
   tf = require('@tensorflow/tfjs');
-  console.log('Using @tensorflow/tfjs (pure JS) for DSS');
+  // Use debug logging controlled by DSS_DEBUG env var
+  const dssDebug = !!(process.env.DSS_DEBUG && String(process.env.DSS_DEBUG).toLowerCase() !== 'false');
+  function dlog(...args) { if (dssDebug) console.log(...args); }
+  dlog('Using @tensorflow/tfjs (pure JS) for DSS');
 } catch (e) {
   tf = null; // model features will be disabled if tf is missing
 }
@@ -816,29 +819,29 @@ function victimTypeToOneHot(type) {
 
 // --- Main suggestion logic ---
 async function suggestForCase(payload = {}, modelObj = null) {
-  console.log('DSS Input:', payload);
-  
+  dlog('DSS Input:', payload);
+
   const victimType = normalizeVictimType(payload.victimType || payload.victimCategory || payload.victim);
-  console.log('Normalized victim type:', victimType);
+  dlog('Normalized victim type:', victimType);
   
   // Keep track of original incident type
   const originalIncidentType = payload.incidentType;
   
   // Detect severity from description keywords
   const severity = detectSeverityFromKeywords(payload.description, payload.incidentType);
-  console.log('Detected severity:', severity);
+  dlog('Detected severity:', severity);
   
   // Check if this is a manual risk level override
   const isManualOverride = !!payload.riskLevel;
   
   // Get base risk from incident type, considering manual override
   const baseRisk = mapIncidentToBaseRisk(payload.incidentType, severity, payload.riskLevel);
-  console.log('Base risk:', baseRisk);
+  dlog('Base risk:', baseRisk);
   
   // Adjust for victim type (children get higher risk), respecting manual override
   // Use `let` because ML prediction logic below may update this value conditionally
   let adjustedRisk = adjustRiskForVictimType(baseRisk, victimType, payload.incidentType, isManualOverride);
-  console.log('Adjusted risk:', adjustedRisk);
+  dlog('Adjusted risk:', adjustedRisk);
   
   // (defer suggestion lookup until we've attempted to resolve victim type from DB)
   
@@ -989,18 +992,17 @@ async function suggestForCase(payload = {}, modelObj = null) {
     description: payload.description || '',
     descriptionLower: (payload.description || '').toLowerCase(),
     severity,
-    injuries: severity === 'High',
     manualRiskLevel: isManualOverride ? adjustedRisk : null,
     recentReports: 0 // This will be calculated by the rules engine
   };
 
-  console.log('Evaluating DSS rules with facts:', facts);
+  dlog('Evaluating DSS rules with facts:', facts);
   
   // Get appropriate suggestion based on risk level and incident type
   // Pass the flat facts object (rules engine expects top-level facts)
   const ruleResult = await evaluateRules(facts);
 
-  console.log('Rule evaluation result:', {
+  dlog('Rule evaluation result:', {
     matched: ruleResult.matched,
     eventsTriggered: ruleResult.events ? ruleResult.events.length : 0,
     firstEvent: ruleResult.events && ruleResult.events.length > 0 ? ruleResult.events[0].type : null
@@ -1011,15 +1013,6 @@ async function suggestForCase(payload = {}, modelObj = null) {
   const finalSuggestion = getSolutionSuggestion(adjustedRisk, payload.incidentType, resolvedVictimType || victimType);
 
   // Return object with proper handling of incident type and risk level
-  // Build human-readable explanations for the probability vector (keeps numeric array in `dssProbabilities`)
-  const canonicalTypes = ['Economic', 'Psychological', 'Physical', 'Sexual'];
-  const dssProbabilitiesExplanation = canonicalTypes.map((label, i) => ({
-    label,
-    probability: Number((probs[i] || 0).toFixed(3)),
-    description: `Estimated probability the case involves ${label.toLowerCase()} harm based on rule-based and heuristic analysis.`,
-    recommendedAction: label === 'Sexual' || label === 'Physical' ? 'Prioritize immediate safety and medical/legal referral' : 'Provide counseling/support and monitor for escalation'
-  }));
-
   // Build a concise, unambiguous response object (avoid duplicate keys)
   const response = {
     predictedRisk: originalIncidentType || 'Unknown',
@@ -1030,8 +1023,6 @@ async function suggestForCase(payload = {}, modelObj = null) {
     // DSS fields that map to database/case schema
     dssPredictedRisk: originalIncidentType || 'Unknown',
     dssStoredRisk: adjustedRisk,
-    dssProbabilities: probs,
-    dssProbabilitiesExplanation,
     dssImmediateAssistanceProbability: finalImmediateProb,
     dssSuggestion: finalSuggestion || 'Review the report and coordinate with MSWD or PNP-WCPD for proper intervention and documentation.',
     dssRuleMatched: ruleResult.matched,

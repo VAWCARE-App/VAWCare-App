@@ -57,7 +57,7 @@ const CasesSchema = new mongoose.Schema({
 	status: {
 		type: String,
 		enum: {
-			values: ['Open', 'Under Investigation', 'Resolved', 'Closed'],
+			values: ['Open', 'Under Investigation', 'Resolved', 'Canceled'],
 			message: 'Status `{VALUE}` is not valid',
 		},
 		default: 'Open',

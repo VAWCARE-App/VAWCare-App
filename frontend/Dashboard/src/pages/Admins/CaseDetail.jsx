@@ -196,6 +196,7 @@ export default function CaseDetail() {
                       options={[
                         { value: "Open", label: "Open" },
                         { value: "In Progress", label: "In Progress" },
+                        {value:"Cancelled", label:"Cancelled"},
                         { value: "Closed", label: "Closed" },
                       ]}
                     />

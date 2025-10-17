@@ -10,5 +10,7 @@ router.post('/test', dssController.testRules);
 
 // Admin-only (or developer) training endpoint
 router.post('/train', dssController.trainModel);
+// Return cancellation counts for a victim or incidentType: GET /api/dss/cancellations?victimId=... or ?incidentType=...
+router.get('/cancellations', dssController.cancellations);
 
 module.exports = router;

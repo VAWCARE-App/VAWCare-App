@@ -418,8 +418,7 @@ export default function CaseManagement() {
                   <Option value="High">High</Option>
                 </Select>
               </Form.Item>
-
-              {/* Status is automatically set to Open on case creation; hide field from the form */}
+              
               <Form.Item name="status" hidden>
                 <Input type="hidden" />
               </Form.Item>

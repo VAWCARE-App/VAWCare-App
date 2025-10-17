@@ -21,12 +21,13 @@ export default function DssSuggestion({ caseData }) {
           assignedOfficer: caseData.assignedOfficer,
           status: caseData.status,
           perpetrator: caseData.perpetrator,
-          victimId: caseData.victim || caseData.victimId || caseData.reportedBy,
+          victimId: caseData.victimID || caseData.victimId || (caseData.victim?._id || caseData.victim) || caseData.reportedBy,
           // include victimType so DSS can tailor suggestions for Child vs Woman
           victimType: caseData.victimType || null,
           // include explicit riskLevel only if this was a manual override (so DSS can respect it)
           riskLevel: caseData.dssManualOverride ? (caseData.riskLevel || null) : null
         };
+        console.log('Sending DSS payload:', payload);
         const res = await api.post('/api/dss/suggest', payload);
         console.log('DSS Response:', res.data.data);
         setResult(res.data.data);
@@ -40,6 +41,8 @@ export default function DssSuggestion({ caseData }) {
 
     fetchSuggestion();
   }, [caseData]);
+
+  // Cancellation signals are returned in the main DSS response (result.cancellationSignals)
 
   // Small mapping for label color + icon
   const labelMeta = {
@@ -87,6 +90,32 @@ export default function DssSuggestion({ caseData }) {
             </Space>
           }>
             <Space direction="vertical" style={{ width: '100%' }} size={16}>
+              {/* Retraction Analysis Alert */}
+              {result.retractionAnalysis?.hasRetractionPattern && (
+                <Alert
+                  message={
+                    <Typography.Text strong>
+                      Retraction Risk: <Tag color={result.retractionAnalysis.retractionRisk === 'High' ? 'red' : 'orange'}>
+                        {result.retractionAnalysis.retractionRisk}
+                      </Tag>
+                    </Typography.Text>
+                  }
+                  description={
+                    <div>
+                      <Typography.Text>{result.retractionAnalysis.suggestion}</Typography.Text>
+                      <div style={{ marginTop: 8 }}>
+                        <Typography.Text type="secondary">
+                          History: {result.retractionAnalysis.cancelledCases} cancelled cases, {result.retractionAnalysis.cancelledAlerts} cancelled alerts
+                        </Typography.Text>
+                      </div>
+                    </div>
+                  }
+                  type="warning"
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                />
+              )}
+
               {/* Risk Level Indicators */}
               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                 <div>
@@ -220,6 +249,31 @@ export default function DssSuggestion({ caseData }) {
           </Card>
 
           {/* Probability breakdown removed: DSS no longer returns probability vectors */}
+
+          {/* Cancellation Signals */}
+          {(result && result.cancellationSignals) && (
+            <Card type="inner" title={<Space><InfoCircleOutlined /> Probability</Space>}>
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <div>
+                  <Typography.Text strong>Cancelled Cases (lookback): </Typography.Text>
+                  <Tag color="default">{result.cancellationSignals.canceledCases}</Tag>
+                </div>
+                <div>
+                  <Typography.Text strong>Cancelled Alerts (lookback): </Typography.Text>
+                  <Tag color="default">{result.cancellationSignals.canceledAlerts}</Tag>
+                </div>
+                <div>
+                  {result.cancellationAdvice ? (
+                    <Typography.Text type="secondary" style={{ fontSize: 14 }}>{result.cancellationAdvice}</Typography.Text>
+                  ) : (
+                    <Typography.Text type="secondary" style={{ fontSize: 14 }}>
+                      The DSS considers these historical cancellations when estimating suggestion confidence. If a victim has multiple cancelled reports/alerts it can indicate recurring false alarms or unstable reporting patterns; treat counts as advisory, not definitive.
+                    </Typography.Text>
+                  )}
+                </div>
+              </Space>
+            </Card>
+          )}
 
           {/* Administrative Actions */}
           {userType === 'admin' && (

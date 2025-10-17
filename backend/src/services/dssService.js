@@ -24,6 +24,118 @@ function normalizeVictimType(v) {
 }
 
 // --- Risk level mapping ---
+// Calculate retraction probability based on cancelled cases and alerts
+async function calculateRetractionProbability(victimId) {
+  console.log('Calculating retraction probability for victim:', victimId);
+  if (!victimId) {
+    console.log('No victimId provided for retraction analysis');
+    return null;
+  }
+  
+  try {
+    // First try to find the victim to get their ObjectId
+    const Victims = require('../models/Victims');
+    let victim = null;
+    
+    try {
+      // Try finding by victimID string first
+      victim = await Victims.findOne({ victimID: victimId }).exec();
+      if (!victim && victimId.length === 24) {
+        // If not found and victimId looks like an ObjectId, try finding by _id
+        victim = await Victims.findById(victimId).exec();
+      }
+    } catch (e) {
+      console.warn('Error finding victim:', e);
+    }
+
+    const victimObjectId = victim?._id || victimId;
+    const Cases = require('../models/Cases');
+    const Alert = require('../models/Alert');
+    
+    // Get counts of cancelled cases and alerts for this victim
+    const cancelledCases = await Cases.countDocuments({
+      $or: [
+        { victimID: victimObjectId },
+        { victimID: victimId }
+      ],
+      status: { $in: ['Cancelled', 'Canceled'] }
+    });
+    
+    const cancelledAlerts = await Alert.countDocuments({
+      $or: [
+        { victimID: victimObjectId },
+        { victimID: victimId }
+      ],
+      status: { $in: ['Cancelled', 'Canceled'] }
+    });
+
+    // Calculate probability and generate suggestion
+    console.log('Found cancelled counts:', { cancelledCases, cancelledAlerts });
+    
+    const suggestion = {
+      cancelledCases,
+      cancelledAlerts,
+      hasRetractionPattern: false,
+      retractionRisk: 'Low',
+      suggestion: ''
+    };
+
+    // Logic for determining retraction patterns
+    if (cancelledCases >= 3 && cancelledAlerts >= 3) {
+      suggestion.hasRetractionPattern = true;
+      suggestion.retractionRisk = 'High';
+      suggestion.suggestion = 'CRITICAL: Victim demonstrates a consistent pattern of both case and alert retractions. This strongly indicates potential external pressures or barriers preventing case progression. Immediate intervention recommended:\n\n' +
+        '1. Schedule urgent counseling session\n' +
+        '2. Assess potential safety concerns or external pressures\n' +
+        '3. Consider assigning a dedicated support officer\n' +
+        '4. Evaluate need for protective measures';
+    } else if (cancelledCases >= 3) {
+      suggestion.hasRetractionPattern = true;
+      suggestion.retractionRisk = 'High';
+      suggestion.suggestion = 'WARNING: Multiple case retractions detected. This pattern suggests serious underlying issues that need attention:\n\n' +
+        '1. Review case withdrawal reasons\n' +
+        '2. Assess potential intimidation or pressure\n' +
+        '3. Consider enhanced victim support services\n' +
+        '4. Schedule follow-up counseling sessions';
+    } else if (cancelledAlerts >= 3) {
+      suggestion.hasRetractionPattern = true;
+      suggestion.retractionRisk = 'High';
+      suggestion.suggestion = 'ALERT: Multiple emergency alerts have been cancelled. This could indicate:\n\n' +
+        '1. Possible coercion to cancel alerts\n' +
+        '2. Need for safe communication channels\n' +
+        '3. Review of emergency response procedures\n' +
+        '4. Safety planning assessment needed';
+    } else if (cancelledCases >= 2 && cancelledAlerts >= 2) {
+      suggestion.hasRetractionPattern = true;
+      suggestion.retractionRisk = 'Medium';
+      suggestion.suggestion = 'CAUTION: Pattern of both case and alert cancellations observed. Recommended actions:\n\n' +
+        '1. Schedule support consultation\n' +
+        '2. Review case withdrawal reasons\n' +
+        '3. Assess victim support needs\n' +
+        '4. Consider preventive measures';
+    } else if (cancelledCases >= 2) {
+      suggestion.hasRetractionPattern = true;
+      suggestion.retractionRisk = 'Medium';
+      suggestion.suggestion = 'NOTE: Multiple case withdrawals observed. Consider:\n\n' +
+        '1. Follow-up consultation\n' +
+        '2. Review support services effectiveness\n' +
+        '3. Assess any barriers to case completion';
+    } else if (cancelledAlerts >= 2) {
+      suggestion.hasRetractionPattern = true;
+      suggestion.retractionRisk = 'Medium';
+      suggestion.suggestion = 'NOTE: Multiple cancelled alerts detected. Recommended steps:\n\n' +
+        '1. Review alert cancellation reasons\n' +
+        '2. Verify alert system effectiveness\n' +
+        '3. Assess if additional support is needed';
+    }
+
+    return suggestion;
+  } catch (error) {
+    console.error('Error calculating retraction probability:', error);
+    return null;
+  }
+}
+
 function mapIncidentToBaseRisk(type, severity, manualRisk = null) {
   // If manual risk level is provided, use it
   if (manualRisk) {
@@ -614,7 +726,7 @@ function getSolutionSuggestion(risk, incidentType, victimType) {
 }
 
 
-function synthesizeProbabilities(incidentType, storedRisk) {
+async function synthesizeProbabilities(incidentType, storedRisk, options = {}) {
   // Map incidentType to index: Economic, Psychological, Physical, Sexual
   const canonical = ['Economic', 'Psychological', 'Physical', 'Sexual'];
   let idx = canonical.indexOf((incidentType || '').toString());
@@ -627,7 +739,80 @@ function synthesizeProbabilities(incidentType, storedRisk) {
   else if (storedRisk === 'Low') strength = 0.25;
 
   const base = (1 - strength) / 3;
-  return canonical.map((c, i) => (i === idx ? strength : base));
+  // start with base distribution
+  let probs = canonical.map((c, i) => (i === idx ? strength : base));
+
+  // If options request DB-aware synthesis, consider historical cancellations
+  try {
+    const dssDebug = !!(process.env.DSS_DEBUG && String(process.env.DSS_DEBUG).toLowerCase() !== 'false');
+    // Lookback window (ms) for counting cancellations (default 365 days)
+    const lookbackMs = Number.isFinite(parseInt(process.env.DSS_CANCEL_LOOKBACK_MS, 10)) ? parseInt(process.env.DSS_CANCEL_LOOKBACK_MS, 10) : (365 * 24 * 60 * 60 * 1000);
+    const since = new Date(Date.now() - lookbackMs);
+
+    let canceledCases = 0;
+    let canceledAlerts = 0;
+
+    // Prefer victim-scoped counts when a victimId is provided. If not available,
+    // fallback to incidentType-scoped counts (still informative).
+    if (options && (options.victimId || options.victimID)) {
+      const vid = options.victimId || options.victimID;
+      try {
+        canceledCases = await Cases.countDocuments({ victimID: vid, status: 'Canceled', updatedAt: { $gte: since } }).exec();
+      } catch (e) {
+        if (dssDebug) console.warn('synthesizeProbabilities: Cases count failed', e && e.message);
+      }
+      try {
+        const AlertModel = require('../models/Alert');
+        canceledAlerts = await AlertModel.countDocuments({ victimId: vid, status: 'Cancelled', updatedAt: { $gte: since } }).exec();
+      } catch (e) {
+        if (dssDebug) console.warn('synthesizeProbabilities: Alert count failed', e && e.message);
+      }
+    } else {
+      // Fallback by incidentType
+      try {
+        canceledCases = await Cases.countDocuments({ incidentType: incidentType, status: 'Canceled', updatedAt: { $gte: since } }).exec();
+      } catch (e) {
+        if (dssDebug) console.warn('synthesizeProbabilities: Cases (by type) count failed', e && e.message);
+      }
+      try {
+        const AlertModel = require('../models/Alert');
+        canceledAlerts = await AlertModel.countDocuments({ incidentType: incidentType, status: 'Cancelled', updatedAt: { $gte: since } }).exec();
+      } catch (e) {
+        if (dssDebug) console.warn('synthesizeProbabilities: Alert (by type) count failed', e && e.message);
+      }
+    }
+
+    if (dssDebug) dlog && dlog('Cancellation signals:', { canceledCases, canceledAlerts });
+
+    // Apply heuristic boosts if cancellation thresholds are met.
+    // - If the victim (or incidentType) has >=2 cancelled cases -> boost the reported type
+    // - If the victim (or incidentType) has >=3 cancelled alerts -> boost the reported type
+    const CANCEL_CASES_THRESHOLD = Number.isFinite(parseInt(process.env.DSS_CANCEL_CASES_THRESHOLD, 10)) ? parseInt(process.env.DSS_CANCEL_CASES_THRESHOLD, 10) : 2;
+    const CANCEL_ALERTS_THRESHOLD = Number.isFinite(parseInt(process.env.DSS_CANCEL_ALERTS_THRESHOLD, 10)) ? parseInt(process.env.DSS_CANCEL_ALERTS_THRESHOLD, 10) : 3;
+    const BOOST_AMOUNT = Number.isFinite(parseFloat(process.env.DSS_CANCEL_BOOST)) ? parseFloat(process.env.DSS_CANCEL_BOOST) : 0.15;
+
+    const targetIdx = canonical.indexOf((incidentType || '').toString());
+    const boostIdx = targetIdx >= 0 ? targetIdx : 0;
+
+    if (canceledCases >= CANCEL_CASES_THRESHOLD) {
+      probs[boostIdx] = Math.min(1, probs[boostIdx] + BOOST_AMOUNT);
+    }
+    if (canceledAlerts >= CANCEL_ALERTS_THRESHOLD) {
+      probs[boostIdx] = Math.min(1, probs[boostIdx] + BOOST_AMOUNT);
+    }
+
+    // Normalize to sum to 1
+    const sum = probs.reduce((a, b) => a + b, 0) || 1;
+    probs = probs.map(p => Math.max(0, Math.min(1, p / sum)));
+  } catch (err) {
+    // If anything went wrong with DB checks, silently fall back to base distribution
+    // Debug-only logging
+    if (process.env.DSS_DEBUG && String(process.env.DSS_DEBUG).toLowerCase() !== 'false') {
+      console.warn('synthesizeProbabilities: DB-aware adjustment failed', err && err.message);
+    }
+  }
+
+  return probs;
 }
 
 function normalizeStoredRisk(r) {
@@ -821,6 +1006,9 @@ function victimTypeToOneHot(type) {
 async function suggestForCase(payload = {}, modelObj = null) {
   dlog('DSS Input:', payload);
 
+  // Get retraction analysis if we have a victim ID
+  const retractionAnalysis = await calculateRetractionProbability(payload.victimId);
+  
   const victimType = normalizeVictimType(payload.victimType || payload.victimCategory || payload.victim);
   dlog('Normalized victim type:', victimType);
   
@@ -907,8 +1095,8 @@ async function suggestForCase(payload = {}, modelObj = null) {
     }
   }
   
-  // Calculate probabilities for the risk levels
-  const probs = synthesizeProbabilities(payload.incidentType, adjustedRisk);
+  // Calculate probabilities for the risk levels (DB-aware: include cancellation history)
+  const probs = await synthesizeProbabilities(payload.incidentType, adjustedRisk, { victimId: payload.victimId || payload.victimID });
 
   // Format incident type to Title Case (match rule values like 'Psychological')
   const formattedIncidentType = payload.incidentType ? (
@@ -1035,6 +1223,7 @@ async function suggestForCase(payload = {}, modelObj = null) {
     ruleDetails: ruleResult.matched && ruleResult.events.length > 0 ? ruleResult.events[0] : null,
     severity,
     victimType: resolvedVictimType || victimType,
+    retractionAnalysis, // Include retraction probability analysis
   };
 
   // Choose a single authoritative rule event from any matched events.

@@ -23,8 +23,7 @@ exports.listLogs = asyncHandler(async (req, res) => {
             else if (actorType === 'admin') query.adminID = { $exists: true };
             else if (actorType === 'official') query.officialID = { $exists: true };
         } else {
-            // actorId from the frontend may be a business id (e.g. VIC001, ANONYMOUS001, ADM000, 0FB000)
-            // SystemLog stores ObjectId references. Resolve business id -> _id when necessary.
+            // actorId from the frontend may be a business id and  SystemLog stores ObjectId references. 
             let resolvedId = actorId;
             const looksLikeObjectId = mongoose.Types.ObjectId.isValid(actorId);
 
@@ -169,9 +168,7 @@ exports.recordPageView = asyncHandler(async (req, res) => {
     const { path } = req.body;
     try {
         const { recordLog } = require('../middleware/logger');
-        // Prefer client-supplied actor info (from localStorage) when available because
-        // some Firebase ID tokens may not carry DB _id lookups in req.user. Fall back
-        // to authenticated req.user values when client info is not present.
+        // Prefer client-supplied actor info (from localStorage).
     let actorType = req.body?.actorType || req.query?.actorType || req.headers?.['x-actor-type'] || req.user?.role || 'anonymous';
     let actorId = req.body?.actorId || req.query?.actorId || req.headers?.['x-actor-id'] || req.user?.adminID || req.user?.officialID || req.user?.victimID || null;
     // If a business id (ADM001 etc.) was supplied, include it in details for traceability

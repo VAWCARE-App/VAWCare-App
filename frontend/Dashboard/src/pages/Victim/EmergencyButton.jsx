@@ -37,14 +37,27 @@ export default function EmergencyButton() {
         // compute client-measured duration and send it to server
         const durationMs = activeAlertStart ? (Date.now() - new Date(activeAlertStart).getTime()) : null;
         const { data } = await api.put(`/api/alerts/${activeAlertId}/resolve`, { durationMs });
-        messageApi.success('Alert resolved');
+        // Prefer server-returned duration if present
+        const serverDuration = data?.data?.durationMs;
+        const effectiveDuration = (typeof serverDuration === 'number') ? serverDuration : durationMs;
+        const CANCEL_WINDOW_MS = 3000; // keep in sync with server default
+        if (typeof effectiveDuration === 'number' && effectiveDuration < CANCEL_WINDOW_MS) {
+          messageApi.success('Alert cancelled');
+        } else {
+          messageApi.success('Alert resolved');
+        }
         // clear stored active alert and start time
         setActiveAlertId(null);
         setActiveAlertStart(null);
         // optionally show duration if returned
         const duration = data?.data?.durationMs;
         if (typeof duration === 'number') {
-          messageApi.info(`Alert active for ${formatDuration(duration)}`);
+          const CANCEL_WINDOW_MS = 3000;
+          if (duration < CANCEL_WINDOW_MS) {
+            messageApi.info(`Alert active for ${formatDuration(duration)} (cancelled)`);
+          } else {
+            messageApi.info(`Alert active for ${formatDuration(duration)} (resolved)`);
+          }
         }
       } catch (err) {
         console.error('Failed to resolve alert', err);

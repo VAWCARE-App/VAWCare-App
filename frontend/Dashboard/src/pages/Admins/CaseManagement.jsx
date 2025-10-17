@@ -134,6 +134,8 @@ export default function CaseManagement() {
     setAddModalVisible(true);
     setSelectedReport(null);
     addForm.resetFields();
+    // ensure status defaults to Open for new cases
+    addForm.setFieldsValue({ status: 'Open' });
     await fetchReports();
   };
 
@@ -697,14 +699,9 @@ export default function CaseManagement() {
                   <Option value="High">High</Option>
                 </Select>
               </Form.Item>
-
-              <Form.Item name="status" label="Status">
-                <Select>
-                  <Option value="Open">Open</Option>
-                  <Option value="Under Investigation">In-Progress</Option>
-                  <Option value="Resolved">Resolved</Option>
-                  <Option value="Cancelled">Cancelled</Option>
-                </Select>
+              
+              <Form.Item name="status" hidden>
+                <Input type="hidden" />
               </Form.Item>
             </Form>
           </Modal>

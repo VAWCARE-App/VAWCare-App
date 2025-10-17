@@ -1,3 +1,4 @@
+// src/pages/admin/CaseManagement.jsx (or your current path)
 import React, { useEffect, useState } from "react";
 import {
   App as AntApp,
@@ -13,8 +14,6 @@ import {
   Tooltip,
   Modal,
   Form,
-  Row,
-  Col,
 } from "antd";
 import {
   SearchOutlined,
@@ -22,13 +21,12 @@ import {
   EyeOutlined,
   EditOutlined,
   DeleteOutlined,
-  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import { api, getUserType } from "../../lib/api";
 import { useNavigate } from "react-router-dom";
 
 const { Header, Content } = Layout;
-const { Search } = Input;
+const { Title, Text } = Typography;
 const { Option } = Select;
 
 export default function CaseManagement() {
@@ -48,12 +46,20 @@ export default function CaseManagement() {
   const [addForm] = Form.useForm();
   const navigate = useNavigate();
 
+  const BRAND = {
+    violet: "#7A5AF8",
+    pink: "#e91e63",
+    bg: "linear-gradient(180deg, #ffffff 0%, #faf7ff 60%, #f6f3ff 100%)",
+    soft: "rgba(122,90,248,0.18)",
+    chip: "#fff0f7",
+  };
+
   const fetchAllCases = async () => {
     try {
       setLoading(true);
       const { data } = await api.get("/api/cases");
       if (data) {
-        const formatted = data.data.map((c) => ({
+        const formatted = (data.data || []).map((c) => ({
           key: c.caseID,
           caseID: c.caseID,
           reportID: c.reportID,
@@ -72,8 +78,8 @@ export default function CaseManagement() {
         setFilteredCases(formatted);
       }
     } catch (err) {
-      console.error('Error fetching cases', err);
-      message.error('Failed to load cases');
+      console.error("Error fetching cases", err);
+      message.error("Failed to load cases");
     } finally {
       setLoading(false);
     }
@@ -83,9 +89,8 @@ export default function CaseManagement() {
 
   const fetchReports = async () => {
     try {
-      const { data } = await api.get('/api/reports');
+      const { data } = await api.get("/api/reports");
       if (data?.success) {
-        // mirror ReportManagement formatting: strip victim.location
         const formatted = data.data.map((r) => {
           let victim = null;
           if (r.victimID) {
@@ -109,21 +114,19 @@ export default function CaseManagement() {
         setReportsList(formatted);
       }
     } catch (err) {
-      console.error('Failed to fetch reports', err);
+      console.error("Failed to fetch reports", err);
     }
   };
 
   const handleViewCase = (rec) => {
-    console.log('Viewing case', rec);
-    console.log('Navigating to /cases/' + rec.caseID);
     const userType = getUserType();
-    const base = userType === 'official' ? '/admin/official-cases' : '/admin/cases';
+    const base = userType === "official" ? "/admin/official-cases" : "/admin/cases";
     navigate(`${base}/${rec.caseID}`);
   };
 
   const handleEditCase = (rec) => {
     const userType = getUserType();
-    const base = userType === 'official' ? '/admin/official-cases' : '/admin/cases';
+    const base = userType === "official" ? "/admin/official-cases" : "/admin/cases";
     navigate(`${base}/${rec.caseID}?edit=true`);
   };
 
@@ -138,36 +141,33 @@ export default function CaseManagement() {
     const rep = reportsList.find((r) => r.reportID === reportID);
     setSelectedReport(rep || null);
     if (rep) {
-      // prefill fields on add form
-      // Compose full name from parts, prefer first + middle initial + last
       const nameParts = [];
       if (rep.victim) {
         if (rep.victim.firstName) nameParts.push(rep.victim.firstName);
         if (rep.victim.middleInitial) nameParts.push(rep.victim.middleInitial);
         if (rep.victim.lastName) nameParts.push(rep.victim.lastName);
       }
-      const composedName = nameParts.length ? nameParts.join(' ').trim() : (rep.victim?.victimID || '');
+      const composedName = nameParts.length
+        ? nameParts.join(" ").trim()
+        : rep.victim?.victimID || "";
 
       addForm.setFieldsValue({
         reportID: rep.reportID,
         incidentType: rep.incidentType,
         description: rep.description,
-        perpetrator: rep.perpetrator || '',
-        location: rep.location || '',
-  victimName: composedName,
-  // If report has victimType, use it; otherwise treat the report as anonymous and set victimType to 'anonymous'
-  victimType: rep.victim?.victimType || 'anonymous',
-        // Auto-map incidentType -> riskLevel (economic->Low, psychological->Medium, physical->High, sexual->High)
-        // If the incident is an Emergency, do not auto-fill riskLevel so the officer can choose.
-        riskLevel: (function(it) {
-          if (!it) return 'Low';
+        perpetrator: rep.perpetrator || "",
+        location: rep.location || "",
+        victimName: composedName,
+        victimType: rep.victim?.victimType || "anonymous",
+        riskLevel: (function (it) {
+          if (!it) return "Low";
           const l = String(it).toLowerCase();
-          if (l.includes('emerg')) return undefined; // let officer choose
-          if (l.includes('economic') || l.includes('financial')) return 'Low';
-          if (l.includes('psych') || l.includes('psychological')) return 'Medium';
-          if (l.includes('physical')) return 'High';
-          if (l.includes('sexual')) return 'High';
-          return 'Low';
+          if (l.includes("emerg")) return undefined;
+          if (l.includes("economic") || l.includes("financial")) return "Low";
+          if (l.includes("psych")) return "Medium";
+          if (l.includes("physical")) return "High";
+          if (l.includes("sexual")) return "High";
+          return "Low";
         })(rep.incidentType),
       });
     }
@@ -178,25 +178,29 @@ export default function CaseManagement() {
       setLoading(true);
       let payload;
       if (selectedReport) {
-        // build payload: include reportID and fields from selected report
-          payload = {
+        payload = {
           caseID: vals.caseID,
           reportID: selectedReport.reportID,
           victimID: selectedReport.raw.victimID?._id || selectedReport.raw.victimID || null,
-          victimName: vals.victimName || (selectedReport.victim ? `${selectedReport.victim.firstName || ''} ${selectedReport.victim.middleInitial ? selectedReport.victim.middleInitial + ' ' : ''}${selectedReport.victim.lastName || ''}`.trim() : (selectedReport.raw.victimID || '')),
+          victimName:
+            vals.victimName ||
+            (selectedReport.victim
+              ? `${selectedReport.victim.firstName || ""} ${
+                  selectedReport.victim.middleInitial ? selectedReport.victim.middleInitial + " " : ""
+                }${selectedReport.victim.lastName || ""}`.trim()
+              : selectedReport.raw.victimID || ""),
           incidentType: selectedReport.incidentType,
           description: selectedReport.description,
-          perpetrator: selectedReport.perpetrator || '',
-          location: selectedReport.location || '',
+          perpetrator: selectedReport.perpetrator || "",
+          location: selectedReport.location || "",
           dateReported: selectedReport.dateReported || new Date().toISOString(),
-          status: vals.status || 'Open',
-          assignedOfficer: vals.assignedOfficer || '',
-          // If riskLevel is not explicitly set in the form (undefined), don't force a default here so the backend DSS can compute suggestion.
-          riskLevel: typeof vals.riskLevel === 'undefined' ? undefined : (vals.riskLevel || 'Low'),
-          victimType: vals.victimType || selectedReport.victim?.victimType || 'anonymous',
+          status: vals.status || "Open",
+          assignedOfficer: vals.assignedOfficer || "",
+          riskLevel:
+            typeof vals.riskLevel === "undefined" ? undefined : vals.riskLevel || "Low",
+          victimType: vals.victimType || selectedReport.victim?.victimType || "anonymous",
         };
       } else {
-        // manual/walk-in case creation: use the form values
         payload = {
           caseID: vals.caseID,
           reportID: vals.reportID || null,
@@ -204,50 +208,49 @@ export default function CaseManagement() {
           victimName: vals.victimName,
           incidentType: vals.incidentType,
           description: vals.description,
-          perpetrator: vals.perpetrator || '',
-          location: vals.location || '',
+          perpetrator: vals.perpetrator || "",
+          location: vals.location || "",
           dateReported: vals.dateReported || new Date().toISOString(),
-          status: vals.status || 'Open',
-          assignedOfficer: vals.assignedOfficer || '',
-          riskLevel: typeof vals.riskLevel === 'undefined' ? undefined : (vals.riskLevel || 'Low'),
-          victimType: vals.victimType || 'anonymous',
+          status: vals.status || "Open",
+          assignedOfficer: vals.assignedOfficer || "",
+          riskLevel:
+            typeof vals.riskLevel === "undefined" ? undefined : vals.riskLevel || "Low",
+          victimType: vals.victimType || "anonymous",
         };
       }
-      console.debug('Creating case payload', payload);
 
-      const res = await api.post('/api/cases', payload);
+      const res = await api.post("/api/cases", payload);
       if (res?.data?.success) {
-        message.success('Case created');
+        message.success("Case created");
         setAddModalVisible(false);
         addForm.resetFields();
         fetchAllCases();
       } else {
-        console.error('Create case response', res?.data);
-        message.error(res?.data?.message || 'Failed to create case');
+        message.error(res?.data?.message || "Failed to create case");
       }
     } catch (err) {
-      console.error('Create case error', err.response || err);
-      // If backend returned validation errors or duplicate key info, show them inline on the add form
+      console.error("Create case error", err.response || err);
       const resp = err?.response?.data;
       if (resp) {
-        // Duplicate key error message from backend
-        if (resp.message && String(resp.message).toLowerCase().includes('duplicate')) {
-          // backend returns which field(s) conflict; prefer to set caseID specifically
-          addForm.setFields([{
-            name: 'caseID',
-            errors: [resp.message || 'Case ID already exists']
-          }]);
-          message.error(resp.message || 'Duplicate Case ID');
-        } else if (resp.errors && typeof resp.errors === 'object') {
-          // Map server-side validation errors to form fields
-          const fields = Object.keys(resp.errors).map((k) => ({ name: k, errors: [resp.errors[k]] }));
-          try { addForm.setFields(fields); } catch (e) { /* ignore */ }
-          message.error(resp.message || 'Validation failed');
+        if (resp.message && String(resp.message).toLowerCase().includes("duplicate")) {
+          addForm.setFields([
+            { name: "caseID", errors: [resp.message || "Case ID already exists"] },
+          ]);
+          message.error(resp.message || "Duplicate Case ID");
+        } else if (resp.errors && typeof resp.errors === "object") {
+          const fields = Object.keys(resp.errors).map((k) => ({
+            name: k,
+            errors: [resp.errors[k]],
+          }));
+          try {
+            addForm.setFields(fields);
+          } catch {}
+          message.error(resp.message || "Validation failed");
         } else {
-          message.error(resp.message || 'Failed to create case');
+          message.error(resp.message || "Failed to create case");
         }
       } else {
-        message.error('Failed to create case');
+        message.error("Failed to create case");
       }
     } finally {
       setLoading(false);
@@ -260,14 +263,14 @@ export default function CaseManagement() {
       const id = rec.caseID || rec._id;
       const res = await api.delete(`/api/cases/${id}`);
       if (res?.data?.success) {
-        message.success('Case deleted');
+        message.success("Case deleted");
       } else {
-        message.error(res?.data?.message || 'Delete failed');
+        message.error(res?.data?.message || "Delete failed");
       }
       fetchAllCases();
     } catch (err) {
-      console.error('Delete failed', err.response || err);
-      message.error(err.response?.data?.message || 'Delete failed');
+      console.error("Delete failed", err.response || err);
+      message.error(err.response?.data?.message || "Delete failed");
     } finally {
       setLoading(false);
     }
@@ -275,26 +278,29 @@ export default function CaseManagement() {
 
   const handleUpdateCase = async (vals) => {
     if (!editingCase) {
-      message.error('No case selected for update');
+      message.error("No case selected for update");
       return;
     }
     try {
       setLoading(true);
       const id = editingCase.caseID || editingCase._id;
-      // always include perpetrator field (keep parity with reports)
-      const payload = { ...vals, perpetrator: vals.perpetrator || '', victimName: vals.victimName || editingCase.victimName || '' };
+      const payload = {
+        ...vals,
+        perpetrator: vals.perpetrator || "",
+        victimName: vals.victimName || editingCase.victimName || "",
+      };
       const res = await api.put(`/api/cases/${id}`, payload);
       if (res?.data?.success) {
-        message.success('Case updated');
+        message.success("Case updated");
         setEditModalVisible(false);
         setEditingCase(null);
       } else {
-        message.error(res?.data?.message || 'Failed to update case');
+        message.error(res?.data?.message || "Failed to update case");
       }
       fetchAllCases();
     } catch (err) {
-      console.error('Update failed', err.response || err);
-      message.error(err.response?.data?.message || 'Update failed');
+      console.error("Update failed", err.response || err);
+      message.error(err.response?.data?.message || "Update failed");
     } finally {
       setLoading(false);
     }
@@ -302,72 +308,335 @@ export default function CaseManagement() {
 
   useEffect(() => {
     let f = allCases;
-    if (filterType !== 'all') f = f.filter((c) => c.status === filterType);
+    if (filterType !== "all") f = f.filter((c) => c.status === filterType);
     if (searchText) {
-      f = f.filter((c) => c.caseID.toLowerCase().includes(searchText.toLowerCase()) || c.incidentType.toLowerCase().includes(searchText.toLowerCase()));
+      const s = searchText.toLowerCase();
+      f = f.filter(
+        (c) =>
+          c.caseID?.toLowerCase().includes(s) ||
+          c.incidentType?.toLowerCase().includes(s) ||
+          c.assignedOfficer?.toLowerCase().includes(s)
+      );
     }
     setFilteredCases(f);
   }, [allCases, searchText, filterType]);
 
+  const statusColor = (s) => {
+    const v = String(s || "").toLowerCase();
+    if (v.includes("open")) return "orange";
+    if (v.includes("investigation") || v.includes("progress")) return "geekblue";
+    if (v.includes("resolved")) return "green";
+    if (v.includes("cancel")) return "default";
+    return "default";
+    };
+  const riskColor = (r) => {
+    const v = String(r || "").toLowerCase();
+    if (v.includes("high")) return "magenta";
+    if (v.includes("medium")) return "volcano";
+    if (v.includes("low")) return "gold";
+    return "default";
+  };
+
   const columns = [
-    { title: 'Case ID', dataIndex: 'caseID', key: 'caseID' },
-    { title: 'Report ID', dataIndex: 'reportID', key: 'reportID', render: (r) => r || 'N/A' },
-    { title: 'Incident Type', dataIndex: 'incidentType', key: 'incidentType' },
-    { title: 'Status', dataIndex: 'status', key: 'status' },
-    { title: 'Assigned Officer', dataIndex: 'assignedOfficer', key: 'assignedOfficer' },
-    { title: 'Risk Level', dataIndex: 'riskLevel', key: 'riskLevel' },
-    { title: 'Date', dataIndex: 'dateReported', key: 'dateReported', render: (d) => d ? new Date(d).toLocaleString() : '' },
     {
-      title: 'Actions', key: 'actions', render: (_, rec) => (
-        <Space>
-          <Tooltip title="View"><Button type="link" icon={<EyeOutlined />} onClick={() => handleViewCase(rec)} /></Tooltip>
-          <Tooltip title="Edit"><Button type="link" icon={<EditOutlined />} onClick={() => handleEditCase(rec)} /></Tooltip>
-          <Tooltip title="Delete"><Button type="link" icon={<DeleteOutlined />} danger onClick={() => handleDeleteCase(rec)} /></Tooltip>
+      title: "Case ID",
+      dataIndex: "caseID",
+      key: "caseID",
+      render: (v) => <Text strong>{v}</Text>,
+    },
+    {
+      title: "Report ID",
+      dataIndex: "reportID",
+      key: "reportID",
+      render: (r) => r || <Text type="secondary">N/A</Text>,
+    },
+    { title: "Incident Type", dataIndex: "incidentType", key: "incidentType" },
+    {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      render: (s) => (
+        <Tag color={statusColor(s)} style={{ borderRadius: 999 }}>
+          {s}
+        </Tag>
+      ),
+    },
+    {
+      title: "Assigned Officer",
+      dataIndex: "assignedOfficer",
+      key: "assignedOfficer",
+      render: (v) => v || <Text type="secondary">—</Text>,
+    },
+    {
+      title: "Risk",
+      dataIndex: "riskLevel",
+      key: "riskLevel",
+      render: (r) => (
+        <Tag color={riskColor(r)} style={{ borderRadius: 999 }}>
+          {r || "—"}
+        </Tag>
+      ),
+    },
+    {
+      title: "Date",
+      dataIndex: "dateReported",
+      key: "dateReported",
+      render: (d) => (d ? new Date(d).toLocaleString() : ""),
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      fixed: "right",
+      render: (_, rec) => (
+        <Space size={4}>
+          <Tooltip title="View">
+            <Button
+              type="text"
+              icon={<EyeOutlined />}
+              onClick={() => handleViewCase(rec)}
+              className="row-action"
+            />
+          </Tooltip>
+          <Tooltip title="Edit">
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              onClick={() => handleEditCase(rec)}
+              className="row-action"
+            />
+          </Tooltip>
+          <Tooltip title="Delete">
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => handleDeleteCase(rec)}
+              className="row-action"
+            />
+          </Tooltip>
         </Space>
-      )
-    }
+      ),
+    },
   ];
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Header style={{ background: '#fff', borderBottom: '1px solid #ffd1dc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography.Title level={4} style={{ margin: 0, color: '#e91e63' }}>Case Management</Typography.Title>
-        <Space>
-          <Button type="primary" onClick={openAddModal} style={{ background: '#e91e63', borderColor: '#e91e63' }}>Add Case</Button>
-          <Button onClick={fetchAllCases} icon={<ReloadOutlined />} style={{ borderColor: '#e91e63', color: '#e91e63' }}>Refresh</Button>
+    <Layout style={{ minHeight: "100vh", background: BRAND.bg }}>
+      {/* Sticky header (matches dashboard look) */}
+      <Header
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 5,
+          background: BRAND.bg,
+          borderBottom: `1px solid ${BRAND.soft}`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingInline: 16,
+          paddingBlock: 12,
+          height: "auto",
+          lineHeight: 1.2,
+        }}
+      >
+        <Space direction="vertical" size={0}>
+          <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
+            Case Management
+          </Title>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            Review, create, and update cases
+          </Text>
+        </Space>
+
+        <Space wrap>
+          <Button
+            type="primary"
+            onClick={openAddModal}
+            style={{
+              background: BRAND.violet,
+              borderColor: BRAND.violet,
+              borderRadius: 12,
+              fontWeight: 700,
+            }}
+          >
+            Add Case
+          </Button>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={fetchAllCases}
+            style={{ borderColor: BRAND.violet, color: BRAND.violet, borderRadius: 12, fontWeight: 700 }}
+          >
+            Refresh
+          </Button>
         </Space>
       </Header>
-      <Content style={{ padding: 16 }}>
-        <Card title="All Cases" extra={<Space><Search placeholder="Search cases..." style={{ width: 240 }} onChange={(e) => setSearchText(e.target.value)} /><Select value={filterType} onChange={setFilterType}><Option value="all">All Cases</Option><Option value="Open">Open</Option><Option value="Under Investigation">In-Progress</Option><Option value="Resolved">Resolved</Option><Option value="Cancelled">Cancelled</Option></Select></Space>}>
-          <Table columns={columns} dataSource={filteredCases} loading={loading} pagination={{ pageSize: 8 }} scroll={{ y: 480 }} />
 
-          <Modal title={editingCase ? `${isViewMode ? 'View' : 'Edit'} Case - ${editingCase?.caseID}` : 'Case'} open={editModalVisible} onCancel={() => { setEditModalVisible(false); setEditingCase(null); setIsViewMode(false); }} okText="Save" onOk={() => { form.validateFields().then((v) => handleUpdateCase(v)); }}>
+      <Content
+        style={{
+          padding: 16,
+          display: "flex",
+          justifyContent: "center",
+          paddingBottom: "max(16px, env(safe-area-inset-bottom))",
+        }}
+      >
+        <Card
+          bordered
+          style={{
+            width: "100%",
+            maxWidth: 1320,
+            borderRadius: 18,
+            borderColor: BRAND.soft,
+            boxShadow: "0 20px 46px rgba(122,90,248,0.06)",
+          }}
+          bodyStyle={{ padding: 16 }}
+          title={
+            <div
+              style={{ display: "flex", alignItems: "center", gap: 8 }}
+            >
+              <Space direction="vertical" size={10}>
+                <Text strong style={{ color: "#000000ff" }}>
+                  All Cases
+                </Text>
+              </Space>
+            </div>
+          }
+          extra={
+            <Space wrap>
+              <Input
+                allowClear
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                placeholder="Search cases…"
+                prefix={<SearchOutlined />}
+                style={{ width: 260, borderRadius: 999 }}
+              />
+              <Select
+                value={filterType}
+                onChange={setFilterType}
+                style={{ width: 200 }}
+                dropdownMatchSelectWidth={220}
+              >
+                <Option value="all">All Cases</Option>
+                <Option value="Open">Open</Option>
+                <Option value="Under Investigation">In-Progress</Option>
+                <Option value="Resolved">Resolved</Option>
+                <Option value="Cancelled">Cancelled</Option>
+              </Select>
+            </Space>
+          }
+        >
+          <Table
+            rowKey="caseID"
+            columns={columns}
+            dataSource={filteredCases}
+            loading={loading}
+            pagination={{ pageSize: 10, showSizeChanger: false }}
+            scroll={{ x: 980, y: 520 }}
+            className="pretty-table"
+          />
+
+          {/* Edit / View Modal (kept functional behavior) */}
+          <Modal
+            title={
+              editingCase
+                ? `${isViewMode ? "View" : "Edit"} Case • ${editingCase?.caseID}`
+                : "Case"
+            }
+            open={editModalVisible}
+            onCancel={() => {
+              setEditModalVisible(false);
+              setEditingCase(null);
+              setIsViewMode(false);
+            }}
+            okText="Save"
+            onOk={() => {
+              form.validateFields().then((v) => handleUpdateCase(v));
+            }}
+          >
             <Form form={form} layout="vertical">
-              <Form.Item name="victimName" label="Victim Name" rules={[{ required: true, message: 'Victim Name is required' }]}>
+              <Form.Item
+                name="victimName"
+                label="Victim Name"
+                rules={[{ required: true, message: "Victim Name is required" }]}
+              >
                 <Input disabled={isViewMode} />
               </Form.Item>
-              <Form.Item name="incidentType" label="Incident Type" rules={[{ required: true }]}><Input disabled={isViewMode} /></Form.Item>
-              <Form.Item name="location" label="Location"><Input disabled={isViewMode} /></Form.Item>
-              <Form.Item name="description" label="Description"><Input.TextArea rows={3} disabled={isViewMode} /></Form.Item>
-              <Form.Item name="perpetrator" label="Perpetrator"><Input disabled={isViewMode} /></Form.Item>
-              <Form.Item name="assignedOfficer" label="Assigned Officer"><Input disabled={isViewMode} /></Form.Item>
-              <Form.Item name="riskLevel" label="Risk Level"><Select disabled={isViewMode}><Option value="Low">Low</Option><Option value="Medium">Medium</Option><Option value="High">High</Option></Select></Form.Item>
-              <Form.Item name="status" label="Status"><Select disabled={isViewMode}><Option value="Open">Open</Option><Option value="Under Investigation">In-Progress</Option><Option value="Resolved">Resolved</Option><Option value="Cancelled">Cancelled</Option></Select></Form.Item>
+              <Form.Item
+                name="incidentType"
+                label="Incident Type"
+                rules={[{ required: true }]}
+              >
+                <Input disabled={isViewMode} />
+              </Form.Item>
+              <Form.Item name="location" label="Location">
+                <Input disabled={isViewMode} />
+              </Form.Item>
+              <Form.Item name="description" label="Description">
+                <Input.TextArea rows={3} disabled={isViewMode} />
+              </Form.Item>
+              <Form.Item name="perpetrator" label="Perpetrator">
+                <Input disabled={isViewMode} />
+              </Form.Item>
+              <Form.Item name="assignedOfficer" label="Assigned Officer">
+                <Input disabled={isViewMode} />
+              </Form.Item>
+              <Form.Item name="riskLevel" label="Risk Level">
+                <Select disabled={isViewMode}>
+                  <Option value="Low">Low</Option>
+                  <Option value="Medium">Medium</Option>
+                  <Option value="High">High</Option>
+                </Select>
+              </Form.Item>
+              <Form.Item name="status" label="Status">
+                <Select disabled={isViewMode}>
+                  <Option value="Open">Open</Option>
+                  <Option value="Under Investigation">In-Progress</Option>
+                  <Option value="Resolved">Resolved</Option>
+                  <Option value="Cancelled">Cancelled</Option>
+                </Select>
+              </Form.Item>
             </Form>
           </Modal>
 
           {/* Add Case Modal */}
-          <Modal title="Create Case" open={addModalVisible} onCancel={() => { setAddModalVisible(false); setSelectedReport(null); }} okText="Create" onOk={() => { addForm.validateFields().then((v) => handleCreateCase(v)); }}>
+          <Modal
+            title="Create Case"
+            open={addModalVisible}
+            onCancel={() => {
+              setAddModalVisible(false);
+              setSelectedReport(null);
+            }}
+            okText="Create"
+            onOk={() => {
+              addForm.validateFields().then((v) => handleCreateCase(v));
+            }}
+          >
             <Form form={addForm} layout="vertical">
-              <Form.Item name="reportID" label="Select Report (optional)" help="Pick a report to prefill fields, or leave blank to add a manual/walk-in case">
-                <Select showSearch placeholder="Optional: select a report to base case on" onChange={handleReportSelect} optionFilterProp="children" allowClear>
+              <Form.Item
+                name="reportID"
+                label="Select Report (optional)"
+                help="Pick a report to prefill fields, or leave blank to add a manual/walk-in case"
+              >
+                <Select
+                  showSearch
+                  placeholder="Optional: select a report to base case on"
+                  onChange={handleReportSelect}
+                  optionFilterProp="children"
+                  allowClear
+                >
                   {reportsList.map((r) => (
-                    <Option key={r.reportID} value={r.reportID}>{r.reportID} — {r.incidentType} — {r.victim?.firstName || ''} {r.victim?.lastName || ''}</Option>
+                    <Option key={r.reportID} value={r.reportID}>
+                      {r.reportID} — {r.incidentType} — {r.victim?.firstName || ""}{" "}
+                      {r.victim?.lastName || ""}
+                    </Option>
                   ))}
                 </Select>
               </Form.Item>
 
-              <Form.Item name="victimName" label="Victim Name" rules={[{ required: true, message: 'Victim Name is required' }]}>
+              <Form.Item
+                name="victimName"
+                label="Victim Name"
+                rules={[{ required: true, message: "Victim Name is required" }]}
+              >
                 <Input />
               </Form.Item>
 
@@ -379,8 +648,12 @@ export default function CaseManagement() {
                 </Select>
               </Form.Item>
 
-              <Form.Item name="incidentType" label="Incident Type" rules={[{ required: true, message: 'Incident Type is required' }]}>
-                 <Select>
+              <Form.Item
+                name="incidentType"
+                label="Incident Type"
+                rules={[{ required: true, message: "Incident Type is required" }]}
+              >
+                <Select>
                   <Option value="Economic">Economic</Option>
                   <Option value="Psychological">Psychological</Option>
                   <Option value="Physical">Physical</Option>
@@ -393,7 +666,11 @@ export default function CaseManagement() {
                 <Input />
               </Form.Item>
 
-              <Form.Item name="description" label="Description" rules={[{ required: true, message: 'Description is required' }]}>
+              <Form.Item
+                name="description"
+                label="Description"
+                rules={[{ required: true, message: "Description is required" }]}
+              >
                 <Input.TextArea rows={3} />
               </Form.Item>
 
@@ -405,7 +682,11 @@ export default function CaseManagement() {
                 <Input placeholder="Enter Case ID (e.g. CASE001)" />
               </Form.Item>
 
-              <Form.Item name="assignedOfficer" label="Assigned Officer" rules={[{ required: true }]}>
+              <Form.Item
+                name="assignedOfficer"
+                label="Assigned Officer"
+                rules={[{ required: true }]}
+              >
                 <Input placeholder="Officer assigned to this case" />
               </Form.Item>
 
@@ -429,6 +710,41 @@ export default function CaseManagement() {
           </Modal>
         </Card>
       </Content>
+
+      {/* Polish (rounded controls, violet focus, glassy table) */}
+      <style>{`
+        .pretty-table .ant-table {
+          border-radius: 14px;
+          overflow: hidden;
+          border: 1px solid ${BRAND.soft};
+          background: #fff;
+        }
+        .pretty-table .ant-table-thead > tr > th {
+          background: #faf7ff;
+          color: #5a4ae6;
+          font-weight: 700;
+        }
+        .pretty-table .ant-table-tbody > tr:hover > td {
+          background: #fbf8ff !important;
+        }
+        .row-action {
+          border-radius: 10px;
+        }
+        .ant-input,
+        .ant-input-affix-wrapper,
+        .ant-select-selector,
+        .ant-btn {
+          border-radius: 12px !important;
+        }
+        .ant-input:focus,
+        .ant-input-affix-wrapper-focused,
+        .ant-select-focused .ant-select-selector,
+        .ant-btn:focus-visible {
+          border-color: ${BRAND.violet} !important;
+          box-shadow: 0 0 0 2px rgba(122,90,248,0.15) !important;
+          outline: none !important;
+        }
+      `}</style>
     </Layout>
   );
 }

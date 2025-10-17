@@ -317,7 +317,7 @@ export default function LandingPage() {
                       icon={<SafetyCertificateOutlined />}
                       onClick={() => navigate("/login")}
                     >
-                      Report / User Login
+                      Report
                     </Button>
                     <Button
                       size="large"

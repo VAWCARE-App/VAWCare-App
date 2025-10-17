@@ -316,7 +316,7 @@ export default function VictimDashboard() {
             borderRadius: 14,
             borderColor: BRAND.soft,
             background: "#fff",
-            width: screens.lg ? 320 : "100%",
+            width: screens.lg ? 380 : "100%", // was 320
             justifySelf: screens.lg ? "end" : "stretch",
             height: 44,
           }}
@@ -444,17 +444,20 @@ export default function VictimDashboard() {
     );
   }, [myReports]);
 
+  // Wider container sizes by breakpoint
+  const CONTAINER_MAX = screens.xxl ? 1440 : screens.xl ? 1320 : 1180;
+
   return (
     <Layout style={{ minHeight: "100vh", background: BRAND.bg }}>
       <Content
         style={{
-          padding: screens.md ? 18 : 12,
-          paddingBottom: "max(18px, env(safe-area-inset-bottom))",
+          padding: screens.md ? 12 : 8, // was 18/12
+          paddingBottom: "max(12px, env(safe-area-inset-bottom))",
           display: "flex",
           justifyContent: "center",
         }}
       >
-        <div style={{ width: "100%", maxWidth: 1180 }}>
+        <div style={{ width: "100%", maxWidth: CONTAINER_MAX }}>
           {/* Hero */}
           <Row gutter={[16, 16]}>
             <Col span={24}>

@@ -377,4 +377,35 @@
       }
     }
   }
+  ,
+  {
+    "conditions": {
+      "all": [
+        { "fact": "anonymousRate", "operator": "greaterThan", "value": 0.6 }
+      ]
+    },
+    "event": {
+      "type": "high-anonymous-reporting",
+      "params": {
+        "predictedRisk": "Psychological",
+        "suggestion": "High anonymous reporting detected — strengthen outreach and confidentiality measures; prioritize trust-building and safe reporting channels.",
+        "requiresImmediate": false
+      }
+    }
+  },
+  {
+    "conditions": {
+      "all": [
+        { "fact": "stagnantCases", "operator": "greaterThan", "value": 0 }
+      ]
+    },
+    "event": {
+      "type": "stagnant-cases",
+      "params": {
+        "predictedRisk": "Psychological",
+        "suggestion": "There are stalled cases older than 14 days — review case assignments and resource bottlenecks; consider reallocation.",
+        "requiresImmediate": false
+      }
+    }
+  }
 ]

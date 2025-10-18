@@ -44,7 +44,7 @@ export default function UserInsights() {
     const { message } = AntApp.useApp();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [data, setData] = useState({ admins: [], victims: [] });
+    const [data, setData] = useState({ admins: [], victims: [], officials: [] });
 
     const BRAND = {
         violet: "#7A5AF8",
@@ -61,6 +61,7 @@ export default function UserInsights() {
             setData({
                 admins: users.admins || [],
                 victims: users.victims || [],
+                officials: users.officials || [],
             });
         } catch (err) {
             message.error("Failed to load user data");
@@ -78,7 +79,8 @@ export default function UserInsights() {
     // Derived stats
     const totalAdmins = data.admins.length;
     const totalVictims = data.victims.length;
-    const totalUsers = totalAdmins + totalVictims;
+    const totalOfficials = data.officials ? data.officials.length : 0;
+    const totalUsers = totalAdmins + totalVictims + totalOfficials;
 
     const anonymousVictims = data.victims.filter((v) => v.isAnonymous).length;
     const regularVictims = totalVictims - anonymousVictims;
@@ -91,12 +93,13 @@ export default function UserInsights() {
     const userTypeDistribution = [
         { name: "Admins", value: totalAdmins },
         { name: "Victims", value: totalVictims },
+        { name: "Officials", value: totalOfficials },
     ];
 
     // Registration trends (based on createdAt)
     const registrationTrend = useMemo(() => {
         const counts = {};
-        [...data.admins, ...data.victims].forEach((u) => {
+        [...data.admins, ...data.victims, ...data.officials].forEach((u) => {
             const date = new Date(u.createdAt).toISOString().slice(0, 10);
             counts[date] = (counts[date] || 0) + 1;
         });
@@ -158,7 +161,7 @@ export default function UserInsights() {
         <Layout style={{ minHeight: "100vh", background: "#fff" }}>
             <Content>
                 <Row gutter={[16, 16]}>
-                    <Col xs={24} md={8}>
+                    <Col xs={24} md={6}>
                         <KpiCard
                             title="Total Users"
                             value={totalUsers}
@@ -166,7 +169,7 @@ export default function UserInsights() {
                             color={BRAND.violet}
                         />
                     </Col>
-                    <Col xs={24} md={8}>
+                    <Col xs={24} md={6}>
                         <KpiCard
                             title="Admins"
                             value={totalAdmins}
@@ -174,12 +177,20 @@ export default function UserInsights() {
                             color={BRAND.pink}
                         />
                     </Col>
-                    <Col xs={24} md={8}>
+                    <Col xs={24} md={6}>
                         <KpiCard
                             title="Victims"
                             value={totalVictims}
                             icon={<SafetyCertificateOutlined style={{ color: "#5AD8A6" }} />}
                             color="#5AD8A6"
+                        />
+                    </Col>
+                    <Col xs={24} md={6}>
+                        <KpiCard
+                            title="Officials"
+                            value={totalOfficials}
+                            icon={<TeamOutlined style={{ color: "#FFB347" }} />}
+                            color="#FFB347"
                         />
                     </Col>
 
@@ -275,7 +286,7 @@ export default function UserInsights() {
                             ) : (
                                 <List
                                     style={{ padding: 0, margin: 0 }}
-                                    dataSource={[...data.admins, ...data.victims]
+                                    dataSource={[...data.admins, ...data.victims, ...data.officials]
                                         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
                                         .slice(0, 5)}
                                     renderItem={(u) => (
@@ -304,8 +315,8 @@ export default function UserInsights() {
                                                 }
                                                 description={new Date(u.createdAt).toLocaleString()}
                                             />
-                                            <Tag color={u.victimID ? "magenta" : "purple"}>
-                                                {u.victimID ? (u.isAnonymous ? "Anonymous" : "Victim") : "Admin"}
+                                            <Tag color={u.victimID ? "magenta" : (u.position ? "gold" : "purple")}>
+                                                {u.victimID ? (u.isAnonymous ? "Anonymous" : "Victim") : (u.position ? "Official" : "Admin")}
                                             </Tag>
                                         </List.Item>
                                     )}

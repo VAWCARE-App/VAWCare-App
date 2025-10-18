@@ -28,6 +28,22 @@ const suggest = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, data: result });
 });
 
+// POST /api/dss/suggest/cases
+const suggestCasesInsights = asyncHandler(async (req, res) => {
+  const opts = req.body || {};
+  const result = await dssService.suggestForCasesInsights(opts).catch(e => null);
+  if (!result) return res.status(500).json({ success: false, message: 'Failed to compute cases insights' });
+  res.status(200).json({ success: true, data: result });
+});
+
+// POST /api/dss/suggest/reports
+const suggestReportsInsights = asyncHandler(async (req, res) => {
+  const opts = req.body || {};
+  const result = await dssService.suggestForReportsInsights(opts).catch(e => null);
+  if (!result) return res.status(500).json({ success: false, message: 'Failed to compute reports insights' });
+  res.status(200).json({ success: true, data: result });
+});
+
 // GET /api/dss/cancellations?victimId=... or ?incidentType=...
 const cancellations = asyncHandler(async (req, res) => {
   const { victimId, victimID, incidentType } = req.query || {};
@@ -67,6 +83,8 @@ const cancellations = asyncHandler(async (req, res) => {
 module.exports = {
   trainModel,
   suggest,
+  suggestCasesInsights,
+  suggestReportsInsights,
   testRules,
   cancellations,
 };

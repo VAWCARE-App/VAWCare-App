@@ -44,9 +44,14 @@ const { Text } = Typography;
 
 export default function ReportsInsights() {
     const { message } = AntApp.useApp();
+    const [locale, setLocale] = useState((typeof window !== 'undefined' && (window.APP_LOCALE || navigator.language)) || 'en');
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [reports, setReports] = useState([]);
+    const [dssLoading, setDssLoading] = useState(true);
+    const [dssInsights, setDssInsights] = useState(null);
+    // explicit toggle for Tagalog translations (user-controlled)
+    const [showTagalog, setShowTagalog] = useState(false);
 
     const BRAND = {
         violet: "#7A5AF8",
@@ -72,7 +77,21 @@ export default function ReportsInsights() {
 
     useEffect(() => {
         loadReports();
+        loadDssInsights();
     }, []);
+
+    const loadDssInsights = async (withSpinner = true) => {
+        try {
+            if (withSpinner) setDssLoading(true);
+            const res = await api.post('/api/dss/suggest/reports', { lookbackDays: 30 });
+            setDssInsights(res.data?.data || null);
+        } catch (err) {
+            console.error('Failed to load DSS insights for reports', err);
+            setDssInsights(null);
+        } finally {
+            if (withSpinner) setDssLoading(false);
+        }
+    };
 
     // Derived stats
     const totalReports = reports.length;
@@ -118,6 +137,7 @@ export default function ReportsInsights() {
     const handleRefresh = async () => {
         setRefreshing(true);
         await loadReports(false);
+        await loadDssInsights(false);
         message.success("Report insights refreshed");
     };
 
@@ -353,6 +373,17 @@ export default function ReportsInsights() {
                         <Card
                             title="Alerts & Recommendations"
                             bordered
+                            extra={
+                                <Space>
+                                    <Button
+                                        type={showTagalog ? 'primary' : 'default'}
+                                        onClick={() => setShowTagalog(s => !s)}
+                                        size="small"
+                                    >
+                                        {showTagalog ? 'English' : 'Tagalog'}
+                                    </Button>
+                                </Space>
+                            }
                             style={{ borderRadius: 16, borderColor: BRAND.soft }}
                         >
                             {loading ? (
@@ -361,92 +392,49 @@ export default function ReportsInsights() {
                                 <Empty description="No data to analyze" />
                             ) : (
                                 <div>
-                                    {(() => {
-                                        const insights = [];
-
-                                        // 🔹 Trend 1: Sudden increase in reports
-                                        const trend = reportTrend.slice(-7);
-                                        if (trend.length >= 2) {
-                                            const last = trend[trend.length - 1].count;
-                                            const prev = trend[trend.length - 2].count;
-                                            if (last > prev * 1.5) {
-                                                insights.push({
-                                                    type: "warning",
-                                                    msg: `There has been a ${Math.round(
-                                                        ((last - prev) / prev) * 100
-                                                    )}% increase in reports compared to the previous period.`,
-                                                });
-                                            }
-                                        }
-
-                                        // 🔹 Trend 2: Most common incident type
-                                        const topType = incidentDistribution.sort((a, b) => b.value - a.value)[0];
-                                        if (topType)
-                                            insights.push({
-                                                type: "info",
-                                                msg: `The most reported incident type is "${topType.name}" (${topType.value} cases).`,
-                                            });
-
-                                        // 🔹 Trend 3: High-risk category (e.g. >50% unresolved)
-                                        const unresolved = reports.filter(
-                                            (r) => r.status === "Open" || r.status === "Pending"
-                                        ).length;
-                                        if (unresolved / reports.length > 0.5)
-                                            insights.push({
-                                                type: "error",
-                                                msg: `Over 50% of reports remain unresolved. Consider reviewing investigation timelines.`,
-                                            });
-
-                                        // 🔹 Trend 4: Anonymous reporting rate
-                                        const anonRate =
-                                            (victimDistribution.find((v) => v.name === "Anonymous")?.value || 0) /
-                                            (victimDistribution.reduce((a, b) => a + b.value, 0) || 1);
-                                        if (anonRate > 0.6)
-                                            insights.push({
-                                                type: "warning",
-                                                msg: `Anonymous reports are high (${Math.round(
-                                                    anonRate * 100
-                                                )}%). Consider outreach for trust-building.`,
-                                            });
-
-                                        // 🔹 Default insight if none matched
-                                        if (insights.length === 0)
-                                            insights.push({
-                                                type: "success",
-                                                msg: "No major alerts detected. Report activity is within normal range.",
-                                            });
-
-                                        return (
-                                            <Space direction="vertical" style={{ width: "100%" }}>
-                                                {insights.map((i, idx) => (
-                                                    <Card
-                                                        key={idx}
-                                                        size="small"
-                                                        style={{
+                                    {dssLoading ? (
+                                        <Skeleton active />
+                                    ) : dssInsights && dssInsights.insights && dssInsights.insights.length === 0 ? (
+                                        <Empty description="No insights available" />
+                                    ) : (
+                                        <Space direction="vertical" style={{ width: "100%" }}>
+                                            {(dssInsights?.insights || []).map((i, idx) => (
+                                                <Card
+                                                    key={idx}
+                                                    size="small"
+                                                    style={{
                                                             background:
                                                                 i.type === "error"
                                                                     ? "#fff2f0"
                                                                     : i.type === "warning"
-                                                                        ? "#fffbe6"
-                                                                        : i.type === "info"
-                                                                            ? "#e6f4ff"
-                                                                            : "#f6ffed",
-                                                            borderLeft: `4px solid ${i.type === "error"
-                                                                    ? "#ff4d4f"
-                                                                    : i.type === "warning"
-                                                                        ? "#faad14"
-                                                                        : i.type === "info"
-                                                                            ? "#1677ff"
-                                                                            : "#52c41a"
-                                                                }`,
-                                                        }}
-                                                    >
-                                                        <Typography.Text>{i.msg}</Typography.Text>
-                                                    </Card>
-                                                ))}
-                                            </Space>
-                                        );
-                                    })()}
+                                                                    ? "#fffbe6"
+                                                                    : i.type === "info"
+                                                                    ? "#e6f4ff"
+                                                                    : "#f6ffed",
+                                                            borderLeft: `4px solid ${i.urgent ? '#d32029' : (i.type === "error" ? "#ff4d4f" : i.type === "warning" ? "#faad14" : i.type === "info" ? "#1677ff" : "#52c41a")}`,
+                                                            boxShadow: i.urgent ? '0 6px 18px rgba(211,32,41,0.08)' : undefined
+                                                    }}
+                                                >
+                                                    <Typography.Text strong>
+                                                        {i.label}
+                                                        {i.value !== undefined ? ` — ${typeof i.value === 'number' ? (i.value.toFixed ? i.value.toFixed(1) : i.value) : i.value}` : ''}
+                                                    </Typography.Text>
+                                                        {i.urgent && (
+                                                            <Tag style={{ marginLeft: 8 }} color="error">URGENT</Tag>
+                                                        )}
+                                                    <br />
+                                                        <Typography.Text>{(showTagalog && i.message_tl) ? i.message_tl : i.message || ''}</Typography.Text>
+                                                            {((showTagalog && i.recommendations_tl && i.recommendations_tl.length) ? i.recommendations_tl : i.recommendations) && (((showTagalog && i.recommendations_tl && i.recommendations_tl.length) ? i.recommendations_tl : i.recommendations).length > 0) && (
+                                                                <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 18 }}>
+                                                                    {((showTagalog && i.recommendations_tl && i.recommendations_tl.length) ? i.recommendations_tl : i.recommendations).map((r, ri) => (
+                                                                        <li key={ri}><Typography.Text>{r}</Typography.Text></li>
+                                                                    ))}
+                                                                </ul>
+                                                            )}
+                                                </Card>
+                                            ))}
+                                        </Space>
+                                    )}
                                 </div>
                             )}
                         </Card>

@@ -171,10 +171,8 @@ export default function ReportManagement() {
         return 'orange';
       case 'under investigation':
         return 'blue';
-      case 'resolved':
-        return 'green';
       case 'closed':
-        return 'red';
+        return 'green';
       case 'pending':
         return 'default';
       default:
@@ -274,7 +272,7 @@ export default function ReportManagement() {
       const s = (r.status || '').toLowerCase();
       return s === 'under investigation' || s === 'in-progress';
     }).length,
-    resolved: allReports.filter((r) => (r.status || '').toLowerCase() === "resolved").length,
+    closed: allReports.filter((r) => (r.status || '').toLowerCase() === "closed").length,
   };
 
   return (
@@ -330,9 +328,9 @@ export default function ReportManagement() {
           </Col>
           <Col xs={12} md={6}>
             <Card style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}>
-              <Typography.Text type="secondary">Resolved</Typography.Text>
+              <Typography.Text type="secondary">Closed</Typography.Text>
               <Typography.Title level={2} style={{ margin: 0, color: "green" }}>
-                {reportCounts.resolved}
+                {reportCounts.closed}
               </Typography.Title>
             </Card>
           </Col>
@@ -360,7 +358,6 @@ export default function ReportManagement() {
                 <Option value="all">All Status</Option>
                 <Option value="Open">Open</Option>
                 <Option value="Under Investigation">In-Progress</Option>
-                <Option value="Resolved">Resolved</Option>
                 <Option value="Closed">Closed</Option>
               </Select>
             </Space>
@@ -497,7 +494,6 @@ export default function ReportManagement() {
                   <Option value="Pending">Pending</Option>
                   <Option value="Open">Open</Option>
                   <Option value="Under Investigation">In-Progress</Option>
-                  <Option value="Resolved">Resolved</Option>
                   <Option value="Closed">Closed</Option>
                 </Select>
               </Form.Item>

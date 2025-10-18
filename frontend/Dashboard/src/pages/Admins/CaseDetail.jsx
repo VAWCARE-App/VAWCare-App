@@ -195,9 +195,9 @@ export default function CaseDetail() {
                     <Select
                       options={[
                         { value: "Open", label: "Open" },
-                        { value: "In Progress", label: "In Progress" },
+                        { value: "Under Investigation", label: "Under Investigation" },
                         {value:"Cancelled", label:"Cancelled"},
-                        { value: "Closed", label: "Closed" },
+                        { value: "Resolved", label: "Resolved" },
                       ]}
                     />
                   </Form.Item>
@@ -260,7 +260,7 @@ export default function CaseDetail() {
                   color={
                     caseData.status === "Open"
                       ? "red"
-                      : caseData.status === "Closed"
+                      : caseData.status === "Resolved"
                         ? "green"
                         : "blue"
                   }

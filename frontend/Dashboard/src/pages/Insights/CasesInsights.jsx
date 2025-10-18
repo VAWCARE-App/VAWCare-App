@@ -44,9 +44,15 @@ const { Text } = Typography;
 
 export default function CasesInsights() {
     const { message } = AntApp.useApp();
+    // simple locale detection: 'tl' or 'fil' indicates Tagalog/Filipino
+    const [locale, setLocale] = useState((typeof window !== 'undefined' && (window.APP_LOCALE || navigator.language)) || 'en');
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [cases, setCases] = useState([]);
+    const [dssLoading, setDssLoading] = useState(true);
+    const [dssInsights, setDssInsights] = useState(null);
+    // explicit toggle for Tagalog translations (user-controlled)
+    const [showTagalog, setShowTagalog] = useState(false);
 
     const BRAND = {
         violet: "#7A5AF8",
@@ -72,7 +78,21 @@ export default function CasesInsights() {
 
     useEffect(() => {
         loadCases();
+        loadDssInsights();
     }, []);
+
+    const loadDssInsights = async (withSpinner = true) => {
+        try {
+            if (withSpinner) setDssLoading(true);
+            const res = await api.post('/api/dss/suggest/cases', { lookbackDays: 30 });
+            setDssInsights(res.data?.data || null);
+        } catch (err) {
+            console.error('Failed to load DSS insights', err);
+            setDssInsights(null);
+        } finally {
+            if (withSpinner) setDssLoading(false);
+        }
+    };
 
     // Derived stats
     const totalCases = cases.length;
@@ -101,6 +121,19 @@ export default function CasesInsights() {
         return Object.entries(counts).map(([name, value]) => ({ name, value }));
     }, [cases]);
 
+    // Woman proportion computed on the frontend to complement backend insights
+    const womanCount = useMemo(() => {
+        try {
+            return cases.filter(c => {
+                const vt = (c.victimType || '').toString().toLowerCase();
+                if (vt.includes('woman') || vt.includes('female')) return true;
+                if (c.victimID && c.victimID.victimType && ['woman','female'].includes(c.victimID.victimType)) return true;
+                return false;
+            }).length;
+        } catch (e) { return 0; }
+    }, [cases]);
+    const womanRate = totalCases ? (womanCount / totalCases) : 0;
+
     // Cases over time
     const caseTrend = useMemo(() => {
         const counts = {};
@@ -114,6 +147,7 @@ export default function CasesInsights() {
     const handleRefresh = async () => {
         setRefreshing(true);
         await loadCases(false);
+        await loadDssInsights(false);
         message.success("Case insights refreshed");
     };
 
@@ -368,6 +402,17 @@ export default function CasesInsights() {
                         <Card
                             title="Case Alerts & Recommendations"
                             bordered
+                            extra={
+                                <Space>
+                                    <Button
+                                        type={showTagalog ? 'primary' : 'default'}
+                                        onClick={() => setShowTagalog(s => !s)}
+                                        size="small"
+                                    >
+                                        {showTagalog ? 'English' : 'Tagalog'}
+                                    </Button>
+                                </Space>
+                            }
                             style={{ borderRadius: 16, borderColor: BRAND.soft }}
                         >
                             {loading ? (
@@ -376,92 +421,79 @@ export default function CasesInsights() {
                                 <Empty description="No data to analyze" />
                             ) : (
                                 <div>
-                                    {(() => {
-                                        const insights = [];
-
-                                        // 🔹 Trend 1: Sudden increase in cases
-                                        const trend = caseTrend.slice(-7);
-                                        if (trend.length >= 2) {
-                                            const last = trend[trend.length - 1].count;
-                                            const prev = trend[trend.length - 2].count;
-                                            if (last > prev * 1.5) {
-                                                insights.push({
-                                                    type: "warning",
-                                                    msg: `There has been a ${Math.round(
-                                                        ((last - prev) / prev) * 100
-                                                    )}% increase in cases compared to the previous period.`,
-                                                });
-                                            }
-                                        }
-
-                                        // 🔹 Trend 2: Most common incident type
-                                        const topType = incidentDistribution.sort((a, b) => b.value - a.value)[0];
-                                        if (topType)
-                                            insights.push({
-                                                type: "info",
-                                                msg: `The most common incident type is "${topType.name}" (${topType.value} cases).`,
-                                            });
-
-                                        // 🔹 Trend 3: High-risk cases (e.g., High-risk & unresolved)
-                                        const highRiskUnresolved = cases.filter(
-                                            (c) => (c.status === "Open" || c.status === "Under Investigation") && c.riskLevel === "High"
-                                        ).length;
-                                        if (highRiskUnresolved > 0)
-                                            insights.push({
-                                                type: "error",
-                                                msg: `${highRiskUnresolved} high-risk cases remain unresolved. Prioritize investigation.`,
-                                            });
-
-                                        // 🔹 Trend 4: Anonymous cases rate
-                                        const anonRate =
-                                            (victimDistribution.find((v) => v.name === "anonymous")?.value || 0) /
-                                            (victimDistribution.reduce((a, b) => a + b.value, 0) || 1);
-                                        if (anonRate > 0.6)
-                                            insights.push({
-                                                type: "warning",
-                                                msg: `Anonymous cases are high (${Math.round(
-                                                    anonRate * 100
-                                                )}%). Consider outreach for trust-building.`,
-                                            });
-
-                                        if (insights.length === 0)
-                                            insights.push({
-                                                type: "success",
-                                                msg: "No major alerts detected. Case activity is within normal range.",
-                                            });
-
-                                        return (
-                                            <Space direction="vertical" style={{ width: "100%" }}>
-                                                {insights.map((i, idx) => (
-                                                    <Card
-                                                        key={idx}
-                                                        size="small"
-                                                        style={{
-                                                            background:
-                                                                i.type === "error"
-                                                                    ? "#fff2f0"
-                                                                    : i.type === "warning"
-                                                                    ? "#fffbe6"
-                                                                    : i.type === "info"
-                                                                    ? "#e6f4ff"
-                                                                    : "#f6ffed",
-                                                            borderLeft: `4px solid ${
-                                                                i.type === "error"
-                                                                    ? "#ff4d4f"
-                                                                    : i.type === "warning"
-                                                                    ? "#faad14"
-                                                                    : i.type === "info"
-                                                                    ? "#1677ff"
-                                                                    : "#52c41a"
-                                                            }`,
-                                                        }}
-                                                    >
-                                                        <Typography.Text>{i.msg}</Typography.Text>
-                                                    </Card>
-                                                ))}
-                                            </Space>
-                                        );
-                                    })()}
+                                    {dssLoading ? (
+                                        <Skeleton active />
+                                    ) : dssInsights && dssInsights.insights && dssInsights.insights.length === 0 ? (
+                                        <Empty description="No insights available" />
+                                    ) : (
+                                        <Space direction="vertical" style={{ width: "100%" }}>
+                                            {(
+                                                // Merge backend insights with a frontend-computed Woman Case insight when missing
+                                                (() => {
+                                                    const backend = dssInsights?.insights || [];
+                                                    const hasWoman = backend.some(x => x.label === 'Woman Case Proportion');
+                                                    if (!hasWoman && womanCount > 0) {
+                                                        const pct = Math.round(womanRate * 100);
+                                                        const womanInsight = {
+                                                            label: 'Woman Case Proportion',
+                                                            value: `${womanCount} (${pct}%)`,
+                                                            type: womanRate > 0.6 ? 'warning' : womanRate > 0.25 ? 'info' : 'success',
+                                                            message: `There are ${womanCount} woman case${womanCount !== 1 ? 's' : ''} (${pct}% of total). Prioritize services and protections for women victims.`,
+                                                            message_tl: `Mayroong ${womanCount} kaso na may kinalaman sa kababaihan (${pct}% ng kabuuan). Bigyang prayoridad ang mga serbisyo at proteksyon para sa mga biktimang babae.`,
+                                                            recommendations: [
+                                                                'Ensure service pathways and referrals are accessible for women victims.',
+                                                                'Provide gender-sensitive counseling and legal support.',
+                                                                'Monitor and prioritize resources for areas with high woman-case proportions.'
+                                                            ],
+                                                            recommendations_tl: [
+                                                                'Siguraduhin na accessible ang mga serbisyo at referral para sa mga biktimang babae.',
+                                                                'Magbigay ng gender-sensitive na counseling at legal na suporta.',
+                                                                'Subaybayan at unahin ang mga resources para sa mga lugar na may mataas na proporsyon ng kaso ng kababaihan.'
+                                                            ]
+                                                        };
+                                                        return [...backend, womanInsight].map((i, idx) => ({ i, idx }));
+                                                    }
+                                                    return backend.map((i, idx) => ({ i, idx }));
+                                                })()
+                                            ).map(({ i, idx }) => (
+                                                <Card
+                                                    key={idx}
+                                                    size="small"
+                                                    style={{
+                                                        background:
+                                                            i.type === "error"
+                                                                ? "#fff2f0"
+                                                                : i.type === "warning"
+                                                                ? "#fffbe6"
+                                                                : i.type === "info"
+                                                                ? "#e6f4ff"
+                                                                : "#f6ffed",
+                                                        borderLeft: `4px solid ${
+                                                            i.urgent ? '#d32029' : (i.type === "error" ? "#ff4d4f" : i.type === "warning" ? "#faad14" : i.type === "info" ? "#1677ff" : "#52c41a")
+                                                        }`,
+                                                        boxShadow: i.urgent ? '0 6px 18px rgba(211,32,41,0.08)' : undefined
+                                                    }}
+                                                >
+                                                    <Typography.Text strong>
+                                                        {i.label}
+                                                        {i.value !== undefined ? ` — ${typeof i.value === 'number' ? (i.value.toFixed ? i.value.toFixed(1) : i.value) : i.value}` : ''}
+                                                    </Typography.Text>
+                                                    {i.urgent && (
+                                                        <Tag style={{ marginLeft: 8 }} color="error">URGENT</Tag>
+                                                    )}
+                                                    <br />
+                                                    <Typography.Text>{(showTagalog && i.message_tl) ? i.message_tl : i.message || ''}</Typography.Text>
+                                                    {((showTagalog && i.recommendations_tl && i.recommendations_tl.length) ? i.recommendations_tl : i.recommendations) && (((showTagalog && i.recommendations_tl && i.recommendations_tl.length) ? i.recommendations_tl : i.recommendations).length > 0) && (
+                                                        <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 18 }}>
+                                                            {((showTagalog && i.recommendations_tl && i.recommendations_tl.length) ? i.recommendations_tl : i.recommendations).map((r, ri) => (
+                                                                <li key={ri}><Typography.Text>{r}</Typography.Text></li>
+                                                            ))}
+                                                        </ul>
+                                                    )}
+                                                </Card>
+                                            ))}
+                                        </Space>
+                                    )}
                                 </div>
                             )}
                         </Card>

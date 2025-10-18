@@ -45,7 +45,7 @@ const incidentReportSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Status is required'],
         enum: {
-            values: ['Pending', 'Open', 'Under Investigation', 'Resolved'],
+            values: ['Pending', 'Open', 'Under Investigation', 'Closed'],
             message: 'Please enter a valid status'
         },
         default: 'Pending',

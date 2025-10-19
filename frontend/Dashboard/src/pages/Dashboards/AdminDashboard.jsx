@@ -1,3 +1,4 @@
+// src/pages/admin/AdminDashboard.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import {
   App as AntApp,
@@ -24,8 +25,6 @@ import {
   FileTextOutlined,
   FolderOpenOutlined,
   ReloadOutlined,
-  TeamOutlined,
-  SettingOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
@@ -34,7 +33,7 @@ const { Header, Content } = Layout;
 const { Title, Text } = Typography;
 
 /** Tiny inline sparkline (no extra deps) */
-function Sparkline({ points = [], width = 420, height = 120, stroke = "#ff6ea9" }) {
+function Sparkline({ points = [], width = 420, height = 120, stroke = "#7A5AF8" }) {
   if (!points.length) return null;
   const max = Math.max(...points);
   const min = Math.min(...points);
@@ -52,8 +51,8 @@ function Sparkline({ points = [], width = 420, height = 120, stroke = "#ff6ea9" 
     <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
       <defs>
         <linearGradient id="sparkFill" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor="#ff6ea9" stopOpacity="0.28" />
-          <stop offset="100%" stopColor="#ff6ea9" stopOpacity="0" />
+          <stop offset="0%" stopColor="#7A5AF8" stopOpacity="0.20" />
+          <stop offset="100%" stopColor="#7A5AF8" stopOpacity="0" />
         </linearGradient>
       </defs>
       <path d={`${d} L ${lastX} ${height-18} L 10 ${height-18} Z`} fill="url(#sparkFill)" />
@@ -76,12 +75,57 @@ export default function AdminDashboard() {
     recentActivities: [],
   });
 
+  // Softer brand with pastel neutrals
   const BRAND = {
     violet: "#7A5AF8",
     pink: "#e91e63",
-    bg: "linear-gradient(180deg, #ffffff 0%, #faf7ff 60%, #f6f3ff 100%)",
-    soft: "rgba(122,90,248,0.18)",
-    chip: "#fff0f7",
+    // page bg: very subtle violet mist
+    bg: "linear-gradient(180deg, #ffffff 0%, #faf9ff 55%, #f6f4ff 100%)",
+    // borders and shadows
+    soft: "rgba(122,90,248,0.16)",
+    chip: "rgba(122,90,248,0.10)",
+    textDark: "#2a2a2a",
+  };
+
+  // Reusable glossy card styles (glass, not too bright)
+  const glossyBase = {
+    borderRadius: 18,
+    background: "linear-gradient(145deg, rgba(255,255,255,0.75), rgba(255,255,255,0.35))",
+    backdropFilter: "blur(16px)",
+    WebkitBackdropFilter: "blur(16px)",
+    border: "1px solid rgba(255,255,255,0.55)",
+    boxShadow: "0 10px 28px rgba(16, 24, 40, 0.06)",
+  };
+
+  const glossyTintViolet = {
+  borderRadius: 18,
+  background:
+    "linear-gradient(145deg, rgba(155,130,255,0.35), rgba(190,170,255,0.25)), linear-gradient(145deg, rgba(255,255,255,0.45), rgba(255,255,255,0.25))",
+  backdropFilter: "blur(18px)",
+  WebkitBackdropFilter: "blur(18px)",
+  border: "1px solid rgba(122,90,248,0.25)",
+  boxShadow: "0 10px 28px rgba(122,90,248,0.12)",
+};
+
+const glossyTintPink = {
+  borderRadius: 18,
+  background:
+    "linear-gradient(145deg, rgba(255,160,190,0.35), rgba(255,190,210,0.25)), linear-gradient(145deg, rgba(255,255,255,0.45), rgba(255,255,255,0.25))",
+  backdropFilter: "blur(18px)",
+  WebkitBackdropFilter: "blur(18px)",
+  border: "1px solid rgba(233,30,99,0.25)",
+  boxShadow: "0 10px 28px rgba(233,30,99,0.12)",
+};
+
+  const overviewSurface = {
+    borderRadius: 18,
+    background:
+      "linear-gradient(160deg, rgba(122,90,248,0.55) 0%, rgba(233,30,99,0.38) 100%)",
+    backdropFilter: "blur(22px)",
+    WebkitBackdropFilter: "blur(22px)",
+    border: "1px solid rgba(255,255,255,0.35)",
+    boxShadow: "0 22px 46px rgba(88, 64, 180, 0.20)",
+    color: "#fff",
   };
 
   const donutSize =
@@ -201,12 +245,10 @@ export default function AdminDashboard() {
       bordered
       className="fade-in-card"
       style={{
-        borderRadius: 16,
+        ...glossyBase,
         borderColor: BRAND.soft,
         height: "100%",
         animationDelay: `${delay}ms`,
-        background: "#fff",
-        boxShadow: "0 10px 26px rgba(122,90,248,0.06)",
       }}
       bodyStyle={{ padding: 16, display: "flex", flexDirection: "column", gap: 8 }}
     >
@@ -216,7 +258,7 @@ export default function AdminDashboard() {
             width: 40,
             height: 40,
             borderRadius: 12,
-            background: BRAND.chip,
+            background: "rgba(122,90,248,0.10)",
             display: "grid",
             placeItems: "center",
             border: `1px solid ${BRAND.soft}`,
@@ -243,7 +285,6 @@ export default function AdminDashboard() {
   const sparkData = useMemo(() => {
     const base = Math.max(metrics.totalCases, 5);
     const open = Math.max(metrics.openCases, 1);
-    // 10 points
     return [4, 6, 5, 7, 9, 8, 10, 9, 12, 11].map((n, i) =>
       Math.round((n * base) / (8 + (i % 3))) - (i % 2 ? open : 0)
     );
@@ -291,7 +332,11 @@ export default function AdminDashboard() {
             icon={<ReloadOutlined />}
             onClick={handleRefresh}
             loading={refreshing}
-            style={{ borderColor: BRAND.violet, color: BRAND.violet }}
+            style={{
+              borderColor: BRAND.violet,
+              color: BRAND.violet,
+              background: "rgba(122,90,248,0.06)",
+            }}
             size={screens.md ? "middle" : "small"}
           >
             Refresh
@@ -318,14 +363,7 @@ export default function AdminDashboard() {
                   <Card
                     className="fade-in-card"
                     bordered
-                    style={{
-                      borderRadius: 18,
-                      borderColor: BRAND.soft,
-                      background:
-                        "linear-gradient(180deg, #7960f6 0%, #8f6df6 40%, #ff6ea9 100%)",
-                      color: "#fff",
-                      boxShadow: "0 24px 48px rgba(121,96,246,0.25)",
-                    }}
+                    style={overviewSurface}
                     bodyStyle={{ padding: 18 }}
                   >
                     <div
@@ -346,11 +384,7 @@ export default function AdminDashboard() {
                           />
                         </div>
                         <div style={{ marginTop: 10 }}>
-                          {loading ? (
-                            <Skeleton active />
-                          ) : (
-                            <Sparkline points={sparkData} />
-                          )}
+                          {loading ? <Skeleton active /> : <Sparkline points={sparkData} />}
                         </div>
                         <div
                           style={{
@@ -381,68 +415,66 @@ export default function AdminDashboard() {
                         </div>
                       </div>
 
-                      {/* target / donut column */}
-                      {/* donut column (centered) */}
-<div
-  style={{
-    background: "rgba(255,255,255,0.14)",
-    border: "1px solid rgba(255,255,255,0.2)",
-    borderRadius: 16,
-    backdropFilter: "blur(6px)",
-    padding: 12,
-    width: screens.md ? 260 : "100%",
-    // 👇 center contents
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    // keep a stable height so the ring + labels sit dead-center
-    minHeight: screens.md ? 260 : 220,
-  }}
->
-  {loading ? (
-    <Skeleton active />
-  ) : (
-    <>
-      <Progress
-        type="dashboard"
-        percent={openPercent}
-        size={screens.md ? 180 : 160}
-        strokeColor="#fff"
-        trailColor="rgba(255,255,255,0.25)"
-        format={(p) => (
-          <span
-            style={{
-              fontSize: "clamp(14px, 2.6vw, 24px)",
-              fontWeight: 800,
-              color: "#fff",
-              lineHeight: 1,
-            }}
-          >
-            {p}% Open
-          </span>
-        )}
-      />
-      <div
-        style={{
-          display: "flex",
-          gap: 8,
-          marginTop: 8,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <Tag color="#ffffff33" style={{ color: "#fff", borderColor: "#fff3" }}>
-          Open: {metrics.openCases}
-        </Tag>
-        <Tag color="#ffffff33" style={{ color: "#fff", borderColor: "#fff3" }}>
-          Total: {metrics.totalCases}
-        </Tag>
-      </div>
-    </>
-  )}
-</div>
-
+                      {/* donut column */}
+                      <div
+                        style={{
+                          background:
+                            "linear-gradient(145deg, rgba(255,255,255,0.22), rgba(255,255,255,0.10))",
+                          border: "1px solid rgba(255,255,255,0.35)",
+                          borderRadius: 16,
+                          backdropFilter: "blur(10px)",
+                          WebkitBackdropFilter: "blur(10px)",
+                          padding: 12,
+                          width: screens.md ? 260 : "100%",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          minHeight: screens.md ? 260 : 220,
+                        }}
+                      >
+                        {loading ? (
+                          <Skeleton active />
+                        ) : (
+                          <>
+                            <Progress
+                              type="dashboard"
+                              percent={openPercent}
+                              size={donutSize}
+                              strokeColor="#ffffff"
+                              trailColor="rgba(255,255,255,0.28)"
+                              format={(p) => (
+                                <span
+                                  style={{
+                                    fontSize: "clamp(14px, 2.6vw, 24px)",
+                                    fontWeight: 800,
+                                    color: "#fff",
+                                    lineHeight: 1,
+                                  }}
+                                >
+                                  {p}% Open
+                                </span>
+                              )}
+                            />
+                            <div
+                              style={{
+                                display: "flex",
+                                gap: 8,
+                                marginTop: 8,
+                                justifyContent: "center",
+                                alignItems: "center",
+                              }}
+                            >
+                              <Tag color="#ffffff33" style={{ color: "#fff", borderColor: "#fff3" }}>
+                                Open: {metrics.openCases}
+                              </Tag>
+                              <Tag color="#ffffff33" style={{ color: "#fff", borderColor: "#fff3" }}>
+                                Total: {metrics.totalCases}
+                              </Tag>
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </Card>
                 </Col>
@@ -452,17 +484,10 @@ export default function AdminDashboard() {
                   <Card
                     className="fade-in-card"
                     bordered
-                    style={{
-                      borderRadius: 18,
-                      borderColor: BRAND.soft,
-                      background:
-                        "linear-gradient(180deg, #8a7cf9 0%, #7a5af8 100%)",
-                      color: "#fff",
-                      minHeight: 128,
-                    }}
-                    bodyStyle={{ padding: 16, display: "grid", gap: 10 }}
+                    style={glossyTintViolet}
+                    bodyStyle={{ padding: 16, display: "grid", gap: 10, color: BRAND.textDark }}
                   >
-                    <Title level={5} style={{ color: "#fff", margin: 0 }}>
+                    <Title level={5} style={{ color: BRAND.violet, margin: 0 }}>
                       Daily Tasks
                     </Title>
                     <Button
@@ -471,6 +496,9 @@ export default function AdminDashboard() {
                         borderRadius: 12,
                         height: 40,
                         fontWeight: 600,
+                        background: "rgba(255,255,255,0.75)",
+                        border: "1px solid rgba(16,24,40,0.06)",
+                        boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
                       }}
                     >
                       Review Reports
@@ -481,17 +509,10 @@ export default function AdminDashboard() {
                   <Card
                     className="fade-in-card"
                     bordered
-                    style={{
-                      borderRadius: 18,
-                      borderColor: BRAND.soft,
-                      background:
-                        "linear-gradient(180deg, #ff86b9 0%, #ff6ea9 100%)",
-                      color: "#fff",
-                      minHeight: 128,
-                    }}
-                    bodyStyle={{ padding: 16, display: "grid", gap: 10 }}
+                    style={glossyTintPink}
+                    bodyStyle={{ padding: 16, display: "grid", gap: 10, color: BRAND.textDark }}
                   >
-                    <Title level={5} style={{ color: "#fff", margin: 0 }}>
+                    <Title level={5} style={{ color: BRAND.pink, margin: 0 }}>
                       My Actions
                     </Title>
                     <Button
@@ -500,6 +521,9 @@ export default function AdminDashboard() {
                         borderRadius: 12,
                         height: 40,
                         fontWeight: 600,
+                        background: "rgba(255,255,255,0.75)",
+                        border: "1px solid rgba(16,24,40,0.06)",
+                        boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
                       }}
                     >
                       Manage Users
@@ -535,17 +559,13 @@ export default function AdminDashboard() {
               </Row>
             </Col>
 
-            {/* Right “Friends / Activity” column */}
+            {/* Right “Activity” column */}
             <Col xs={24} xl={8}>
               <Card
                 className="fade-in-card"
                 title={<span style={{ color: BRAND.violet }}>Recent Activity</span>}
                 bordered
-                style={{
-                  borderRadius: 18,
-                  borderColor: BRAND.soft,
-                  height: "100%",
-                }}
+                style={glossyBase}
                 bodyStyle={{
                   padding: 0,
                   display: "flex",
@@ -571,12 +591,16 @@ export default function AdminDashboard() {
                     renderItem={(item) => (
                       <List.Item key={item.id} style={{ paddingInline: 12 }}>
                         <List.Item.Meta
-                          avatar={<Avatar style={{ background: BRAND.chip }}>{item.type?.[0]?.toUpperCase()}</Avatar>}
+                          avatar={
+                            <Avatar style={{ background: "rgba(122,90,248,0.10)", color: BRAND.violet }}>
+                              {item.type?.[0]?.toUpperCase()}
+                            </Avatar>
+                          }
                           title={
                             <span>
                               {item.title}{" "}
                               {item.type && (
-                                <Tag color="#7A5AF8" style={{ color: "#fff" }}>
+                                <Tag color={BRAND.violet} style={{ color: "#fff", borderRadius: 999 }}>
                                   {item.type}
                                 </Tag>
                               )}
@@ -602,13 +626,15 @@ export default function AdminDashboard() {
       <style>{`
         .fade-in-card { opacity: 0; transform: translateY(30px); animation: fadeUp .7s ease forwards; }
         @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
-        .ant-card { transition: transform .2s ease, box-shadow .2s ease; }
-        .ant-card:hover { transform: translateY(-4px); box-shadow: 0 14px 34px rgba(0,0,0,.08); }
+
+        .ant-card { transition: transform .18s ease, box-shadow .18s ease, filter .18s ease; }
+        .ant-card:hover { transform: translateY(-3px); box-shadow: 0 16px 36px rgba(16,24,40,0.08); }
 
         .mini-stat .mini-value{
           font-weight: 800;
           font-size: clamp(16px,3vw,22px);
           color: #fff;
+          text-shadow: 0 1px 0 rgba(0,0,0,0.06);
         }
       `}</style>
     </Layout>

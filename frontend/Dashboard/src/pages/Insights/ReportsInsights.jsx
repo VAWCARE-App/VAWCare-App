@@ -50,6 +50,7 @@ export default function ReportsInsights() {
     const [reports, setReports] = useState([]);
     const [dssLoading, setDssLoading] = useState(true);
     const [dssInsights, setDssInsights] = useState(null);
+    const [range, setRange] = useState('current'); // 'current' | 'previous' | 'last2' | 'all'
     // explicit toggle for Tagalog translations (user-controlled)
     const [showTagalog, setShowTagalog] = useState(false);
 
@@ -60,6 +61,34 @@ export default function ReportsInsights() {
         soft: "rgba(122,90,248,0.18)",
         chip: "#fff0f7",
     };
+
+    function formatRangeLabel(range) {
+        const now = new Date();
+        const monthName = (d) => d.toLocaleString(undefined, { month: 'short', year: 'numeric' });
+        if (range === 'current') return monthName(new Date(now.getFullYear(), now.getMonth(), 1));
+        if (range === 'previous') return monthName(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+        if (range === 'last2') return `${monthName(new Date(now.getFullYear(), now.getMonth() - 1, 1))} – ${monthName(new Date(now.getFullYear(), now.getMonth(), 1))}`;
+        return 'All time';
+    }
+
+    function getRangeBounds(range) {
+        const now = new Date();
+        if (range === 'current') return { since: new Date(now.getFullYear(), now.getMonth(), 1), until: null };
+        if (range === 'previous') return { since: new Date(now.getFullYear(), now.getMonth() - 1, 1), until: new Date(now.getFullYear(), now.getMonth(), 1) };
+        if (range === 'last2') return { since: new Date(now.getFullYear(), now.getMonth() - 1, 1), until: null };
+        return { since: new Date(0), until: null };
+    }
+
+    // filter local reports by createdAt according to selected range (createdAt is authoritative)
+    const filteredReports = useMemo(() => {
+        const bounds = getRangeBounds(range);
+        return reports.filter(r => {
+            const dt = new Date(r.createdAt);
+            if (bounds.since && dt < bounds.since) return false;
+            if (bounds.until && dt >= bounds.until) return false;
+            return true;
+        });
+    }, [reports, range]);
 
     const loadReports = async (withSpinner = true) => {
         try {
@@ -80,10 +109,15 @@ export default function ReportsInsights() {
         loadDssInsights();
     }, []);
 
+    useEffect(() => {
+        // reload dss insights when range changes
+        loadDssInsights();
+    }, [range]);
+
     const loadDssInsights = async (withSpinner = true) => {
         try {
             if (withSpinner) setDssLoading(true);
-            const res = await api.post('/api/dss/suggest/reports', { lookbackDays: 30 });
+            const res = await api.post('/api/dss/suggest/reports', { range });
             setDssInsights(res.data?.data || null);
         } catch (err) {
             console.error('Failed to load DSS insights for reports', err);
@@ -93,28 +127,28 @@ export default function ReportsInsights() {
         }
     };
 
-    // Derived stats
-    const totalReports = reports.length;
-    const openReports = reports.filter((r) => r.status === "Open").length;
-    const pendingReports = reports.filter((r) => r.status === "Pending").length;
-    const closedReports = reports.filter((r) => r.status === "Closed").length;
+    // Derived stats (filtered by selected range)
+    const totalReports = filteredReports.length;
+    const openReports = filteredReports.filter((r) => r.status === "Open").length;
+    const pendingReports = filteredReports.filter((r) => r.status === "Pending").length;
+    const closedReports = filteredReports.filter((r) => r.status === "Closed").length;
 
     const COLORS = ["#7A5AF8", "#FF6EA9", "#5AD8A6", "#FFB347", "#69C0FF"];
 
     // Incident Type Distribution
     const incidentDistribution = useMemo(() => {
         const counts = {};
-        reports.forEach((r) => {
+        filteredReports.forEach((r) => {
             counts[r.incidentType] = (counts[r.incidentType] || 0) + 1;
         });
         return Object.entries(counts).map(([name, value]) => ({ name, value }));
-    }, [reports]);
+    }, [filteredReports]);
 
     // Victim Type Distribution
     const victimDistribution = useMemo(() => {
         let anonymous = 0,
             regular = 0;
-        reports.forEach((r) => {
+        filteredReports.forEach((r) => {
             if (r.victimID?.isAnonymous) anonymous++;
             else regular++;
         });
@@ -122,17 +156,17 @@ export default function ReportsInsights() {
             { name: "Anonymous", value: anonymous },
             { name: "Regular", value: regular },
         ];
-    }, [reports]);
+    }, [filteredReports]);
 
     // Reports over time
     const reportTrend = useMemo(() => {
         const counts = {};
-        reports.forEach((r) => {
+        filteredReports.forEach((r) => {
             const date = new Date(r.createdAt).toISOString().slice(0, 10);
             counts[date] = (counts[date] || 0) + 1;
         });
         return Object.entries(counts).map(([date, count]) => ({ date, count }));
-    }, [reports]);
+    }, [filteredReports]);
 
     const handleRefresh = async () => {
         setRefreshing(true);
@@ -185,6 +219,20 @@ export default function ReportsInsights() {
         <Layout style={{ minHeight: "100vh", background: "#fff" }}>
             <Content>
                 <Row gutter={[16, 16]}>
+                    <Col xs={24} style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, alignItems: 'center' }}>
+                        <Space>
+                            <div style={{ textAlign: 'right', marginRight: 8 }}>
+                                <Text type="secondary" style={{ display: 'block', fontSize: 11 }}>Based on</Text>
+                                <Text type="secondary" style={{ display: 'block', fontSize: 12 }}>{formatRangeLabel(range)}</Text>
+                            </div>
+                            <Button.Group>
+                                <Button type={range === 'current' ? 'primary' : 'default'} onClick={() => { setRange('current'); setDssLoading(true); }}>Current</Button>
+                                <Button type={range === 'previous' ? 'primary' : 'default'} onClick={() => { setRange('previous'); setDssLoading(true); }}>Previous</Button>
+                                <Button type={range === 'all' ? 'primary' : 'default'} onClick={() => { setRange('all'); setDssLoading(true); }}>All</Button>
+                            </Button.Group>
+                             <Button icon={<ReloadOutlined spin={refreshing} />} onClick={handleRefresh}>Refresh</Button>
+                        </Space>
+                    </Col>
                     {/* KPIs */}
                     <Col xs={24} md={6}>
                         <KpiCard
@@ -196,18 +244,18 @@ export default function ReportsInsights() {
                     </Col>
                     <Col xs={24} md={6}>
                         <KpiCard
-                            title="Open Reports"
-                            value={openReports}
-                            icon={<AlertOutlined style={{ color: BRAND.pink }} />}
-                            color={BRAND.pink}
-                        />
-                    </Col>
-                    <Col xs={24} md={6}>
-                        <KpiCard
                             title="Pending Reports"
                             value={pendingReports}
                             icon={<ClockCircleOutlined style={{ color: "#FFB347" }} />}
                             color="#FFB347"
+                        />
+                    </Col>
+                    <Col xs={24} md={6}>
+                        <KpiCard
+                            title="Open Reports"
+                            value={openReports}
+                            icon={<AlertOutlined style={{ color: BRAND.pink }} />}
+                            color={BRAND.pink}
                         />
                     </Col>
                     <Col xs={24} md={6}>
@@ -329,7 +377,7 @@ export default function ReportsInsights() {
                             ) : (
                                 <List
                                     style={{ padding: 0, margin: 0 }}
-                                    dataSource={[...reports]
+                                    dataSource={[...filteredReports]
                                         .sort(
                                             (a, b) =>
                                                 new Date(b.createdAt) - new Date(a.createdAt)

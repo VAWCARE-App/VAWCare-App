@@ -29,6 +29,8 @@ import {
 import { motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import { api } from "../lib/api";
+import { message } from "antd";
 
 const { Content, Footer } = Layout;
 const { Title, Paragraph, Text } = Typography;
@@ -315,7 +317,25 @@ export default function LandingPage() {
                       className="btn-primary"
                       type="primary"
                       icon={<SafetyCertificateOutlined />}
-                      onClick={() => navigate("/login")}
+                      onClick={async () => {
+                        // Create an anonymous account then route to report page
+                        try {
+                          message.loading({ content: 'Preparing anonymous report...', key: 'anon' });
+                          const { data } = await api.post('/api/victims/register', { victimAccount: 'anonymous' });
+                          if (!data || !data.success) throw new Error(data?.message || 'Failed to create anonymous account');
+                          const resp = data.data || {};
+                          if (resp && resp.victim) localStorage.setItem('user', JSON.stringify(resp.victim));
+                          try { if (resp && resp.victim && resp.victim.id) { localStorage.setItem('actorId', String(resp.victim.id)); localStorage.setItem('actorType', 'victim'); } } catch (e) { /* ignore */ }
+                          try { const businessId = resp?.victim?.victimID || null; if (businessId) localStorage.setItem('actorBusinessId', String(businessId)); } catch (e) { /* ignore */ }
+                          message.success({ content: 'Anonymous session ready', key: 'anon', duration: 1.2 });
+                          navigate('/victim/report');
+                        } catch (err) {
+                          console.error('Anonymous creation failed', err);
+                          message.error(err?.response?.data?.message || err.message || 'Unable to create anonymous account');
+                          // fallback to login page
+                          navigate('/login');
+                        }
+                      }}
                     >
                       Report
                     </Button>

@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+// src/pages/admin/UserManagement.jsx
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   App as AntApp,
   Card,
@@ -10,543 +11,870 @@ import {
   Input,
   Select,
   Space,
-  Tooltip,
   Avatar,
   Modal,
   Form,
   Row,
   Col,
+  Grid,
+  DatePicker,
+  Descriptions,
 } from "antd";
 import {
   UserOutlined,
-  SafetyOutlined,
-  TeamOutlined,
   SearchOutlined,
   ReloadOutlined,
-  EyeOutlined,
   EditOutlined,
-  DeleteOutlined
+  DownloadOutlined,
+  CalendarOutlined,
+  MailOutlined,
+  IdcardOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
-import Sidebar from "../../components/Sidebar";
 
 const { Header, Content } = Layout;
 const { Search } = Input;
-const { Option } = Select;
+const { RangePicker } = DatePicker;
 
 export default function UserManagement() {
   const { message } = AntApp.useApp();
+  const screens = Grid.useBreakpoint();
+
+  // Brand
+  const BRAND = {
+    violet: "#7A5AF8",
+    pink: "#e91e63",
+    green: "#52c41a",
+    blue: "#1890ff",
+    pageBg: "linear-gradient(180deg, #faf9ff 0%, #f6f3ff 60%, #ffffff 100%)",
+    softBorder: "rgba(122,90,248,0.18)",
+    rowHover: "#F1EEFF", // opaque hover bg so nothing shows through
+  };
+  const glassCard = {
+    borderRadius: 14,
+    background:
+      "linear-gradient(145deg, rgba(255,255,255,0.82), rgba(255,255,255,0.58))",
+    backdropFilter: "blur(10px)",
+    WebkitBackdropFilter: "blur(10px)",
+    border: `1px solid ${BRAND.softBorder}`,
+    boxShadow: "0 10px 26px rgba(16,24,40,0.06)",
+  };
+
+  // Sizing / layout control
+  const HEADER_H = 70;
+  const TOP_PAD = 12;
+  const [tableY, setTableY] = useState(520);
+  const pageRef = useRef(null);
+
+  // ensure header doesn't overlap a sidebar (measure .ant-layout-sider if present)
+  const [siderLeft, setSiderLeft] = useState(0);
+  useEffect(() => {
+    const measure = () => {
+      const s = document.querySelector(".ant-layout-sider");
+      const w = s ? Math.round(s.getBoundingClientRect().width) : 0;
+      setSiderLeft(w);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    // also observe DOM changes in case sider toggles
+    const mo = new MutationObserver(measure);
+    mo.observe(document.body, { childList: true, subtree: true, attributes: true });
+    return () => {
+      window.removeEventListener("resize", measure);
+      mo.disconnect();
+    };
+  }, []);
+
+  // State
   const [loading, setLoading] = useState(true);
-  const [collapsed, setCollapsed] = useState(false);
   const [allUsers, setAllUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
-  const [searchText, setSearchText] = useState('');
-  const [filterType, setFilterType] = useState('all');
-  const [editModalVisible, setEditModalVisible] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
-  const [form] = Form.useForm();
-  const currentRole = Form.useWatch("role", form);
-  const isAnonymous = currentRole === "anonymous";
-  const [isViewMode, setIsViewMode] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [dateRange, setDateRange] = useState(null);
 
+  // Modal (right-side)
+  const [modalOpen, setModalOpen] = useState(false);
+  const [mode, setMode] = useState("view"); // view | edit
+  const [activeUser, setActiveUser] = useState(null);
+  const [form] = Form.useForm();
+
+  // Compute available height & width (works when sidebar expands/collapses)
+  useEffect(() => {
+    const calc = () => {
+      if (!pageRef.current) return;
+      const rect = pageRef.current.getBoundingClientRect();
+      const available = window.innerHeight - rect.top - TOP_PAD;
+      const y = Math.max(220, available - 180);
+      setTableY(y);
+
+      // ensure content can shrink next to Sider (avoids clipping)
+      pageRef.current.style.width = "100%";
+      pageRef.current.style.minWidth = "0";
+    };
+
+    calc();
+    window.addEventListener("resize", calc);
+
+    const ro = new ResizeObserver(calc);
+    ro.observe(document.body);
+
+    const t = setTimeout(calc, 50);
+    return () => {
+      window.removeEventListener("resize", calc);
+      ro.disconnect();
+      clearTimeout(t);
+    };
+  }, []);
+
+  // Fetch users
   const fetchAllUsers = async () => {
     try {
       setLoading(true);
       const { data } = await api.get("/api/admin/users");
-
       if (data.success) {
-        // Combine all user types with proper formatting
-        const formattedUsers = [];
-
-        // Add admins
-        if (data.data.admins) {
-          data.data.admins.forEach(admin => {
-            formattedUsers.push({
-              key: `admin_${admin._id}`,
-              id: admin._id,
-              userType: 'admin',
-              firstName: admin.firstName,
-              middleInitial: admin.middleInitial,
-              lastName: admin.lastName,
-              name: `${admin.firstName} ${admin.middleInitial ? admin.middleInitial + ' ' : ''}${admin.lastName}`,
-              email: admin.adminEmail,
-              username: admin.adminID,
-              role: admin.adminRole,
-              status: admin.status,
-              isDeleted: admin.isDeleted,
-              createdAt: admin.createdAt,
-              avatar: admin.firstName?.charAt(0) + admin.lastName?.charAt(0)
-            });
-          });
-        }
-
-        // Add victims
-        if (data.data.victims) {
-          data.data.victims.forEach(victim => {
-            formattedUsers.push({
-              key: `victim_${victim._id}`,
-              id: victim._id,
-              userType: 'victim',
-              firstName: victim.firstName,
-              middleInitial: victim.middleInitial,
-              lastName: victim.lastName,
-              name: `${victim.firstName} ${victim.middleInitial ? victim.middleInitial + ' ' : ''}${victim.lastName}`,
-              email: victim.victimEmail || 'N/A',
-              username: victim.victimUsername,
-              role: victim.victimAccount,
-              status: victim.isAnonymous ? 'anonymous' : 'regular',
-              isDeleted: victim.isDeleted,
-              createdAt: victim.createdAt,
-              avatar: victim.firstName?.charAt(0) + victim.lastName?.charAt(0)
-            });
-          });
-        }
-
-        // Add officials
-        if (data.data.officials) {
-          data.data.officials.forEach(official => {
-            formattedUsers.push({
-              key: `official_${official._id}`,
-              id: official._id,
-              userType: 'official',
-              firstName: official.firstName,
-              middleInitial: official.middleInitial,
-              lastName: official.lastName,
-              name: `${official.firstName} ${official.middleInitial ? official.middleInitial + ' ' : ''}${official.lastName}`,
-              email: official.officialEmail,
-              username: official.officialID,
-              role: official.position,
-              status: official.status,
-              isDeleted: official.isDeleted,
-              createdAt: official.createdAt,
-              avatar: official.firstName?.charAt(0) + official.lastName?.charAt(0)
-            });
-          });
-        }
-
-        setAllUsers(formattedUsers);
-        setFilteredUsers(formattedUsers);
+        const formatted = [];
+        data.data.admins?.forEach((a) =>
+          formatted.push({
+            key: `admin_${a._id}`,
+            id: a._id,
+            userType: "admin",
+            firstName: a.firstName,
+            middleInitial: a.middleInitial,
+            lastName: a.lastName,
+            name: `${a.firstName} ${a.middleInitial ? a.middleInitial + " " : ""}${a.lastName}`,
+            email: a.adminEmail,
+            username: a.adminID,
+            role: a.adminRole,
+            status: a.status,
+            isDeleted: a.isDeleted,
+            createdAt: a.createdAt,
+            avatar: (a.firstName?.[0] || "") + (a.lastName?.[0] || ""),
+          })
+        );
+        data.data.victims?.forEach((v) =>
+          formatted.push({
+            key: `victim_${v._id}`,
+            id: v._id,
+            userType: "victim",
+            firstName: v.firstName,
+            middleInitial: v.middleInitial,
+            lastName: v.lastName,
+            name: `${v.firstName} ${v.middleInitial ? v.middleInitial + " " : ""}${v.lastName}`,
+            email: v.victimEmail || "N/A",
+            username: v.victimUsername,
+            role: v.victimAccount,
+            status: v.isAnonymous ? "anonymous" : "regular",
+            isDeleted: v.isDeleted,
+            createdAt: v.createdAt,
+            avatar: (v.firstName?.[0] || "") + (v.lastName?.[0] || ""),
+          })
+        );
+        data.data.officials?.forEach((o) =>
+          formatted.push({
+            key: `official_${o._id}`,
+            id: o._id,
+            userType: "official",
+            firstName: o.firstName,
+            middleInitial: o.middleInitial,
+            lastName: o.lastName,
+            name: `${o.firstName} ${o.middleInitial ? o.middleInitial + " " : ""}${o.lastName}`,
+            email: o.officialEmail,
+            username: o.officialID,
+            role: o.position,
+            status: o.status,
+            isDeleted: o.isDeleted,
+            createdAt: o.createdAt,
+            avatar: (o.firstName?.[0] || "") + (o.lastName?.[0] || ""),
+          })
+        );
+        setAllUsers(formatted);
+        setFilteredUsers(formatted);
       }
     } catch (err) {
-      console.error('Error fetching users:', err);
+      console.error("Error fetching users:", err);
       message.error("Failed to load users");
     } finally {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchAllUsers();
   }, []);
 
-  // Helpers to build API path for user type
-  const getApiPath = (userType) => {
-    if (userType === 'admin') return 'admins';
-    if (userType === 'official') return 'officials';
-    return 'victims';
-  };
-
-  const handleViewUser = (record) => {
-    // For now, reuse edit modal for viewing details (read-only)
-    setEditingUser(record);
-    // Prefer explicit fields if present (avoids splitting errors)
+  // Open right modal
+  const openModalFor = (record, m = "view") => {
+    setActiveUser(record);
+    setMode(m);
     form.setFieldsValue({
-      firstName: record.firstName || record.name.split(' ')[0] || '',
-      middleInitial: record.middleInitial || '',
-      lastName: record.lastName || record.name.split(' ').slice(1).join(' ') || '',
-      email: record.email === 'N/A' ? '' : record.email,
+      firstName: record.firstName || record.name.split(" ")[0] || "",
+      middleInitial: record.middleInitial || "",
+      lastName: record.lastName || record.name.split(" ").slice(1).join(" ") || "",
+      email: record.email === "N/A" ? "" : record.email,
       role: record.role,
-      status: record.status
+      status: record.status,
     });
-    setIsViewMode(true);
-    setEditModalVisible(true);
+    setModalOpen(true);
   };
 
-  const handleEditUser = (record) => {
-    setEditingUser(record);
-    // split name into first/last for editing convenience
-    // Prefer explicit fields if present (avoids splitting errors)
-    form.setFieldsValue({
-      firstName: record.firstName || record.name.split(' ')[0] || '',
-      middleInitial: record.middleInitial || '',
-      lastName: record.lastName || record.name.split(' ').slice(1).join(' ') || '',
-      email: record.email === 'N/A' ? '' : record.email,
-      role: record.role,
-      status: record.status
-    });
-    setIsViewMode(false);
-    setEditModalVisible(true);
-  };
-
-  const handleDeleteUser = async (record) => {
-    try {
-      setLoading(true);
-      const path = getApiPath(record.userType);
-      // Use soft-delete endpoint instead of hard delete
-      const res = await api.put(`/api/admin/${path}/soft-delete/${record.id}`);
-      if (res && res.data && res.data.success) {
-        message.success('User soft-deleted');
-      } else {
-        console.error('Soft-delete response:', res);
-        message.error('Failed to delete user: ' + (res.data?.message || 'Unknown error'));
-      }
-      fetchAllUsers();
-    } catch (err) {
-      console.error('Soft-delete failed', err.response || err);
-      const errMsg = err.response?.data?.message || err.message || 'Failed to delete user';
-      message.error(errMsg);
-    } finally {
-      setLoading(false);
+  // Helpers
+  const getStatusColor = (status, userType) => {
+    if (userType === "victim") return status === "anonymous" ? "orange" : "blue";
+    switch (status) {
+      case "approved":
+        return "green";
+      case "pending":
+        return "orange";
+      case "rejected":
+        return "red";
+      default:
+        return "default";
     }
   };
+  const typePillBg = (type) =>
+    type === "admin" ? "#e9f3ff" : type === "official" ? "#e9f9e6" : "#ffe9f0";
 
   const handleUpdateUser = async (values) => {
     try {
-      setLoading(true);
-      const record = editingUser;
-      const path = getApiPath(record.userType);
+      const record = activeUser;
+      const path =
+        record.userType === "admin"
+          ? "admins"
+          : record.userType === "official"
+          ? "officials"
+          : "victims";
 
-      // Build payload depending on user type
       let payload = {};
-      if (record.userType === 'admin') {
+      if (record.userType === "admin") {
         payload = {
           firstName: values.firstName,
           lastName: values.lastName,
           adminEmail: values.email,
           adminRole: values.role,
-          status: values.status
+          status: values.status,
         };
-      } else if (record.userType === 'official') {
+      } else if (record.userType === "official") {
         payload = {
           firstName: values.firstName,
           lastName: values.lastName,
           officialEmail: values.email,
           position: values.role,
-          status: values.status
+          status: values.status,
         };
       } else {
-        // victim
-        payload = {
-          firstName: values.firstName,
-          lastName: values.lastName,
-        };
-
-        // Only include email if role is NOT anonymous and email is provided
-        if (values.role !== "anonymous" && values.email && values.email.trim() !== '') {
+        payload = { firstName: values.firstName, lastName: values.lastName };
+        if (values.role !== "anonymous" && values.email && values.email.trim() !== "")
           payload.victimEmail = values.email;
-        }
       }
-
-
-      // Remove any undefined or empty string fields to avoid validation failures
-      Object.keys(payload).forEach(k => {
+      Object.keys(payload).forEach((k) => {
         if (
           payload[k] === undefined ||
-          (typeof payload[k] === 'string' && payload[k].trim() === '')
-        ) {
-          delete payload[k]; // removes email if left blank
-        }
+          (typeof payload[k] === "string" && payload[k].trim() === "")
+        )
+          delete payload[k];
       });
 
       const res = await api.put(`/api/admin/${path}/${record.id}`, payload);
-      if (res && res.data && res.data.success) {
-        message.success('User updated');
-        setEditModalVisible(false);
-        setEditingUser(null);
+      if (res?.data?.success) {
+        message.success("User updated");
+        setMode("view");
+        fetchAllUsers();
       } else {
-        console.error('Update response:', res);
-        message.error('Failed to update user: ' + (res.data?.message || 'Unknown error'));
+        message.error(res?.data?.message || "Failed to update user");
       }
-      setEditModalVisible(false);
-      setEditingUser(null);
-      fetchAllUsers();
     } catch (err) {
-      console.error('Update failed', err.response || err);
-      const errMsg = err.response?.data?.message || err.message || 'Failed to update user';
-      message.error(errMsg);
+      message.error(
+        err.response?.data?.message || err.message || "Failed to update user"
+      );
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!activeUser) return;
+    try {
+      setLoading(true);
+      const path =
+        activeUser.userType === "admin"
+          ? "admins"
+          : activeUser.userType === "official"
+          ? "officials"
+          : "victims";
+      const res = await api.put(`/api/admin/${path}/soft-delete/${activeUser.id}`);
+      if (res?.data?.success) {
+        message.success("User soft-deleted");
+        setModalOpen(false);
+        fetchAllUsers();
+      } else {
+        message.error(res?.data?.message || "Failed to delete user");
+      }
+    } catch (err) {
+      message.error(
+        err.response?.data?.message || err.message || "Failed to delete user"
+      );
     } finally {
       setLoading(false);
     }
   };
 
+  // Filtering
   useEffect(() => {
-    let filtered = allUsers;
-
-    // Filter by user type
-    if (filterType !== 'all') {
-      filtered = filtered.filter(user => user.userType === filterType);
+    let filtered = [...allUsers];
+    if (filterType !== "all") filtered = filtered.filter((u) => u.userType === filterType);
+    if (filterStatus !== "all")
+      filtered = filtered.filter(
+        (u) => String(u.status).toLowerCase() === filterStatus
+      );
+    if (dateRange && dateRange.length === 2) {
+      const [start, end] = dateRange;
+      filtered = filtered.filter((u) => {
+        const t = new Date(u.createdAt).getTime();
+        return (
+          t >= start.startOf("day").valueOf() && t <= end.endOf("day").valueOf()
+        );
+      });
     }
-
-    // Filter by search text
     if (searchText) {
-      filtered = filtered.filter(user =>
-        user.name.toLowerCase().includes(searchText.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchText.toLowerCase()) ||
-        user.username.toLowerCase().includes(searchText.toLowerCase())
+      const q = searchText.toLowerCase();
+      filtered = filtered.filter(
+        (u) =>
+          u.name.toLowerCase().includes(q) ||
+          (u.email || "").toLowerCase().includes(q) ||
+          (u.username || "").toLowerCase().includes(q)
       );
     }
-
     setFilteredUsers(filtered);
-  }, [allUsers, searchText, filterType]);
+  }, [allUsers, searchText, filterType, filterStatus, dateRange]);
 
-  const getUserTypeIcon = (type) => {
-    switch (type) {
-      case 'admin': return <SafetyOutlined style={{ color: '#1890ff' }} />;
-      case 'official': return <TeamOutlined style={{ color: '#52c41a' }} />;
-      case 'victim': return <UserOutlined style={{ color: '#e91e63' }} />;
-      default: return <UserOutlined />;
-    }
+  // Columns (keep fixed left)
+  const columns = useMemo(
+    () => [
+      {
+        title: "User",
+        dataIndex: "name",
+        key: "name",
+        fixed: "left",
+        width: 260,
+        render: (text, record) => (
+          <Space>
+            <Avatar style={{ background: typePillBg(record.userType), color: "#444" }}>
+              {record.avatar}
+            </Avatar>
+            <div>
+              <div style={{ fontWeight: 700 }}>{text}</div>
+              <div style={{ fontSize: 12, color: "#999" }}>@{record.username}</div>
+            </div>
+          </Space>
+        ),
+        onCell: (record) => ({
+          onClick: () => openModalFor(record, "view"),
+          style: { cursor: "pointer" },
+        }),
+      },
+      {
+        title: "Email",
+        dataIndex: "email",
+        key: "email",
+        ellipsis: true,
+        width: 260,
+        responsive: ["sm"],
+      },
+      {
+        title: "Type",
+        dataIndex: "userType",
+        key: "userType",
+        width: 120,
+        render: (t) => <Tag style={{ borderRadius: 999 }}>{t}</Tag>,
+        responsive: ["md"],
+      },
+      {
+        title: "Role/Position",
+        dataIndex: "role",
+        key: "role",
+        width: 160,
+        render: (r) => <Tag style={{ borderRadius: 999 }}>{r}</Tag>,
+        responsive: ["lg"],
+      },
+      {
+        title: "Status",
+        dataIndex: "status",
+        key: "status",
+        width: 140,
+        render: (s, r) => (
+          <Tag color={getStatusColor(s, r.userType)} style={{ borderRadius: 999 }}>
+            {String(s).charAt(0).toUpperCase() + String(s).slice(1)}
+          </Tag>
+        ),
+        responsive: ["sm"],
+      },
+      {
+        title: "Created",
+        dataIndex: "createdAt",
+        key: "createdAt",
+        width: 180,
+        render: (d) => (d ? new Date(d).toLocaleString() : "-"),
+        responsive: ["xl"],
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [screens.xs, screens.sm, screens.md, screens.lg, screens.xl]
+  );
+
+  // Metrics
+  const userCounts = useMemo(
+    () => ({
+      total: allUsers.length,
+      admins: allUsers.filter((u) => u.userType === "admin").length,
+      officials: allUsers.filter((u) => u.userType === "official").length,
+      victims: allUsers.filter((u) => u.userType === "victim").length,
+    }),
+    [allUsers]
+  );
+
+  // Export CSV
+  const exportCsv = () => {
+    const rows = filteredUsers.map((u) => ({
+      Name: u.name,
+      Username: u.username,
+      Email: u.email,
+      Type: u.userType,
+      Role: u.role,
+      Status: u.status,
+      CreatedAt: u.createdAt ? new Date(u.createdAt).toISOString() : "",
+    }));
+    const header = "Name,Username,Email,Type,Role,Status,CreatedAt";
+    const body = rows
+      .map((r) =>
+        Object.values(r)
+          .map((v) => `"${String(v ?? "").replaceAll('"', '""')}"`)
+          .join(",")
+      )
+      .join("\n");
+    const csv = header + "\n" + body;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "users.csv";
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
-  const getUserTypeColor = (type) => {
-    switch (type) {
-      case 'admin': return 'blue';
-      case 'official': return 'green';
-      case 'victim': return 'pink';
-      default: return 'default';
-    }
-  };
-
-  const getStatusColor = (status, userType) => {
-    if (userType === 'victim') {
-      return status === 'anonymous' ? 'orange' : 'blue';
-    }
-    switch (status) {
-      case 'approved': return 'green';
-      case 'pending': return 'orange';
-      case 'rejected': return 'red';
-      default: return 'default';
-    }
-  };
-
-  const columns = [
-    {
-      title: 'User',
-      dataIndex: 'name',
-      key: 'name',
-      render: (text, record) => (
-        <Space>
-          <Avatar size="small" style={{ backgroundColor: getUserTypeColor(record.userType) }}>
-            {record.avatar}
-          </Avatar>
-          <div>
-            <div style={{ fontWeight: 500 }}>{text}</div>
-            <div style={{ fontSize: '12px', color: '#999' }}>@{record.username}</div>
-          </div>
-        </Space>
-      ),
-    },
-    {
-      title: 'Email',
-      dataIndex: 'email',
-      key: 'email',
-    },
-    {
-      title: 'Type',
-      dataIndex: 'userType',
-      key: 'userType',
-      render: (type) => (
-        <Tag icon={getUserTypeIcon(type)} color={getUserTypeColor(type)}>
-          {type.charAt(0).toUpperCase() + type.slice(1)}
-        </Tag>
-      ),
-    },
-    {
-      title: 'Role/Position',
-      dataIndex: 'role',
-      key: 'role',
-      render: (role) => (
-        <Tag>{role}</Tag>
-      ),
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status, record) => (
-        <Tag color={getStatusColor(status, record.userType)}>
-          {status.charAt(0).toUpperCase() + status.slice(1)}
-        </Tag>
-      ),
-    },
-    {
-      title: 'Created',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (date) => new Date(date).toLocaleString(),
-    },
-    {
-      title: 'Actions',
-      key: 'actions',
-      render: (_, record) => (
-        <Space>
-          <Tooltip title="View Details">
-            <Button type="link" icon={<EyeOutlined />} size="small" onClick={() => handleViewUser(record)} />
-          </Tooltip>
-          <Tooltip title="Edit User">
-            <Button type="link" icon={<EditOutlined />} size="small" onClick={() => handleEditUser(record)} />
-          </Tooltip>
-          <Tooltip title="Edit User">
-            <Button type="link" icon={<DeleteOutlined />} size="small" danger onClick={() => handleDeleteUser(record)} />
-          </Tooltip>
-        </Space>
-      ),
-    },
-  ];
-
-  const PINK = "#e91e63";
-  const LIGHT_PINK = "#fff0f5";
-  const SOFT_PINK = "#ffd1dc";
-
-  const userCounts = {
-    total: allUsers.length,
-    admins: allUsers.filter(u => u.userType === 'admin').length,
-    officials: allUsers.filter(u => u.userType === 'official').length,
-    victims: allUsers.filter(u => u.userType === 'victim').length,
-  };
+  const modalWidth = screens.xl ? 700 : screens.lg ? 660 : screens.md ? "92vw" : "96vw";
 
   return (
-    <Layout style={{ minHeight: "100vh", width: "100%", background: LIGHT_PINK }}>
+    <Layout
+      style={{
+        minHeight: "100vh",
+        width: "100%",
+        background: BRAND.pageBg,
+        overflow: "hidden",
+      }}
+    >
+      {/* Solid top bar */}
       <Header
         style={{
-          background: "#fff",
-          borderBottom: `1px solid ${SOFT_PINK}`,
+          position: "fixed",
+          top: 0,
+          left: siderLeft,
+          zIndex: 100,
+          background: "#ffffff",
+          borderBottom: `1px solid ${BRAND.softBorder}`,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          paddingInline: 16,
+          paddingInline: 12,
+          height: HEADER_H,
+          width: `calc(100% - ${siderLeft}px)`,
+          boxSizing: "border-box",
         }}
       >
-        <Typography.Title level={4} style={{ margin: 0, color: PINK }}>
+        <Typography.Title level={4} style={{ margin: 0, color: BRAND.violet }}>
           User Management
         </Typography.Title>
-        <Button
-          onClick={fetchAllUsers}
-          icon={<ReloadOutlined />}
-          style={{ borderColor: PINK, color: PINK }}
-        >
-          Refresh
-        </Button>
+        <Space wrap>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={fetchAllUsers}
+            style={{ borderColor: BRAND.violet, color: BRAND.violet }}
+          >
+            Refresh
+          </Button>
+          <Button icon={<DownloadOutlined />} onClick={exportCsv}>
+            Export
+          </Button>
+        </Space>
       </Header>
 
-      <Content style={{ padding: 16, overflowX: "hidden" }}>
-        {/* Summary Cards */}
-        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-          <Col xs={12} md={6}>
-            <Card style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}>
-              <Typography.Text type="secondary">Total Users</Typography.Text>
-              <Typography.Title level={2} style={{ margin: 0, color: PINK }}>
-                {userCounts.total}
-              </Typography.Title>
-            </Card>
-          </Col>
-          <Col xs={12} md={6}>
-            <Card style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}>
-              <Typography.Text type="secondary">Administrators</Typography.Text>
-              <Typography.Title level={2} style={{ margin: 0, color: '#1890ff' }}>
-                {userCounts.admins}
-              </Typography.Title>
-            </Card>
-          </Col>
-          <Col xs={12} md={6}>
-            <Card style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}>
-              <Typography.Text type="secondary">Officials</Typography.Text>
-              <Typography.Title level={2} style={{ margin: 0, color: '#52c41a' }}>
-                {userCounts.officials}
-              </Typography.Title>
-            </Card>
-          </Col>
-          <Col xs={12} md={6}>
-            <Card style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}>
-              <Typography.Text type="secondary">Victims</Typography.Text>
-              <Typography.Title level={2} style={{ margin: 0, color: PINK }}>
-                {userCounts.victims}
-              </Typography.Title>
-            </Card>
-          </Col>
-        </Row>
+      <Content
+        ref={pageRef}
+        style={{
+          padding: TOP_PAD,
+          paddingTop: HEADER_H + TOP_PAD, // offset for fixed header
+          width: "100%",
+          minWidth: 0,
+          marginLeft: 0,
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          boxSizing: "border-box",
+        }}
+      >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "100%",
+            margin: 0,
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+            paddingInline: screens.xs ? 6 : 12,
+            transition: "width .25s ease",
+            boxSizing: "border-box",
+          }}
+        >
+          {/* KPIs */}
+          <Row gutter={[10, 10]}>
+            {[
+              ["Total Users", userCounts.total, BRAND.violet],
+              ["Administrators", userCounts.admins, BRAND.blue],
+              ["Officials", userCounts.officials, BRAND.green],
+              ["Victims", userCounts.victims, BRAND.pink],
+            ].map(([label, value, color], i) => (
+              <Col xs={12} md={6} key={i}>
+                <Card style={{ ...glassCard, padding: 10 }}>
+                  <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+                    {label}
+                  </Typography.Text>
+                  <Typography.Title
+                    level={3}
+                    style={{ margin: 0, color, fontSize: 24 }}
+                  >
+                    {value}
+                  </Typography.Title>
+                </Card>
+              </Col>
+            ))}
+          </Row>
 
-        {/* Users Table */}
-        <Card
-          title="All Users"
-          style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}
-          extra={
-            <Space>
-              <Search
-                placeholder="Search users..."
-                allowClear
-                enterButton={<SearchOutlined />}
-                style={{ width: 250 }}
-                onSearch={setSearchText}
-                onChange={(e) => setSearchText(e.target.value)}
-              />
-              <Select
-                value={filterType}
-                onChange={setFilterType}
-                style={{ width: 150 }}
-              >
-                <Option value="all">All Types</Option>
-                <Option value="admin">Administrators</Option>
-                <Option value="official">Officials</Option>
-                <Option value="victim">Victims</Option>
-              </Select>
+          {/* Toolbar */}
+          <Card style={{ ...glassCard, padding: 10 }}>
+            <Space wrap style={{ width: "100%", justifyContent: "space-between" }}>
+              <Space wrap>
+                <Search
+                  placeholder="Search name, email, username…"
+                  allowClear
+                  enterButton={<SearchOutlined />}
+                  style={{ width: 200 }}
+                  value={searchText}
+                  onSearch={setSearchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                />
+                <Select
+                  value={filterType}
+                  onChange={setFilterType}
+                  style={{ width: 160 }}
+                  options={[
+                    { value: "all", label: "All Types" },
+                    { value: "admin", label: "Administrators" },
+                    { value: "official", label: "Officials" },
+                    { value: "victim", label: "Victims" },
+                  ]}
+                />
+                <Select
+                  value={filterStatus}
+                  onChange={setFilterStatus}
+                  style={{ width: 160 }}
+                  options={[
+                    { value: "all", label: "All Status" },
+                    { value: "approved", label: "Approved" },
+                    { value: "pending", label: "Pending" },
+                    { value: "rejected", label: "Rejected" },
+                    { value: "anonymous", label: "Anonymous" },
+                    { value: "regular", label: "Regular" },
+                  ]}
+                />
+                <RangePicker
+                  onChange={setDateRange}
+                  allowEmpty={[true, true]}
+                  placeholder={["Start", "End"]}
+                  suffixIcon={<CalendarOutlined />}
+                  style={{ width: screens.xs ? 220 : 260 }}
+                />
+              </Space>
+              <Space>
+                <Button icon={<ReloadOutlined />} onClick={fetchAllUsers} />
+                <Button icon={<DownloadOutlined />} onClick={exportCsv}>
+                  Export
+                </Button>
+              </Space>
             </Space>
+          </Card>
+
+          {/* Table */}
+          <Card style={{ ...glassCard, padding: 0 }}>
+            <Table
+              columns={columns}
+              dataSource={filteredUsers}
+              loading={loading}
+              size="middle"
+              sticky
+              rowKey="key"
+              pagination={false}
+              tableLayout="fixed"
+              scroll={{ y: tableY, x: "max-content" }}
+              onRow={(record) => ({
+                onClick: () => openModalFor(record, "view"),
+                style: { cursor: "pointer" },
+              })}
+              rowClassName={(record) => (activeUser?.key === record.key ? "is-active" : "")}
+            />
+          </Card>
+        </div>
+
+        {/* RIGHT-SIDE FLOATING MODAL */}
+        <Modal
+          open={modalOpen}
+          onCancel={() => setModalOpen(false)}
+          footer={null}
+          centered={false}
+          width={modalWidth}
+          wrapClassName="floating-side"
+          className="floating-modal"
+          maskStyle={{
+            backdropFilter: "blur(2px)",
+            background: "rgba(17,17,26,0.24)",
+          }}
+          styles={{ body: { padding: 12 } }}
+          title={
+            activeUser ? (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 8,
+                }}
+              >
+                <Space>
+                  <Avatar
+                    style={{ background: typePillBg(activeUser.userType), color: "#444" }}
+                  >
+                    {activeUser.avatar}
+                  </Avatar>
+                  <div>
+                    <div style={{ fontWeight: 800 }}>
+                      {activeUser.name} <Tag style={{ marginLeft: 6 }}>{activeUser.userType}</Tag>
+                    </div>
+                    <Typography.Text type="secondary">@{activeUser.username}</Typography.Text>
+                  </div>
+                </Space>
+                <Space>
+                  {mode === "view" ? (
+                    <Button
+                      type="primary"
+                      onClick={() => setMode("edit")}
+                      icon={<EditOutlined />}
+                      style={{ background: BRAND.violet, borderColor: BRAND.violet }}
+                    >
+                      Edit
+                    </Button>
+                  ) : (
+                    <Button onClick={() => setMode("view")}>Cancel</Button>
+                  )}
+                  <Button danger onClick={handleDeleteUser}>Delete</Button>
+                </Space>
+              </div>
+            ) : (
+              "User"
+            )
           }
         >
-          <Table
-            columns={columns}
-            dataSource={filteredUsers}
-            loading={loading}
-            // Keep table area fixed: show 6 rows per page and allow vertical scrolling
-            pagination={{
-              pageSize: 6,
-              showSizeChanger: false,
-              showQuickJumper: true,
-              showTotal: (total, range) =>
-                `${range[0]}-${range[1]} of ${total} users`,
-            }}
-            // Set a fixed vertical height for the table body so it doesn't extend the page
-            scroll={{ x: "max-content", y: 480 }}
-          />
-          <Modal
-            title={editingUser ? `${isViewMode ? 'View' : 'Edit'} ${editingUser.userType} - ${editingUser.name}` : 'Edit User'}
-            open={editModalVisible}
-            onCancel={() => { setEditModalVisible(false); setEditingUser(null); setIsViewMode(false); }}
-            footer={isViewMode ? [
-              <Button key="close" onClick={() => { setEditModalVisible(false); setEditingUser(null); setIsViewMode(false); }}>Close</Button>
-            ] : undefined}
-            okText="Save"
-            onOk={() => { form.validateFields().then(vals => handleUpdateUser(vals)); }}
-          >
-            <Form
-              form={form}
-              layout="horizontal"
-              labelCol={{ flex: "120px" }}
-              wrapperCol={{ flex: 1 }}
-              labelAlign="left"
-            >
-              <Form.Item name="firstName" label="First name" rules={[{ required: true }]} style={{ marginBottom: 12, marginTop: 20 }} >
-                <Input disabled={isViewMode || isAnonymous} />
-              </Form.Item>
-              <Form.Item name="lastName" label="Last name" rules={[{ required: true }]} style={{ marginBottom: 12 }}>
-                <Input disabled={isViewMode || isAnonymous} />
-              </Form.Item>
-              <Form.Item name="email" label="Email address" style={{ marginBottom: 12 }}>
-                <Input disabled={isViewMode || isAnonymous} />
-              </Form.Item>
-              <Form.Item name="role" label="Role/Position" style={{ marginBottom: 12 }}>
-                <Input disabled={isViewMode} />
-              </Form.Item>
-              <Form.Item name="status" label="Status" style={{ marginBottom: 12 }}>
-                <Select disabled={isViewMode}>
-                  <Option value="approved">Approved</Option>
-                  <Option value="pending">Pending</Option>
-                </Select>
-              </Form.Item>
-            </Form>
-          </Modal>
-        </Card>
+          {activeUser && (
+            <div className="modal-inner-animate">
+              {/* Details */}
+              <Card style={{ ...glassCard, borderRadius: 16, marginBottom: 12 }}>
+                <Descriptions
+                  bordered
+                  size="small"
+                  column={1}
+                  labelStyle={{ width: 140, background: "#fafafa" }}
+                  style={{ borderRadius: 12, overflow: "hidden" }}
+                >
+                  <Descriptions.Item label="Email">
+                    <Space>
+                      <MailOutlined /> {activeUser.email || "—"}
+                    </Space>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Username">
+                    <Space>
+                      <IdcardOutlined /> {activeUser.username}
+                    </Space>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Role/Position">
+                    {activeUser.role}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Status">
+                    <Tag
+                      color={getStatusColor(activeUser.status, activeUser.userType)}
+                      style={{ borderRadius: 999 }}
+                    >
+                      {String(activeUser.status).charAt(0).toUpperCase() + String(activeUser.status).slice(1)}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Created">
+                    {activeUser.createdAt
+                      ? new Date(activeUser.createdAt).toLocaleString()
+                      : "-"}
+                  </Descriptions.Item>
+                </Descriptions>
+              </Card>
+
+              {/* Edit */}
+              <Card style={{ ...glassCard, borderRadius: 16 }}>
+                <Form
+                  form={form}
+                  layout="vertical"
+                  onFinish={handleUpdateUser}
+                  disabled={mode === "view"}
+                >
+                  <Row gutter={[10, 0]}>
+                    <Col xs={24} md={12}>
+                      <Form.Item
+                        name="firstName"
+                        label="First name"
+                        rules={[{ required: true }]}
+                      >
+                        <Input prefix={<UserOutlined />} />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} md={12}>
+                      <Form.Item
+                        name="lastName"
+                        label="Last name"
+                        rules={[{ required: true }]}
+                      >
+                        <Input />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} md={12}>
+                      <Form.Item name="middleInitial" label="Middle initial">
+                        <Input maxLength={1} />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} md={12}>
+                      <Form.Item name="role" label="Role / Position">
+                        <Input />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24}>
+                      <Form.Item name="email" label="Email">
+                        <Input type="email" />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} md={12}>
+                      <Form.Item name="status" label="Status">
+                        <Select
+                          options={[
+                            { value: "approved", label: "Approved" },
+                            { value: "pending", label: "Pending" },
+                            { value: "rejected", label: "Rejected" },
+                            { value: "anonymous", label: "Anonymous" },
+                            { value: "regular", label: "Regular" },
+                          ]}
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+
+                  {mode === "edit" && (
+                    <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                      <Button onClick={() => setMode("view")}>Cancel</Button>
+                      <Button
+                        type="primary"
+                        htmlType="submit"
+                        style={{ background: BRAND.violet, borderColor: BRAND.violet }}
+                      >
+                        Save Changes
+                      </Button>
+                    </div>
+                  )}
+                </Form>
+              </Card>
+            </div>
+          )}
+        </Modal>
       </Content>
+
+      {/* Styles */}
+      <style>{`
+        html, body, #root { height: 100%; }
+        .ant-card { transition: transform .18s ease, box-shadow .18s ease; }
+        .ant-card:hover { transform: translateY(-1px); box-shadow: 0 16px 36px rgba(16,24,40,0.08); }
+        .ant-table-thead > tr > th { background: #fff !important; }
+
+        /* Base row hover (non-fixed cells) */
+        .ant-table .ant-table-tbody > tr:hover > td {
+          background: ${BRAND.rowHover} !important; /* opaque */
+        }
+
+        /* === OVERLAP FIX (final): keep User cell above Email while scrolling === */
+
+        /* Give normal cells a baseline stacking layer */
+        .ant-table .ant-table-tbody > tr > td {
+          position: relative;
+          z-index: 0;                         /* fixed cells render above this */
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        /* Keep the fixed-left cell on top and fully opaque */
+        .ant-table .ant-table-cell-fix-left {
+          position: sticky;                   /* reasserted */
+          left: 0;
+          z-index: 10 !important;             /* above normal body cells */
+          background: #ffffff !important;     /* solid so email can't show through */
+        }
+
+        /* Subtle edge to separate columns (optional) */
+        .ant-table .ant-table-cell-fix-left-last {
+          box-shadow: 6px 0 6px -6px rgba(16,24,40,0.10);
+        }
+
+        /* Hover/active states repaint the fixed cell too, and keep it above */
+        .ant-table .ant-table-tbody > tr:hover > .ant-table-cell-fix-left,
+        .ant-table .ant-table-tbody > tr.is-active > .ant-table-cell-fix-left {
+          background: ${BRAND.rowHover} !important; /* opaque hover */
+          z-index: 11 !important;                   /* stays above hovered row */
+        }
+
+        /* RIGHT-SIDE floating modal */
+        .floating-side { display: flex; align-items: flex-start; justify-content: flex-end; padding: 16px; }
+        .floating-side .ant-modal { margin: 0; top: ${HEADER_H}px; } /* place modal under fixed header */
+        .floating-modal .ant-modal-content {
+          border-radius: 18px;
+          overflow: hidden;
+          border: 1px solid ${BRAND.softBorder};
+          background: linear-gradient(145deg, rgba(255,255,255,0.95), rgba(255,255,255,0.86));
+          box-shadow: 0 24px 72px rgba(16,24,40,0.22);
+          max-height: 92vh;
+          display: flex;
+          flex-direction: column;
+        }
+        .floating-modal .ant-modal-header { background: rgba(245,245,255,0.7); border-bottom: 1px solid ${BRAND.softBorder}; border-radius: 18px 18px 0 0; padding: 10px 16px; }
+        .floating-modal .ant-modal-body { overflow: auto; }
+
+        @media (max-width: 768px) {
+          .floating-side { padding: 10px; }
+          .floating-modal .ant-modal-content { max-height: 94vh; }
+          .ant-table { font-size: 12px; }
+        }
+
+        .modal-inner-animate { animation: slideIn .28s cubic-bezier(.2,.7,.3,1) both; }
+        @keyframes slideIn { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+      `}</style>
     </Layout>
   );
 }

@@ -65,7 +65,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
   // ---- Menus with groups (dropdowns) ----
   const adminMenu = [
-    { type: "item", key: "/landing", icon: <HomeOutlined />, label: "Home" },
+   
     { type: "item", key: "/admin", icon: <DashboardOutlined />, label: "Dashboard" },
     {
       type: "group",
@@ -94,6 +94,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     },
     { type: "item", key: "/admin/logs", icon: <FileTextOutlined />, label: "System Logs" }, // ✅ restored
     { type: "item", key: "/admin/settings", icon: <SettingOutlined />, label: "Settings" },
+     { type: "item", key: "/landing", icon: <HomeOutlined />, label: "Home" },
   ];
 
   const officialMenu = [

@@ -61,6 +61,24 @@ export default function AlertsInsights() {
     const [alerts, setAlerts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [range, setRange] = useState('current'); // 'current' | 'previous' | 'last2' | 'all'
+
+    function formatRangeLabel(range) {
+        const now = new Date();
+        const monthName = (d) => d.toLocaleString(undefined, { month: 'short', year: 'numeric' });
+        if (range === 'current') return monthName(new Date(now.getFullYear(), now.getMonth(), 1));
+        if (range === 'previous') return monthName(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+        if (range === 'last2') return `${monthName(new Date(now.getFullYear(), now.getMonth() - 1, 1))} – ${monthName(new Date(now.getFullYear(), now.getMonth(), 1))}`;
+        return 'All time';
+    }
+
+    function getRangeBounds(range) {
+        const now = new Date();
+        if (range === 'current') return { since: new Date(now.getFullYear(), now.getMonth(), 1), until: null };
+        if (range === 'previous') return { since: new Date(now.getFullYear(), now.getMonth() - 1, 1), until: new Date(now.getFullYear(), now.getMonth(), 1) };
+        if (range === 'last2') return { since: new Date(now.getFullYear(), now.getMonth() - 1, 1), until: null };
+        return { since: new Date(0), until: null };
+    }
 
     const loadAlerts = async (withSpinner = true) => {
         try {
@@ -79,11 +97,28 @@ export default function AlertsInsights() {
         loadAlerts();
     }, []);
 
+    useEffect(() => {
+        // reload alerts when range changes to update displays
+        loadAlerts();
+    }, [range]);
+
     // KPI Metrics
-    const total = alerts.length;
-    const active = alerts.filter((a) => a.status === "Active").length;
-    const resolved = alerts.filter((a) => a.status === "Resolved").length;
-    const cancelled = alerts.filter((a) => a.status === "Cancelled").length;
+    const bounds = getRangeBounds(range);
+
+    const filteredAlerts = useMemo(() => {
+        return alerts.filter(a => {
+            const dt = new Date(a.createdAt);
+            if (bounds.since && dt < bounds.since) return false;
+            if (bounds.until && dt >= bounds.until) return false;
+            return true;
+        });
+    }, [alerts, range]);
+
+    // KPI Metrics (based on filteredAlerts)
+    const total = filteredAlerts.length;
+    const active = filteredAlerts.filter((a) => a.status === "Active").length;
+    const resolved = filteredAlerts.filter((a) => a.status === "Resolved").length;
+    const cancelled = filteredAlerts.filter((a) => a.status === "Cancelled").length;
 
     // Status Distribution Pie
     const statusData = useMemo(
@@ -92,24 +127,34 @@ export default function AlertsInsights() {
             { name: "Resolved", value: resolved },
             { name: "Cancelled", value: cancelled },
         ],
-        [alerts]
+        [filteredAlerts]
     );
 
     const COLORS = [BRAND.pink, BRAND.green, "#8884d8"];
 
-    // Alerts over time
+    // Alerts over time (filtered by selected range)
     const trendData = useMemo(() => {
         const counts = {};
-        alerts.forEach((a) => {
-            const date = new Date(a.createdAt).toISOString().slice(0, 10);
+        const now = new Date();
+        const bounds = (function() {
+            if (range === 'current') return { since: new Date(now.getFullYear(), now.getMonth(), 1), until: null };
+            if (range === 'previous') return { since: new Date(now.getFullYear(), now.getMonth() - 1, 1), until: new Date(now.getFullYear(), now.getMonth(), 1) };
+            if (range === 'last2') return { since: new Date(now.getFullYear(), now.getMonth() - 1, 1), until: null };
+            return { since: new Date(0), until: null };
+        })();
+        filteredAlerts.forEach((a) => {
+            const dt = new Date(a.createdAt);
+            if (bounds.since && dt < bounds.since) return;
+            if (bounds.until && dt >= bounds.until) return;
+            const date = dt.toISOString().slice(0, 10);
             counts[date] = (counts[date] || 0) + 1;
         });
         return Object.entries(counts).map(([date, count]) => ({ date, count }));
-    }, [alerts]);
+    }, [alerts, range]);
 
     // Average duration for resolved alerts
     const durationData = useMemo(() => {
-        const resolvedAlerts = alerts.filter((a) => a.durationMs);
+    const resolvedAlerts = filteredAlerts.filter((a) => a.durationMs);
         if (resolvedAlerts.length === 0) return [];
         return resolvedAlerts.map((a) => ({
             name: a.alertID,
@@ -150,7 +195,7 @@ export default function AlertsInsights() {
             type: activeRatio > 50 ? "error" : activeRatio > 25 ? "warning" : "success",
         });
 
-        const clusterCount = alerts.filter(
+        const clusterCount = filteredAlerts.filter(
             (a, i, arr) =>
                 arr.findIndex(
                     (b) =>
@@ -206,6 +251,20 @@ export default function AlertsInsights() {
         <Layout style={{ background: "#fff", minHeight: "100vh", padding: 16 }}>
             <Content>
                 <Row gutter={[16, 16]}>
+                    <Col xs={24} style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, alignItems: 'center' }}>
+                        <Space>
+                            <div style={{ textAlign: 'right', marginRight: 8 }}>
+                                <Text type="secondary" style={{ display: 'block', fontSize: 11 }}>Based on </Text>
+                                <Text type="secondary" style={{ display: 'block', fontSize: 12 }}>{formatRangeLabel(range)}</Text>
+                            </div>
+                            <Button.Group>
+                                <Button type={range === 'current' ? 'primary' : 'default'} onClick={() => { setRange('current'); }}>Current</Button>
+                                <Button type={range === 'previous' ? 'primary' : 'default'} onClick={() => { setRange('previous'); }}>Previous</Button>
+                                <Button type={range === 'all' ? 'primary' : 'default'} onClick={() => { setRange('all'); }}>All</Button>
+                            </Button.Group>
+                             <Button icon={<ReloadOutlined spin={refreshing} />} onClick={handleRefresh}>Refresh</Button>
+                        </Space>
+                    </Col>
                     <Col xs={24} md={8}>
                         <KpiCard
                             title="Active Alerts"
@@ -273,7 +332,7 @@ export default function AlertsInsights() {
                                             });
                                         }}
                                     >
-                                        {alerts
+                                        {filteredAlerts
                                             .filter((a) => a.status === "Active")
                                             .map((a, i) => (
                                                 <Marker

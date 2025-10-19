@@ -230,7 +230,7 @@ export default function CasesInsights() {
                     <Col xs={24} style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, alignItems: 'center' }}>
                         <Space>
                             <div style={{ textAlign: 'right', marginRight: 8 }}>
-                                                                <Text type="secondary" style={{ display: 'block', fontSize: 11 }}>Based on</Text>
+                                <Text type="secondary" style={{ display: 'block', fontSize: 11 }}>Based on</Text>
                                 <Text type="secondary" style={{ display: 'block', fontSize: 12 }}>{formatRangeLabel(range)}</Text>
                             </div>
                             <Button.Group>

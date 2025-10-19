@@ -923,7 +923,7 @@ async function buildAndTrainModel(samples, labels) {
   return { model, history };
 }
 
-async function trainModelFromCases(minSamples = 50) {
+async function trainModelFromCases(minSamples = 20) {
   // Get historical cases
   const docs = await Cases.find({
     riskLevel: { $exists: true },
@@ -1263,11 +1263,6 @@ async function suggestForCase(payload = {}, modelObj = null) {
   }
   response.detectionMethod = detectionMethod;
 
-  // Recompute explicit immediate-assistance decision now that we know the
-  // authoritative rule (chosenEvent) and detection method. This lets rules
-  // that explicitly require immediate action take precedence and prevents
-  // medium-confidence heuristic probabilities from automatically forcing an
-  // "immediate" label (e.g. Psychological: Medium should not always be immediate).
   // Priority order:
   // 1. Manual override -> immediate only if override is High
   // 2. If chosen rule explicitly requires immediate -> immediate
@@ -1300,19 +1295,54 @@ async function ensureModelTrained(force = false) {
   return null;
 }
 
+// Helper to compute since/until based on options.range
+function computeSinceUntil(options = {}) {
+  const now = new Date();
+  const range = options.range || (options.useCurrentMonth ? 'current' : null);
+  let since = null;
+  let until = null;
+
+  if (range === 'current') {
+    since = new Date(now.getFullYear(), now.getMonth(), 1);
+    until = null;
+  } else if (range === 'previous') {
+    // previous calendar month
+    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    since = prev;
+    until = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else if (range === 'last2') {
+    // previous + current month compiled as one
+    since = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    until = null;
+  } else if (range === 'all') {
+    since = new Date(0);
+    until = null;
+  } else {
+    // fallback to lookbackDays behavior
+    const lookbackDays = Number.isFinite(parseInt(options.lookbackDays, 10)) ? parseInt(options.lookbackDays, 10) : 30;
+    since = new Date();
+    since.setDate(since.getDate() - lookbackDays);
+    until = null;
+  }
+
+  return { since, until };
+}
+
 // Suggest insights for the Cases insights page (moved from frontend)
 async function suggestForCasesInsights(options = {}) {
   try {
     // options can include lookbackDays, minSpikeFactor, victimId, incidentType
-    const lookbackDays = Number.isFinite(parseInt(options.lookbackDays, 10)) ? parseInt(options.lookbackDays, 10) : 30;
-    const since = new Date();
-    since.setDate(since.getDate() - lookbackDays);
-
+    const { since, until } = computeSinceUntil(options);
     const CasesModel = require('../models/Cases');
-    const docs = await CasesModel.find({ createdAt: { $gte: since } }).lean().exec();
+    const query = since ? { createdAt: { $gte: since } } : {};
+    if (until) query.createdAt.$lt = until;
+    const docs = await CasesModel.find(query).lean().exec();
 
-    const insights = [];
-    const total = docs.length;
+  const insights = [];
+  const total = docs.length;
+  const sampleSize = total;
+  const lowSample = sampleSize < 5; // consider small samples when <5 records
+  const sampleNote = lowSample ? ` (small sample: ${sampleSize} records — interpret with caution)` : '';
     const open = docs.filter(d => d.status === 'Open').length;
     const resolved = docs.filter(d => d.status === 'Resolved').length;
     const cancelled = docs.filter(d => d.status === 'Cancelled' || d.status === 'Canceled').length;
@@ -1325,26 +1355,121 @@ async function suggestForCasesInsights(options = {}) {
     });
     const trend = Object.entries(counts).map(([date,count]) => ({ date, count }));
 
+    // For the 'previous' range, compute month-over-month counts directly and
+    // emit an Increase in Cases insight when the current calendar month has
+    // more cases than the previous calendar month. This avoids relying on
+    // short-term daily spikes which may not appear for small samples.
+    if (options.range === 'previous') {
+      try {
+        const CasesModel = require('../models/Cases');
+        const now = new Date();
+        const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const curMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const prevMonthCount = await CasesModel.countDocuments({ createdAt: { $gte: prevMonthStart, $lt: curMonthStart } }).exec();
+        const curMonthCount = await CasesModel.countDocuments({ createdAt: { $gte: curMonthStart } }).exec();
 
-    // Active ratio
+        if (curMonthCount > prevMonthCount) {
+          let percent = null;
+          let percentBasis = 'monthly';
+          let deltaCount = null;
+          if (prevMonthCount > 0) {
+            deltaCount = (curMonthCount - prevMonthCount);
+            percent = (deltaCount / prevMonthCount) * 100;
+          } else {
+            // fallback to daily basis using the trend if the previous month had 0
+            const last7 = trend.slice(-7);
+            const last = last7.length >= 1 ? last7[last7.length - 1].count : 0;
+            const prev = last7.length >= 2 ? last7[last7.length - 2].count || 0 : 0;
+            deltaCount = (last - prev);
+            percent = ((last - prev) / (prev || 1)) * 100;
+            percentBasis = 'daily';
+          }
+
+          insights.push({
+            label: 'Increase in Cases',
+            value: percent,
+            type: 'warning',
+            message: `There has been a recent jump in cases (increase of ${deltaCount} ${percentBasis === 'monthly' ? 'cases month-over-month' : 'cases day-over-day'}; ${Math.round(percent)}%).${sampleNote}`,
+            message_tl: `May biglang pagtaas ng mga kaso (tumaas ng ${deltaCount} ${percentBasis === 'monthly' ? 'kaso buwan-sa-buwan' : 'kaso araw-sa-araw'}; ${Math.round(percent)}%).${sampleNote}`,
+            details: { prevMonthCount, curMonthCount, percentBasis, deltaCount },
+            recommendations: [
+              'Identify geographic or time-based hotspots and prioritize patrols/visits.',
+              'Temporarily increase staff presence in affected areas.',
+              'Coordinate with partner agencies if multiple cases point to the same issue.'
+            ],
+            recommendations_tl: [
+              'Tukuyin ang mga hotspot base sa lokasyon/oras at unahin ang outreach/patrol.',
+              'Pansamantalang dagdagan ang presensya ng staff sa mga apektadong lugar.',
+              'Makipag-coordinate sa mga partner agencies kung maraming kaso ang tumuturo sa parehong isyu.'
+            ]
+          });
+        }
+      } catch (e) {
+        // Don't let insight generation crash the whole suggestions flow
+        console.warn('suggestForCasesInsights: monthly comparison failed', e && e.message);
+      }
+    }
+
+
+  // Active ratio
     const activeRatio = (open / (total || 1)) * 100;
-    insights.push({
-      label: 'Active Case Ratio',
-      value: activeRatio,
-      type: activeRatio > 50 ? 'error' : activeRatio > 25 ? 'warning' : 'success',
-      message: `About ${Math.round(activeRatio)}% of cases are still open. Try to close simple cases quickly and reassign difficult cases to experienced staff.`,
-      message_tl: `Tinatayang ${Math.round(activeRatio)}% ng mga kaso ay nananatiling bukas. Sikaping isara agad ang mga simpleng kaso at i-reassign ang mahihirap na kaso sa mga may karanasan.`,
-      recommendations: [
-        'Review open cases and mark low-complexity ones for quick closure.',
-        'Reassign complex cases to senior staff and set target resolution dates.',
-        'Use daily stand-ups to unblock stalled cases.'
-      ],
-      recommendations_tl: [
-        'Suriin ang mga bukas na kaso at markahan ang mga simpleng kaso para mabilis na pagsasara.',
-        'I-reassign ang kumplikadong kaso sa senior staff at magtakda ng target na petsa ng resolusyon.',
-        'Gumamit ng araw-araw na stand-up para alisin ang mga hadlang sa mga naka-stall na kaso.'
-      ]
-    });
+    if (lowSample) {
+      insights.push({
+        label: 'Active Case Ratio',
+        value: activeRatio,
+        type: 'info',
+        message: `About ${Math.round(activeRatio)}% of cases are still open.${sampleNote}`,
+        message_tl: `Tinatayang ${Math.round(activeRatio)}% ng mga kaso ay nananatiling bukas.${sampleNote}`,
+        recommendations: [
+          'Review open cases and prioritize simple closures where possible.'
+        ],
+        recommendations_tl: [
+          'Suriin ang mga bukas na kaso at unahin ang mabilis na pagsasara kung maaari.'
+        ]
+      });
+    } else {
+      insights.push({
+        label: 'Active Case Ratio',
+        value: activeRatio,
+        type: activeRatio > 50 ? 'error' : activeRatio > 25 ? 'warning' : 'success',
+        message: `About ${Math.round(activeRatio)}% of cases are still open. Try to close simple cases quickly and reassign difficult cases to experienced staff.`,
+        message_tl: `Tinatayang ${Math.round(activeRatio)}% ng mga kaso ay nananatiling bukas. Sikaping isara agad ang mga simpleng kaso at i-reassign ang mahihirap na kaso sa mga may karanasan.`,
+        recommendations: [
+          'Review open cases and mark low-complexity ones for quick closure.',
+          'Reassign complex cases to senior staff and set target resolution dates.',
+          'Use daily stand-ups to unblock stalled cases.'
+        ],
+        recommendations_tl: [
+          'Suriin ang mga bukas na kaso at markahan ang mga simpleng kaso para mabilis na pagsasara.',
+          'I-reassign ang kumplikadong kaso sa senior staff at magtakda ng target na petsa ng resolusyon.',
+          'Gumamit ng araw-araw na stand-up para alisin ang mga hadlang sa mga naka-stall na kaso.'
+        ]
+      });
+    }
+
+// High-risk cases proportion
+    const highRiskCount = docs.filter(d => (d.riskLevel || '').toString().toLowerCase() === 'high').length;
+    const highRiskRate = highRiskCount / (total || 1);
+    if (highRiskRate > 0.15) {
+      insights.push({
+        label: 'High-Risk Cases Present',
+        value: highRiskRate * 100,
+        type: lowSample ? 'warning' : 'error',
+        urgent: true,
+        message: `${Math.round(highRiskRate * 100)}% of cases are marked High risk.${sampleNote}`,
+        message_tl: `Tinatayang ${Math.round(highRiskRate * 100)}% ng mga kaso ay may markang High risk.${sampleNote}`,
+        recommendations: [
+          'Immediately review and prioritize High-risk cases.',
+          'Assign protective measures and consider emergency referrals.',
+          'Ensure senior oversight for case plans.'
+        ],
+        recommendations_tl: [
+          'Agad na suriin at unahin ang High-risk na mga kaso.',
+          'Magtalaga ng mga hakbang para sa proteksyon at isaalang-alang ang emergency referrals.',
+          'Siguraduhin ang senior oversight para sa mga plano ng kaso.'
+        ]
+      });
+    }
 
     // Stagnant cases (>14 days)
     const stagnant = docs.filter(d => {
@@ -1354,9 +1479,9 @@ async function suggestForCasesInsights(options = {}) {
     if (stagnant > 0) insights.push({
       label: 'Stagnant Cases',
       value: stagnant,
-      type: 'error',
-      message: `${stagnant} case(s) have had no progress for more than 14 days. Please review these cases and reassign or escalate as needed.`,
-      message_tl: `${stagnant} kaso ang walang progreso nang higit sa 14 na araw. Pakisuri ang mga kasong ito at i-reassign o i-escalate kung kinakailangan.`,
+      type: lowSample ? 'warning' : 'error',
+      message: `${stagnant} case(s) have had no progress for more than 14 days.${sampleNote}`,
+      message_tl: `${stagnant} kaso ang walang progreso nang higit sa 14 na araw.${sampleNote}`,
       recommendations: [
         'Run a quick audit of all cases older than 14 days to identify blockers.',
         'Reassign stalled cases to a fresh investigator with a 7-day action plan.',
@@ -1374,9 +1499,9 @@ async function suggestForCasesInsights(options = {}) {
     if (cancellationRate > 0.1) insights.push({
       label: 'High Cancellation Rate',
       value: cancellationRate * 100,
-      type: 'warning',
-      message: `About ${Math.round(cancellationRate * 100)}% of cases were cancelled. Follow up with the people involved to learn why and offer extra support.`,
-      message_tl: `Tinatayang ${Math.round(cancellationRate * 100)}% ng mga kaso ang kinansela. Makipag-follow up sa mga taong sangkot upang malaman ang dahilan at mag-alok ng dagdag na suporta.`,
+      type: lowSample ? 'info' : 'warning',
+      message: `About ${Math.round(cancellationRate * 100)}% of cases were cancelled.${sampleNote}`,
+      message_tl: `Tinatayang ${Math.round(cancellationRate * 100)}% ng mga kaso ang kinansela.${sampleNote}`,
       recommendations: [
         'Contact victims who cancelled to ask why and offer help (use gentle wording).',
         'Check for patterns of cancellation (same area, same timeframe).',
@@ -1388,42 +1513,6 @@ async function suggestForCasesInsights(options = {}) {
         'Siguraduhin ang ligtas na mga channel para sa mga biktima na mag-follow up nang walang presyon.'
       ]
     });
-
-    // Anonymous cases: show count and proportion (focus on cases rather than 'reporting')
-    const anonCount = docs.filter(d => {
-      try {
-        if ((d.victimType || '').toString().toLowerCase() === 'anonymous') return true;
-        if (d.victimID && typeof d.victimID === 'object' && d.victimID.isAnonymous) return true;
-        if (d.victimID && typeof d.victimID === 'string' && d.victimID.toUpperCase().startsWith('ANONYMOUS')) return true;
-        if (d.victimID && d.victimID._id && typeof d.victimID._id === 'string' && d.victimID._id.toUpperCase().startsWith('ANONYMOUS')) return true;
-      } catch (e) {
-        // ignore
-      }
-      return false;
-    }).length;
-    const anonRate = anonCount / (total || 1);
-
-    if (anonCount > 0) {
-      const pct = Math.round(anonRate * 100);
-      const severityType = anonRate > 0.6 ? 'warning' : anonRate > 0.25 ? 'info' : 'success';
-      insights.push({
-        label: 'Anonymous Cases',
-        value: `${anonCount} (${pct}%)`,
-        type: severityType,
-        message: `There are ${anonCount} anonymous case${anonCount !== 1 ? 's' : ''} (${pct}% of total). These records lack an identified victim; ensure they are handled with appropriate confidentiality and low-barrier follow-up options.`,
-        message_tl: `Mayroong ${anonCount} anonymous na kaso (${pct}% ng kabuuan). Ang mga rekord na ito ay walang natukoy na biktima; siguraduhing maingat ang paghawak at mag-alok ng madaling paraan ng follow-up.`,
-        recommendations: [
-          'Flag anonymous cases for sensitive handling and low-barrier support.',
-          'Provide clear instructions for anonymous-to-identified follow-up (opt-in contact methods).',
-          'Monitor whether anonymous cases cluster by area or time to inform outreach.'
-        ],
-        recommendations_tl: [
-          'I-flag ang mga anonymous na kaso para sa maingat na paghawak at madaling suporta.',
-          'Magbigay ng malinaw na gabay para sa anonymous-to-identified follow-up (opsyonal na contact).',
-          'Subaybayan kung may pag-oorlap ang mga anonymous na kaso ayon sa lugar o oras para gabayan ang outreach.'
-        ]
-      });
-    }
 
     // --- Additional comprehensive insights for Cases ---
     // Incident type distribution
@@ -1471,6 +1560,42 @@ async function suggestForCasesInsights(options = {}) {
           ]
         });
       }
+    }
+
+// Anonymous cases: show count and proportion (focus on cases rather than 'reporting')
+    const anonCount = docs.filter(d => {
+      try {
+        if ((d.victimType || '').toString().toLowerCase() === 'anonymous') return true;
+        if (d.victimID && typeof d.victimID === 'object' && d.victimID.isAnonymous) return true;
+        if (d.victimID && typeof d.victimID === 'string' && d.victimID.toUpperCase().startsWith('ANONYMOUS')) return true;
+        if (d.victimID && d.victimID._id && typeof d.victimID._id === 'string' && d.victimID._id.toUpperCase().startsWith('ANONYMOUS')) return true;
+      } catch (e) {
+        // ignore
+      }
+      return false;
+    }).length;
+    const anonRate = anonCount / (total || 1);
+
+    if (anonCount > 0) {
+      const pct = Math.round(anonRate * 100);
+      const severityType = anonRate > 0.6 ? 'warning' : anonRate > 0.25 ? 'info' : 'success';
+      insights.push({
+        label: 'Anonymous Cases',
+        value: `${anonCount} (${pct}%)`,
+        type: severityType,
+        message: `There are ${anonCount} anonymous case${anonCount !== 1 ? 's' : ''} (${pct}% of total). These records lack an identified victim; ensure they are handled with appropriate confidentiality and low-barrier follow-up options.`,
+        message_tl: `Mayroong ${anonCount} anonymous na kaso (${pct}% ng kabuuan). Ang mga rekord na ito ay walang natukoy na biktima; siguraduhing maingat ang paghawak at mag-alok ng madaling paraan ng follow-up.`,
+        recommendations: [
+          'Flag anonymous cases for sensitive handling and low-barrier support.',
+          'Provide clear instructions for anonymous-to-identified follow-up (opt-in contact methods).',
+          'Monitor whether anonymous cases cluster by area or time to inform outreach.'
+        ],
+        recommendations_tl: [
+          'I-flag ang mga anonymous na kaso para sa maingat na paghawak at madaling suporta.',
+          'Magbigay ng malinaw na gabay para sa anonymous-to-identified follow-up (opsyonal na contact).',
+          'Subaybayan kung may pag-oorlap ang mga anonymous na kaso ayon sa lugar o oras para gabayan ang outreach.'
+        ]
+      });
     }
 
     // Child victim proportion
@@ -1530,30 +1655,6 @@ async function suggestForCasesInsights(options = {}) {
       });
     }
 
-    // High-risk cases proportion
-    const highRiskCount = docs.filter(d => (d.riskLevel || '').toString().toLowerCase() === 'high').length;
-    const highRiskRate = highRiskCount / (total || 1);
-    if (highRiskRate > 0.15) {
-      insights.push({
-        label: 'High-Risk Cases Present',
-        value: highRiskRate * 100,
-        type: 'error',
-        urgent: true,
-        message: `${Math.round(highRiskRate * 100)}% of cases are marked High risk. These may need urgent review and protection measures.`,
-        message_tl: `Tinatayang ${Math.round(highRiskRate * 100)}% ng mga kaso ay may markang High risk. Maaaring kailanganin ang agarang pagsusuri at mga hakbang para sa proteksyon.`,
-        recommendations: [
-          'Immediately review and prioritize all High-risk cases.',
-          'Assign protective measures and consider emergency referrals.',
-          'Ensure senior oversight for case plans.'
-        ],
-        recommendations_tl: [
-          'Agad na suriin at unahin ang lahat ng High-risk na kaso.',
-          'Magtalaga ng mga hakbang para sa proteksyon at isaalang-alang ang emergency referrals.',
-          'Siguraduhin ang senior oversight para sa mga plano ng kaso.'
-        ]
-      });
-    }
-
     // Document completeness (cases may not include attachments in this workflow)
     // Instead of 'low evidence capture' we surface opportunities to improve structured case details
     try {
@@ -1568,31 +1669,7 @@ async function suggestForCasesInsights(options = {}) {
       // (Removed: Limited details / contactability insight per user request)
     } catch (e) { /* ignore errors in optional completeness check */ }
 
-        // Time-of-day concentration
-    try {
-      const hours = Array(24).fill(0);
-      docs.forEach(d => { const h = new Date(d.createdAt).getHours(); hours[h] = (hours[h] || 0) + 1; });
-      const max = Math.max(...hours);
-      const totalDocs = hours.reduce((a,b) => a + b, 0) || 1;
-      if (max / totalDocs > 0.4) {
-        const hour = hours.indexOf(max);
-        insights.push({
-          label: 'Time Concentration',
-          value: (max / totalDocs) * 100,
-          type: 'info',
-            message: `Many cases are reported around ${hour}:00 (${Math.round((max/totalDocs)*100)}%). Consider adjusting monitoring during these hours.`,
-            message_tl: `Maraming kaso ang nai-uulat bandang ${hour}:00 (${Math.round((max/totalDocs)*100)}%). Isaalang-alang ang pag-adjust ng monitoring sa mga oras na iyon.`,
-            recommendations: [
-              `Increase monitoring or staff coverage around ${hour}:00–${(hour+2)%24}:00.`,
-              'Check whether specific events or shifts correlate with these reports.'
-            ],
-            recommendations_tl: [
-              `Dagdagan ang monitoring o staff coverage bandang ${hour}:00–${(hour+2)%24}:00.`,
-              'Suriin kung may partikular na mga kaganapan o shift na kaugnay ng mga ulat na ito.'
-            ]
-        });
-      }
-    } catch (e) { /* ignore */ }
+    // (Removed) Time-of-day concentration for cases — moved to Reports insights per request
 
     // Optionally ensure ML model is trained and include status
     let mlInfo = null;
@@ -1603,7 +1680,7 @@ async function suggestForCasesInsights(options = {}) {
       mlInfo = { mlAvailable: false };
     }
 
-    return { total, open, resolved, cancelled, trend, insights, mlInfo };
+    return { total, open, resolved, cancelled, trend, insights, mlInfo, meta: { since: since ? since.toISOString() : null, until: until ? until.toISOString() : null, range: options.range || null } };
   } catch (err) {
     console.error('suggestForCasesInsights error:', err);
     return { total: 0, open: 0, resolved: 0, cancelled: 0, trend: [], insights: [], mlInfo: { mlAvailable: false } };
@@ -1613,15 +1690,17 @@ async function suggestForCasesInsights(options = {}) {
 // Suggest insights for Reports insights page
 async function suggestForReportsInsights(options = {}) {
   try {
-    const lookbackDays = Number.isFinite(parseInt(options.lookbackDays, 10)) ? parseInt(options.lookbackDays, 10) : 30;
-    const since = new Date();
-    since.setDate(since.getDate() - lookbackDays);
-
+    const { since, until } = computeSinceUntil(options);
     const Reports = require('../models/IncidentReports');
-    const docs = await Reports.find({ createdAt: { $gte: since } }).lean().exec();
+    const query = since ? { createdAt: { $gte: since } } : {};
+    if (until) query.createdAt.$lt = until;
+    const docs = await Reports.find(query).lean().exec();
 
-    const insights = [];
-    const total = docs.length;
+  const insights = [];
+  const total = docs.length;
+  const sampleSize = total;
+  const lowSample = sampleSize < 5;
+  const sampleNote = lowSample ? ` (small sample: ${sampleSize} records — interpret with caution)` : '';
     const open = docs.filter(d => d.status === 'Open').length;
     const pending = docs.filter(d => d.status === 'Pending').length;
     const closed = docs.filter(d => d.status === 'Closed').length;
@@ -1638,24 +1717,69 @@ async function suggestForReportsInsights(options = {}) {
     if (last7.length >= 2) {
       const last = last7[last7.length - 1].count;
       const prev = last7[last7.length - 2].count || 0;
-      if (prev > 0 && last > prev * (Number.parseFloat(options.minSpikeFactor) || 1.5)) {
-        insights.push({
-          label: 'Spike in Reports',
-          value: ((last - prev) / prev) * 100,
-          type: 'warning',
-          message: 'There has been a recent jump in reports. Check for hotspots and consider assigning more staff to that area.',
-          message_tl: 'May biglang pagtaas ng mga ulat kamakailan. Suriin ang mga hotspot at isaalang-alang ang pagtatalaga ng karagdagang staff sa lugar na iyon.',
-          recommendations: [
-            'Identify geographic or time-based hotspots and prioritize patrols/visits.',
-            'Temporarily increase staff presence in affected areas.',
-            'Coordinate with partner agencies if multiple reports point to the same issue.'
-          ],
-          recommendations_tl: [
-            'Tukuyin ang mga hotspot ayon sa lokasyon o oras at unahin ang mag patrol/pagbisita.',
-            'Pansamantalang dagdagan ang presensya ng staff sa mga apektadong lugar.',
-            'Makipag-coordinate sa mga partner agencies kung maraming ulat ang tumuturo sa parehong isyu.'
-          ]
-        });
+      const factor = Number.parseFloat(options.minSpikeFactor) || 1.5;
+      if (prev > 0 && last > prev * factor) {
+        // Additional guard: only consider a spike if the current calendar month has more reports
+        // than the previous calendar month to avoid flagging trivial day-to-day noise.
+        try {
+          const ReportsModel = require('../models/IncidentReports');
+          const now = new Date();
+          const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          const curMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+          const prevMonthCount = await ReportsModel.countDocuments({ createdAt: { $gte: prevMonthStart, $lt: curMonthStart } }).exec();
+          const curMonthCount = await ReportsModel.countDocuments({ createdAt: { $gte: curMonthStart } }).exec();
+          if (curMonthCount > prevMonthCount) {
+            let percent = null;
+            let percentBasis = 'monthly';
+            let deltaCount = null;
+            if (prevMonthCount > 0) {
+              deltaCount = (curMonthCount - prevMonthCount);
+              percent = (deltaCount / prevMonthCount) * 100;
+            } else {
+              // fallback to daily percent if previous month had 0 reports
+              deltaCount = (last - prev);
+              percent = ((last - prev) / prev) * 100;
+              percentBasis = 'daily';
+            }
+            insights.push({
+              label: 'Increase in Reports',
+              value: percent,
+              type: lowSample ? 'warning' : 'warning',
+              message: `There has been a recent jump in reports (increase of ${deltaCount} ${percentBasis === 'monthly' ? 'reports in over a month' : 'reports day-over-day'}; ${Math.round(percent)}%).${sampleNote}`,
+              message_tl: `May biglang pagtaas ng mga ulat (tumaas ng ${deltaCount} ${percentBasis === 'monthly' ? 'ulat buwan-sa-buwan' : 'ulat araw-sa-araw'}; ${Math.round(percent)}%).${sampleNote}`,
+              details: { prevDayCount: prev, lastDayCount: last, prevMonthCount, curMonthCount, percentBasis, deltaCount },
+              recommendations: [
+                'Identify geographic or time-based hotspots and prioritize patrols/visits.',
+                'Temporarily increase staff presence in affected areas.',
+                'Coordinate with partner agencies if multiple reports point to the same issue.'
+              ],
+              recommendations_tl: [
+                'Tukuyin ang mga hotspot ayon sa lokasyon o oras at unahin ang mag patrol/pagbisita.',
+                'Pansamantalang dagdagan ang presensya ng staff sa mga apektadong lugar.',
+                'Makipag-coordinate sa mga partner agencies kung maraming ulat ang tumuturo sa parehong isyu.'
+              ]
+            });
+          }
+        } catch (e) {
+          // If monthly comparison fails for any reason, fall back to daily spike behavior
+          insights.push({
+            label: 'Spike in Reports',
+            value: ((last - prev) / prev) * 100,
+            type: lowSample ? 'warning' : 'warning',
+            message: `There has been a recent jump in reports.${sampleNote}`,
+            message_tl: `May biglang pagtaas ng mga ulat kamakailan.${sampleNote}`,
+            recommendations: [
+              'Identify geographic or time-based hotspots and prioritize patrols/visits.',
+              'Temporarily increase staff presence in affected areas.',
+              'Coordinate with partner agencies if multiple reports point to the same issue.'
+            ],
+            recommendations_tl: [
+              'Tukuyin ang mga hotspot ayon sa lokasyon o oras at unahin ang mag patrol/pagbisita.',
+              'Pansamantalang dagdagan ang presensya ng staff sa mga apektadong lugar.',
+              'Makipag-coordinate sa mga partner agencies kung maraming ulat ang tumuturo sa parehong isyu.'
+            ]
+          });
+        }
       }
     }
 
@@ -1665,9 +1789,9 @@ async function suggestForReportsInsights(options = {}) {
     if (unresolvedRate > 0.5) insights.push({
       label: 'Unresolved Rate',
       value: unresolvedRate * 100,
-      type: 'error',
-      message: `About ${Math.round(unresolvedRate * 100)}% of reports are still open or pending. Prioritize urgent reports and consider process improvements.`,
-      message_tl: `Tinatayang ${Math.round(unresolvedRate * 100)}% ng mga ulat ay bukas o naka-pending. Unahin ang mga agarang ulat at isaalang-alang ang pagpapabuti ng proseso.`,
+      type: lowSample ? 'info' : 'error',
+      message: `About ${Math.round(unresolvedRate * 100)}% of reports are still open or pending.${sampleNote}`,
+      message_tl: `Tinatayang ${Math.round(unresolvedRate * 100)}% ng mga ulat ay bukas o naka-pending.${sampleNote}`,
       recommendations: [
         'Create a rapid-response team to close high-priority reports.',
         'Review and simplify the reporting-to-resolution workflow.',
@@ -1682,9 +1806,9 @@ async function suggestForReportsInsights(options = {}) {
     else if (unresolvedRate > 0.3) insights.push({
       label: 'Moderate Unresolved Rate',
       value: unresolvedRate * 100,
-      type: 'warning',
-      message: `Around ${Math.round(unresolvedRate * 100)}% of reports are unresolved. Review workflows to reduce delays.`,
-      message_tl: `Tinatayang ${Math.round(unresolvedRate * 100)}% ng mga ulat ay hindi pa nareresolba. Suriin ang mga workflow upang mabawasan ang pagkaantala.`,
+      type: lowSample ? 'info' : 'warning',
+      message: `Around ${Math.round(unresolvedRate * 100)}% of reports are unresolved.${sampleNote}`,
+      message_tl: `Tinatayang ${Math.round(unresolvedRate * 100)}% ng mga ulat ay hindi pa nareresolba.${sampleNote}`,
       recommendations: [
         'Assign a case owner to each pending report.',
         'Hold weekly case-review meetings to unblock difficult items.',
@@ -1801,15 +1925,18 @@ async function suggestForReportsInsights(options = {}) {
           value: repeaters,
           type: 'info',
           message: `${repeaters} reporters submitted more than one report. Follow up to see if these indicate ongoing issues.`,
+          message_tl: `${repeaters} nag-ulat ang higit sa isang ulat. Makipag-ugnayan upang alamin kung ito ay nagpapahiwatig ng patuloy na isyu.`,
           recommendations: [
             'Follow up with repeat reporters to gather more context.',
             'Identify possible ongoing incidents that need urgent attention.'
+          ],
+          recommendations_tl: [
+            'Makipag-ugnayan sa mga paulit-ulit na nag-uulat upang makakuha ng higit na konteksto.',
+            'Tukuyin ang mga posibleng patuloy na insidente na nangangailangan ng agarang pansin.'
           ]
         });
       }
     } catch (e) { /* ignore */ }
-
-
 
     // Time-of-day concentration for reports
     try {
@@ -1819,25 +1946,32 @@ async function suggestForReportsInsights(options = {}) {
       const totalDocs = hours.reduce((a,b) => a + b, 0) || 1;
       if (max / totalDocs > 0.4) {
         const hour = hours.indexOf(max);
+        function formatHour(h) {
+          const period = h >= 12 ? 'PM' : 'AM';
+          const hh = ((h + 11) % 12) + 1;
+          return `${hh}:00 ${period}`;
+        }
+        const start = formatHour(hour);
+        const end = formatHour((hour + 2) % 24);
         insights.push({
           label: 'Report Time Concentration',
           value: (max / totalDocs) * 100,
           type: 'info',
-            message: `Many reports are submitted around ${hour}:00 (${Math.round((max/totalDocs)*100)}%). Consider targeted monitoring.`,
-            message_tl: `Maraming ulat ang isinusumite bandang ${hour}:00 (${Math.round((max/totalDocs)*100)}%). Isaalang-alang ang nakatuong monitoring.`,
+            message: `Many reports are submitted around ${start} (${Math.round((max/totalDocs)*100)}%). Consider targeted monitoring.`,
+            message_tl: `Maraming ulat ang isinusumite bandang ${start} (${Math.round((max/totalDocs)*100)}%). Isaalang-alang ang nakatuong monitoring.`,
             recommendations: [
-              `Increase monitoring around ${hour}:00–${(hour+2)%24}:00.`,
+              `Increase monitoring around ${start}–${end}.`,
               'Check correlation with local events or shifts.'
             ],
             recommendations_tl: [
-              `Dagdagan ang monitoring bandang ${hour}:00–${(hour+2)%24}:00.`,
+              `Dagdagan ang monitoring bandang ${start}–${end}.`,
               'Suriin ang kaugnayan sa mga lokal na kaganapan o shift.'
             ]
         });
       }
     } catch (e) { /* ignore */ }
 
-    return { total, open, pending, closed, trend, insights };
+    return { total, open, pending, closed, trend, insights, meta: { since: since ? since.toISOString() : null, until: until ? until.toISOString() : null, range: options.range || null } };
   } catch (err) {
     console.error('suggestForReportsInsights error:', err);
     return { total: 0, open: 0, pending: 0, closed: 0, trend: [], insights: [] };

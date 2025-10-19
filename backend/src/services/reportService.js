@@ -9,7 +9,7 @@ function normalizeStatus(value) {
   if (s === "in-progress" || s === "in progress" || s === "under investigation")
     return "Under Investigation";
   if (s === "pending") return "Pending";
-  if (s === "resolved" || s === "closed") return "Resolved";
+  if (s === "closed" ) return "Closed";
   return undefined;
 }
 

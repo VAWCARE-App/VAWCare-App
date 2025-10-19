@@ -393,7 +393,7 @@ export default function Signup() {
                             { type: "email", message: "Please enter a valid email" },
                           ]}
                         >
-                          <Input placeholder="you@example.com" size={screens.md ? "large" : "middle"} />
+                          <Input placeholder="your@example.com" size={screens.md ? "large" : "middle"} />
                         </Form.Item>
                       </Col>
                     </Row>

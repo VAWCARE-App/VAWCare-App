@@ -61,10 +61,29 @@ export default function UserManagement() {
   };
 
   // Sizing / layout control
-  const HEADER_H = 60;
+  const HEADER_H = 70;
   const TOP_PAD = 12;
   const [tableY, setTableY] = useState(520);
   const pageRef = useRef(null);
+
+  // ensure header doesn't overlap a sidebar (measure .ant-layout-sider if present)
+  const [siderLeft, setSiderLeft] = useState(0);
+  useEffect(() => {
+    const measure = () => {
+      const s = document.querySelector(".ant-layout-sider");
+      const w = s ? Math.round(s.getBoundingClientRect().width) : 0;
+      setSiderLeft(w);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    // also observe DOM changes in case sider toggles
+    const mo = new MutationObserver(measure);
+    mo.observe(document.body, { childList: true, subtree: true, attributes: true });
+    return () => {
+      window.removeEventListener("resize", measure);
+      mo.disconnect();
+    };
+  }, []);
 
   // State
   const [loading, setLoading] = useState(true);
@@ -455,9 +474,10 @@ export default function UserManagement() {
       {/* Solid top bar */}
       <Header
         style={{
-          position: "sticky",
+          position: "fixed",
           top: 0,
-          zIndex: 5,
+          left: siderLeft,
+          zIndex: 100,
           background: "#ffffff",
           borderBottom: `1px solid ${BRAND.softBorder}`,
           display: "flex",
@@ -465,12 +485,12 @@ export default function UserManagement() {
           justifyContent: "space-between",
           paddingInline: 12,
           height: HEADER_H,
-          width: "100%",
+          width: `calc(100% - ${siderLeft}px)`,
           boxSizing: "border-box",
         }}
       >
         <Typography.Title level={4} style={{ margin: 0, color: BRAND.violet }}>
-          Users
+          User Management
         </Typography.Title>
         <Space wrap>
           <Button
@@ -490,6 +510,7 @@ export default function UserManagement() {
         ref={pageRef}
         style={{
           padding: TOP_PAD,
+          paddingTop: HEADER_H + TOP_PAD, // offset for fixed header
           width: "100%",
           minWidth: 0,
           marginLeft: 0,
@@ -831,7 +852,7 @@ export default function UserManagement() {
 
         /* RIGHT-SIDE floating modal */
         .floating-side { display: flex; align-items: flex-start; justify-content: flex-end; padding: 16px; }
-        .floating-side .ant-modal { margin: 0; top: 0; }
+        .floating-side .ant-modal { margin: 0; top: ${HEADER_H}px; } /* place modal under fixed header */
         .floating-modal .ant-modal-content {
           border-radius: 18px;
           overflow: hidden;

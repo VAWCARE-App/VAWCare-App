@@ -477,6 +477,7 @@ export default function ReportManagement() {
                   <Option value="Sexual">Sexual</Option>
                   <Option value="Psychological">Psychological</Option>
                   <Option value="Economic">Economic</Option>
+                  <Option value="Emergency">Emergency</Option>
                 </Select>
               </Form.Item>
 

@@ -51,6 +51,7 @@ export default function CasesInsights() {
     const [cases, setCases] = useState([]);
     const [dssLoading, setDssLoading] = useState(true);
     const [dssInsights, setDssInsights] = useState(null);
+    const [range, setRange] = useState('current'); // 'current' | 'previous' | 'last2' | 'all'
     // explicit toggle for Tagalog translations (user-controlled)
     const [showTagalog, setShowTagalog] = useState(false);
 
@@ -61,6 +62,33 @@ export default function CasesInsights() {
         soft: "rgba(122,90,248,0.18)",
         chip: "#fff0f7",
     };
+
+    function formatRangeLabel(range) {
+        const now = new Date();
+        const monthName = (d) => d.toLocaleString(undefined, { month: 'short', year: 'numeric' });
+        if (range === 'current') return monthName(new Date(now.getFullYear(), now.getMonth(), 1));
+        if (range === 'previous') return monthName(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+        if (range === 'last2') return `${monthName(new Date(now.getFullYear(), now.getMonth() - 1, 1))} – ${monthName(new Date(now.getFullYear(), now.getMonth(), 1))}`;
+        return 'All time';
+    }
+
+    function getRangeBounds(range) {
+        const now = new Date();
+        if (range === 'current') return { since: new Date(now.getFullYear(), now.getMonth(), 1), until: null };
+        if (range === 'previous') return { since: new Date(now.getFullYear(), now.getMonth() - 1, 1), until: new Date(now.getFullYear(), now.getMonth(), 1) };
+        if (range === 'last2') return { since: new Date(now.getFullYear(), now.getMonth() - 1, 1), until: null };
+        return { since: new Date(0), until: null };
+    }
+
+    const filteredCases = useMemo(() => {
+        const bounds = getRangeBounds(range);
+        return cases.filter(c => {
+            const dt = new Date(c.createdAt || c.dateReported);
+            if (bounds.since && dt < bounds.since) return false;
+            if (bounds.until && dt >= bounds.until) return false;
+            return true;
+        });
+    }, [cases, range]);
 
     const loadCases = async (withSpinner = true) => {
         try {
@@ -81,10 +109,14 @@ export default function CasesInsights() {
         loadDssInsights();
     }, []);
 
+    useEffect(() => {
+        loadDssInsights();
+    }, [range]);
+
     const loadDssInsights = async (withSpinner = true) => {
         try {
             if (withSpinner) setDssLoading(true);
-            const res = await api.post('/api/dss/suggest/cases', { lookbackDays: 30 });
+            const res = await api.post('/api/dss/suggest/cases', { range });
             setDssInsights(res.data?.data || null);
         } catch (err) {
             console.error('Failed to load DSS insights', err);
@@ -94,37 +126,37 @@ export default function CasesInsights() {
         }
     };
 
-    // Derived stats
-    const totalCases = cases.length;
-    const openCases = cases.filter((c) => c.status === "Open").length;
-    const underInvestigation = cases.filter((c) => c.status === "Under Investigation").length;
-    const resolvedCases = cases.filter((c) => c.status === "Resolved").length;
-    const closedCases = cases.filter((c) => c.status === "Closed").length;
+    // Derived stats (filtered by selected range)
+    const totalCases = filteredCases.length;
+    const openCases = filteredCases.filter((c) => c.status === "Open").length;
+    const underInvestigation = filteredCases.filter((c) => c.status === "Under Investigation").length;
+    const resolvedCases = filteredCases.filter((c) => c.status === "Resolved").length;
+    const closedCases = filteredCases.filter((c) => c.status === "Closed").length;
 
     const COLORS = ["#7A5AF8", "#FF6EA9", "#5AD8A6", "#FFB347", "#69C0FF"];
 
     // Incident Type Distribution
     const incidentDistribution = useMemo(() => {
         const counts = {};
-        cases.forEach((c) => {
+        filteredCases.forEach((c) => {
             counts[c.incidentType] = (counts[c.incidentType] || 0) + 1;
         });
         return Object.entries(counts).map(([name, value]) => ({ name, value }));
-    }, [cases]);
+    }, [filteredCases]);
 
     // Victim Type Distribution
     const victimDistribution = useMemo(() => {
         const counts = { child: 0, woman: 0, anonymous: 0 };
-        cases.forEach((c) => {
+        filteredCases.forEach((c) => {
             counts[c.victimType] = (counts[c.victimType] || 0) + 1;
         });
         return Object.entries(counts).map(([name, value]) => ({ name, value }));
-    }, [cases]);
+    }, [filteredCases]);
 
     // Woman proportion computed on the frontend to complement backend insights
     const womanCount = useMemo(() => {
         try {
-            return cases.filter(c => {
+            return filteredCases.filter(c => {
                 const vt = (c.victimType || '').toString().toLowerCase();
                 if (vt.includes('woman') || vt.includes('female')) return true;
                 if (c.victimID && c.victimID.victimType && ['woman','female'].includes(c.victimID.victimType)) return true;
@@ -137,12 +169,12 @@ export default function CasesInsights() {
     // Cases over time
     const caseTrend = useMemo(() => {
         const counts = {};
-        cases.forEach((c) => {
+        filteredCases.forEach((c) => {
             const date = new Date(c.dateReported || c.createdAt).toISOString().slice(0, 10);
             counts[date] = (counts[date] || 0) + 1;
         });
         return Object.entries(counts).map(([date, count]) => ({ date, count }));
-    }, [cases]);
+    }, [filteredCases]);
 
     const handleRefresh = async () => {
         setRefreshing(true);
@@ -195,8 +227,22 @@ export default function CasesInsights() {
         <Layout style={{ minHeight: "100vh", background: "#fff" }}>
             <Content>
                 <Row gutter={[16, 16]}>
+                    <Col xs={24} style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, alignItems: 'center' }}>
+                        <Space>
+                            <div style={{ textAlign: 'right', marginRight: 8 }}>
+                                                                <Text type="secondary" style={{ display: 'block', fontSize: 11 }}>Based on</Text>
+                                <Text type="secondary" style={{ display: 'block', fontSize: 12 }}>{formatRangeLabel(range)}</Text>
+                            </div>
+                            <Button.Group>
+                                <Button type={range === 'current' ? 'primary' : 'default'} onClick={() => { setRange('current'); setDssLoading(true); }}>Current</Button>
+                                <Button type={range === 'previous' ? 'primary' : 'default'} onClick={() => { setRange('previous'); setDssLoading(true); }}>Previous</Button>
+                                <Button type={range === 'all' ? 'primary' : 'default'} onClick={() => { setRange('all'); setDssLoading(true); }}>All</Button>
+                            </Button.Group>
+                             <Button icon={<ReloadOutlined spin={refreshing} />} onClick={handleRefresh}>Refresh</Button>
+                        </Space>
+                    </Col>
                     {/* KPIs */}
-                    <Col xs={24} md={4}>
+                    <Col xs={24} md={6}>
                         <KpiCard
                             title="Total Cases"
                             value={totalCases}
@@ -204,7 +250,7 @@ export default function CasesInsights() {
                             color={BRAND.violet}
                         />
                     </Col>
-                    <Col xs={24} md={5}>
+                    <Col xs={24} md={6}>
                         <KpiCard
                             title="Open Cases"
                             value={openCases}
@@ -212,7 +258,7 @@ export default function CasesInsights() {
                             color={BRAND.pink}
                         />
                     </Col>
-                    <Col xs={24} md={5}>
+                    <Col xs={24} md={6}>
                         <KpiCard
                             title="Under Investigation"
                             value={underInvestigation}
@@ -220,7 +266,7 @@ export default function CasesInsights() {
                             color="#FFB347"
                         />
                     </Col>
-                    <Col xs={24} md={5}>
+                    <Col xs={24} md={6}>
                         <KpiCard
                             title="Resolved Cases"
                             value={resolvedCases}
@@ -228,15 +274,6 @@ export default function CasesInsights() {
                             color={BRAND.green}
                         />
                     </Col>
-                    <Col xs={24} md={5}>
-                        <KpiCard
-                            title="Closed Cases"
-                            value={closedCases}
-                            icon={<CheckCircleOutlined style={{ color: "#69C0FF" }} />}
-                            color="#69C0FF"
-                        />
-                    </Col>
-
                     {/* Pie chart: Incident Type */}
                     <Col xs={24} md={12}>
                         <Card
@@ -347,7 +384,7 @@ export default function CasesInsights() {
                             ) : (
                                 <List
                                     style={{ padding: 0, margin: 0 }}
-                                    dataSource={[...cases]
+                                    dataSource={[...filteredCases]
                                         .sort(
                                             (a, b) =>
                                                 new Date(b.dateReported || b.createdAt) -
@@ -427,35 +464,7 @@ export default function CasesInsights() {
                                         <Empty description="No insights available" />
                                     ) : (
                                         <Space direction="vertical" style={{ width: "100%" }}>
-                                            {(
-                                                // Merge backend insights with a frontend-computed Woman Case insight when missing
-                                                (() => {
-                                                    const backend = dssInsights?.insights || [];
-                                                    const hasWoman = backend.some(x => x.label === 'Woman Case Proportion');
-                                                    if (!hasWoman && womanCount > 0) {
-                                                        const pct = Math.round(womanRate * 100);
-                                                        const womanInsight = {
-                                                            label: 'Woman Case Proportion',
-                                                            value: `${womanCount} (${pct}%)`,
-                                                            type: womanRate > 0.6 ? 'warning' : womanRate > 0.25 ? 'info' : 'success',
-                                                            message: `There are ${womanCount} woman case${womanCount !== 1 ? 's' : ''} (${pct}% of total). Prioritize services and protections for women victims.`,
-                                                            message_tl: `Mayroong ${womanCount} kaso na may kinalaman sa kababaihan (${pct}% ng kabuuan). Bigyang prayoridad ang mga serbisyo at proteksyon para sa mga biktimang babae.`,
-                                                            recommendations: [
-                                                                'Ensure service pathways and referrals are accessible for women victims.',
-                                                                'Provide gender-sensitive counseling and legal support.',
-                                                                'Monitor and prioritize resources for areas with high woman-case proportions.'
-                                                            ],
-                                                            recommendations_tl: [
-                                                                'Siguraduhin na accessible ang mga serbisyo at referral para sa mga biktimang babae.',
-                                                                'Magbigay ng gender-sensitive na counseling at legal na suporta.',
-                                                                'Subaybayan at unahin ang mga resources para sa mga lugar na may mataas na proporsyon ng kaso ng kababaihan.'
-                                                            ]
-                                                        };
-                                                        return [...backend, womanInsight].map((i, idx) => ({ i, idx }));
-                                                    }
-                                                    return backend.map((i, idx) => ({ i, idx }));
-                                                })()
-                                            ).map(({ i, idx }) => (
+                                            {(dssInsights?.insights || []).map((i, idx) => (
                                                 <Card
                                                     key={idx}
                                                     size="small"

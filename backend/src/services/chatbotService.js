@@ -82,11 +82,12 @@ const CONTEXTS = [
   },
   {
     name: "resources",
-    keywords: ["resources", "tulong", "sanggunian", "support", "assistance", "help"],
+    keywords: ["resources", "tulong", "sanggunian", "support", "assistance", "help", "information"],
     priority: 6,
     prompt: `
       Provide information about available resources for victims of violence.
       Include hotlines, shelters, counseling services, and legal aid.
+      - They can access provided resources found in the Dashboard labeled "VAWC Hub".
     `
   }
 ];

@@ -1,4 +1,5 @@
-# VAWCare
+# VAWCare ![Version](https://img.shields.io/badge/version-1.0.0-blue)
+
 
 <img src="https://github.com/rozvalle/My-Image-Storage/blob/main/LOGO%20VAWCARE.png?raw=true" align="right"
      alt="VAWCare by Quadra" width="200" height="200">

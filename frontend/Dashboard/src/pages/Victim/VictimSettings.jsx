@@ -439,7 +439,7 @@ export default function VictimSettings() {
                 </Form.Item>
               </Col>
               <Col xs={24} md={12}>
-                <Form.Item name="email" label="Email">
+                <Form.Item name="victimEmail" label="Email">
                   <Input prefix={<MailOutlined />} placeholder="you@example.com" />
                 </Form.Item>
               </Col>

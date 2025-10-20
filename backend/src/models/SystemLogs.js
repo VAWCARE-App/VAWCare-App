@@ -103,7 +103,6 @@ systemLogSchema.add({
 });
 
 // Create indexes for faster querying
-systemLogSchema.index({ logID: 1 }, { unique: true });
 systemLogSchema.index({ victimID: 1 });
 systemLogSchema.index({ adminID: 1 });
 systemLogSchema.index({ officialID: 1 });

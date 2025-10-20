@@ -65,7 +65,6 @@ const resourceSchema = new mongoose.Schema({
 });
 
 // Create indexes for faster querying
-resourceSchema.index({ resourceID: 1 }, { unique: true });
 resourceSchema.index({ type: 1 });
 resourceSchema.index({ availability: 1 });
 resourceSchema.index({ 'location.latitude': 1, 'location.longitude': 1 });

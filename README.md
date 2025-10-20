@@ -43,12 +43,12 @@ It provides a **confidential**, **accessible**, and **community-driven** digital
 * **Nodemailer** – Sending emails/alerts from the backend.
 
 ## Contributors
-| Name | Role |
-|------|------|
-| [Francis Elmo C. Valeros] | Project Lead / Developer |
-| [Ethan Jericho B. Salvador] | UI/UX Designer |
-| [Kevin Klein V. Ananayo] | Backend Developer |
-| [Desierre A. Lacerona] | Research / Documentation |
+| Name                         | Role                     |
+|------------------------------|--------------------------|
+| Francis Elmo C. Valeros      | Project Lead / Developer |
+| Ethan Jericho B. Salvador    | UI/UX Designer           |
+| Kevin Klein V. Ananayo       | Backend Developer        |
+| Desierre A. Lacerona         | Research / Documentation |
 
 ## License
 This project is licensed under the **MIT License** — feel free to use, modify, and share with attribution.

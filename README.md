@@ -19,28 +19,46 @@ It provides a **confidential**, **accessible**, and **community-driven** digital
 * **Decision Support System (DSS)** – View analytics and insights on reported cases.  
   Helps barangay officials monitor trends, identify high-risk areas, and make data-driven decisions for interventions.
 
-## Tech Stack & Libraries
+## Technologies Used
 
 ### Frontend
-* **React** – Core library for building UI.
-* **Ant Design (antd)** – UI components and design system.
-* **React Router DOM** – Client-side routing.
-* **Axios** – HTTP client for API requests.
-* **Firebase** – Authentication and Firestore integration.
-* **Recharts** – Charts and data visualization.
-* **Framer Motion** – Animations and transitions.
-* **Leaflet + React Leaflet** – Interactive maps.
-* **React-Leaflet-MarkerCluster** – Clustered map markers.
+
+**Language:** JavaScript / TypeScript  
+**Framework:** React – Core library for building user interfaces.  
+
+**UI:**  
+- Ant Design (antd) – UI component library and design system.  
+- Recharts – Charts and data visualization.  
+- Framer Motion – Animations and smooth UI transitions.  
+
+**Routing & Networking:**  
+- React Router DOM – Client-side routing and navigation.  
+- Axios – HTTP client for API requests.  
+
+**Maps:**  
+- Leaflet + React Leaflet – Interactive maps for geolocation features.  
+- React-Leaflet-MarkerCluster – Clustered markers for map efficiency.  
+
+**Backend Integration:**  
+- Firebase – Authentication, Firestore, and backend integration.  
 
 ### Backend
-* **Node.js + Express** – Server and REST API framework.
-* **Firebase Admin SDK** – Server-side Firebase operations.
-* **Mongoose** – MongoDB object modeling and database integration.
-* **JSON Rules Engine** – Rule-based decision logic for DSS.
-* **Bcryptjs** – Password hashing and security.
-* **Dotenv** – Environment variable management.
-* **Cors** – Enable cross-origin requests.
-* **Nodemailer** – Sending emails/alerts from the backend.
+
+**Language / Runtime:** Node.js – Server-side JavaScript runtime  
+**Framework:** Express – REST API framework for building server endpoints.  
+
+**Database & Data Management:**  
+- Mongoose – MongoDB object modeling and database integration.  
+- JSON Rules Engine – Rule-based logic for Decision Support System (DSS).  
+
+**Authentication & Security:**  
+- Firebase Admin SDK – Server-side Firebase operations.  
+- Bcryptjs – Password hashing and security.  
+
+**Utilities:**  
+- Dotenv – Environment variable management.  
+- Cors – Enable cross-origin requests.  
+- Nodemailer – Sending emails and alerts from the backend.  
 
 ## Contributors
 | Name                         | Role                     |
@@ -51,4 +69,8 @@ It provides a **confidential**, **accessible**, and **community-driven** digital
 | Desierre A. Lacerona         | Research / Documentation |
 
 ## License
-This project is licensed under the **MIT License** — feel free to use, modify, and share with attribution.
+
+This project is licensed under the **MIT License**.  
+
+You are free to **use, modify, and distribute** this software, provided that proper **attribution** is given to the original authors.
+

@@ -11,7 +11,6 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@tensorflow/tfjs": "^4.22.0",
-    "json-rules-engine": "^6.2.0",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
@@ -19,6 +18,8 @@
     "express-async-handler": "^1.2.0",
     "firebase": "^12.2.1",
     "firebase-admin": "^13.5.0",
+    "fuse.js": "^7.1.0",
+    "json-rules-engine": "^6.2.0",
     "mongoose": "^8.18.0",
     "nodemailer": "^7.0.9",
     "swagger-jsdoc": "^6.2.8",

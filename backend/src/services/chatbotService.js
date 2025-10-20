@@ -17,6 +17,7 @@ exports.generateChatbotResponse = async (user, message) => {
 
     - Do not use markdown, asterisks (**), or any formatting.
     - Keep answers clear and conversational.
+    - Do not answer questions outside the scope of VAWCare.
   `;
 
   if (lowerMsg.includes("emergency") || lowerMsg.includes("help now")) {
@@ -40,7 +41,7 @@ exports.generateChatbotResponse = async (user, message) => {
       Provide simple summaries of laws like RA 9262 and the Safe Spaces Act.
       Do not give legal advice — only factual information.
     `;
-  } else if (lowerMsg.includes("hotline") || lowerMsg.includes("contact")) {
+  } else if (lowerMsg.includes("hotline") || lowerMsg.includes("contact") || lowerMsg.includes("call") || lowerMsg.includes("find")) {
     context = "hotlines";
     systemPrompt += `
       Philippine Commission on Women (PCW) VAWC Helpline

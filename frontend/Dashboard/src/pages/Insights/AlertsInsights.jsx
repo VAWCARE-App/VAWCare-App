@@ -58,6 +58,7 @@ const alertIcon = new L.Icon({
 });
 
 export default function AlertsInsights() {
+    const loggedRef = React.useRef(false);
     const [alerts, setAlerts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -96,6 +97,16 @@ export default function AlertsInsights() {
 
     useEffect(() => {
         loadAlerts();
+    }, []);
+
+    // Log page view to system logs (only once per mount)
+    useEffect(() => {
+        if (!loggedRef.current) {
+            loggedRef.current = true;
+            api.post("/api/logs/pageview", { path: "/admin/insights/alerts" }).catch((e) => {
+                console.debug("Failed to log page view:", e.message);
+            });
+        }
     }, []);
 
     useEffect(() => {

@@ -65,7 +65,7 @@ export default function AlertsInsights() {
 
     function formatRangeLabel(range) {
         const now = new Date();
-        const monthName = (d) => d.toLocaleString(undefined, { month: 'short', year: 'numeric' });
+        const monthName = (d) => d.toLocaleString('default', { month: 'short', year: 'numeric' });
         if (range === 'current') return monthName(new Date(now.getFullYear(), now.getMonth(), 1));
         if (range === 'previous') return monthName(new Date(now.getFullYear(), now.getMonth() - 1, 1));
         if (range === 'last2') return `${monthName(new Date(now.getFullYear(), now.getMonth() - 1, 1))} – ${monthName(new Date(now.getFullYear(), now.getMonth(), 1))}`;
@@ -84,7 +84,8 @@ export default function AlertsInsights() {
         try {
             if (withSpinner) setLoading(true);
             const res = await api.get("/api/alerts");
-            setAlerts(res.data?.data || res.data || []);
+            const alertsData = res.data?.data || res.data || [];
+            setAlerts(alertsData);
         } catch (err) {
             console.error(err);
         } finally {
@@ -154,7 +155,7 @@ export default function AlertsInsights() {
 
     // Average duration for resolved alerts
     const durationData = useMemo(() => {
-    const resolvedAlerts = filteredAlerts.filter((a) => a.durationMs);
+        const resolvedAlerts = filteredAlerts.filter((a) => a.durationMs);
         if (resolvedAlerts.length === 0) return [];
         return resolvedAlerts.map((a) => ({
             name: a.alertID,
@@ -291,7 +292,6 @@ export default function AlertsInsights() {
                     </Col>
 
                     {/* Map */}
-                    {/* Map with Clustering */}
                     <Col xs={24} md={12}>
                         <Card
                             title="Active Alert Locations (Clustered)"
@@ -310,31 +310,30 @@ export default function AlertsInsights() {
                             ) : active === 0 ? (
                                 <Empty description="No active alerts" />
                             ) : (
-                                <MapContainer
-                                    center={[12.8797, 121.7740]} // Philippines center
-                                    zoom={5}
-                                    style={{ height: 300, width: "100%", borderRadius: 12 }}
-                                >
-                                    <TileLayer
-                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                        attribution='&copy; OpenStreetMap contributors'
-                                    />
-                                    <MarkerClusterGroup
-                                        iconCreateFunction={(cluster) => {
-                                            const count = cluster.getChildCount();
-                                            const size = count < 5 ? 'small' : count < 10 ? 'medium' : 'large';
-                                            const color =
-                                                count < 5 ? '#5AD8A6' : count < 10 ? '#FFB347' : '#FF6EA9';
-                                            return L.divIcon({
-                                                html: `<div style="background-color:${color};border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;">${count}</div>`,
-                                                className: 'custom-cluster-icon',
-                                                iconSize: L.point(40, 40),
-                                            });
-                                        }}
+                                <div style={{ height: 300, width: "100%", borderRadius: 12 }}>
+                                    <MapContainer
+                                        center={[12.8797, 121.7740]} // Philippines center
+                                        zoom={5}
+                                        style={{ height: "100%", width: "100%" }}
                                     >
-                                        {filteredAlerts
-                                            .filter((a) => a.status === "Active")
-                                            .map((a, i) => (
+                                        <TileLayer
+                                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                            attribution='&copy; OpenStreetMap contributors'
+                                        />
+                                        <MarkerClusterGroup
+                                            iconCreateFunction={(cluster) => {
+                                                const count = cluster.getChildCount();
+                                                const size = count < 5 ? 'small' : count < 10 ? 'medium' : 'large';
+                                                const color =
+                                                    count < 5 ? '#5AD8A6' : count < 10 ? '#FFB347' : '#FF6EA9';
+                                                return L.divIcon({
+                                                    html: `<div style="background-color:${color};border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;">${count}</div>`,
+                                                    className: 'custom-cluster-icon',
+                                                    iconSize: L.point(40, 40),
+                                                });
+                                            }}
+                                        >
+                                            {filteredAlerts.map((a, i) => (
                                                 <Marker
                                                     key={i}
                                                     position={[a.location.latitude, a.location.longitude]}
@@ -343,18 +342,18 @@ export default function AlertsInsights() {
                                                     <Popup>
                                                         <strong>{a.alertID}</strong>
                                                         <br />
-                                                        Victim: {a.victimID?.name || "N/A"}
+                                                        Victim ID: {typeof a.victimID === 'object' ? a.victimID.victimID : a.victimID || 'N/A'}
                                                         <br />
                                                         Status: {a.status}
                                                     </Popup>
                                                 </Marker>
                                             ))}
-                                    </MarkerClusterGroup>
-                                </MapContainer>
+                                        </MarkerClusterGroup>
+                                    </MapContainer>
+                                </div>
                             )}
                         </Card>
                     </Col>
-
 
                     {/* Pie Chart */}
                     <Col xs={24} md={12}>

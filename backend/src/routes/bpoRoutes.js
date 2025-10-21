@@ -19,5 +19,8 @@ router.delete('/:id', bpoController.deleteBPO);
 
 // Note: Update (PUT) is enabled for controlled status edits; DELETE exposes the soft-delete endpoint.
 
+// Generate filled BPO PDF
+router.get('/:id/pdf', bpoController.generateBpoPdf);
+
 module.exports = router;
 

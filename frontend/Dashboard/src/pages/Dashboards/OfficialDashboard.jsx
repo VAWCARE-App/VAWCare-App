@@ -442,7 +442,7 @@ export default function OfficialDashboard() {
                       Daily Tasks
                     </Title>
                     <Button
-                      href="/admin/official-reports"
+                      href="/admin/reports"
                       style={{ borderRadius: 12, height: 40, fontWeight: 600 }}
                       icon={<EyeOutlined />}
                     >

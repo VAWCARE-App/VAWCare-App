@@ -44,6 +44,7 @@ const { Text } = Typography;
 
 export default function CasesInsights() {
     const { message } = AntApp.useApp();
+    const loggedRef = React.useRef(false);
     // simple locale detection: 'tl' or 'fil' indicates Tagalog/Filipino
     const [locale, setLocale] = useState((typeof window !== 'undefined' && (window.APP_LOCALE || navigator.language)) || 'en');
     const [loading, setLoading] = useState(true);
@@ -107,6 +108,16 @@ export default function CasesInsights() {
     useEffect(() => {
         loadCases();
         loadDssInsights();
+    }, []);
+
+    // Log page view to system logs (only once per mount)
+    useEffect(() => {
+        if (!loggedRef.current) {
+            loggedRef.current = true;
+            api.post("/api/logs/pageview", { path: "/admin/insights/cases" }).catch((e) => {
+                console.debug("Failed to log page view:", e.message);
+            });
+        }
     }, []);
 
     useEffect(() => {

@@ -44,6 +44,7 @@ const { Text } = Typography;
 
 export default function ReportsInsights() {
     const { message } = AntApp.useApp();
+    const loggedRef = React.useRef(false);
     const [locale, setLocale] = useState((typeof window !== 'undefined' && (window.APP_LOCALE || navigator.language)) || 'en');
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -107,6 +108,16 @@ export default function ReportsInsights() {
     useEffect(() => {
         loadReports();
         loadDssInsights();
+    }, []);
+
+    // Log page view to system logs (only once per mount)
+    useEffect(() => {
+        if (!loggedRef.current) {
+            loggedRef.current = true;
+            api.post("/api/logs/pageview", { path: "/admin/insights/reports" }).catch((e) => {
+                console.debug("Failed to log page view:", e.message);
+            });
+        }
     }, []);
 
     useEffect(() => {
@@ -177,19 +188,19 @@ export default function ReportsInsights() {
 
     const KpiCard = ({ title, value, icon, color }) => (
         <Card
-            bordered
+            variant="outlined"
             style={{
                 borderRadius: 16,
                 borderColor: BRAND.soft,
                 height: "100%",
                 boxShadow: "0 10px 26px rgba(122,90,248,0.06)",
             }}
-            bodyStyle={{
+            styles={{ body: {
                 padding: 16,
                 display: "flex",
                 flexDirection: "column",
                 gap: 8,
-            }}
+            } }}
         >
             <Space align="center">
                 <div
@@ -225,11 +236,11 @@ export default function ReportsInsights() {
                                 <Text type="secondary" style={{ display: 'block', fontSize: 11 }}>Based on</Text>
                                 <Text type="secondary" style={{ display: 'block', fontSize: 12 }}>{formatRangeLabel(range)}</Text>
                             </div>
-                            <Button.Group>
+                            <Space.Compact>
                                 <Button type={range === 'current' ? 'primary' : 'default'} onClick={() => { setRange('current'); setDssLoading(true); }}>Current</Button>
                                 <Button type={range === 'previous' ? 'primary' : 'default'} onClick={() => { setRange('previous'); setDssLoading(true); }}>Previous</Button>
                                 <Button type={range === 'all' ? 'primary' : 'default'} onClick={() => { setRange('all'); setDssLoading(true); }}>All</Button>
-                            </Button.Group>
+                            </Space.Compact>
                              <Button icon={<ReloadOutlined spin={refreshing} />} onClick={handleRefresh}>Refresh</Button>
                         </Space>
                     </Col>
@@ -271,7 +282,7 @@ export default function ReportsInsights() {
                     <Col xs={24} md={12}>
                         <Card
                             title="Incident Type Distribution"
-                            bordered
+                            variant="outlined"
                             style={{ borderRadius: 16, borderColor: BRAND.soft }}
                         >
                             {loading ? (
@@ -306,7 +317,7 @@ export default function ReportsInsights() {
                     <Col xs={24} md={12}>
                         <Card
                             title="Victim Type Distribution"
-                            bordered
+                            variant="outlined"
                             style={{ borderRadius: 16, borderColor: BRAND.soft }}
                         >
                             {loading ? (
@@ -328,7 +339,7 @@ export default function ReportsInsights() {
                     <Col xs={24} md={16}>
                         <Card
                             title="Reports Submitted Over Time"
-                            bordered
+                            variant="outlined"
                             style={{ borderRadius: 16, borderColor: BRAND.soft }}
                         >
                             {loading ? (
@@ -357,13 +368,13 @@ export default function ReportsInsights() {
                     <Col xs={24} md={8}>
                         <Card
                             title="Recent Reports"
-                            bordered
+                            variant="outlined"
                             style={{
                                 borderRadius: 16,
                                 borderColor: BRAND.soft,
                                 overflow: "hidden",
                             }}
-                            bodyStyle={{ padding: 8 }}
+                            styles={{ body: { padding: 8 } }}
                             extra={
                                 <Button
                                     icon={<ReloadOutlined spin={refreshing} />}

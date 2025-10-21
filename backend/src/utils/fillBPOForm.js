@@ -31,6 +31,8 @@ async function fillBPOForm(bpoId) {
     form.getTextField('servedBy').setText(bpo.servedBy || '');
     form.getTextField('punongBarangay').setText(bpo.punongBarangay || '');
     form.getTextField('barangayKagawad').setText(bpo.barangaykagawad || '');
+    form.getTextField('time').setText(bpo.time || '');
+    form.getTextField('unavailabledate').setText(bpo.date?.toLocaleDateString() || '');
 
     // Save PDF in memory and return bytes
     const filledPdfBytes = await pdfDoc.save();

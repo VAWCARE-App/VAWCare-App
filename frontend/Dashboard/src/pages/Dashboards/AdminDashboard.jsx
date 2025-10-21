@@ -83,7 +83,7 @@ export default function AdminDashboard() {
               fontWeight: 700,
             }}
           >
-            Primary Dashboard
+            Admin Dashboard
           </Title>
           <Text type="secondary" style={{ fontSize: 12 }}>
             Overview • Users • Reports • Cases • Alerts

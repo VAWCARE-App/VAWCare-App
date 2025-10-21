@@ -2,6 +2,7 @@ const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
 const crypto = require('crypto');
 const BPO = require('../models/BPO');
+const fillBPOForm = require('../utils/fillBPOForm');
 
 function buildIdQuery(id) {
     const or = [];
@@ -103,4 +104,19 @@ const deleteBPO = asyncHandler(async (req, res) => {
     }
 });
 
-module.exports = { createBPO, listBPOs, getBPO, updateBPO, deleteBPO };
+const generateBpoPdf = async (req, res) => {
+  try {
+    const bpoId = String(req.params.id || 'BPO'); // ensure string
+    const pdfBytes = await fillBPOForm(bpoId);   // returns bytes
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${bpoId}.pdf"`);
+    res.send(Buffer.from(pdfBytes));             // send the PDF directly
+  } catch (error) {
+    console.error('Error generating BPO PDF:', error);
+    res.status(500).json({ message: 'Error generating BPO PDF', error: error.message });
+  }
+};
+
+
+module.exports = { createBPO, listBPOs, getBPO, updateBPO, deleteBPO, generateBpoPdf };

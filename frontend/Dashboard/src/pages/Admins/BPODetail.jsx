@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Input, Typography, Button, message } from 'antd';
-import { PrinterOutlined } from '@ant-design/icons';
+import { Input, Typography, Button, message, Layout, Space, Divider } from 'antd';
+import { PrinterOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { api, getUserType } from '../../lib/api';
 import { useNavigate } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
 
+
 const { Title, Text } = Typography;
+const { Content } = Layout;
 
 export default function BPODetail() {
   const { id } = useParams();
@@ -122,14 +124,14 @@ export default function BPODetail() {
 
     try {
       if (window.__bpoPrintPopup && !window.__bpoPrintPopup.closed) {
-        try { window.__bpoPrintPopup.close(); } catch (e) {}
+        try { window.__bpoPrintPopup.close(); } catch (e) { }
         window.__bpoPrintPopup = null;
       }
-    } catch (e) {}
+    } catch (e) { }
 
     const popup = window.open('', '_blank', 'toolbar=0,location=0,menubar=0,width=900,height=1100');
     if (!popup) { window.print(); return; }
-    try { window.__bpoPrintPopup = popup; } catch (e) {}
+    try { window.__bpoPrintPopup = popup; } catch (e) { }
     popup.document.open();
     popup.document.write(printableHTML);
     popup.document.close();
@@ -138,7 +140,7 @@ export default function BPODetail() {
       setTimeout(() => {
         try { popup.postMessage({ type: 'bpo-print' }, '*'); } catch (e) { console.warn('postMessage failed', e); }
       }, 250);
-    } catch (e) {}
+    } catch (e) { }
   };
 
   useEffect(() => {
@@ -182,147 +184,179 @@ export default function BPODetail() {
   }, [id]);
 
   return (
-    <div className="bpo-printable" style={{ maxWidth: 900, margin: '18px auto', padding: 28, background: '#fff', fontFamily: "'Times New Roman', Times, serif", color: '#000' }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 14 }}>Republic of the Philippines</div>
-        <div style={{ fontSize: 14 }}>Province of Nueva Vizcaya</div>
-        <div style={{ fontSize: 14 }}>Municipality of Bayombong</div>
-        <div style={{ fontSize: 14 }}>Barangay Bonfal Proper</div>
-        <div style={{ fontSize: 14, fontWeight: 700, marginTop: 6 }}>OFFICE OF THE PUNONG BARANGAY</div>
-      </div>
+    <Layout style={{ width: "100%", background: "#FFF5F8", minHeight: "100vh" }}>
+      <Content style={{ maxWidth: "100%", paddingTop: 32, paddingBottom: 32, paddingLeft: 16, paddingRight: 16 }}>
+        <Space align="center" style={{ marginBottom: 16 }}>
+          {/* Back button */}
+          <Button
+            icon={<ArrowLeftOutlined />}
+            onClick={() => navigate(-1)}
+            style={{ borderColor: "#e91e63", color: "#e91e63" }}
+          >
+            Back
+          </Button>
 
-      <Title level={3} style={{ textAlign: 'center', marginTop: 10, marginBottom: 6 }}>BARANGAY PROTECTION ORDER</Title>
+          {/* Download PDF button */}
+          <Button
+            type="primary"
+            onClick={() => {
+              const downloadUrl = `http://localhost:5000/api/bpo/${form.bpoID}/pdf`;
+              window.open(downloadUrl, "_blank"); // triggers download
+            }}
+            style={{ backgroundColor: "#e91e63", borderColor: "#e91e63" }}
+          >
+            Download PDF
+          </Button>
 
-      {!loading && !form.bpoID && (
-        <div style={{ textAlign: 'center', margin: '8px 0', color: '#e91e63' }}>
-          <Text>No BPO data loaded — check the browser console and ensure the URL contains the correct bpo id.</Text>
-        </div>
-      )}
+          {/* Title */}
+          <Title level={3} style={{ margin: 0, color: "#e91e63" }}>
+            BPO Details
+          </Title>
+        </Space>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-        <div>
-          <Text strong>VAWC FORM #4</Text>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Text>CONTROL NO.</Text>
-          <Input value={form.controlNo} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: 160 }} />
-        </div>
-      </div>
-
-      <div style={{ marginTop: 8 }}>
-        <div style={{ marginBottom: 10 }}>
-          <Text strong>Name of Respondent: </Text>
-          <Input value={form.respondent} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: '68%' }} />
-        </div>
-
-        <div style={{ marginBottom: 10 }}>
-          <Text strong>Address: </Text>
-          <Input value={form.address} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: '75%' }} />
-        </div>
-
-        <Title level={3} style={{ textAlign: 'center', marginTop: 8, marginBottom: 6 }}>ORDER</Title>
-
-        <div style={{ marginBottom: 12 }}>
-          <Text strong>Applicant Name: </Text>
-          <Input value={form.applicant} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: 260 }} />
-          <span style={{ marginLeft: 12 }}>applied for a BPO on</span>
-          <Input value={form.appliedOn ? new Date(form.appliedOn).toLocaleDateString() : ''} readOnly style={{ border: 0, borderBottom: '1px solid #000', marginLeft: 8, width: 140 }} />
-          <span style={{ marginLeft: 8 }}>under oath stating that:</span>
+        <Divider />
+      </Content>
+      <div className="bpo-printable" style={{ maxWidth: 900, margin: '18px auto', padding: 28, background: '#fff', fontFamily: "'Times New Roman', Times, serif", color: '#000' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 14 }}>Republic of the Philippines</div>
+          <div style={{ fontSize: 14 }}>Province of Nueva Vizcaya</div>
+          <div style={{ fontSize: 14 }}>Municipality of Bayombong</div>
+          <div style={{ fontSize: 14 }}>Barangay Bonfal Proper</div>
+          <div style={{ fontSize: 14, fontWeight: 700, marginTop: 6 }}>OFFICE OF THE PUNONG BARANGAY</div>
         </div>
 
-        <div style={{ marginBottom: 12 }}>
-          <textarea rows={3} value={form.statement} readOnly placeholder="Statement / facts under oath…" style={{ width: '100%', padding: 8, fontFamily: "'Times New Roman', Times, serif", fontSize: 15, border: '1px solid #ccc', resize: 'none' }} />
-        </div>
+        <Title level={3} style={{ textAlign: 'center', marginTop: 10, marginBottom: 6 }}>BARANGAY PROTECTION ORDER</Title>
 
-        <div style={{ marginBottom: 8 }}>
-          <span>After having heard the application and the witnesses and evidence, the undersigned hereby issues this BPO ordering you to immediately cease and desist from causing or threatening the cause physical harm to </span>
-          <Input value={form.harmTo} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: 120, marginLeft: 8, marginRight: 8 }} />
-          <span>and/or her child/children namely:</span>
-          <Input value={form.children} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: 360, marginLeft: 8 }} />
-        </div>
+        {!loading && !form.bpoID && (
+          <div style={{ textAlign: 'center', margin: '8px 0', color: '#e91e63' }}>
+            <Text>No BPO data loaded — check the browser console and ensure the URL contains the correct bpo id.</Text>
+          </div>
+        )}
 
-        <div style={{ marginTop: 12 }}>
-          <Text strong>This BPO is effective for 15 days from receipt.</Text>
-        </div>
-
-        <div style={{ marginTop: 8, textAlign: 'center' }}>
-          <div style={{ textTransform: 'uppercase', fontWeight: 700 }}>Violation of this order is punishable by law</div>
-        </div>
-
-        <div style={{ marginTop: 18, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div />
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontWeight: 700 }}>{form.pbName}</div>
-            <div>Punong Barangay</div>
-            <div style={{ marginTop: 8 }}>
-              <Text>Date Issued: </Text>
-              <Input value={form.dateIssued ? new Date(form.dateIssued).toLocaleDateString() : ''} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: 160 }} />
-            </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <div>
+            <Text strong>VAWC FORM #4</Text>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Text>CONTROL NO.</Text>
+            <Input value={form.controlNo} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: 160 }} />
           </div>
         </div>
 
-  {/* Receipt / Served section (removed dashed divider) */}
-  <div style={{ marginTop: 22, paddingTop: 12 }}>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-            <div style={{ minWidth: 320 }}>
-              <Text strong>Copy received by:</Text>
-              <Input value={form.receivedBy} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: '100%', marginTop: 8 }} />
-              <div style={{ fontSize: 12, marginTop: 6 }}>Signature over Printed Name</div>
+        <div style={{ marginTop: 8 }}>
+          <div style={{ marginBottom: 10 }}>
+            <Text strong>Name of Respondent: </Text>
+            <Input value={form.respondent} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: '68%' }} />
+          </div>
 
-              <div style={{ marginTop: 10 }}>
-                <Text strong>Date received:</Text>
-                <div style={{ marginTop: 8 }}>
-                  <Input value={form.dateReceived ? new Date(form.dateReceived).toLocaleDateString() : ''} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: 160 }} />
+          <div style={{ marginBottom: 10 }}>
+            <Text strong>Address: </Text>
+            <Input value={form.address} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: '75%' }} />
+          </div>
+
+          <Title level={3} style={{ textAlign: 'center', marginTop: 8, marginBottom: 6 }}>ORDER</Title>
+
+          <div style={{ marginBottom: 12 }}>
+            <Text strong>Applicant Name: </Text>
+            <Input value={form.applicant} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: 260 }} />
+            <span style={{ marginLeft: 12 }}>applied for a BPO on</span>
+            <Input value={form.appliedOn ? new Date(form.appliedOn).toLocaleDateString() : ''} readOnly style={{ border: 0, borderBottom: '1px solid #000', marginLeft: 8, width: 140 }} />
+            <span style={{ marginLeft: 8 }}>under oath stating that:</span>
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <textarea rows={3} value={form.statement} readOnly placeholder="Statement / facts under oath…" style={{ width: '100%', padding: 8, fontFamily: "'Times New Roman', Times, serif", fontSize: 15, border: '1px solid #ccc', resize: 'none' }} />
+          </div>
+
+          <div style={{ marginBottom: 8 }}>
+            <span>After having heard the application and the witnesses and evidence, the undersigned hereby issues this BPO ordering you to immediately cease and desist from causing or threatening the cause physical harm to </span>
+            <Input value={form.harmTo} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: 120, marginLeft: 8, marginRight: 8 }} />
+            <span>and/or her child/children namely:</span>
+            <Input value={form.children} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: 360, marginLeft: 8 }} />
+          </div>
+
+          <div style={{ marginTop: 12 }}>
+            <Text strong>This BPO is effective for 15 days from receipt.</Text>
+          </div>
+
+          <div style={{ marginTop: 8, textAlign: 'center' }}>
+            <div style={{ textTransform: 'uppercase', fontWeight: 700 }}>Violation of this order is punishable by law</div>
+          </div>
+
+          <div style={{ marginTop: 18, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div />
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontWeight: 700 }}>{form.pbName}</div>
+              <div>Punong Barangay</div>
+              <div style={{ marginTop: 8 }}>
+                <Text>Date Issued: </Text>
+                <Input value={form.dateIssued ? new Date(form.dateIssued).toLocaleDateString() : ''} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: 160 }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Receipt / Served section (removed dashed divider) */}
+          <div style={{ marginTop: 22, paddingTop: 12 }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              <div style={{ minWidth: 320 }}>
+                <Text strong>Copy received by:</Text>
+                <Input value={form.receivedBy} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: '100%', marginTop: 8 }} />
+                <div style={{ fontSize: 12, marginTop: 6 }}>Signature over Printed Name</div>
+
+                <div style={{ marginTop: 10 }}>
+                  <Text strong>Date received:</Text>
+                  <div style={{ marginTop: 8 }}>
+                    <Input value={form.dateReceived ? new Date(form.dateReceived).toLocaleDateString() : ''} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: 160 }} />
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 12 }}>
+                  <Text strong>Served by:</Text>
+                  <Input value={form.servedBy} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: '100%', marginTop: 8 }} />
+                  <div style={{ fontSize: 12, marginTop: 6 }}>Signature over Printed Name</div>
                 </div>
               </div>
 
-              <div style={{ marginTop: 12 }}>
-                <Text strong>Served by:</Text>
-                <Input value={form.servedBy} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: '100%', marginTop: 8 }} />
-                <div style={{ fontSize: 12, marginTop: 6 }}>Signature over Printed Name</div>
+              <div style={{ flex: 1 }}>
+                {/* right column intentionally left for layout balance or future fields */}
               </div>
             </div>
+          </div>
 
-            <div style={{ flex: 1 }}>
-              {/* right column intentionally left for layout balance or future fields */}
+          {/* Attestation */}
+          <div style={{ marginTop: 24, textAlign: 'center' }}>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>ATTESTATION</div>
+            <div style={{ marginTop: 4 }}>(In Case the Punong Barangay is Unavailable)</div>
+
+            <div style={{ marginTop: 12, textAlign: 'left', maxWidth: 760, marginLeft: 'auto', marginRight: 'auto' }}>
+              <Text>I hereby attest that Punong Barangay </Text>
+              <Input value={form.pbName} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: 260, marginLeft: 8, marginRight: 8 }} />
+              was unavailable to act on
+              <Input value={form.attestDate ? new Date(form.attestDate).toLocaleDateString() : ''} readOnly style={{ border: 0, borderBottom: '1px solid #000', marginLeft: 8, width: 140 }} /> at
+              <Input value={form.attestTime || ''} readOnly style={{ border: 0, borderBottom: '1px solid #000', marginLeft: 8, width: 100 }} /> a.m./p.m. and issue such order.
+            </div>
+
+            <div style={{ marginTop: 18, display: 'flex', justifyContent: 'flex-end' }}>
+              <div style={{ width: 260, textAlign: 'center' }}>
+                <Input
+                  value={form.kagawadName}
+                  readOnly
+                  style={{ border: 0, borderBottom: '1px solid #000', width: '100%', textAlign: 'center' }}
+                  placeholder="Printed name"
+                />
+                <div style={{ marginTop: 6 }}>Barangay Kagawad</div>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Attestation */}
-        <div style={{ marginTop: 24, textAlign: 'center' }}>
-          <div style={{ fontWeight: 700, fontSize: 16 }}>ATTESTATION</div>
-          <div style={{ marginTop: 4 }}>(In Case the Punong Barangay is Unavailable)</div>
-
-          <div style={{ marginTop: 12, textAlign: 'left', maxWidth: 760, marginLeft: 'auto', marginRight: 'auto' }}>
-            <Text>I hereby attest that Punong Barangay </Text>
-            <Input value={form.pbName} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: 260, marginLeft: 8, marginRight: 8 }} />
-            was unavailable to act on
-            <Input value={form.attestDate ? new Date(form.attestDate).toLocaleDateString() : ''} readOnly style={{ border: 0, borderBottom: '1px solid #000', marginLeft: 8, width: 140 }} /> at
-            <Input value={form.attestTime || ''} readOnly style={{ border: 0, borderBottom: '1px solid #000', marginLeft: 8, width: 100 }} /> a.m./p.m. and issue such order.
-          </div>
-
-          <div style={{ marginTop: 18, display: 'flex', justifyContent: 'flex-end' }}>
-            <div style={{ width: 260, textAlign: 'center' }}>
-              <Input
-                value={form.kagawadName}
-                readOnly
-                style={{ border: 0, borderBottom: '1px solid #000', width: '100%', textAlign: 'center' }}
-                placeholder="Printed name"
-              />
-              <div style={{ marginTop: 6 }}>Barangay Kagawad</div>
-            </div>
+          <div style={{ marginTop: 20, display: 'flex', gap: 12, alignItems: 'center' }}>
+            <Button icon={<PrinterOutlined />} onClick={handlePrint}>Print</Button>
           </div>
         </div>
 
-        <div style={{ marginTop: 20, display: 'flex', gap: 12, alignItems: 'center' }}>
-          <Button icon={<PrinterOutlined />} onClick={handlePrint}>Print</Button>
-        </div>
-      </div>
+        {/* Notifications are shown via Ant Design notification (non-blocking) */}
 
-      {/* Notifications are shown via Ant Design notification (non-blocking) */}
-
-      <style>{`
+        <style>{`
         @media print {
           /* Hide interactive controls */
           button, .ant-btn { display: none !important; }
@@ -343,6 +377,8 @@ export default function BPODetail() {
         /* Screen hint: ensure printable area looks like a single page */
         .bpo-printable { box-shadow: 0 0 0 1px rgba(0,0,0,0.05); }
       `}</style>
-    </div>
+      </div>
+    </Layout>
+
   );
 }

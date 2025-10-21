@@ -26,7 +26,7 @@ import {
   ReloadOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-import { api } from "../../lib/api";
+import { api, isAuthed, getUserType } from "../../lib/api";
 
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;
@@ -64,6 +64,7 @@ function Sparkline({ points = [], width = 420, height = 120, stroke = "#7A5AF8" 
 export default function OverviewInsights() {
   const { message } = AntApp.useApp();
   const screens = Grid.useBreakpoint();
+  const loggedRef = React.useRef(false);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -140,11 +141,22 @@ export default function OverviewInsights() {
     try {
       if (withSpinner) setLoading(true);
 
+      // Only call admin-only endpoints when the current client appears to be an admin
+      // This avoids noisy 401s in the browser console for unauthenticated/non-admin users
+      const reportsPromise = api.get("/api/reports").catch(() => ({ data: [] }));
+      const casesPromise = api.get("/api/cases").catch(() => ({ data: [] }));
+      const logsPromise = api.get("/api/logs").catch(() => ({ data: [] }));
+
+      const shouldCallAdminUsers = isAuthed() && getUserType && getUserType() === "admin";
+      const usersPromise = shouldCallAdminUsers
+        ? api.get("/api/admin/users").catch(() => ({ data: [] }))
+        : Promise.resolve({ data: [] });
+
       const [reportsRes, casesRes, usersRes, logsRes] = await Promise.all([
-        api.get("/api/reports").catch(() => ({ data: [] })),
-        api.get("/api/cases").catch(() => ({ data: [] })),
-        api.get("/api/admin/users").catch(() => ({ data: [] })),
-        api.get("/api/logs").catch(() => ({ data: [] })),
+        reportsPromise,
+        casesPromise,
+        usersPromise,
+        logsPromise,
       ]);
 
       const reports = Array.isArray(reportsRes.data)
@@ -239,9 +251,19 @@ export default function OverviewInsights() {
     loadMetrics(true);
   }, []);
 
+  // Log page view to system logs (only once per mount)
+  useEffect(() => {
+    if (!loggedRef.current) {
+      loggedRef.current = true;
+      api.post("/api/logs/pageview", { path: "/admin/insights/overview" }).catch((e) => {
+        console.debug("Failed to log page view:", e.message);
+      });
+    }
+  }, []);
+
   const KpiChip = ({ icon, label, value, delay = 0 }) => (
     <Card
-      bordered
+      variant="outlined"
       className="fade-in-card"
       style={{
         ...glossyBase,
@@ -249,7 +271,7 @@ export default function OverviewInsights() {
         height: "100%",
         animationDelay: `${delay}ms`,
       }}
-      bodyStyle={{ padding: 16, display: "flex", flexDirection: "column", gap: 8 }}
+      styles={{ body: { padding: 16, display: "flex", flexDirection: "column", gap: 8 } }}
     >
       <Space align="center">
         <div
@@ -342,7 +364,9 @@ export default function OverviewInsights() {
 
       <Content
         style={{
-          padding: screens.md ? 16 : 12,
+          paddingTop: screens.md ? 16 : 12,
+          paddingRight: screens.md ? 16 : 12,
+          paddingLeft: screens.md ? 16 : 12,
           display: "flex",
           justifyContent: "center",
           overflow: "auto",
@@ -358,9 +382,9 @@ export default function OverviewInsights() {
                 <Col xs={24}>
                   <Card
                     className="fade-in-card"
-                    bordered
+                    variant="outlined"
                     style={overviewSurface}
-                    bodyStyle={{ padding: 18 }}
+                    styles={{ body: { padding: 18 } }}
                   >
                     <div
                       style={{
@@ -479,9 +503,9 @@ export default function OverviewInsights() {
                 <Col xs={24} md={12}>
                   <Card
                     className="fade-in-card"
-                    bordered
+                    variant="outlined"
                     style={glossyTintViolet}
-                    bodyStyle={{ padding: 16, display: "grid", gap: 10, color: BRAND.textDark }}
+                    styles={{ body: { padding: 16, display: "grid", gap: 10, color: BRAND.textDark } }}
                   >
                     <Title level={5} style={{ color: BRAND.violet, margin: 0 }}>
                       Daily Tasks
@@ -504,9 +528,9 @@ export default function OverviewInsights() {
                 <Col xs={24} md={12}>
                   <Card
                     className="fade-in-card"
-                    bordered
+                    variant="outlined"
                     style={glossyTintPink}
-                    bodyStyle={{ padding: 16, display: "grid", gap: 10, color: BRAND.textDark }}
+                    styles={{ body: { padding: 16, display: "grid", gap: 10, color: BRAND.textDark } }}
                   >
                     <Title level={5} style={{ color: BRAND.pink, margin: 0 }}>
                       My Actions
@@ -560,16 +584,16 @@ export default function OverviewInsights() {
               <Card
                 className="fade-in-card"
                 title={<span style={{ color: BRAND.violet }}>Recent Activity</span>}
-                bordered
+                variant="outlined"
                 style={glossyBase}
-                bodyStyle={{
+                styles={{ body: {
                   padding: 0,
                   display: "flex",
                   flexDirection: "column",
                   minHeight: 200,
                   maxHeight: 520,
                   overflowY: "auto",
-                }}
+                } }}
               >
                 {loading ? (
                   <div style={{ padding: 16 }}>

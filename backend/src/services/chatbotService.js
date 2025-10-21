@@ -42,8 +42,11 @@ const CONTEXTS = [
   },
   {
     name: "hotlines",
-    keywords: ["hotline", "contact", "call", "find", "tawag", "kontak", "hanap", "numero", "numero ng tulong"],
-    priority: 4,
+    keywords: [
+      "hotline", "contact", "call", "call someone", "can i call", "who to call",
+      "find", "tawag", "kontak", "hanap", "numero", "numero ng tulong", "tumawag", "numbers", "phone number"
+    ],
+    priority: 1.5,
     prompt: `
       Philippine Commission on Women (PCW) VAWC Helpline
       Hotline: 0917-867-1907
@@ -74,7 +77,9 @@ const CONTEXTS = [
     priority: 4.5, // slightly lower than hotlines
     prompt: `
       The user may need local support through their Barangay.
-      Provide if asked:
+      Provide only what is asked in a conversational manner.
+      - Barangay Captain: Kapitan Regina Cristina Tumacder
+      - VAWC Officer: Kagawad Vangelyn Alcantara
       - Barangay Violence Against Women (VAW) Desk: Visit your local Barangay office for assistance.
       - Barangay Protection Order (BPO): A legal order issued at the Barangay level for immediate protection.
       - Barangay officials can help with initial reports and referrals.
@@ -119,6 +124,7 @@ function detectContextFuzzy(message) {
 
 // Build system prompt
 function buildSystemPrompt(contextPrompt) {
+  console.log("Context Prompt:", contextPrompt);
   return `
 You are a personal VAWCare Assistant — a chatbot for the VAWCare System.
 Provide concise, accurate, and supportive responses.
@@ -127,10 +133,6 @@ When unsure, advise the user to contact a professional or hotline.
 - Do not use markdown, asterisks, or formatting.
 - Keep answers clear and conversational.
 - Do not answer questions outside the scope of VAWCare.
-
-Useful Information:
-- The Barangay Captain of Bonfal Proper is Kapitan Regina Cristina Tumacder 
-- The VAWC Officer is Kagawad Vangelyn Alcantara
 
 ${contextPrompt || ""}
 `;

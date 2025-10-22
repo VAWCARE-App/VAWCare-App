@@ -430,7 +430,7 @@ export default function ReportsInsights() {
                     {/* DSS Insights Section */}
                     <Col xs={24}>
                         <Card
-                            title="Alerts & Recommendations"
+                            title="Reports Recommendations"
                             bordered
                             extra={
                                 <Space>

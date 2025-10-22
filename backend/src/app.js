@@ -79,6 +79,7 @@ app.listen(PORT, () => {
                 try {
                     const activeCount = await alerts.countDocuments({ status: 'Active' });
                     if (process.env.ALERT_DEBUG) console.log(`Alert supervisor: active alerts=${activeCount}`);
+                    const ALERT_MAX_ACTIVE_MS = 1000 * 60 * 60; // 1 hour countdown timer before auto-resolve
                     if (ALERT_MAX_ACTIVE_MS && Number.isFinite(ALERT_MAX_ACTIVE_MS)) {
                         const cutoff = new Date(Date.now() - ALERT_MAX_ACTIVE_MS);
                         const stale = await alerts.find({ status: 'Active', createdAt: { $lte: cutoff } }).limit(100).lean();

@@ -177,7 +177,7 @@ export default function Chatbot() {
           }}
         >
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
-            {["What is VAWC?", "How to report?", "Barangay help desk", "Safe Spaces Act", "Emergency"].map((q) => (
+            {["What is VAWC?", "How to report?", "Barangay help desk", "Resources", "Emergency", "Hotlines"].map((q) => (
               <Button
                 key={q}
                 size="small"

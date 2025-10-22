@@ -62,9 +62,9 @@ export default function VictimNavbar() {
         await Promise.race([
           api.post("/api/auth/logout"),
           new Promise((r) => setTimeout(r, 1500)),
-        ]).catch(() => {});
+        ]).catch(() => { });
       }
-    } catch {}
+    } catch { }
     clearToken();
     localStorage.clear();
     navigate("/");
@@ -78,17 +78,6 @@ export default function VictimNavbar() {
   // Profile dropdown (shown only when avatar is clicked)
   const userMenu = {
     items: [
-      {
-        key: "resources",
-        icon: <InfoCircleOutlined />,
-        label: <a href="/resources">VAWC Resources</a>,
-      },
-      {
-        key: "hotline",
-        icon: <PhoneOutlined />,
-        label: <a href="tel:117">Emergency Hotline (117)</a>,
-      },
-      { type: "divider" },
       {
         key: "logout",
         icon: <LogoutOutlined />,
@@ -201,7 +190,8 @@ export default function VictimNavbar() {
                 type="text"
                 aria-label="Account menu"
                 style={{
-                  padding: "6px 8px",
+                  padding: "10px 12px",   // taller padding
+                  minHeight: 40,
                   borderRadius: 12,
                   border: `1px solid ${BRAND.soft}`,
                   background: "rgba(255,255,255,0.9)",
@@ -212,7 +202,7 @@ export default function VictimNavbar() {
                   backdropFilter: "blur(6px) saturate(140%)",
                 }}
               >
-                <Badge dot color={BRAND.violet}>
+                <Badge>
                   <Avatar style={{ background: BRAND.violet, fontWeight: 700 }} size={28}>
                     {initials}
                   </Avatar>
@@ -307,6 +297,7 @@ export default function VictimNavbar() {
                   alignItems: "center",
                   justifyContent: "space-between",
                   cursor: "pointer",
+                  height: 40,
                 }}
               >
                 <Space align="center" size={10}>

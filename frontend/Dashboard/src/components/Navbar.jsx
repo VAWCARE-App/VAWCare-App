@@ -7,6 +7,7 @@ import {
   UserSwitchOutlined,
   MoonOutlined,
   BulbOutlined,
+  LogoutOutlined
 } from "@ant-design/icons";
 
 const { Header } = Layout;
@@ -20,6 +21,7 @@ export default function Navbar({
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [user, setUser] = useState(null);
 
   // Active key from hash or path
   const activeKey = useMemo(() => {
@@ -29,7 +31,17 @@ export default function Navbar({
     return "home";
   }, [location]);
 
+  const handleLogout = () => {
+    localStorage.clear();
+    setUser(null);
+    window.location.reload(); // optional
+  }
+
   useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
     const onScroll = () => setScrolled(window.scrollY > 6);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -107,9 +119,8 @@ export default function Navbar({
       >
         {/* Glass bar container */}
         <div
-          className={`nav-wrap ${
-            scrolled ? (dark ? "nav-shadow-dark" : "nav-shadow-lite") : "nav-shadow-none"
-          }`}
+          className={`nav-wrap ${scrolled ? (dark ? "nav-shadow-dark" : "nav-shadow-lite") : "nav-shadow-none"
+            }`}
         >
           {/* Brand */}
           <Link to="/landing" style={{ textDecoration: "none" }}>
@@ -148,16 +159,46 @@ export default function Navbar({
                     />
                   </Tooltip>
                 )}
-                <Link to="/admin/login">
-                  <Button size="middle" icon={<UserSwitchOutlined />} className="btn-outline">
-                    Admin
-                  </Button>
-                </Link>
-                <Link to="/login">
-                  <Button type="primary" icon={<LoginOutlined />} className="btn-primary">
-                    Login
-                  </Button>
-                </Link>
+                {user ? (
+                  <>
+                    <Tooltip title={`Logged in as ${user.firstName}`}>
+                      <Button 
+                      size="middle" 
+                      icon={<UserSwitchOutlined />} 
+                      className="btn-outline" 
+                      onClick={() => {
+                        if (user.userType === "admin") {
+                          window.location.href = "/admin";
+                        } else {
+                          window.location.href = "/victim";
+                        }
+                      }}>
+                        {user.userType === "admin" ? "Admin Panel" : "Dashboard"}
+                      </Button>
+                    </Tooltip>
+                    <Button
+                      type="primary"
+                      danger
+                      onClick={handleLogout}
+                      icon={<LogoutOutlined />}
+                    >
+                      Logout
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Link to="/admin/login">
+                      <Button size="middle" icon={<UserSwitchOutlined />} className="btn-outline">
+                        Admin
+                      </Button>
+                    </Link>
+                    <Link to="/login">
+                      <Button type="primary" icon={<LoginOutlined />} className="btn-primary">
+                        Login
+                      </Button>
+                    </Link>
+                  </>
+                )}
               </Space>
             </div>
           ) : (

@@ -448,7 +448,7 @@ export default function CasesInsights() {
                     {/* DSS Insights */}
                     <Col xs={24}>
                         <Card
-                            title="Case Alerts & Recommendations"
+                            title="Cases Recommendations"
                             bordered
                             extra={
                                 <Space>

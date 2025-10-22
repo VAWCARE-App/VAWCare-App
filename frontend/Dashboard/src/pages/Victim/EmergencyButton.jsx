@@ -87,18 +87,30 @@ export default function EmergencyButton() {
       // Try to collect multiple high-accuracy samples and pick the best one
       const getBestPosition = (opts = {}) =>
         new Promise((resolve, reject) => {
-          const maxSamples = opts.maxSamples || 6;
-          const maxTime = opts.maxTime || 8000; // ms
+          const maxSamples = opts.maxSamples || 10; // Increased from 6 to 10 samples
+          const maxTime = opts.maxTime || 12000; // Increased from 8000 to 12000ms
           const positions = [];
           let watchId = null;
           let finished = false;
+          const ACCURACY_THRESHOLD = 20; // meters - consider this "good enough"
 
           function done() {
             if (finished) return;
             finished = true;
             if (watchId !== null) navigator.geolocation.clearWatch(watchId);
             if (positions.length === 0) return reject(new Error('No position samples collected'));
-            // pick the sample with smallest accuracy (in meters) when available
+            
+            // First try to find a position with accuracy better than threshold
+            const accuratePosition = positions.find(p => 
+              p.coords && typeof p.coords.accuracy === 'number' && p.coords.accuracy <= ACCURACY_THRESHOLD
+            );
+            
+            if (accuratePosition) {
+              resolve(accuratePosition);
+              return;
+            }
+
+            // If no position meets threshold, pick the most accurate one as before
             positions.sort((a, b) => {
               const aa = (a.coords && typeof a.coords.accuracy === 'number') ? a.coords.accuracy : Infinity;
               const bb = (b.coords && typeof b.coords.accuracy === 'number') ? b.coords.accuracy : Infinity;
@@ -108,10 +120,15 @@ export default function EmergencyButton() {
           }
 
           try {
-            watchId = navigator.geolocation.watchPosition(
+              watchId = navigator.geolocation.watchPosition(
               (position) => {
                 positions.push(position);
-                // if we have enough samples, finish early
+                // If we get a very accurate reading (under threshold), finish immediately
+                if (position.coords && position.coords.accuracy <= ACCURACY_THRESHOLD) {
+                  done();
+                  return;
+                }
+                // if we have enough samples, finish
                 if (positions.length >= maxSamples) done();
               },
               (err) => {
@@ -119,7 +136,11 @@ export default function EmergencyButton() {
                 if (positions.length > 0) return done();
                 reject(err);
               },
-              { enableHighAccuracy: true, maximumAge: 0, timeout: opts.sampleTimeout || 2500 }
+              { 
+                enableHighAccuracy: true,
+                maximumAge: 0,
+                timeout: opts.sampleTimeout || 4000  // Increased from 2500 to 4000ms
+              }
             );
           } catch (e) {
             return reject(e);
@@ -141,7 +162,11 @@ export default function EmergencyButton() {
           if (err && err.code === 3) {
             try {
               pos = await new Promise((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, maximumAge: 60000, timeout: 5000 });
+                navigator.geolocation.getCurrentPosition(resolve, reject, { 
+                  enableHighAccuracy: true, 
+                  maximumAge: 0, // Don't use cached positions
+                  timeout: 10000 // Increased timeout for better accuracy
+                });
               });
             } catch (fallbackErr) {
               throw err; // rethrow original

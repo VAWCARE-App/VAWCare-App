@@ -44,6 +44,7 @@ const CONTEXTS = [
     name: "hotlines",
     keywords: [
       "hotline", "contact", "call", "call someone", "can i call", "who to call",
+      "email", "email address", "gmail", "send email", "send a message", "contact email",
       "find", "tawag", "kontak", "hanap", "numero", "numero ng tulong", "tumawag", "numbers", "phone number"
     ],
     priority: 1.5,
@@ -104,7 +105,7 @@ const keywordList = CONTEXTS.flatMap(ctx =>
 const fuse = new Fuse(keywordList, {
   keys: ["keyword"],
   includeScore: true,
-  threshold: 0.4, // lower = stricter match, higher = more forgiving
+  threshold: 0.6, // lower = stricter match, higher = more forgiving
   ignoreLocation: true,
 });
 

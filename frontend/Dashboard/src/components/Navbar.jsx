@@ -7,6 +7,7 @@ import {
   UserSwitchOutlined,
   MoonOutlined,
   BulbOutlined,
+  LogoutOutlined
 } from "@ant-design/icons";
 
 const { Header } = Layout;
@@ -161,7 +162,17 @@ export default function Navbar({
                 {user ? (
                   <>
                     <Tooltip title={`Logged in as ${user.firstName}`}>
-                      <Button size="middle" icon={<UserSwitchOutlined />} className="btn-outline">
+                      <Button 
+                      size="middle" 
+                      icon={<UserSwitchOutlined />} 
+                      className="btn-outline" 
+                      onClick={() => {
+                        if (user.userType === "admin") {
+                          window.location.href = "/admin";
+                        } else {
+                          window.location.href = "/victim";
+                        }
+                      }}>
                         {user.userType === "admin" ? "Admin Panel" : "Dashboard"}
                       </Button>
                     </Tooltip>
@@ -169,6 +180,7 @@ export default function Navbar({
                       type="primary"
                       danger
                       onClick={handleLogout}
+                      icon={<LogoutOutlined />}
                     >
                       Logout
                     </Button>

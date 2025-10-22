@@ -38,6 +38,7 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import MarkerClusterGroup from 'react-leaflet-markercluster';
 import '../../styles/marker-cluster.css';
+import '../../styles/pulsing-marker.css';
 import { api } from "../../lib/api";
 
 const { Content } = Layout;
@@ -51,11 +52,47 @@ const BRAND = {
     soft: "rgba(122,90,248,0.18)",
 };
 
-const alertIcon = new L.Icon({
-    iconUrl: "https://cdn-icons-png.flaticon.com/512/484/484582.png",
-    iconSize: [30, 30],
-    iconAnchor: [15, 30],
-});
+// Define icons for different alert statuses
+const alertIcons = {
+    Active: new L.DivIcon({
+        className: '',
+        html: `<div style="position: relative; width: 32px; height: 32px;">
+                <div class="pulsing-marker"></div>
+                <div style="width: 32px; height: 32px; background: #ff4d4f; border-radius: 50%; box-shadow: 0 3px 6px rgba(0,0,0,0.2); border: 2px solid #fff; position: absolute; top: 0; left: 0; z-index: 1;"></div>
+               </div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+        popupAnchor: [0, -16]
+    }),
+    Resolved: new L.DivIcon({
+        className: '',
+        html: `<div style="
+            width: 32px;
+            height: 32px;
+            background: #52c41a;
+            border-radius: 50%;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+            border: 2px solid #fff;
+        "></div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+        popupAnchor: [0, -16]
+    }),
+    Cancelled: new L.DivIcon({
+        className: '',
+        html: `<div style="
+            width: 32px;
+            height: 32px;
+            background: #8c8c8c;
+            border-radius: 50%;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+            border: 2px solid #fff;
+        "></div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+        popupAnchor: [0, -16]
+    })
+};
 
 export default function AlertsInsights() {
     const loggedRef = React.useRef(false);
@@ -301,11 +338,10 @@ export default function AlertsInsights() {
                             icon={<CloseCircleOutlined style={{ color: "#8884d8", fontSize: 22 }} />}
                         />
                     </Col>
-
-                    {/* Map */}
-                    <Col xs={24} md={12}>
+                        {/* Alerts Location Card */}
+                    <Col xs={24}>
                         <Card
-                            title="Active Alert Locations (Clustered)"
+                            title="Alerts Location"
                             bordered
                             style={{ borderRadius: 16, borderColor: BRAND.soft }}
                             extra={
@@ -318,54 +354,92 @@ export default function AlertsInsights() {
                         >
                             {loading ? (
                                 <Skeleton active />
-                            ) : active === 0 ? (
-                                <Empty description="No active alerts" />
+                            ) : filteredAlerts.length === 0 ? (
+                                <Empty description="No alerts data" />
                             ) : (
-                                <div style={{ height: 300, width: "100%", borderRadius: 12 }}>
+                                <div style={{ height: 450, width: "100%", borderRadius: 12 }}>
                                     <MapContainer
-                                        center={[12.8797, 121.7740]} // Philippines center
-                                        zoom={5}
+                                        center={[16.4829176, 121.1501679]} // Bayombong, Nueva Vizcaya center
+                                        zoom={13}
                                         style={{ height: "100%", width: "100%" }}
                                     >
                                         <TileLayer
                                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                             attribution='&copy; OpenStreetMap contributors'
                                         />
-                                        <MarkerClusterGroup
-                                            iconCreateFunction={(cluster) => {
-                                                const count = cluster.getChildCount();
-                                                const size = count < 5 ? 'small' : count < 10 ? 'medium' : 'large';
-                                                const color =
-                                                    count < 5 ? '#5AD8A6' : count < 10 ? '#FFB347' : '#FF6EA9';
-                                                return L.divIcon({
-                                                    html: `<div style="background-color:${color};border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;">${count}</div>`,
-                                                    className: 'custom-cluster-icon',
-                                                    iconSize: L.point(40, 40),
-                                                });
-                                            }}
-                                        >
-                                            {filteredAlerts.map((a, i) => (
+                                        {[...filteredAlerts]
+                                            .sort((a, b) => {
+                                                // First, check if either alert is active
+                                                const aIsActive = a.status === 'Active';
+                                                const bIsActive = b.status === 'Active';
+                                                
+                                                if (aIsActive !== bIsActive) {
+                                                    // If one is active and the other isn't, active goes on top
+                                                    return aIsActive ? 1 : -1;
+                                                }
+                                                // If neither is active or both are active,
+                                                const dateA = new Date(a.createdAt).getTime();
+                                                const dateB = new Date(b.createdAt).getTime();
+                                                return dateB - dateA;
+                                            })
+                                            .map((a, i) => {
+                                            // Safely handle missing location data
+                                            if (!a?.location?.latitude || !a?.location?.longitude) {
+                                                return null;
+                                            }
+
+                                            // Safely extract victimID
+                                            const victimIdDisplay = (() => {
+                                                if (!a.victimID) return 'N/A';
+                                                if (typeof a.victimID === 'object' && a.victimID?.victimID) {
+                                                    return a.victimID.victimID;
+                                                }
+                                                return String(a.victimID);
+                                            })();
+
+                                            // Calculate zIndex based on status and date
+                                            const baseZIndex = 1000; // base z-index
+                                            const alertDate = new Date(a.createdAt).getTime();
+                                            // Use the timestamp directly for date-based z-index
+                                            // This ensures newer dates always get higher values
+                                            const dateBonus = Math.floor(alertDate / 1000); // Convert to seconds for smaller numbers
+                                            const statusBonus = a.status === 'Active' ? 10000 : 0; // Active alerts get much higher priority
+                                            const zIndex = baseZIndex + statusBonus + dateBonus;
+
+                                            return (
                                                 <Marker
                                                     key={i}
                                                     position={[a.location.latitude, a.location.longitude]}
-                                                    icon={alertIcon}
+                                                    icon={alertIcons[a.status || 'Active']}
+                                                    zIndexOffset={zIndex}
                                                 >
                                                     <Popup>
-                                                        <strong>{a.alertID}</strong>
+                                                        <strong>{a.alertID || 'Unknown Alert'}</strong>
                                                         <br />
-                                                        Victim ID: {typeof a.victimID === 'object' ? a.victimID.victimID : a.victimID || 'N/A'}
+                                                        Victim ID: {(() => {
+                                                            if (!a.victimID) return 'N/A';
+                                                            if (typeof a.victimID === 'object' && a.victimID?.victimID) {
+                                                                return a.victimID.victimID;
+                                                            }
+                                                            return String(a.victimID);
+                                                        })()}
                                                         <br />
-                                                        Status: {a.status}
+                                                        Status: <Tag color={
+                                                            a.status === "Active" ? "red" : 
+                                                            a.status === "Resolved" ? "green" : 
+                                                            "default"
+                                                        }>{a.status || 'Unknown'}</Tag>
+                                                        <br />
+                                                        Created: {a.createdAt ? new Date(a.createdAt).toLocaleString() : 'Unknown date'}
                                                     </Popup>
                                                 </Marker>
-                                            ))}
-                                        </MarkerClusterGroup>
+                                            );
+                                        })}
                                     </MapContainer>
                                 </div>
                             )}
                         </Card>
                     </Col>
-
                     {/* Pie Chart */}
                     <Col xs={24} md={12}>
                         <Card
@@ -399,9 +473,31 @@ export default function AlertsInsights() {
                             )}
                         </Card>
                     </Col>
-
-                    {/* Line Chart */}
+                    {/* Duration Bar */}
                     <Col xs={24} md={12}>
+                        <Card
+                            title="Average Response Time (Minutes)"
+                            bordered
+                            style={{ borderRadius: 16, borderColor: BRAND.soft }}
+                        >
+                            {loading ? (
+                                <Skeleton active />
+                            ) : durationData.length === 0 ? (
+                                <Empty description="No resolved alerts" />
+                            ) : (
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <BarChart data={durationData}>
+                                        <XAxis dataKey="name" />
+                                        <YAxis />
+                                        <Tooltip />
+                                        <Bar dataKey="duration" fill={BRAND.pink} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            )}
+                        </Card>
+                    </Col>
+                    {/* Line Chart */}
+                    <Col xs={24} md={24}>
                         <Card
                             title="Alerts Over Time"
                             bordered
@@ -420,30 +516,6 @@ export default function AlertsInsights() {
                                         <Tooltip />
                                         <Line type="monotone" dataKey="count" stroke={BRAND.violet} />
                                     </LineChart>
-                                </ResponsiveContainer>
-                            )}
-                        </Card>
-                    </Col>
-
-                    {/* Duration Bar */}
-                    <Col xs={24} md={12}>
-                        <Card
-                            title="Average Response Time (Minutes)"
-                            bordered
-                            style={{ borderRadius: 16, borderColor: BRAND.soft }}
-                        >
-                            {loading ? (
-                                <Skeleton active />
-                            ) : durationData.length === 0 ? (
-                                <Empty description="No resolved alerts" />
-                            ) : (
-                                <ResponsiveContainer width="100%" height={280}>
-                                    <BarChart data={durationData}>
-                                        <XAxis dataKey="name" />
-                                        <YAxis />
-                                        <Tooltip />
-                                        <Bar dataKey="duration" fill={BRAND.pink} />
-                                    </BarChart>
                                 </ResponsiveContainer>
                             )}
                         </Card>

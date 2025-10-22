@@ -42,6 +42,7 @@ const { Title, Text } = Typography;
 
 export default function UserInsights() {
     const { message } = AntApp.useApp();
+    const loggedRef = React.useRef(false);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [data, setData] = useState({ admins: [], victims: [], officials: [] });
@@ -74,6 +75,16 @@ export default function UserInsights() {
 
     useEffect(() => {
         loadUsers();
+    }, []);
+
+    // Log page view to system logs (only once per mount)
+    useEffect(() => {
+        if (!loggedRef.current) {
+            loggedRef.current = true;
+            api.post("/api/logs/pageview", { path: "/admin/insights/users" }).catch((e) => {
+                console.debug("Failed to log page view:", e.message);
+            });
+        }
     }, []);
 
     // Derived stats

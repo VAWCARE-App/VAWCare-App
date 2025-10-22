@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+// src/pages/admin/ReportManagement.jsx
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   App as AntApp,
   Card,
@@ -10,499 +11,950 @@ import {
   Input,
   Select,
   Space,
-  Tooltip,
-  Descriptions,
+  Avatar,
   Modal,
   Form,
   Row,
   Col,
+  Grid,
+  DatePicker,
+  Descriptions,
 } from "antd";
 import {
   SearchOutlined,
   ReloadOutlined,
-  EyeOutlined,
   EditOutlined,
-  DeleteOutlined,
+  DownloadOutlined,
+  CalendarOutlined,
+  EnvironmentOutlined,
   AlertOutlined,
-  ExclamationCircleOutlined,
-  EnvironmentOutlined
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 
 const { Header, Content } = Layout;
 const { Search } = Input;
-const { Option } = Select;
+const { RangePicker } = DatePicker;
 
 export default function ReportManagement() {
   const { message } = AntApp.useApp();
+  const screens = Grid.useBreakpoint();
+
+  // === Brand & glass style ===
+  const BRAND = {
+    violet: "#7A5AF8",
+    pink: "#e91e63",
+    green: "#52c41a",
+    blue: "#1890ff",
+    pageBg: "linear-gradient(180deg, #faf9ff 0%, #f6f3ff 60%, #ffffff 100%)",
+    softBorder: "rgba(122,90,248,0.18)",
+    rowHover: "#F1EEFF",
+  };
+  const glassCard = {
+    borderRadius: 14,
+    background:
+      "linear-gradient(145deg, rgba(255,255,255,0.82), rgba(255,255,255,0.58))",
+    backdropFilter: "blur(10px)",
+    WebkitBackdropFilter: "blur(10px)",
+    border: `1px solid ${BRAND.softBorder}`,
+    boxShadow: "0 10px 26px rgba(16,24,40,0.06)",
+  };
+
+  // === Layout sizing ===
+  const HEADER_H = 0; // sticky header is in normal flow (matching AlertsManagement)
+  const TOP_PAD = 12;
+  const [tableY, setTableY] = useState(520);
+  const pageRef = useRef(null);
+
+  // Compute available table height responsively
+  useEffect(() => {
+    const calc = () => {
+      if (!pageRef.current) return;
+      const rect = pageRef.current.getBoundingClientRect();
+      const available = window.innerHeight - rect.top - TOP_PAD;
+      const y = Math.max(220, available - 180);
+      setTableY(y);
+      pageRef.current.style.width = "100%";
+      pageRef.current.style.minWidth = "0";
+    };
+    calc();
+    window.addEventListener("resize", calc);
+    const ro = new ResizeObserver(calc);
+    ro.observe(document.body);
+    const t = setTimeout(calc, 50);
+    return () => {
+      window.removeEventListener("resize", calc);
+      ro.disconnect();
+      clearTimeout(t);
+    };
+  }, []);
+
+  // === State ===
   const [loading, setLoading] = useState(true);
   const [allReports, setAllReports] = useState([]);
   const [filteredReports, setFilteredReports] = useState([]);
   const [searchText, setSearchText] = useState("");
-  const [filterType, setFilterType] = useState("all");
-  const [editModalVisible, setEditModalVisible] = useState(false);
-  const [editingReport, setEditingReport] = useState(null);
-  const [isViewMode, setIsViewMode] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dateRange, setDateRange] = useState(null);
+
+  // Right-side modal
+  const [modalOpen, setModalOpen] = useState(false);
+  const [mode, setMode] = useState("view"); // view | edit
+  const [activeReport, setActiveReport] = useState(null);
   const [form] = Form.useForm();
 
+  // quick status editor state
+  const [quickStatus, setQuickStatus] = useState(null);
+  const [statusUpdating, setStatusUpdating] = useState(false);
+
+  // === Data ===
   const fetchAllReports = async () => {
     try {
       setLoading(true);
       const { data } = await api.get("/api/reports");
-
-      if (data.success) {
-        const formattedReports = data.data.map((r) => {
-          // Remove the victim's location (latitude/longitude) for privacy
+      if (data?.success) {
+        const formatted = (data.data || []).map((r) => {
           let victim = null;
           if (r.victimID) {
-            // keep all victim fields except location
-            const { location, ...victimNoLocation } = r.victimID;
-            victim = victimNoLocation;
+            const { location, ...safeVictim } = r.victimID; // privacy scrub
+            victim = safeVictim;
           }
-
           return {
             key: r.reportID,
             reportID: r.reportID,
-            victimID: victim,
+            victimID: victim, // object or null
             incidentType: r.incidentType,
             description: r.description,
             perpetrator: r.perpetrator,
             location: r.location,
-            dateReported: r.dateReported,
             status: r.status,
+            dateReported: r.dateReported || r.createdAt,
             createdAt: r.createdAt,
             updatedAt: r.updatedAt,
           };
         });
-
-        setAllReports(formattedReports);
-        setFilteredReports(formattedReports);
+        setAllReports(formatted);
+        setFilteredReports(formatted);
+      } else {
+        message.error("Failed to load reports");
       }
     } catch (err) {
-      console.error("Error fetching reports:", err);
+      console.error(err);
       message.error("Failed to load reports");
     } finally {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchAllReports();
   }, []);
 
-  const handleViewReport = (record) => {
-    setEditingReport(record);
-    form.setFieldsValue(record);
-    setIsViewMode(true);
-    setEditModalVisible(true);
+  // === Helpers ===
+  const normalizeStatus = (s) => {
+    const v = String(s || "").toLowerCase();
+    if (v === "under investigation" || v === "in-progress")
+      return "Under Investigation";
+    if (v === "open") return "Open";
+    if (v === "pending") return "Pending";
+    if (v === "closed") return "Closed";
+    return s || "Pending";
+  };
+  const getStatusColor = (status) => {
+    const s = String(status || "").toLowerCase();
+    switch (s) {
+      case "open":
+        return "orange";
+      case "under investigation":
+      case "in-progress":
+        return "blue";
+      case "closed":
+        return "green";
+      case "pending":
+      default:
+        return "default";
+    }
+  };
+  const typePillBg = "#ffe9f0";
+
+  // === Modal open ===
+  const openModalFor = (record, m = "view") => {
+    setActiveReport(record);
+    setMode(m);
+    form.setFieldsValue({
+      incidentType: record.incidentType || "",
+      location: record.location || "",
+      description: record.description || "",
+      perpetrator: record.perpetrator || "",
+      status: normalizeStatus(record.status),
+    });
+    setQuickStatus(normalizeStatus(record.status));
+    setModalOpen(true);
   };
 
-  const handleEditReport = (record) => {
-    // Make sure the perpetrator field exists (use empty string if missing)
-    const patchedRecord = { ...record, perpetrator: record.perpetrator || '' };
-    setEditingReport(patchedRecord);
-    form.setFieldsValue(patchedRecord);
-    setIsViewMode(false);
-    setEditModalVisible(true);
-  };
-
-  const handleDeleteReport = async (record) => {
+  // Quick update status API call
+  const handleUpdateStatus = async (newStatus) => {
+    if (!activeReport) return;
     try {
-      setLoading(true);
-      const res = await api.delete(`/api/reports/${record.reportID}`);
+      setStatusUpdating(true);
+      const payload = { status: newStatus };
+      const res = await api.put(
+        `/api/reports/${activeReport.reportID}`,
+        payload
+      );
       if (res?.data?.success) {
-        message.success("Report deleted");
+        message.success("Status updated");
+        await fetchAllReports();
+        const refreshed = (await api.get(`/api/reports/${activeReport.reportID}`))
+          .data;
+        if (refreshed?.data) {
+          const updated = {
+            ...activeReport,
+            ...refreshed.data,
+          };
+          setActiveReport(updated);
+          form.setFieldsValue({ status: normalizeStatus(updated.status) });
+          setQuickStatus(normalizeStatus(updated.status));
+        }
       } else {
-        message.error("Failed to delete report");
+        message.error(res?.data?.message || "Failed to update status");
       }
-      fetchAllReports();
     } catch (err) {
-      console.error("Delete failed", err.response || err);
-      message.error("Failed to delete report");
+      console.error(err);
+      message.error(
+        err?.response?.data?.message || err.message || "Failed to update status"
+      );
     } finally {
-      setLoading(false);
+      setStatusUpdating(false);
     }
   };
 
+  // === Update/Delete ===
   const handleUpdateReport = async (values) => {
+    if (!activeReport) return;
     try {
       setLoading(true);
-      // Include the perpetrator field in the update (empty string if not set)
-      const payload = { ...values, perpetrator: values.perpetrator || '' };
-      const res = await api.put(`/api/reports/${editingReport.reportID}`, payload);
+      const payload = {
+        incidentType: values.incidentType,
+        location: values.location,
+        description: values.description,
+        perpetrator: values.perpetrator || "",
+        status: values.status,
+      };
+      const res = await api.put(
+        `/api/reports/${activeReport.reportID}`,
+        payload
+      );
       if (res?.data?.success) {
         message.success("Report updated");
-        setEditModalVisible(false);
-        setEditingReport(null);
+        setMode("view");
+        fetchAllReports();
       } else {
-        message.error("Failed to update report");
+        message.error(res?.data?.message || "Failed to update report");
       }
-      fetchAllReports();
     } catch (err) {
-      console.error("Update failed", err.response || err);
-      message.error("Failed to update report");
+      message.error(
+        err.response?.data?.message || err.message || "Failed to update report"
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    let filtered = allReports;
+  const handleDeleteReport = async () => {
+    if (!activeReport) return;
+    try {
+      setLoading(true);
+      const res = await api.delete(`/api/reports/${activeReport.reportID}`);
+      if (res?.data?.success) {
+        message.success("Report deleted");
+        setModalOpen(false);
+        fetchAllReports();
+      } else {
+        message.error(res?.data?.message || "Failed to delete report");
+      }
+    } catch (err) {
+      message.error(
+        err.response?.data?.message || err.message || "Failed to delete report"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    if (filterType !== "all") {
-      filtered = filtered.filter((r) => r.status === filterType);
+  // === Filtering ===
+  useEffect(() => {
+    let filtered = [...allReports];
+
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(
+        (r) => normalizeStatus(r.status) === statusFilter
+      );
+    }
+
+    if (dateRange && dateRange.length === 2) {
+      const [start, end] = dateRange;
+      filtered = filtered.filter((r) => {
+        const t = new Date(r.dateReported || r.createdAt).getTime();
+        return (
+          t >= start.startOf("day").valueOf() && t <= end.endOf("day").valueOf()
+        );
+      });
     }
 
     if (searchText) {
+      const q = searchText.toLowerCase();
       filtered = filtered.filter(
         (r) =>
-          r.reportID.toLowerCase().includes(searchText.toLowerCase()) ||
-          r.incidentType.toLowerCase().includes(searchText.toLowerCase())
+          String(r.reportID).toLowerCase().includes(q) ||
+          String(r.incidentType).toLowerCase().includes(q) ||
+          String(r.location).toLowerCase().includes(q) ||
+          String(r.status).toLowerCase().includes(q)
       );
     }
 
     setFilteredReports(filtered);
-  }, [allReports, searchText, filterType]);
+  }, [allReports, searchText, statusFilter, dateRange]);
 
-  const getStatusColor = (status) => {
-    const s = (status || '').toLowerCase();
-    switch (s) {
-      case 'open':
-        return 'orange';
-      case 'under investigation':
-        return 'blue';
-      case 'closed':
-        return 'green';
-      case 'pending':
-        return 'default';
-      default:
-        return 'default';
-    }
-  };
-
-  const getRiskColor = (level) => {
-    const l = (level || '').toLowerCase();
-    switch (l) {
-      case 'low':
-        return 'green';
-      case 'medium':
-        return 'orange';
-      case 'high':
-        return 'red';
-      default:
-        return 'default';
-    }
-  };
-
-  const columns = [
-    {
-      title: "Victim ID",
-      dataIndex: "victimID",
-      key: "victimID",
-      render: (victim) => {
-        if (!victim) return <Tag color="default">N/A</Tag>;
-        // victim can be an object or a string; pick the ID to show
-        const id = typeof victim === 'string' ? victim : victim.victimID || victim._id || 'N/A';
-        return <Tag color="magenta">{id}</Tag>;
+  // === Columns ===
+  const columns = useMemo(
+    () => [
+      {
+        title: "Report",
+        key: "report",
+        fixed: "left",
+        width: 280,
+        render: (_, record) => (
+          <Space>
+            <Avatar
+              style={{ background: typePillBg, color: "#444" }}
+              icon={<AlertOutlined />}
+            />
+            <div>
+              <div style={{ fontWeight: 700 }}>{record.reportID}</div>
+              <div style={{ fontSize: 12, color: "#999" }}>
+                {record.incidentType}
+              </div>
+            </div>
+          </Space>
+        ),
+        onCell: (record) => ({
+          onClick: () => openModalFor(record, "view"),
+          style: { cursor: "pointer" },
+        }),
       },
-      width: 160,
-    },
-    {
-      title: "Report ID",
-      dataIndex: "reportID",
-      key: "reportID",
-      render: (text) => <Tag icon={<AlertOutlined />} color="blue">{text}</Tag>,
-    },
-    {
-      title: "Incident Type",
-      dataIndex: "incidentType",
-      key: "incidentType",
-    },
-    {
-      title: "Location",
-      dataIndex: "location",
-      key: "location",
-      render: (loc) => <Tag icon={<EnvironmentOutlined />} color="geekblue">{loc}</Tag>
-    },
+      {
+        title: "Victim",
+        dataIndex: "victimID",
+        key: "victimID",
+        width: 220,
+        render: (victim) => {
+          if (!victim) return <Tag>N/A</Tag>;
+          const id =
+            typeof victim === "string"
+              ? victim
+              : victim.victimID || victim._id || "N/A";
+          return <Tag color="magenta">{id}</Tag>;
+        },
+        responsive: ["sm"],
+      },
+      {
+        title: "Location",
+        dataIndex: "location",
+        key: "location",
+        width: 220,
+        ellipsis: true,
+        render: (loc) =>
+          loc ? (
+            <Tag icon={<EnvironmentOutlined />} color="geekblue">
+              {loc}
+            </Tag>
+          ) : (
+            "—"
+          ),
+        responsive: ["md"],
+      },
+      {
+        title: "Status",
+        dataIndex: "status",
+        key: "status",
+        width: 160,
+        render: (s) => (
+          <Tag color={getStatusColor(s)} style={{ borderRadius: 999 }}>
+            {normalizeStatus(s)}
+          </Tag>
+        ),
+      },
+      {
+        title: "Date Reported",
+        dataIndex: "dateReported",
+        key: "dateReported",
+        width: 200,
+        render: (d) => (d ? new Date(d).toLocaleString() : "-"),
+        responsive: ["lg"],
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [screens.xs, screens.sm, screens.md, screens.lg, screens.xl]
+  );
 
-    {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      render: (status) => (
-        <Tag icon={<ExclamationCircleOutlined />} color={getStatusColor(status)}>
-          {status}
-        </Tag>
-      ),
-    },
+  // === KPIs ===
+  const reportCounts = useMemo(
+    () => ({
+      total: allReports.length,
+      open: allReports.filter((r) => normalizeStatus(r.status) === "Open")
+        .length,
+      inProgress: allReports.filter(
+        (r) => normalizeStatus(r.status) === "Under Investigation"
+      ).length,
+      closed: allReports.filter((r) => normalizeStatus(r.status) === "Closed")
+        .length,
+    }),
+    [allReports]
+  );
 
-    {
-      title: "Date Reported",
-      dataIndex: "dateReported",
-      key: "dateReported",
-      render: (date) => new Date(date).toLocaleString(),
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      render: (_, record) => (
-        <Space>
-          <Tooltip title="View Details">
-            <Button type="link" icon={<EyeOutlined />} size="small" onClick={() => handleViewReport(record)} />
-          </Tooltip>
-          <Tooltip title="Edit Report">
-            <Button type="link" icon={<EditOutlined />} size="small" onClick={() => handleEditReport(record)} />
-          </Tooltip>
-          <Tooltip title="Delete Report">
-            <Button type="link" icon={<DeleteOutlined />} size="small" danger onClick={() => handleDeleteReport(record)} />
-          </Tooltip>
-        </Space>
-      ),
-    },
-  ];
-
-  const PINK = "#e91e63";
-  const LIGHT_PINK = "#fff0f5";
-  const SOFT_PINK = "#ffd1dc";
-
-  const reportCounts = {
-    total: allReports.length,
-    open: allReports.filter((r) => (r.status || '').toLowerCase() === "open").length,
-    inProgress: allReports.filter((r) => {
-      const s = (r.status || '').toLowerCase();
-      return s === 'under investigation' || s === 'in-progress';
-    }).length,
-    closed: allReports.filter((r) => (r.status || '').toLowerCase() === "closed").length,
+  // === Export CSV (filtered view) ===
+  const exportCsv = () => {
+    const rows = filteredReports.map((r) => ({
+      ReportID: r.reportID,
+      VictimID: r.victimID
+        ? typeof r.victimID === "string"
+          ? r.victimID
+          : r.victimID.victimID || r.victimID._id || ""
+        : "",
+      IncidentType: r.incidentType || "",
+      Location: r.location || "",
+      Status: normalizeStatus(r.status) || "",
+      DateReported: r.dateReported ? new Date(r.dateReported).toISOString() : "",
+      CreatedAt: r.createdAt ? new Date(r.createdAt).toISOString() : "",
+      UpdatedAt: r.updatedAt ? new Date(r.updatedAt).toISOString() : "",
+      Perpetrator: r.perpetrator || "",
+      Description: (r.description || "").replaceAll("\n", " ").trim(),
+    }));
+    const header =
+      "ReportID,VictimID,IncidentType,Location,Status,DateReported,CreatedAt,UpdatedAt,Perpetrator,Description";
+    const body = rows
+      .map((row) =>
+        Object.values(row)
+          .map((v) => `"${String(v ?? "").replaceAll('"', '""')}"`)
+          .join(",")
+      )
+      .join("\n");
+    const csv = header + "\n" + body;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "reports.csv";
+    a.click();
+    URL.revokeObjectURL(url);
   };
+
+  const modalWidth = screens.xl ? 720 : screens.lg ? 680 : screens.md ? "92vw" : "96vw";
 
   return (
-    <Layout style={{ minHeight: "100vh", width: "100%", background: LIGHT_PINK }}>
+    <Layout
+      style={{
+        minHeight: "100vh",
+        width: "100%",
+        background: BRAND.pageBg,
+        overflow: "hidden",
+      }}
+    >
+      {/* Alerts-style sticky header */}
       <Header
         style={{
-          background: "#fff",
-          borderBottom: `1px solid ${SOFT_PINK}`,
+          position: "sticky",
+          top: 0,
+          zIndex: 5,
+          background: BRAND.pageBg,
+          borderBottom: `1px solid ${BRAND.softBorder}`,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           paddingInline: 16,
+          paddingBlock: 12,
+          height: "auto",
+          lineHeight: 1.2,
         }}
       >
-        <Typography.Title level={4} style={{ margin: 0, color: PINK }}>
-          Report Management
-        </Typography.Title>
-        <Button
-          onClick={fetchAllReports}
-          icon={<ReloadOutlined />}
-          style={{ borderColor: PINK, color: PINK }}
-        >
-          Refresh
-        </Button>
+        <Space direction="vertical" size={0}>
+          <Typography.Title level={4} style={{ margin: 0, color: BRAND.violet }}>
+            Report Management
+          </Typography.Title>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            Review, manage, and monitor reports submitted by victims.
+          </Typography.Text>
+        </Space>
+
+        <Space wrap>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={fetchAllReports}
+            style={{ borderColor: BRAND.violet, color: BRAND.violet }}
+          >
+            Refresh
+          </Button>
+          <Button icon={<DownloadOutlined />} onClick={exportCsv}>
+            Export
+          </Button>
+        </Space>
       </Header>
 
-      <Content style={{ padding: 16, overflowX: "hidden" }}>
-        {/* Summary Cards */}
-        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-          <Col xs={12} md={6}>
-            <Card style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}>
-              <Typography.Text type="secondary">Total Reports</Typography.Text>
-              <Typography.Title level={2} style={{ margin: 0, color: PINK }}>
-                {reportCounts.total}
-              </Typography.Title>
-            </Card>
-          </Col>
-          <Col xs={12} md={6}>
-            <Card style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}>
-              <Typography.Text type="secondary">Open</Typography.Text>
-              <Typography.Title level={2} style={{ margin: 0, color: "orange" }}>
-                {reportCounts.open}
-              </Typography.Title>
-            </Card>
-          </Col>
-          <Col xs={12} md={6}>
-            <Card style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}>
-              <Typography.Text type="secondary">Under Investigation</Typography.Text>
-              <Typography.Title level={2} style={{ margin: 0, color: "blue" }}>
-                {reportCounts.inProgress}
-              </Typography.Title>
-            </Card>
-          </Col>
-          <Col xs={12} md={6}>
-            <Card style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}>
-              <Typography.Text type="secondary">Closed</Typography.Text>
-              <Typography.Title level={2} style={{ margin: 0, color: "green" }}>
-                {reportCounts.closed}
-              </Typography.Title>
-            </Card>
-          </Col>
-        </Row>
+      <Content
+        ref={pageRef}
+        style={{
+          padding: TOP_PAD,
+          paddingTop: TOP_PAD, // no fixed header offset needed
+          width: "100%",
+          minWidth: 0,
+          marginLeft: 0,
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          boxSizing: "border-box",
+        }}
+      >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "100%",
+            margin: 0,
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+            paddingInline: screens.xs ? 6 : 12,
+            transition: "width .25s ease",
+            boxSizing: "border-box",
+          }}
+        >
+          {/* KPIs */}
+          <Row gutter={[10, 10]}>
+            {[
+              ["Total Reports", reportCounts.total, BRAND.violet],
+              ["Open", reportCounts.open, "orange"],
+              ["Under Investigation", reportCounts.inProgress, BRAND.blue],
+              ["Closed", reportCounts.closed, BRAND.green],
+            ].map(([label, value, color], i) => (
+              <Col xs={12} md={6} key={i}>
+                <Card style={{ ...glassCard, padding: 10 }}>
+                  <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+                    {label}
+                  </Typography.Text>
+                  <Typography.Title
+                    level={3}
+                    style={{ margin: 0, color, fontSize: 24 }}
+                  >
+                    {value}
+                  </Typography.Title>
+                </Card>
+              </Col>
+            ))}
+          </Row>
 
-        {/* Reports Table */}
-        <Card
-          title="All Reports"
-          style={{ border: `1px solid ${SOFT_PINK}`, borderRadius: 12 }}
-          extra={
-            <Space>
-              <Search
-                placeholder="Search reports..."
-                allowClear
-                enterButton={<SearchOutlined />}
-                style={{ width: 250 }}
-                onSearch={setSearchText}
-                onChange={(e) => setSearchText(e.target.value)}
-              />
-              <Select
-                value={filterType}
-                onChange={setFilterType}
-                style={{ width: 150 }}
-              >
-                <Option value="all">All Status</Option>
-                <Option value="Open">Open</Option>
-                <Option value="Under Investigation">In-Progress</Option>
-                <Option value="Closed">Closed</Option>
-              </Select>
+          {/* Toolbar */}
+          <Card style={{ ...glassCard, padding: 10 }}>
+            <Space wrap style={{ width: "100%", justifyContent: "space-between" }}>
+              <Space wrap>
+                <Search
+                  placeholder="Search report ID, type, location…"
+                  allowClear
+                  enterButton={<SearchOutlined />}
+                  style={{ width: 220 }}
+                  value={searchText}
+                  onSearch={setSearchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                />
+                <Select
+                  value={statusFilter}
+                  onChange={setStatusFilter}
+                  style={{ width: 220 }}
+                  options={[
+                    { value: "all", label: "All Status" },
+                    { value: "Open", label: "Open" },
+                    { value: "Under Investigation", label: "Under Investigation" },
+                    { value: "Closed", label: "Closed" },
+                    { value: "Pending", label: "Pending" },
+                  ]}
+                />
+                <RangePicker
+                  onChange={setDateRange}
+                  allowEmpty={[true, true]}
+                  placeholder={["Start", "End"]}
+                  suffixIcon={<CalendarOutlined />}
+                  style={{ width: screens.xs ? 220 : 260 }}
+                />
+              </Space>
+              <Space>
+                <Button icon={<ReloadOutlined />} onClick={fetchAllReports} />
+                <Button icon={<DownloadOutlined />} onClick={exportCsv}>
+                  Export
+                </Button>
+              </Space>
             </Space>
+          </Card>
+
+          {/* Table */}
+          <Card style={{ ...glassCard, padding: 0 }}>
+            <Table
+              columns={columns}
+              dataSource={filteredReports}
+              loading={loading}
+              size="middle"
+              sticky
+              rowKey="key"
+              pagination={false}
+              tableLayout="fixed"
+              scroll={{ y: tableY, x: "max-content" }}
+              onRow={(record) => ({
+                onClick: () => openModalFor(record, "view"),
+                style: { cursor: "pointer" },
+              })}
+              rowClassName={(record) =>
+                activeReport?.key === record.key ? "is-active" : ""
+              }
+            />
+          </Card>
+        </div>
+
+        {/* RIGHT-SIDE FLOATING MODAL */}
+        <Modal
+          open={modalOpen}
+          onCancel={() => setModalOpen(false)}
+          footer={null}
+          centered={false}
+          width={modalWidth}
+          wrapClassName="floating-side"
+          className="floating-modal"
+          maskStyle={{
+            backdropFilter: "blur(2px)",
+            background: "rgba(17,17,26,0.24)",
+          }}
+          getContainer={false}
+          title={
+            activeReport ? (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 8,
+                }}
+              >
+                <Space>
+                  <Avatar
+                    style={{ background: typePillBg, color: "#444" }}
+                    icon={<AlertOutlined />}
+                  />
+                  <div>
+                    <div style={{ fontWeight: 800 }}>
+                      {activeReport.reportID}{" "}
+                      <Tag style={{ marginLeft: 6 }}>{activeReport.incidentType}</Tag>
+                    </div>
+                    <Typography.Text type="secondary">
+                      {activeReport.location ? (
+                        <span>
+                          <EnvironmentOutlined /> {activeReport.location}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </Typography.Text>
+                  </div>
+                </Space>
+                <Space>
+                  {mode === "view" ? (
+                    <Button
+                      type="primary"
+                      onClick={() => setMode("edit")}
+                      icon={<EditOutlined />}
+                      style={{ background: BRAND.violet, borderColor: BRAND.violet }}
+                    >
+                      Edit
+                    </Button>
+                  ) : (
+                    <Button onClick={() => setMode("view")}>Cancel</Button>
+                  )}
+                  <Button danger onClick={handleDeleteReport}>
+                    Delete
+                  </Button>
+                </Space>
+              </div>
+            ) : (
+              "Report"
+            )
           }
         >
-          <Table
-            columns={columns}
-            dataSource={filteredReports}
-            loading={loading}
-            pagination={{
-              pageSize: 6,
-              showSizeChanger: false,
-              showQuickJumper: true,
-              showTotal: (total, range) =>
-                `${range[0]}-${range[1]} of ${total} reports`,
-            }}
-            scroll={{ x: "max-content", y: 480 }}
-          />
+          {/* Quick status editor box */}
+          <Card style={{ marginBottom: 12, borderRadius: 12 }}>
+            <Row gutter={12} align="middle">
+              <Col flex="1">
+                <div style={{ fontWeight: 700, marginBottom: 6 }}>Quick Status</div>
+                <div style={{ color: "#666", fontSize: 13, marginBottom: 8 }}>
+                  Update case status quickly without editing the whole report.
+                </div>
+                <Select
+                  value={quickStatus}
+                  onChange={setQuickStatus}
+                  options={[
+                    { label: "Pending", value: "Pending" },
+                    { label: "Open", value: "Open" },
+                    { label: "Under Investigation", value: "Under Investigation" },
+                    { label: "Closed", value: "Closed" },
+                  ]}
+                  style={{ width: 260 }}
+                />
+              </Col>
+              <Col>
+                <Button
+                  type="primary"
+                  loading={statusUpdating}
+                  onClick={() => handleUpdateStatus(quickStatus)}
+                  style={{
+                    background: BRAND.violet,
+                    borderColor: BRAND.violet,
+                    marginLeft: 8,
+                  }}
+                >
+                  Save
+                </Button>
+              </Col>
+            </Row>
+          </Card>
 
-          {/* VIEW MODAL */}
-          <Modal
-            title={`Report Details - ${editingReport?.reportID}`}
-            open={isViewMode && editModalVisible}
-            onCancel={() => {
-              setEditModalVisible(false);
-              setEditingReport(null);
-              setIsViewMode(false);
-            }}
-            footer={[
-              <Button key="close" onClick={() => setEditModalVisible(false)}>
-                Close
-              </Button>,
-            ]}
-            width={600}
-          >
-            {editingReport && (
-              <Descriptions
-                bordered
-                column={1}
-                size="middle"
-                labelStyle={{ fontWeight: 600, width: 160 }}
-              >
-                <Descriptions.Item label="Report ID">
-                  <Tag color="blue">{editingReport.reportID}</Tag>
-                </Descriptions.Item>
+          {activeReport && (
+            <div className="modal-inner-animate">
+              {/* Details */}
+              <Card style={{ ...glassCard, borderRadius: 16, marginBottom: 10 }}>
+                <Descriptions
+                  bordered
+                  size="small"
+                  column={1}
+                  labelStyle={{ width: 160, background: "#fafafa" }}
+                  style={{ borderRadius: 12, overflow: "hidden" }}
+                >
+                  <Descriptions.Item label="Report ID">
+                    <Tag color="blue">{activeReport.reportID}</Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Victim">
+                    {activeReport.victimID ? (
+                      <Tag color="magenta">
+                        {typeof activeReport.victimID === "string"
+                          ? activeReport.victimID
+                          : activeReport.victimID.victimID ||
+                            activeReport.victimID._id ||
+                            "N/A"}
+                      </Tag>
+                    ) : (
+                      "N/A"
+                    )}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Current Status">
+                    <Tag
+                      color={getStatusColor(activeReport.status)}
+                      style={{ borderRadius: 999 }}
+                    >
+                      {normalizeStatus(activeReport.status)}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Incident Type">
+                    {activeReport.incidentType || "—"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Location">
+                    {activeReport.location ? (
+                      <Tag icon={<EnvironmentOutlined />} color="geekblue">
+                        {activeReport.location}
+                      </Tag>
+                    ) : (
+                      "—"
+                    )}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Date Reported">
+                    {activeReport.dateReported
+                      ? new Date(activeReport.dateReported).toLocaleString()
+                      : "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Perpetrator">
+                    {activeReport.perpetrator || "N/A"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Description">
+                    <Typography.Paragraph
+                      style={{ whiteSpace: "pre-line", marginBottom: 0 }}
+                    >
+                      {activeReport.description || "No description provided."}
+                    </Typography.Paragraph>
+                  </Descriptions.Item>
+                </Descriptions>
+              </Card>
 
-                <Descriptions.Item label="Victim ID">
-                  {editingReport.victimID?.victimID ? (
-                    <Tag color="magenta">{editingReport.victimID.victimID}</Tag>
-                  ) : (
-                    "N/A"
+              {/* Edit */}
+              <Card style={{ ...glassCard, borderRadius: 16 }}>
+                <Form
+                  form={form}
+                  layout="vertical"
+                  onFinish={handleUpdateReport}
+                  disabled={mode === "view"}
+                >
+                  <Row gutter={[10, 0]}>
+                    <Col xs={24} md={12}>
+                      <Form.Item
+                        name="incidentType"
+                        label="Incident Type"
+                        rules={[
+                          { required: true, message: "Please select the incident type" },
+                        ]}
+                      >
+                        <Select
+                          options={[
+                            { value: "Physical", label: "Physical" },
+                            { value: "Sexual", label: "Sexual" },
+                            { value: "Psychological", label: "Psychological" },
+                            { value: "Economic", label: "Economic" },
+                            { value: "Emergency", label: "Emergency" },
+                          ]}
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} md={12}>
+                      <Form.Item name="status" label="Status">
+                        <Select
+                          options={[
+                            { value: "Pending", label: "Pending" },
+                            { value: "Open", label: "Open" },
+                            { value: "Under Investigation", label: "Under Investigation" },
+                            { value: "Closed", label: "Closed" },
+                          ]}
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24}>
+                      <Form.Item
+                        name="location"
+                        label="Location"
+                        rules={[{ required: true }]}
+                      >
+                        <Input prefix={<EnvironmentOutlined />} />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24}>
+                      <Form.Item name="perpetrator" label="Perpetrator">
+                        <Input />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24}>
+                      <Form.Item name="description" label="Description">
+                        <Input.TextArea rows={4} />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+
+                  {mode === "edit" && (
+                    <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                      <Button onClick={() => setMode("view")}>Cancel</Button>
+                      <Button
+                        type="primary"
+                        htmlType="submit"
+                        style={{ background: BRAND.violet, borderColor: BRAND.violet }}
+                      >
+                        Save Changes
+                      </Button>
+                    </div>
                   )}
-                </Descriptions.Item>
-
-                <Descriptions.Item label="Incident Type">
-                  {editingReport.incidentType}
-                </Descriptions.Item>
-
-                <Descriptions.Item label="Location">
-                  <Tag icon={<EnvironmentOutlined />} color="geekblue">
-                    {editingReport.location}
-                  </Tag>
-                </Descriptions.Item>
-
-                <Descriptions.Item label="Description">
-                  <Typography.Paragraph
-                    style={{ whiteSpace: "pre-line", marginBottom: 0 }}
-                  >
-                    {editingReport.description || "No description provided."}
-                  </Typography.Paragraph>
-                </Descriptions.Item>
-
-                <Descriptions.Item label="Perpetrator">
-                  {editingReport.perpetrator || "N/A"}
-                </Descriptions.Item>
-
-                <Descriptions.Item label="Status">
-                  <Tag color={getStatusColor(editingReport.status)}>
-                    {editingReport.status}
-                  </Tag>
-                </Descriptions.Item>
-
-                <Descriptions.Item label="Date Reported">
-                  {new Date(editingReport.dateReported).toLocaleString()}
-                </Descriptions.Item>
-              </Descriptions>
-            )}
-          </Modal>
-
-          {/* EDIT MODAL */}
-          <Modal
-            title={`Edit Report - ${editingReport?.reportID}`}
-            open={!isViewMode && editModalVisible}
-            onCancel={() => {
-              setEditModalVisible(false);
-              setEditingReport(null);
-              setIsViewMode(false);
-            }}
-            okText="Save"
-            onOk={() => form.validateFields().then((vals) => handleUpdateReport(vals))}
-          >
-            <Form
-              form={form}
-              layout="horizontal"
-              labelCol={{ flex: "120px" }}
-              wrapperCol={{ flex: 1 }}
-              labelAlign="left"
-            >
-              <Form.Item
-                name="incidentType"
-                label="Incident Type"
-                rules={[{ required: true, message: "Please select the type of incident" }]}
-                style={{ marginBottom: 12, marginTop: 20 }}
-              >
-                <Select placeholder="Select type">
-                  <Option value="Physical">Physical</Option>
-                  <Option value="Sexual">Sexual</Option>
-                  <Option value="Psychological">Psychological</Option>
-                  <Option value="Economic">Economic</Option>
-                  <Option value="Emergency">Emergency</Option>
-                </Select>
-              </Form.Item>
-
-              <Form.Item name="location" label="Location" rules={[{ required: true }]} style={{ marginBottom: 12 }}>
-                <Input />
-              </Form.Item>
-              <Form.Item name="description" label="Description" style={{ marginBottom: 12 }}>
-                <Input.TextArea rows={3} />
-              </Form.Item>
-              <Form.Item name="perpetrator" label="Perpetrator" style={{ marginBottom: 12 }}>
-                <Input />
-              </Form.Item>
-              <Form.Item name="status" label="Status" style={{ marginBottom: 12 }}>
-                <Select>
-                  <Option value="Pending">Pending</Option>
-                  <Option value="Open">Open</Option>
-                  <Option value="Under Investigation">In-Progress</Option>
-                  <Option value="Closed">Closed</Option>
-                </Select>
-              </Form.Item>
-            </Form>
-          </Modal>
-
-        </Card>
+                </Form>
+              </Card>
+            </div>
+          )}
+        </Modal>
       </Content>
+
+      {/* === Styles === */}
+      <style>{`
+        html, body, #root { height: 100%; }
+        .ant-card { transition: transform .18s ease, box-shadow .18s ease; }
+        .ant-card:hover { transform: translateY(-1px); box-shadow: 0 16px 36px rgba(16,24,40,0.08); }
+        .ant-table-thead > tr > th { background: #fff !important; }
+
+        /* Row hover */
+        .ant-table .ant-table-tbody > tr:hover > td {
+          background: ${BRAND.rowHover} !important;
+        }
+        .ant-table .ant-table-tbody > tr > td {
+          position: relative;
+          z-index: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .ant-table .ant-table-cell-fix-left {
+          position: sticky;
+          left: 0;
+          z-index: 10 !important;
+          background: #ffffff !important;
+        }
+        .ant-table .ant-table-cell-fix-left-last {
+          box-shadow: 6px 0 6px -6px rgba(16,24,40,0.10);
+        }
+        .ant-table .ant-table-tbody > tr:hover > .ant-table-cell-fix-left,
+        .ant-table .ant-table-tbody > tr.is-active > .ant-table-cell-fix-left {
+          background: ${BRAND.rowHover} !important;
+          z-index: 11 !important;
+        }
+
+        /* SIDE + VERTICAL CENTER (sticky header is in flow; HEADER_H = 0) */
+        .floating-side {
+          display: flex;
+          justify-content: flex-end;
+          align-items: center;
+          height: calc(100vh - ${HEADER_H}px);
+          padding: 12px;
+          box-sizing: border-box;
+        }
+
+        .floating-side .ant-modal {
+          top: auto !important;
+          margin: 0;
+          max-height: calc(100vh - ${HEADER_H}px - 24px);
+        }
+
+        .floating-modal .ant-modal-content {
+          border-radius: 14px;
+          overflow: hidden;
+          border: 1px solid ${BRAND.softBorder};
+          background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(255,255,255,0.92));
+          box-shadow: 0 20px 48px rgba(16,24,40,0.16);
+          max-height: calc(100vh - ${HEADER_H}px - 24px);
+          display: flex;
+          flex-direction: column;
+        }
+
+        .floating-modal .ant-modal-header {
+          background: rgba(250,250,255,0.9);
+          border-bottom: 1px solid ${BRAND.softBorder};
+          border-radius: 14px 14px 0 0;
+          padding: 8px 14px;
+        }
+
+        /* Body scrolls independently; keeps outside gaps equal */
+        .floating-modal .ant-modal-body {
+          overflow: auto;
+          padding: 12px;
+          max-height: calc(100vh - ${HEADER_H}px - 24px - 56px);
+        }
+
+        @media (max-width: 768px) {
+          .floating-side { padding: 10px; }
+          .floating-side .ant-modal,
+          .floating-modal .ant-modal-content {
+            max-height: calc(100vh - ${HEADER_H}px - 20px);
+          }
+          .ant-table { font-size: 12px; }
+        }
+
+        .modal-inner-animate { animation: slideIn .28s cubic-bezier(.2,.7,.3,1) both; }
+        @keyframes slideIn {
+          from { transform: translateY(8px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+      `}</style>
     </Layout>
   );
 }

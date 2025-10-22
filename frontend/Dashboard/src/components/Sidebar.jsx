@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { Layout, Button, Typography, Avatar, Badge, Divider } from "antd";
+import { Layout, Button, Typography, Avatar, Badge, Divider, Grid, Popover } from "antd";
 import {
   DashboardOutlined,
   FileTextOutlined,
@@ -15,6 +15,13 @@ import {
   MessageOutlined,
   InfoCircleOutlined,
   DownOutlined,
+  UserAddOutlined,
+  UnorderedListOutlined,
+  FileSearchOutlined,
+  BellOutlined,
+  FolderOpenOutlined,
+  BankOutlined,
+  IdcardOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { clearToken, api, isTokenProbablyJwt } from "../lib/api";
@@ -26,6 +33,7 @@ const { Text } = Typography;
 export default function Sidebar({ collapsed, setCollapsed }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const screens = Grid.useBreakpoint();
 
   const BRAND = {
     primary: "#7A5AF8",
@@ -43,9 +51,9 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         await Promise.race([
           api.post("/api/auth/logout"),
           new Promise((r) => setTimeout(r, 1500)),
-        ]).catch(() => { });
+        ]).catch(() => {});
       }
-    } catch { }
+    } catch {}
     clearToken();
     localStorage.clear();
     navigate("/");
@@ -63,9 +71,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     return (a + b || "U").toUpperCase();
   }, [currentUser]);
 
-  // ---- Menus with groups (dropdowns) ----
+  // ---- Menus with grouped children (now with icons) ----
   const adminMenu = [
-   
     { type: "item", key: "/admin", icon: <DashboardOutlined />, label: "Dashboard" },
     {
       type: "group",
@@ -74,8 +81,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       label: "Users",
       base: "/admin/users",
       children: [
-        { key: "/admin/create-official", label: "Add Official" },
-        { key: "/admin/users", label: "View Users" },
+        { key: "/admin/create-official", label: "Add Official", icon: <UserAddOutlined /> },
+        { key: "/admin/users", label: "View Users", icon: <UnorderedListOutlined /> },
       ],
     },
     {
@@ -86,15 +93,15 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       base: "/admin/reports",
       labelClass: "pink",
       children: [
-        { key: "/admin/reports", label: "View Reports" },
-        { key: "/admin/alerts", label: "View Alerts" },
-        { key: "/admin/cases", label: "View Cases" },
-        { key: "/admin/bpo-management", label: "View BPO" },
+        { key: "/admin/reports", label: "View Reports", icon: <FileSearchOutlined /> },
+        { key: "/admin/alerts", label: "View Alerts", icon: <BellOutlined /> },
+        { key: "/admin/cases", label: "View Cases", icon: <FolderOpenOutlined /> },
+        { key: "/admin/bpo-management", label: "View BPO", icon: <BankOutlined /> },
       ],
     },
-    { type: "item", key: "/admin/logs", icon: <FileTextOutlined />, label: "System Logs" }, // ✅ restored
+    { type: "item", key: "/admin/logs", icon: <IdcardOutlined />, label: "System Logs" },
     { type: "item", key: "/admin/settings", icon: <SettingOutlined />, label: "Settings" },
-     { type: "item", key: "/landing", icon: <HomeOutlined />, label: "Home" },
+    { type: "item", key: "/landing", icon: <HomeOutlined />, label: "Home" },
   ];
 
   const officialMenu = [
@@ -106,7 +113,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       icon: <TeamOutlined />,
       label: "Cases",
       base: "/admin/official-cases",
-      children: [{ key: "/admin/official-cases", label: "View Cases" }],
+      children: [{ key: "/admin/official-cases", label: "View Cases", icon: <FolderOpenOutlined /> }],
     },
     {
       type: "group",
@@ -115,13 +122,13 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       label: "Reports",
       base: "/admin/reports",
       children: [
-        { key: "/admin/reports", label: "View Reports" },
-        { key: "/admin/alerts", label: "View Alerts" },
-        { key: "/admin/bpo-management", label: "View BPO" },
+        { key: "/admin/reports", label: "View Reports", icon: <FileSearchOutlined /> },
+        { key: "/admin/alerts", label: "View Alerts", icon: <AlertOutlined /> },
+        { key: "/admin/bpo-management", label: "View BPO", icon: <BankOutlined /> },
       ],
     },
     { type: "item", key: "/admin/official-settings", icon: <SettingOutlined />, label: "Settings" },
-    { type: "item", key: "/landing", icon: <HomeOutlined />, label: "Landing Page" },
+    { type: "item", key: "/landing", icon: <HomeOutlined />, label: "Home" },
   ];
 
   const victimMenu = [
@@ -135,7 +142,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   if (userType === "official") menu = officialMenu;
   else if (userType === "victim") menu = victimMenu;
 
-  // ---- Open groups (dropdown state) ----
+  // ---- Default open groups (for expanded state) ----
   const defaultOpen = (pathname) => {
     const open = [];
     if (
@@ -143,12 +150,14 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       pathname.startsWith("/admin/alerts") ||
       pathname.startsWith("/admin/cases") ||
       pathname.startsWith("/admin/bpo-management")
-    ) open.push("reports", "official-reports");
+    )
+      open.push("reports", "official-reports");
     if (
       pathname.startsWith("/admin/create-official") ||
       pathname.startsWith("/admin/users") ||
       pathname.startsWith("/admin/official-cases")
-    ) open.push("management", "official-cases");
+    )
+      open.push("management", "official-cases");
     return open;
   };
 
@@ -170,6 +179,33 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   const isActive = (key) =>
     location.pathname === key || location.pathname.startsWith(key + "/");
 
+  // ---- Auto-collapse for phones / small tablets ----
+  useEffect(() => {
+    if (!screens.md && !collapsed) setCollapsed(true);
+  }, [screens.md, collapsed, setCollapsed]);
+
+  // ---- Submenu panel used in collapsed mode (hover/tap fly-out) ----
+  const SubmenuFlyout = ({ node }) => (
+    <div className="flyout">
+      <div className="flyout-title">
+        <span className="flyout-title-icon">{node.icon}</span>
+        <span className="flyout-title-text">{node.label}</span>
+      </div>
+      <div className="flyout-list">
+        {node.children?.map((child) => (
+          <button
+            key={child.key}
+            className={`flyout-item ${isActive(child.key) ? "active" : ""}`}
+            onClick={() => navigate(child.key)}
+          >
+            <span className="flyout-icon">{child.icon}</span>
+            <span className="flyout-label">{child.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
   // ---- Render ----
   return (
     <Sider
@@ -177,7 +213,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       collapsible
       collapsed={collapsed}
       width={280}
-      collapsedWidth={90}
+      collapsedWidth={screens.xs ? 0 : 98}
       style={{
         background: BRAND.panel,
         borderRight: `1px solid ${BRAND.border}`,
@@ -243,23 +279,39 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               (node.base && location.pathname.startsWith(node.base)) ||
               node.children?.some((c) => isActive(c.key));
 
+            // When collapsed: show fly-out popover so users can access children
+            const GroupButton = (
+              <button
+                className={`rail-btn ${parentActive ? "active" : ""}`}
+                onClick={() => (collapsed ? null : toggleGroup(node.key))}
+                title={collapsed ? node.label : undefined}
+              >
+                <span className="rail-icon">{node.icon}</span>
+                {!collapsed && (
+                  <>
+                    <span className={`rail-label ${node.labelClass || ""}`}>{node.label}</span>
+                    <DownOutlined className={`chev ${isOpen ? "open" : ""}`} />
+                  </>
+                )}
+              </button>
+            );
+
             return (
               <div key={node.key} className="group">
-                <button
-                  className={`rail-btn ${parentActive ? "active" : ""}`}
-                  onClick={() => (collapsed ? navigate(node.base || "/") : toggleGroup(node.key))}
-                  title={collapsed ? node.label : undefined}
-                >
-                  <span className="rail-icon">{node.icon}</span>
-                  {!collapsed && (
-                    <>
-                      <span className={`rail-label ${node.labelClass || ""}`}>{node.label}</span>
-                      <DownOutlined className={`chev ${isOpen ? "open" : ""}`} />
-                    </>
-                  )}
-                </button>
+                {collapsed ? (
+                  <Popover
+                    overlayClassName="sider-flyout"
+                    placement="rightTop"
+                    trigger={["hover", "click"]}
+                    content={<SubmenuFlyout node={node} />}
+                  >
+                    {GroupButton}
+                  </Popover>
+                ) : (
+                  GroupButton
+                )}
 
-                {/* FLAT children — no box, no indent */}
+                {/* Expanded subitems */}
                 {!collapsed && isOpen && (
                   <div className="sub-flat">
                     {node.children?.map((child) => (
@@ -268,6 +320,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                         className={`sub-btn ${isActive(child.key) ? "active" : ""}`}
                         onClick={() => navigate(child.key)}
                       >
+                        <span className="sub-icon">{child.icon}</span>
                         <span className="sub-label">{child.label}</span>
                       </button>
                     ))}
@@ -331,10 +384,9 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         </div>
       </div>
 
-
       {/* STYLES */}
       <style>{`
-        /* Layout — fixed heights to avoid jump */
+        /* Layout */
         .sider-modern .brand{
           height: 72px;
           padding: 12px;
@@ -406,12 +458,12 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
         /* Collapsed (overflow-safe) */
         .sider-modern .rail.collapsed{ padding: 8px 6px; }
-        .sider-modern .rail.collapsed .rail-btn{ width: 52px; padding: 0; justify-content: center; }
-        .sider-modern .rail.collapsed .rail-icon{ width: 20px; font-size: 18px; }
+        .sider-modern .rail.collapsed .rail-btn{ width: 58px; padding: 0; justify-content: center; }
+        .sider-modern .rail.collapsed .rail-icon{ width: 22px; font-size: 18px; }
         .sider-modern .rail.collapsed .rail-label{ display: none !important; }
         .sider-modern .rail.collapsed .chev{ display: none; }
 
-        /* Group chevron only (no box, no indent for children) */
+        /* Group chevron */
         .sider-modern .group .chev{
           margin-left: auto;
           font-size: 10px;
@@ -420,19 +472,19 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         }
         .sider-modern .group .chev.open{ transform: rotate(180deg); }
 
-        /* FLAT children list */
+        /* Expanded children list */
         .sider-modern .sub-flat{
           display: grid;
-          gap: 8px;            /* small gap between child rows */
-          margin-top: 6px;     /* spacing from parent; no indent */
+          gap: 8px;
+          margin-top: 6px;
         }
         .sider-modern .sub-btn{
           height: 44px;
-          display: flex; align-items: center;
+          display: flex; align-items: center; gap: 10px;
           border: none; border-radius: 12px;
-          background: #fff;                     /* flat, no extra box behind */
+          background: #fff;
           color: #5a4eb1; font-weight: 600;
-          padding: 0 14px;                      /* same left padding as parent */
+          padding: 0 14px;
           text-align: left;
           box-shadow: 0 4px 10px rgba(0,0,0,0.04);
           cursor: pointer;
@@ -448,15 +500,58 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           box-shadow: 0 12px 24px rgba(122,90,248,0.16);
           color: ${BRAND.primary};
         }
+        .sider-modern .sub-icon{
+          width: 20px; display: grid; place-items: center;
+          color: ${BRAND.primary};
+          font-size: 16px;
+        }
 
-        /* User chip */
-        .sider-modern .user-chip{
-          display: flex; align-items: center; gap: 10px;
-          height: 60px; padding: 10px;
-          background: rgba(255,255,255,0.86);
-          border: 1px solid ${BRAND.border};
+        /* Fly-out (collapsed) */
+        .sider-flyout .ant-popover-inner{
+          padding: 10px;
           border-radius: 14px;
-          backdrop-filter: blur(6px) saturate(140%);
+          border: 1px solid ${BRAND.border};
+          background: #ffffffee;
+          backdrop-filter: blur(8px) saturate(140%);
+        }
+        .flyout{
+          min-width: 220px;
+          max-width: 260px;
+          display: grid; gap: 10px;
+        }
+        .flyout-title{
+          display: flex; align-items: center; gap: 8px;
+          padding: 6px 8px; border-radius: 10px;
+          background: #f7f4ff;
+          color: ${BRAND.primary};
+          font-weight: 700;
+        }
+        .flyout-title-icon{ font-size: 16px; display: grid; place-items: center; }
+        .flyout-list{ display: grid; gap: 6px; }
+        .flyout-item{
+          height: 40px; border: none; border-radius: 10px;
+          display: flex; align-items: center; gap: 10px;
+          background: #fff; color: #5a4eb1; font-weight: 600;
+          padding: 0 10px; text-align: left;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+          cursor: pointer;
+          transition: background .15s ease, transform .15s ease, box-shadow .15s ease;
+        }
+        .flyout-item:hover{
+          background: #f7f4ff;
+          transform: translateY(-1px);
+          box-shadow: 0 8px 18px rgba(122,90,248,0.12);
+        }
+        .flyout-item.active{
+          background: #f2edff;
+          color: ${BRAND.primary};
+          box-shadow: 0 12px 24px rgba(122,90,248,0.16);
+        }
+        .flyout-icon{ width: 18px; display: grid; place-items: center; font-size: 16px; color: ${BRAND.primary}; }
+
+        /* Mobile tweaks */
+        @media (max-width: 576px) {
+          .sider-modern .rail.collapsed .rail-btn{ width: 60px; }
         }
       `}</style>
     </Sider>

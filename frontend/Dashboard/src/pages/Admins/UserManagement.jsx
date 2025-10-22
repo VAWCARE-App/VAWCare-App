@@ -40,7 +40,7 @@ export default function UserManagement() {
   const { message } = AntApp.useApp();
   const screens = Grid.useBreakpoint();
 
-  // Brand
+  // Brand (matches Alerts/other updated pages)
   const BRAND = {
     violet: "#7A5AF8",
     pink: "#e91e63",
@@ -48,7 +48,7 @@ export default function UserManagement() {
     blue: "#1890ff",
     pageBg: "linear-gradient(180deg, #faf9ff 0%, #f6f3ff 60%, #ffffff 100%)",
     softBorder: "rgba(122,90,248,0.18)",
-    rowHover: "#F1EEFF", // opaque hover bg so nothing shows through
+    rowHover: "#F1EEFF",
   };
   const glassCard = {
     borderRadius: 14,
@@ -60,56 +60,19 @@ export default function UserManagement() {
     boxShadow: "0 10px 26px rgba(16,24,40,0.06)",
   };
 
-  // Sizing / layout control
-  const HEADER_H = 70;
-  const TOP_PAD = 12;
+  // Layout sizing
   const [tableY, setTableY] = useState(520);
   const pageRef = useRef(null);
 
-  // ensure header doesn't overlap a sidebar (measure .ant-layout-sider if present)
-  const [siderLeft, setSiderLeft] = useState(0);
-  useEffect(() => {
-    const measure = () => {
-      const s = document.querySelector(".ant-layout-sider");
-      const w = s ? Math.round(s.getBoundingClientRect().width) : 0;
-      setSiderLeft(w);
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    // also observe DOM changes in case sider toggles
-    const mo = new MutationObserver(measure);
-    mo.observe(document.body, { childList: true, subtree: true, attributes: true });
-    return () => {
-      window.removeEventListener("resize", measure);
-      mo.disconnect();
-    };
-  }, []);
-
-  // State
-  const [loading, setLoading] = useState(true);
-  const [allUsers, setAllUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
-  const [searchText, setSearchText] = useState("");
-  const [filterType, setFilterType] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [dateRange, setDateRange] = useState(null);
-
-  // Modal (right-side)
-  const [modalOpen, setModalOpen] = useState(false);
-  const [mode, setMode] = useState("view"); // view | edit
-  const [activeUser, setActiveUser] = useState(null);
-  const [form] = Form.useForm();
-
-  // Compute available height & width (works when sidebar expands/collapses)
   useEffect(() => {
     const calc = () => {
       if (!pageRef.current) return;
       const rect = pageRef.current.getBoundingClientRect();
-      const available = window.innerHeight - rect.top - TOP_PAD;
-      const y = Math.max(220, available - 180);
+      // available height below content top, minus small buffer
+      const available = window.innerHeight - rect.top - 16;
+      const y = Math.max(240, available - 220); // accounts for cards/toolbars inside content
       setTableY(y);
 
-      // ensure content can shrink next to Sider (avoids clipping)
       pageRef.current.style.width = "100%";
       pageRef.current.style.minWidth = "0";
     };
@@ -127,6 +90,21 @@ export default function UserManagement() {
       clearTimeout(t);
     };
   }, []);
+
+  // State
+  const [loading, setLoading] = useState(true);
+  const [allUsers, setAllUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [searchText, setSearchText] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [dateRange, setDateRange] = useState(null);
+
+  // Modal (right-side)
+  const [modalOpen, setModalOpen] = useState(false);
+  const [mode, setMode] = useState("view"); // view | edit
+  const [activeUser, setActiveUser] = useState(null);
+  const [form] = Form.useForm();
 
   // Fetch users
   const fetchAllUsers = async () => {
@@ -346,7 +324,7 @@ export default function UserManagement() {
     setFilteredUsers(filtered);
   }, [allUsers, searchText, filterType, filterStatus, dateRange]);
 
-  // Columns (keep fixed left)
+  // Columns (keep left fixed & clickable)
   const columns = useMemo(
     () => [
       {
@@ -471,27 +449,32 @@ export default function UserManagement() {
         overflow: "hidden",
       }}
     >
-      {/* Solid top bar */}
+      {/* Sticky header like Alerts */}
       <Header
         style={{
-          position: "fixed",
+          position: "sticky",
           top: 0,
-          left: siderLeft,
-          zIndex: 100,
-          background: "#ffffff",
+          zIndex: 5,
+          background: BRAND.pageBg,
           borderBottom: `1px solid ${BRAND.softBorder}`,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          paddingInline: 12,
-          height: HEADER_H,
-          width: `calc(100% - ${siderLeft}px)`,
-          boxSizing: "border-box",
+          paddingInline: 16,
+          paddingBlock: 12,
+          height: "auto",
+          lineHeight: 1.2,
         }}
       >
-        <Typography.Title level={4} style={{ margin: 0, color: BRAND.violet }}>
-          User Management
-        </Typography.Title>
+        <Space direction="vertical" size={0}>
+          <Typography.Title level={4} style={{ margin: 0, color: BRAND.violet }}>
+            User Management
+          </Typography.Title>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            Review, filter, and manage all users across roles and accounts.
+          </Typography.Text>
+        </Space>
+
         <Space wrap>
           <Button
             icon={<ReloadOutlined />}
@@ -509,8 +492,7 @@ export default function UserManagement() {
       <Content
         ref={pageRef}
         style={{
-          padding: TOP_PAD,
-          paddingTop: HEADER_H + TOP_PAD, // offset for fixed header
+          padding: 12,
           width: "100%",
           minWidth: 0,
           marginLeft: 0,
@@ -566,7 +548,7 @@ export default function UserManagement() {
                   placeholder="Search name, email, username…"
                   allowClear
                   enterButton={<SearchOutlined />}
-                  style={{ width: 200 }}
+                  style={{ width: 220 }}
                   value={searchText}
                   onSearch={setSearchText}
                   onChange={(e) => setSearchText(e.target.value)}
@@ -574,7 +556,7 @@ export default function UserManagement() {
                 <Select
                   value={filterType}
                   onChange={setFilterType}
-                  style={{ width: 160 }}
+                  style={{ width: 170 }}
                   options={[
                     { value: "all", label: "All Types" },
                     { value: "admin", label: "Administrators" },
@@ -585,7 +567,7 @@ export default function UserManagement() {
                 <Select
                   value={filterStatus}
                   onChange={setFilterStatus}
-                  style={{ width: 160 }}
+                  style={{ width: 170 }}
                   options={[
                     { value: "all", label: "All Status" },
                     { value: "approved", label: "Approved" },
@@ -628,7 +610,9 @@ export default function UserManagement() {
                 onClick: () => openModalFor(record, "view"),
                 style: { cursor: "pointer" },
               })}
-              rowClassName={(record) => (activeUser?.key === record.key ? "is-active" : "")}
+              rowClassName={(record) =>
+                activeUser?.key === record.key ? "is-active" : ""
+              }
             />
           </Card>
         </div>
@@ -646,6 +630,7 @@ export default function UserManagement() {
             backdropFilter: "blur(2px)",
             background: "rgba(17,17,26,0.24)",
           }}
+          getContainer={false}
           styles={{ body: { padding: 12 } }}
           title={
             activeUser ? (
@@ -720,7 +705,8 @@ export default function UserManagement() {
                       color={getStatusColor(activeUser.status, activeUser.userType)}
                       style={{ borderRadius: 999 }}
                     >
-                      {String(activeUser.status).charAt(0).toUpperCase() + String(activeUser.status).slice(1)}
+                      {String(activeUser.status).charAt(0).toUpperCase() +
+                        String(activeUser.status).slice(1)}
                     </Tag>
                   </Descriptions.Item>
                   <Descriptions.Item label="Created">
@@ -814,66 +800,42 @@ export default function UserManagement() {
         .ant-card:hover { transform: translateY(-1px); box-shadow: 0 16px 36px rgba(16,24,40,0.08); }
         .ant-table-thead > tr > th { background: #fff !important; }
 
-        /* Base row hover (non-fixed cells) */
         .ant-table .ant-table-tbody > tr:hover > td {
-          background: ${BRAND.rowHover} !important; /* opaque */
+          background: ${BRAND.rowHover} !important;
         }
-
-        /* === OVERLAP FIX (final): keep User cell above Email while scrolling === */
-
-        /* Give normal cells a baseline stacking layer */
-        .ant-table .ant-table-tbody > tr > td {
-          position: relative;
-          z-index: 0;                         /* fixed cells render above this */
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        /* Keep the fixed-left cell on top and fully opaque */
         .ant-table .ant-table-cell-fix-left {
-          position: sticky;                   /* reasserted */
+          position: sticky;
           left: 0;
-          z-index: 10 !important;             /* above normal body cells */
-          background: #ffffff !important;     /* solid so email can't show through */
+          z-index: 10 !important;
+          background: #ffffff !important;
         }
-
-        /* Subtle edge to separate columns (optional) */
         .ant-table .ant-table-cell-fix-left-last {
           box-shadow: 6px 0 6px -6px rgba(16,24,40,0.10);
         }
-
-        /* Hover/active states repaint the fixed cell too, and keep it above */
         .ant-table .ant-table-tbody > tr:hover > .ant-table-cell-fix-left,
         .ant-table .ant-table-tbody > tr.is-active > .ant-table-cell-fix-left {
-          background: ${BRAND.rowHover} !important; /* opaque hover */
-          z-index: 11 !important;                   /* stays above hovered row */
+          background: ${BRAND.rowHover} !important;
+          z-index: 11 !important;
         }
 
-        /* RIGHT-SIDE floating modal */
-        .floating-side { display: flex; align-items: flex-start; justify-content: flex-end; padding: 16px; }
-        .floating-side .ant-modal { margin: 0; top: ${HEADER_H}px; } /* place modal under fixed header */
+        /* Side modal wrapper under sticky header */
+        .floating-side { display:flex; justify-content:flex-end; align-items:center; padding:12px; }
         .floating-modal .ant-modal-content {
           border-radius: 18px;
           overflow: hidden;
           border: 1px solid ${BRAND.softBorder};
           background: linear-gradient(145deg, rgba(255,255,255,0.95), rgba(255,255,255,0.86));
           box-shadow: 0 24px 72px rgba(16,24,40,0.22);
-          max-height: 92vh;
-          display: flex;
-          flex-direction: column;
         }
-        .floating-modal .ant-modal-header { background: rgba(245,245,255,0.7); border-bottom: 1px solid ${BRAND.softBorder}; border-radius: 18px 18px 0 0; padding: 10px 16px; }
-        .floating-modal .ant-modal-body { overflow: auto; }
-
-        @media (max-width: 768px) {
-          .floating-side { padding: 10px; }
-          .floating-modal .ant-modal-content { max-height: 94vh; }
-          .ant-table { font-size: 12px; }
+        .floating-modal .ant-modal-header {
+          background: rgba(245,245,255,0.7);
+          border-bottom: 1px solid ${BRAND.softBorder};
+          border-radius: 18px 18px 0 0;
+          padding: 10px 16px;
         }
 
         .modal-inner-animate { animation: slideIn .28s cubic-bezier(.2,.7,.3,1) both; }
-        @keyframes slideIn { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideIn { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1); } }
       `}</style>
     </Layout>
   );

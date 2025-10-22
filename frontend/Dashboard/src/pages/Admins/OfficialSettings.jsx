@@ -47,12 +47,12 @@ export default function OfficialSettings() {
   const [avatarUrl, setAvatarUrl] = useState("");
   const [verified, setVerified] = useState(false);
 
-  // new: hold cached/current user/profile
+  // cached/current user
   const [user, setUser] = useState(null);
 
   const [form] = Form.useForm();
 
-  /** tolerant verification detector (same logic as VictimSettings) */
+  /** tolerant verification detector (parity with VictimSettings) */
   const determineVerified = (profile) => {
     if (!profile) return false;
     if (typeof profile.isVerified === "boolean") return profile.isVerified;
@@ -60,7 +60,7 @@ export default function OfficialSettings() {
     if (typeof profile.emailVerified === "boolean") return profile.emailVerified;
     const status = String(profile.verificationStatus || profile.status || "").toLowerCase();
     if (status) return ["verified", "active", "confirmed"].includes(status);
-    if (profile.verifiedAt || profile.emailVerifiedAt) return true;
+    if (profile.verifiedAt || profile.verified_at || profile.emailVerifiedAt || profile.email_verified_at) return true;
     return false;
   };
 
@@ -81,48 +81,38 @@ export default function OfficialSettings() {
         if (profile.officialEmail && !profile.email) profile.email = profile.officialEmail;
         if (profile.photoURL) setAvatarUrl(profile.photoURL);
         setVerified(determineVerified(profile));
-        setUser(profile); // <-- store profile so UI can read immediately
+        setUser(profile);
         form.setFieldsValue(profile);
         return profile;
       }
     } catch (err) {
-      // leave fallback to cached user below
-      console.debug("loadProfile failed", err && err.message);
+      console.debug("loadProfile failed", err?.message);
     }
     return null;
   };
 
-  // on mount: load cached user quickly, then refresh from API
+  // on mount: warm start from localStorage, then refresh from API
   useEffect(() => {
     try {
       const raw = localStorage.getItem("user");
       if (raw) {
         const cached = JSON.parse(raw);
-        // ensure keys are consistent with form and UI
         if (cached.officialEmail && !cached.email) cached.email = cached.officialEmail;
         setUser(cached);
         if (cached.photoURL) setAvatarUrl(cached.photoURL);
         setVerified(determineVerified(cached));
         form.setFieldsValue(cached);
       }
-    } catch (ex) {
-      console.debug("no cached user", ex && ex.message);
-    }
+    } catch (_) {}
 
-    // always try to refresh from backend
     (async () => {
       const fresh = await loadProfile();
-      // if backend returned profile, also update localStorage so next load is instant
       if (fresh) {
         try {
           localStorage.setItem("user", JSON.stringify(fresh));
-        } catch (e) {
-          /* ignore storage errors */
-        }
+        } catch (_) {}
       }
     })();
-
-    // only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -131,18 +121,17 @@ export default function OfficialSettings() {
     setLoading(true);
     try {
       const payload = { ...values };
-      // map normalized email back if needed
       if (payload.email && !payload.officialEmail) payload.officialEmail = payload.email;
 
       await api.put("/api/officials/profile", payload);
       message.success("Profile updated successfully!");
+
       const refreshed = await loadProfile();
       if (refreshed && determineVerified(refreshed)) setVerified(true);
 
-      // update cached local user
       try {
         localStorage.setItem("user", JSON.stringify(refreshed || payload));
-      } catch (e) {}
+      } catch (_) {}
     } catch {
       message.error("Unable to update profile");
     } finally {
@@ -164,15 +153,13 @@ export default function OfficialSettings() {
       });
 
       if (data?.url) setAvatarUrl(data.url);
-      const payloadPhoto = { photoURL: data?.url || b64 };
-      await api.put("/api/officials/profile", payloadPhoto);
+      await api.put("/api/officials/profile", { photoURL: data?.url || b64 });
 
-      // refresh
       const fresh = await loadProfile();
       if (fresh) {
         try {
           localStorage.setItem("user", JSON.stringify(fresh));
-        } catch (e) {}
+        } catch (_) {}
       }
 
       message.success("Profile photo updated");
@@ -181,7 +168,7 @@ export default function OfficialSettings() {
     }
   };
 
-  // displayName: prefer live user state, fallback to form
+  // display name parity with VictimSettings
   const displayName = useMemo(() => {
     if (user) {
       const name = [user.firstName, user.lastName].filter(Boolean).join(" ");
@@ -197,96 +184,115 @@ export default function OfficialSettings() {
   return (
     <div style={{ display: "flex", justifyContent: "center" }}>
       <style>{`
-        .page-wrap{
-          width:100%;
-          max-width:1120px;
-          padding:${screens.xs ? "12px" : "24px"};
+        .page-wrap {
+          width: 100%;
+          max-width: 1120px;
+          padding: ${screens.xs ? "12px" : "24px"};
         }
 
-        /* HERO */
-        .hero{
-          position:relative;
-          border-radius:24px;
-          overflow:visible;
-          min-height:${screens.md ? "220px" : "190px"};
-          padding-bottom:72px;
-          box-shadow:0 18px 40px rgba(16,24,40,0.14);
+        /* HERO (same styling as VictimSettings) */
+        .hero {
+          position: relative;
+          border-radius: 24px;
+          overflow: visible;
+          min-height: ${screens.md ? "220px" : "190px"};
+          padding-bottom: 72px;
+          box-shadow: 0 18px 40px rgba(16,24,40,0.14);
           background: linear-gradient(135deg, ${BRAND.violet}, ${BRAND.pink});
           animation: fadeUp 400ms ease-out;
         }
-        .hero-inner{
-          padding:${screens.xs ? "22px" : "32px"};
-          color:#fff;
-          display:flex;
-          align-items:center;
-          justify-content:space-between;
-          flex-wrap:wrap;
+        .hero-inner {
+          padding: ${screens.xs ? "22px" : "32px"};
+          color: #fff;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
         }
-        .hero-title{ margin:0;color:#fff; }
-        .hero-sub{ margin:6px 0 0; opacity:.95; }
+        .hero-title { margin: 0; color: #fff; }
+        .hero-sub { margin: 6px 0 0; opacity: .95; }
 
-        /* Avatar overlay */
-        .avatar-wrap{
-          position:absolute;
-          left:50%;
-          transform:translateX(-50%);
-          bottom:-40px;
-          width:130px; height:130px;
-          border-radius:50%;
-          background:#fff;
-          display:grid; place-items:center;
-          box-shadow:0 18px 36px rgba(16,24,40,0.22);
-          border:8px solid #fff;
-          z-index:3;
+        /* Avatar Overlay (centered circle with ring) */
+        .avatar-wrap {
+          position: absolute;
+          left: 50%;
+          transform: translateX(-50%);
+          bottom: -40px;
+          width: 130px;
+          height: 130px;
+          border-radius: 50%;
+          background: #fff;
+          display: grid;
+          place-items: center;
+          box-shadow: 0 18px 36px rgba(16,24,40,0.22);
+          border: 8px solid #fff;
+          z-index: 3;
           transition: transform 250ms ease;
         }
-        .avatar-wrap:hover{ transform:translateX(-50%) scale(1.02); }
-        .avatar-ring{ width:115px; height:115px; border-radius:50%; padding:3px; display:grid; place-items:center; animation: slowspin 20s linear infinite; }
-        .avatar-inner{ width:105px; height:105px; border-radius:50%; overflow:hidden; background:${BRAND.soft}; display:grid; place-items:center; }
-        .change-avatar{ position:absolute; right:-4px; bottom:-4px; border-radius:50%; padding:0; width:32px; height:32px; font-size:14px; color:#fff; box-shadow:0 6px 16px rgba(0,0,0,0.12); }
+        .avatar-wrap:hover { transform: translateX(-50%) scale(1.02); }
 
-        /* Stats (parity with victim settings) */
-        .stats{
-          margin-top:88px;
-          display:flex; flex-wrap:wrap; justify-content:center; gap:16px;
+        .avatar-ring {
+          width: 115px; height: 115px; border-radius: 50%;
+          padding: 3px; display: grid; place-items: center;
+          animation: slowspin 20s linear infinite;
         }
-        .stat-card{
-          flex:1; min-width:260px; border-radius:20px;
-          background:${BRAND.card};
-          text-align:center;
-          box-shadow:0 10px 25px rgba(16,24,40,0.08);
-          border:1px solid rgba(233,30,99,0.06);
+        .avatar-inner {
+          width: 105px; height: 105px; border-radius: 50%;
+          overflow: hidden; background: ${BRAND.soft};
+          display: grid; place-items: center;
+        }
+        .change-avatar {
+          position: absolute; right: -4px; bottom: -4px;
+          border-radius: 50%; padding: 0; width: 32px; height: 32px;
+          font-size: 14px; color: #fff; box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+        }
+
+        /* Stats (same visual as VictimSettings) */
+        .stats {
+          margin-top: 88px;
+          display: flex; flex-wrap: wrap; justify-content: center; gap: 16px;
+        }
+        .stat-card {
+          flex: 1; min-width: 260px;
+          border-radius: 20px;
+          background: ${BRAND.card};
+          text-align: center;
+          box-shadow: 0 10px 25px rgba(16,24,40,0.08);
+          border: 1px solid rgba(233,30,99,0.06);
           transition: transform 200ms ease;
         }
-        .stat-card:hover{ transform: translateY(-4px); }
+        .stat-card:hover { transform: translateY(-4px); }
 
-        /* Main card */
-        .main-card{
-          margin-top:20px;
-          border-radius:20px;
-          box-shadow:0 12px 30px rgba(16,24,40,0.08);
-          border:1px solid rgba(233,30,99,0.06);
+        /* Main settings card */
+        .main-card {
+          margin-top: 20px;
+          border-radius: 20px;
+          box-shadow: 0 12px 30px rgba(16,24,40,0.08);
+          border: 1px solid rgba(233,30,99,0.06);
           animation: fadeUp 400ms ease-out;
-          background:${BRAND.card};
+          background: ${BRAND.card};
         }
 
-        .section-head{ display:flex; align-items:center; gap:10px; }
-        .brand-dot{ width:10px; height:10px; border-radius:50%; background:${BRAND.pink}; }
+        .section-head { display: flex; align-items: center; gap: 10px; }
+        .brand-dot { width: 10px; height: 10px; border-radius: 50%; background: ${BRAND.pink}; }
 
-        .btn-primary{
-          background:${BRAND.pink};
-          border-color:${BRAND.pink};
-          border-radius:12px;
-          min-width:170px;
-          height:40px;
+        .btn-primary {
+          background: ${BRAND.pink};
+          border-color: ${BRAND.pink};
+          border-radius: 12px;
+          min-width: 170px;
+          height: 40px;
           transition: transform 150ms ease;
-          color:#fff;
-          font-weight:700;
+          color: #fff;
+          font-weight: 700;
         }
-        .btn-primary:hover{ transform: scale(1.02); }
+        .btn-primary:hover { transform: scale(1.02); }
 
         @keyframes slowspin { to { transform: rotate(360deg); } }
-        @keyframes fadeUp { from { opacity:0; transform: translateY(10px);} to { opacity:1; transform: translateY(0);} }
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
       `}</style>
 
       <div className="page-wrap">
@@ -327,7 +333,6 @@ export default function OfficialSettings() {
               <Button
                 icon={<SafetyCertificateOutlined />}
                 onClick={() => {
-                  // reset both form and user-derived preview
                   form.resetFields();
                   (async () => {
                     const fresh = await loadProfile();
@@ -403,9 +408,7 @@ export default function OfficialSettings() {
               <Title level={4} style={{ margin: 0 }}>
                 Account Settings
               </Title>
-              <Text type="secondary">
-                Update your official details and contact information.
-              </Text>
+              <Text type="secondary">Update your official details and contact information.</Text>
             </div>
           </div>
 
@@ -465,11 +468,10 @@ export default function OfficialSettings() {
                   <Button
                     onClick={() => {
                       form.resetFields();
-                      // restore cached user preview if any
                       try {
                         const raw = localStorage.getItem("user");
                         if (raw) setUser(JSON.parse(raw));
-                      } catch (e) {}
+                      } catch (_) {}
                     }}
                   >
                     Discard

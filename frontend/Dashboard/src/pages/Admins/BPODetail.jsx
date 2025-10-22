@@ -5,9 +5,12 @@ import { api, getUserType } from '../../lib/api';
 import { useNavigate } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
 
-
 const { Title, Text } = Typography;
 const { Content } = Layout;
+
+// ==== brand colors (only change) ====
+const BRAND_PRIMARY = '#7A5AF8';     // violet
+const BRAND_PAGE_BG = '#F6F3FF';     // soft violet background
 
 export default function BPODetail() {
   const { id } = useParams();
@@ -20,13 +23,9 @@ export default function BPODetail() {
   const [form, setForm] = useState({});
   const [loading, setLoading] = useState(false);
 
-  // Print handler: write only the printable HTML/CSS into a new popup window and call print.
-  // This avoids printing app chrome (sidebar/header) and generally reduces clipping.
   const handlePrint = () => {
     const el = document.querySelector('.bpo-printable');
     if (!el) return window.print();
-
-    // Clone the element to capture current values (inputs/textarea)
     const clone = el.cloneNode(true);
     try {
       const originals = el.querySelectorAll('input, textarea, select');
@@ -46,7 +45,6 @@ export default function BPODetail() {
         }
       });
     } catch (e) {
-      // If anything goes wrong preserving values, continue with innerHTML fallback
       console.warn('Could not copy input values for print clone', e);
     }
 
@@ -57,7 +55,6 @@ export default function BPODetail() {
           <title>Barangay Protection Order</title>
           <style>
             html,body{margin:0;padding:0;color:#000;font-family: 'Times New Roman', Times, serif}
-            /* center the printable block and use a comfortable inner width */
             .bpo-printable{box-sizing:border-box;width:186mm;padding:12mm;margin:0 auto}
             button, .ant-btn{display:none !important}
             input::placeholder, textarea::placeholder{color:transparent !important}
@@ -71,7 +68,6 @@ export default function BPODetail() {
             (function(){
               function mmToPx(mm){ return mm * 96 / 25.4; }
               function whenReady(fn){ if (document.readyState === 'complete') return fn(); window.addEventListener('load', fn); setTimeout(fn, 500); }
-
               function doPrint(){
                 try{
                   const marginMM = 12;
@@ -90,9 +86,7 @@ export default function BPODetail() {
                       document.body.style.width = (210 / scale) + 'mm';
                     }
                   }
-
                   window.focus();
-
                   function closeOnce(){ try{ window.close(); }catch(e){} }
                   if ('onafterprint' in window) {
                     window.onafterprint = closeOnce;
@@ -103,13 +97,10 @@ export default function BPODetail() {
                       try{ mql.addEventListener('change', listener); }catch(e){ try{ mql.addListener(listener); }catch(e){} }
                     }catch(e){}
                   }
-
                   window.print();
                 }catch(e){ console.error('print error', e); }
                 setTimeout(function(){ try{ window.close(); }catch(e){} }, 3000);
               }
-
-              // Only print when the opener explicitly requests it (prevents duplicate dialogs)
               window.addEventListener('message', function(evt){
                 try{
                   if (evt && evt.data && evt.data.type === 'bpo-print') {
@@ -148,7 +139,6 @@ export default function BPODetail() {
       setLoading(true);
       try {
         const res = await api.get(`/api/bpo/${id}`);
-        console.debug('BPODetail fetch response:', res?.data);
         const data = res?.data?.data;
         if (data) {
           setForm({
@@ -171,7 +161,6 @@ export default function BPODetail() {
             status: data.status || '',
             bpoID: data.bpoID || data._id || '',
           });
-          console.debug('BPODetail mapped form:', data);
         }
       } catch (err) {
         console.error('Failed to load BPO', err);
@@ -184,14 +173,14 @@ export default function BPODetail() {
   }, [id]);
 
   return (
-    <Layout style={{ width: "100%", background: "#FFF5F8", minHeight: "100vh" }}>
+    <Layout style={{ width: "100%", background: BRAND_PAGE_BG, minHeight: "100vh" }}>
       <Content style={{ maxWidth: "100%", paddingTop: 32, paddingBottom: 32, paddingLeft: 16, paddingRight: 16 }}>
         <Space align="center" style={{ marginBottom: 16 }}>
           {/* Back button */}
           <Button
             icon={<ArrowLeftOutlined />}
             onClick={() => navigate(-1)}
-            style={{ borderColor: "#e91e63", color: "#e91e63" }}
+            style={{ borderColor: BRAND_PRIMARY, color: BRAND_PRIMARY }}
           >
             Back
           </Button>
@@ -201,22 +190,33 @@ export default function BPODetail() {
             type="primary"
             onClick={() => {
               const downloadUrl = `http://localhost:5000/api/bpo/${form.bpoID}/pdf`;
-              window.open(downloadUrl, "_blank"); // triggers download
+              window.open(downloadUrl, "_blank");
             }}
-            style={{ backgroundColor: "#e91e63", borderColor: "#e91e63" }}
+            style={{ backgroundColor: BRAND_PRIMARY, borderColor: BRAND_PRIMARY }}
           >
             Download PDF
           </Button>
 
           {/* Title */}
-          <Title level={3} style={{ margin: 0, color: "#e91e63" }}>
+          <Title level={3} style={{ margin: 0, color: BRAND_PRIMARY }}>
             BPO Details
           </Title>
         </Space>
 
         <Divider />
       </Content>
-      <div className="bpo-printable" style={{ maxWidth: 900, margin: '18px auto', padding: 28, background: '#fff', fontFamily: "'Times New Roman', Times, serif", color: '#000' }}>
+
+      <div
+        className="bpo-printable"
+        style={{
+          maxWidth: 900,
+          margin: '18px auto',
+          padding: 28,
+          background: '#fff',
+          fontFamily: "'Times New Roman', Times, serif",
+          color: '#000'
+        }}
+      >
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 14 }}>Republic of the Philippines</div>
           <div style={{ fontSize: 14 }}>Province of Nueva Vizcaya</div>
@@ -228,7 +228,7 @@ export default function BPODetail() {
         <Title level={3} style={{ textAlign: 'center', marginTop: 10, marginBottom: 6 }}>BARANGAY PROTECTION ORDER</Title>
 
         {!loading && !form.bpoID && (
-          <div style={{ textAlign: 'center', margin: '8px 0', color: '#e91e63' }}>
+          <div style={{ textAlign: 'center', margin: '8px 0', color: BRAND_PRIMARY }}>
             <Text>No BPO data loaded — check the browser console and ensure the URL contains the correct bpo id.</Text>
           </div>
         )}
@@ -295,7 +295,7 @@ export default function BPODetail() {
             </div>
           </div>
 
-          {/* Receipt / Served section (removed dashed divider) */}
+          {/* Receipt / Served section */}
           <div style={{ marginTop: 22, paddingTop: 12 }}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
               <div style={{ minWidth: 320 }}>
@@ -317,9 +317,7 @@ export default function BPODetail() {
                 </div>
               </div>
 
-              <div style={{ flex: 1 }}>
-                {/* right column intentionally left for layout balance or future fields */}
-              </div>
+              <div style={{ flex: 1 }} />
             </div>
           </div>
 
@@ -354,31 +352,19 @@ export default function BPODetail() {
           </div>
         </div>
 
-        {/* Notifications are shown via Ant Design notification (non-blocking) */}
-
         <style>{`
         @media print {
-          /* Hide interactive controls */
           button, .ant-btn { display: none !important; }
-          /* Hide app chrome: sidebar, headers, footers, menus */
           .sider-modern, .ant-layout-header, .ant-layout-footer, .menu-modern { display: none !important; }
-          /* So placeholders don't show in print */
           input::placeholder, textarea::placeholder { color: transparent; }
-          /* Ensure text is black on print */
           body, div { color: #000 !important; }
-          /* A4 in mm */
           @page { size: A4; margin: 12mm; }
-          /* Make sure printable container starts at top-left */
           .bpo-printable { margin: 0; padding: 6mm; width: 100%; box-shadow: none !important; }
-          /* Break-inside avoid to prevent splitting where possible */
           .bpo-printable * { break-inside: avoid; }
         }
-
-        /* Screen hint: ensure printable area looks like a single page */
         .bpo-printable { box-shadow: 0 0 0 1px rgba(0,0,0,0.05); }
       `}</style>
       </div>
     </Layout>
-
   );
 }

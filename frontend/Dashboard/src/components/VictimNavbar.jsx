@@ -23,6 +23,7 @@ import {
   PhoneOutlined,
   MenuOutlined,
   ExclamationCircleFilled,
+  HomeOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { clearToken, api, isTokenProbablyJwt } from "../lib/api";
@@ -79,6 +80,12 @@ export default function VictimNavbar() {
   const userMenu = {
     items: [
       {
+        key: "home",
+        icon: <HomeOutlined />,
+        label: <span>Home</span>,
+        onClick: () => navigate("/"), // go to landing page / home
+      },
+      {
         key: "logout",
         icon: <LogoutOutlined />,
         label: <span style={{ color: BRAND.pink }}>Logout</span>,
@@ -94,6 +101,7 @@ export default function VictimNavbar() {
     { key: "/victim/victim-cases", icon: <UserSwitchOutlined />, label: "My Cases" },
     { key: "/victim/victim-barangay", icon: <InfoCircleOutlined />, label: "Barangay" },
     { key: "/victim/victim-settings", icon: <SettingOutlined />, label: "Settings" },
+    
   ];
 
   // Mobile drawer items (Emergency first)
@@ -132,6 +140,7 @@ export default function VictimNavbar() {
       icon: <SettingOutlined />,
       label: <span className="drawer-pill">Settings</span>,
     },
+   
   ];
 
   return (

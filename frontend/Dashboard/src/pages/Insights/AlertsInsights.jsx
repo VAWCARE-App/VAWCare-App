@@ -524,7 +524,7 @@ export default function AlertsInsights() {
                     {/* DSS Section */}
                     <Col xs={24}>
                         <Card
-                            title="DSS Analysis & Recommendations"
+                            title="Alerts Recommendations"
                             bordered
                             style={{ borderRadius: 16, borderColor: BRAND.soft }}
                         >

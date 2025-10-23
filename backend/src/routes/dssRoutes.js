@@ -7,6 +7,7 @@ router.post('/suggest', dssController.suggest);
 // Suggestions for insights pages
 router.post('/suggest/cases', dssController.suggestCasesInsights);
 router.post('/suggest/reports', dssController.suggestReportsInsights);
+router.post('/suggest/alerts', dssController.suggestAlertsInsights);
 
 // Test rules engine without running model: POST /api/dss/test
 router.post('/test', dssController.testRules);

@@ -39,6 +39,44 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const screens = Grid.useBreakpoint();
   const prefersReduced = useReducedMotion();
+  // --- Dashboard data ---
+  const [reportCount, setReportCount] = useState(0);
+  const [caseCount, setCaseCount] = useState(0);
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoadingStats(true);
+
+        // Fetch full lists (or whatever your backend returns)
+        const [reportsRes, casesRes] = await Promise.all([
+          api.get("/api/reports"), // e.g., returns an array of reports
+          api.get("/api/cases"),   // e.g., returns an array of cases
+        ]);
+        console.log("Fetched reports and cases:", reportsRes.data, casesRes.data);
+        // Count manually in frontend
+        // 👇 Correctly access the nested array
+        const reportList = reportsRes?.data?.data || [];
+        const caseList = casesRes?.data?.data || [];
+
+        // Count manually
+        const reports = reportList.length;
+        const openCases = caseList.filter((c) => c.status === "Open").length;
+
+        setReportCount(reports);
+        setCaseCount(openCases);
+      } catch (err) {
+        console.error("Failed to load stats:", err);
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+
 
   // --- Dark mode state (persists)
   const [dark, setDark] = useState(() => {
@@ -78,8 +116,8 @@ export default function LandingPage() {
   );
 
   const kpis = [
-    { label: "Reports Filed (All-time)", value: 1204 },
-    { label: "Open Cases", value: 87 },
+    { label: "Reports Filed (All-time)", value: reportCount },
+    { label: "Open Cases", value: caseCount },
     { label: "Avg. Response (hrs)", value: 2.4 },
   ];
 

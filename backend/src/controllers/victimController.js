@@ -61,7 +61,7 @@ const registerVictim = asyncHandler(async (req, res) => {
                 victimUsername = `anon_${Date.now()}_${Math.floor(Math.random() * 9000) + 1000}`;
             } else {
                 console.log(`Registration failed: Username ${victimUsername} already exists`);
-                res.status(400);
+                res.status(409);
                 throw new Error('Username already exists');
             }
         }
@@ -71,7 +71,7 @@ const registerVictim = asyncHandler(async (req, res) => {
             const existingEmail = await Victim.findOne({ victimEmail });
             if (existingEmail) {
                 console.log(`Registration failed: Email ${victimEmail} already exists`);
-                res.status(400);
+                res.status(409);
                 throw new Error('Email already registered');
             }
         }
@@ -212,12 +212,6 @@ const registerVictim = asyncHandler(async (req, res) => {
             res.status(400);
             throw new Error('Email already registered');
         }
-
-        if (error.code === 11000) {
-            console.log('Duplicate Key Details:', error.keyPattern);
-            console.log('Duplicate Key Value:', error.keyValue);
-        }
-
         throw error;
     }
 });

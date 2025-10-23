@@ -250,30 +250,62 @@ export default function Navbar({
                   items={[
                     ...navItems,
                     { type: "divider" },
-                    {
-                      key: "admin",
-                      label: <Link to="/admin/login">Admin</Link>,
-                      icon: <UserSwitchOutlined />,
-                    },
-                    {
-                      key: "login",
-                      label: <Link to="/login">Login</Link>,
-                      icon: <LoginOutlined />,
-                    },
                   ]}
                   onClick={() => setOpen(false)}
                 />
+
                 <Space direction="vertical" size={8} style={{ width: "100%", marginTop: 12 }}>
-                  <Link to="/admin/login">
-                    <Button block icon={<UserSwitchOutlined />} className="btn-outline">
-                      Admin
-                    </Button>
-                  </Link>
-                  <Link to="/login">
-                    <Button block type="primary" icon={<LoginOutlined />} className="btn-primary">
-                      Login
-                    </Button>
-                  </Link>
+                  {user ? (
+                    <>
+                      <Button
+                        block
+                        icon={<UserSwitchOutlined />}
+                        className="btn-outline"
+                        onClick={() => {
+                          setOpen(false);
+                          if (user.userType === "admin") {
+                            window.location.href = "/admin";
+                          } else if (user.userType === "official") {
+                            window.location.href = "/admin/official-dashboard";
+                          } else {
+                            window.location.href = "/victim";
+                          }
+                        }}
+                      >
+                        {user.userType === "admin"
+                          ? "Admin Panel"
+                          : user.userType === "official"
+                            ? "Official Panel"
+                            : "Dashboard"}
+                      </Button>
+
+                      <Button
+                        block
+                        danger
+                        type="primary"
+                        icon={<LogoutOutlined />}
+                        onClick={() => {
+                          setOpen(false);
+                          handleLogout();
+                        }}
+                      >
+                        Logout
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Link to="/admin/login" onClick={() => setOpen(false)}>
+                        <Button block icon={<UserSwitchOutlined />} className="btn-outline">
+                          Admin
+                        </Button>
+                      </Link>
+                      <Link to="/login" onClick={() => setOpen(false)}>
+                        <Button block type="primary" icon={<LoginOutlined />} className="btn-primary">
+                          Login
+                        </Button>
+                      </Link>
+                    </>
+                  )}
                 </Space>
               </Drawer>
             </Space>

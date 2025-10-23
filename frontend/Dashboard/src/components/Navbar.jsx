@@ -162,18 +162,25 @@ export default function Navbar({
                 {user ? (
                   <>
                     <Tooltip title={`Logged in as ${user.firstName}`}>
-                      <Button 
-                      size="middle" 
-                      icon={<UserSwitchOutlined />} 
-                      className="btn-outline" 
-                      onClick={() => {
-                        if (user.userType === "admin") {
-                          window.location.href = "/admin";
-                        } else {
-                          window.location.href = "/victim";
-                        }
-                      }}>
-                        {user.userType === "admin" ? "Admin Panel" : "Dashboard"}
+                      <Button
+                        size="middle"
+                        icon={<UserSwitchOutlined />}
+                        className="btn-outline"
+                        onClick={() => {
+                          if (user.userType === "admin") {
+                            window.location.href = "/admin";
+                          } else if (user.userType === "official") {
+                            window.location.href = "/admin/official-dashboard";
+                          } else {
+                            window.location.href = "/victim";
+                          }
+                        }}
+                      >
+                        {user.userType === "admin"
+                          ? "Admin Panel"
+                          : user.userType === "official"
+                            ? "Official Panel"
+                            : "Dashboard"}
                       </Button>
                     </Tooltip>
                     <Button

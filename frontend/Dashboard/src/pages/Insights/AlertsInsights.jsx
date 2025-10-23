@@ -100,6 +100,8 @@ export default function AlertsInsights() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [range, setRange] = useState('current'); // 'current' | 'previous' | 'last2' | 'all'
+    const [dssLoading, setDssLoading] = useState(true);
+    const [dssInsights, setDssInsights] = useState(null);
 
     function formatRangeLabel(range) {
         const now = new Date();
@@ -132,8 +134,22 @@ export default function AlertsInsights() {
         }
     };
 
+    const loadDssInsights = async (withSpinner = true) => {
+        try {
+            if (withSpinner) setDssLoading(true);
+            const res = await api.post('/api/dss/suggest/alerts', { range });
+            setDssInsights(res.data?.data || null);
+        } catch (err) {
+            console.error('Failed to load DSS insights for alerts', err);
+            setDssInsights(null);
+        } finally {
+            if (withSpinner) setDssLoading(false);
+        }
+    };
+
     useEffect(() => {
         loadAlerts();
+        loadDssInsights();
     }, []);
 
     // Log page view to system logs (only once per mount)
@@ -149,6 +165,7 @@ export default function AlertsInsights() {
     useEffect(() => {
         // reload alerts when range changes to update displays
         loadAlerts();
+        loadDssInsights();
     }, [range]);
 
     // KPI Metrics
@@ -211,8 +228,8 @@ export default function AlertsInsights() {
         }));
     }, [alerts]);
 
-    // DSS Logic
-    const dssInsights = useMemo(() => {
+    // DSS Logic (local calculation for fallback)
+    const localDssInsights = useMemo(() => {
         const insights = [];
 
         const last7 = trendData.slice(-7);
@@ -265,6 +282,7 @@ export default function AlertsInsights() {
     const handleRefresh = async () => {
         setRefreshing(true);
         await loadAlerts(false);
+        await loadDssInsights(false);
     };
 
     const KpiCard = ({ title, value, icon, color }) => (
@@ -530,42 +548,54 @@ export default function AlertsInsights() {
                         >
                             {loading ? (
                                 <Skeleton active />
-                            ) : dssInsights.length === 0 ? (
-                                <Empty description="No insights available" />
+                            ) : alerts.length === 0 ? (
+                                <Empty description="No data to analyze" />
                             ) : (
-                                <Space direction="vertical" style={{ width: "100%" }}>
-                                    {dssInsights.map((i, idx) => (
-                                        <div key={idx} style={{ padding: "8px 0" }}>
-                                            <Space>
-                                                <Badge
-                                                    status={
-                                                        i.type === "error"
-                                                            ? "error"
-                                                            : i.type === "warning"
-                                                                ? "warning"
-                                                                : "success"
-                                                    }
-                                                />
-                                                <Text strong>{i.label}</Text>
-                                            </Space>
-                                            <Progress
-                                                percent={Math.min(
-                                                    i.value > 100 ? 100 : Number(i.value.toFixed(1)),
-                                                    100
-                                                )}
-                                                strokeColor={
-                                                    i.type === "error"
-                                                        ? "#ff4d4f"
-                                                        : i.type === "warning"
-                                                            ? "#faad14"
-                                                            : "#52c41a"
-                                                }
-                                                showInfo={true}
-                                                style={{ marginTop: 4 }}
-                                            />
-                                        </div>
-                                    ))}
-                                </Space>
+                                <div>
+                                    {dssLoading ? (
+                                        <Skeleton active />
+                                    ) : dssInsights && dssInsights.insights && dssInsights.insights.length === 0 ? (
+                                        <Empty description="No insights available" />
+                                    ) : (
+                                        <Space direction="vertical" style={{ width: "100%" }}>
+                                            {(dssInsights?.insights || []).map((i, idx) => (
+                                                <Card
+                                                    key={idx}
+                                                    size="small"
+                                                    style={{
+                                                            background:
+                                                                i.type === "error"
+                                                                    ? "#fff2f0"
+                                                                    : i.type === "warning"
+                                                                    ? "#fffbe6"
+                                                                    : i.type === "info"
+                                                                    ? "#e6f4ff"
+                                                                    : "#f6ffed",
+                                                            borderLeft: `4px solid ${i.urgent ? '#d32029' : (i.type === "error" ? "#ff4d4f" : i.type === "warning" ? "#faad14" : i.type === "info" ? "#1677ff" : "#52c41a")}`,
+                                                            boxShadow: i.urgent ? '0 6px 18px rgba(211,32,41,0.08)' : undefined
+                                                    }}
+                                                >
+                                                    <Typography.Text strong>
+                                                        {i.label}
+                                                        {i.value !== undefined ? ` — ${typeof i.value === 'number' ? (i.value.toFixed ? i.value.toFixed(1) : i.value) : i.value}` : ''}
+                                                    </Typography.Text>
+                                                        {i.urgent && (
+                                                            <Tag style={{ marginLeft: 8 }} color="error">URGENT</Tag>
+                                                        )}
+                                                    <br />
+                                                        <Typography.Text>{i.message || ''}</Typography.Text>
+                                                            {(i.recommendations && i.recommendations.length > 0) && (
+                                                                <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 18 }}>
+                                                                    {i.recommendations.map((r, ri) => (
+                                                                        <li key={ri}><Typography.Text>{r}</Typography.Text></li>
+                                                                    ))}
+                                                                </ul>
+                                                            )}
+                                                </Card>
+                                            ))}
+                                        </Space>
+                                    )}
+                                </div>
                             )}
                         </Card>
                     </Col>

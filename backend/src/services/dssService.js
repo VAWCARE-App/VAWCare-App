@@ -1355,11 +1355,11 @@ async function suggestForCasesInsights(options = {}) {
     });
     const trend = Object.entries(counts).map(([date,count]) => ({ date, count }));
 
-    // For the 'previous' range, compute month-over-month counts directly and
+    // For the 'current' range, compute month-over-month counts directly and
     // emit an Increase in Cases insight when the current calendar month has
     // more cases than the previous calendar month. This avoids relying on
     // short-term daily spikes which may not appear for small samples.
-    if (options.range === 'previous') {
+    if (options.range === 'current') {
       try {
         const CasesModel = require('../models/Cases');
         const now = new Date();
@@ -1713,41 +1713,35 @@ async function suggestForReportsInsights(options = {}) {
     });
     const trend = Object.entries(counts).map(([date,count]) => ({ date, count }));
 
-    const last7 = trend.slice(-7);
-    if (last7.length >= 2) {
-      const last = last7[last7.length - 1].count;
-      const prev = last7[last7.length - 2].count || 0;
-      const factor = Number.parseFloat(options.minSpikeFactor) || 1.5;
-      if (prev > 0 && last > prev * factor) {
-        // Additional guard: only consider a spike if the current calendar month has more reports
-        // than the previous calendar month to avoid flagging trivial day-to-day noise.
-        try {
-          const ReportsModel = require('../models/IncidentReports');
-          const now = new Date();
-          const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-          const curMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-          const prevMonthCount = await ReportsModel.countDocuments({ createdAt: { $gte: prevMonthStart, $lt: curMonthStart } }).exec();
-          const curMonthCount = await ReportsModel.countDocuments({ createdAt: { $gte: curMonthStart } }).exec();
-          if (curMonthCount > prevMonthCount) {
-            let percent = null;
-            let percentBasis = 'monthly';
-            let deltaCount = null;
-            if (prevMonthCount > 0) {
-              deltaCount = (curMonthCount - prevMonthCount);
-              percent = (deltaCount / prevMonthCount) * 100;
-            } else {
-              // fallback to daily percent if previous month had 0 reports
-              deltaCount = (last - prev);
-              percent = ((last - prev) / prev) * 100;
-              percentBasis = 'daily';
-            }
+    // Check for month-over-month increase in current range
+    if (options.range === 'current') {
+      try {
+        const ReportsModel = require('../models/IncidentReports');
+        const now = new Date();
+        const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const curMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const prevMonthCount = await ReportsModel.countDocuments({ createdAt: { $gte: prevMonthStart, $lt: curMonthStart } }).exec();
+        const curMonthCount = await ReportsModel.countDocuments({ createdAt: { $gte: curMonthStart } }).exec();
+        
+        if (curMonthCount > prevMonthCount) {
+          let percent = null;
+          let deltaCount = null;
+          if (prevMonthCount > 0) {
+            deltaCount = (curMonthCount - prevMonthCount);
+            percent = (deltaCount / prevMonthCount) * 100;
+          } else if (curMonthCount > 0) {
+            deltaCount = curMonthCount;
+            percent = 100;
+          }
+          
+          if (deltaCount > 0) {
             insights.push({
               label: 'Increase in Reports',
               value: percent,
               type: lowSample ? 'warning' : 'warning',
-              message: `There has been a recent jump in reports (increase of ${deltaCount} ${percentBasis === 'monthly' ? 'reports in over a month' : 'reports day-over-day'}; ${Math.round(percent)}%).${sampleNote}`,
-              message_tl: `May biglang pagtaas ng mga ulat (tumaas ng ${deltaCount} ${percentBasis === 'monthly' ? 'ulat buwan-sa-buwan' : 'ulat araw-sa-araw'}; ${Math.round(percent)}%).${sampleNote}`,
-              details: { prevDayCount: prev, lastDayCount: last, prevMonthCount, curMonthCount, percentBasis, deltaCount },
+              message: `There has been an increase in reports compared to last month (${deltaCount} more report${deltaCount !== 1 ? 's' : ''}; +${Math.round(percent)}%).${sampleNote}`,
+              message_tl: `May tumaas na mga ulat kumpara sa nakaraang buwan (${deltaCount} karagdagang ulat; +${Math.round(percent)}%).${sampleNote}`,
+              details: { prevMonthCount, curMonthCount, deltaCount, percent },
               recommendations: [
                 'Identify geographic or time-based hotspots and prioritize patrols/visits.',
                 'Temporarily increase staff presence in affected areas.',
@@ -1760,26 +1754,9 @@ async function suggestForReportsInsights(options = {}) {
               ]
             });
           }
-        } catch (e) {
-          // If monthly comparison fails for any reason, fall back to daily spike behavior
-          insights.push({
-            label: 'Spike in Reports',
-            value: ((last - prev) / prev) * 100,
-            type: lowSample ? 'warning' : 'warning',
-            message: `There has been a recent jump in reports.${sampleNote}`,
-            message_tl: `May biglang pagtaas ng mga ulat kamakailan.${sampleNote}`,
-            recommendations: [
-              'Identify geographic or time-based hotspots and prioritize patrols/visits.',
-              'Temporarily increase staff presence in affected areas.',
-              'Coordinate with partner agencies if multiple reports point to the same issue.'
-            ],
-            recommendations_tl: [
-              'Tukuyin ang mga hotspot ayon sa lokasyon o oras at unahin ang mag patrol/pagbisita.',
-              'Pansamantalang dagdagan ang presensya ng staff sa mga apektadong lugar.',
-              'Makipag-coordinate sa mga partner agencies kung maraming ulat ang tumuturo sa parehong isyu.'
-            ]
-          });
         }
+      } catch (e) {
+        console.warn('suggestForReportsInsights: monthly comparison failed', e && e.message);
       }
     }
 
@@ -1978,4 +1955,301 @@ async function suggestForReportsInsights(options = {}) {
   }
 }
 
-module.exports = { trainModelFromCases, suggestForCase, suggestForCasesInsights, suggestForReportsInsights };
+// Suggest insights for Alerts insights page
+async function suggestForAlertsInsights(options = {}) {
+  try {
+    const { since, until } = computeSinceUntil(options);
+    const Alert = require('../models/Alert');
+    const query = since ? { createdAt: { $gte: since } } : {};
+    if (until) query.createdAt.$lt = until;
+    const docs = await Alert.find(query).lean().exec();
+
+    const insights = [];
+    const total = docs.length;
+    const sampleSize = total;
+    const lowSample = sampleSize < 5;
+    const sampleNote = lowSample ? ` (small sample: ${sampleSize} records — interpret with caution)` : '';
+
+    const active = docs.filter(d => d.status === 'Active').length;
+    const resolved = docs.filter(d => d.status === 'Resolved').length;
+    const cancelled = docs.filter(d => d.status === 'Cancelled').length;
+
+    // Trend
+    const counts = {};
+    docs.forEach(d => {
+      const date = new Date(d.createdAt).toISOString().slice(0,10);
+      counts[date] = (counts[date] || 0) + 1;
+    });
+    const trend = Object.entries(counts).map(([date,count]) => ({ date, count }));
+
+    // Alert spike detection
+    const last7 = trend.slice(-7);
+    if (last7.length >= 2) {
+      const last = last7[last7.length - 1].count;
+      const prev = last7[last7.length - 2].count || 0;
+      const factor = Number.parseFloat(options.minSpikeFactor) || 1.5;
+      if (prev > 0 && last > prev * factor) {
+        try {
+          const AlertModel = require('../models/Alert');
+          const now = new Date();
+          const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          const curMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+          const prevMonthCount = await AlertModel.countDocuments({ createdAt: { $gte: prevMonthStart, $lt: curMonthStart } }).exec();
+          const curMonthCount = await AlertModel.countDocuments({ createdAt: { $gte: curMonthStart } }).exec();
+          if (curMonthCount > prevMonthCount) {
+            let percent = null;
+            let percentBasis = 'monthly';
+            let deltaCount = null;
+            if (prevMonthCount > 0) {
+              deltaCount = (curMonthCount - prevMonthCount);
+              percent = (deltaCount / prevMonthCount) * 100;
+            } else {
+              deltaCount = (last - prev);
+              percent = ((last - prev) / prev) * 100;
+              percentBasis = 'daily';
+            }
+            insights.push({
+              label: 'Increase in Alerts',
+              value: percent,
+              type: 'warning',
+              message: `There has been a recent jump in alerts (increase of ${deltaCount} ${percentBasis === 'monthly' ? 'alerts in over a month' : 'alerts day-over-day'}; ${Math.round(percent)}%).${sampleNote}`,
+              message_tl: `May biglang pagtaas ng mga alerto (tumaas ng ${deltaCount} ${percentBasis === 'monthly' ? 'alerto buwan-sa-buwan' : 'alerto araw-sa-araw'}; ${Math.round(percent)}%).${sampleNote}`,
+              details: { prevDayCount: prev, lastDayCount: last, prevMonthCount, curMonthCount, percentBasis, deltaCount },
+              recommendations: [
+                'Review the nature of recent alerts to identify patterns or common issues.',
+                'Increase response team capacity during high-alert periods.',
+                'Conduct outreach to understand why alerts have increased.'
+              ],
+              recommendations_tl: [
+                'Suriin ang kalikasan ng mga kamakailang alerto upang tukuyin ang mga pattern o karaniwang isyu.',
+                'Pataas ang kapasidad ng response team sa mga panahon ng mataas na alerto.',
+                'Magsagawa ng outreach upang maunawaan kung bakit tumaas ang mga alerto.'
+              ]
+            });
+          }
+        } catch (e) {
+          insights.push({
+            label: 'Spike in Alerts',
+            value: ((last - prev) / prev) * 100,
+            type: 'warning',
+            message: `There has been a recent jump in alerts.${sampleNote}`,
+            message_tl: `May biglang pagtaas ng mga alerto kamakailan.${sampleNote}`,
+            recommendations: [
+              'Review the nature of recent alerts to identify patterns or common issues.',
+              'Increase response team capacity during high-alert periods.'
+            ],
+            recommendations_tl: [
+              'Suriin ang kalikasan ng mga kamakailang alerto upang tukuyin ang mga pattern o karaniwang isyu.',
+              'Pataas ang kapasidad ng response team sa mga panahon ng mataas na alerto.'
+            ]
+          });
+        }
+      }
+    }
+
+    // Active alert ratio
+    const activeRate = active / (total || 1);
+    if (activeRate > 0.5) {
+      insights.push({
+        label: 'High Active Alert Ratio',
+        value: activeRate * 100,
+        type: lowSample ? 'info' : 'error',
+        message: `About ${Math.round(activeRate * 100)}% of alerts are still active.${sampleNote}`,
+        message_tl: `Tinatayang ${Math.round(activeRate * 100)}% ng mga alerto ay aktibo pa rin.${sampleNote}`,
+        recommendations: [
+          'Prioritize resolution of active alerts with highest severity.',
+          'Allocate additional resources to response teams if needed.',
+          'Set daily targets for resolving active alerts.'
+        ],
+        recommendations_tl: [
+          'Unahin ang resolusyon ng mga aktibong alerto na may pinakamataas na kalidad.',
+          'Maglaan ng dagdag na resources sa response teams kung kinakailangan.',
+          'Magtakda ng araw-araw na target para sa pagresolba ng mga aktibong alerto.'
+        ]
+      });
+    } else if (activeRate > 0.25) {
+      insights.push({
+        label: 'Moderate Active Alert Ratio',
+        value: activeRate * 100,
+        type: lowSample ? 'info' : 'warning',
+        message: `Around ${Math.round(activeRate * 100)}% of alerts are active.${sampleNote}`,
+        message_tl: `Tinatayang ${Math.round(activeRate * 100)}% ng mga alerto ay aktibo.${sampleNote}`,
+        recommendations: [
+          'Monitor active alerts closely and track resolution progress.',
+          'Coordinate with field teams to expedite response.',
+          'Review cases associated with long-standing active alerts.'
+        ],
+        recommendations_tl: [
+          'Bantayan nang mabuti ang mga aktibong alerto at subaybayan ang progreso ng resolusyon.',
+          'Makipag-coordinate sa field teams upang pabilisin ang tugon.',
+          'Suriin ang mga case na nauugnay sa mahabang aktibong alerto.'
+        ]
+      });
+    }
+
+    // Resolution rate
+    const resolvedRate = resolved / (total || 1);
+    if (resolvedRate > 0.7) {
+      insights.push({
+        label: 'Excellent Resolution Rate',
+        value: resolvedRate * 100,
+        type: 'success',
+        message: `Excellent response: ${Math.round(resolvedRate * 100)}% of alerts have been resolved.${sampleNote}`,
+        message_tl: `Kahanga-hangang tugon: ${Math.round(resolvedRate * 100)}% ng mga alerto ay nalutas na.${sampleNote}`,
+        recommendations: [
+          'Continue current response practices and protocols.',
+          'Document best practices for team training.',
+          'Consider recognizing and rewarding effective response efforts.'
+        ],
+        recommendations_tl: [
+          'Magpatuloy sa kasalukuyang mga practice at protokol sa tugon.',
+          'I-dokumento ang best practices para sa pagsasanay ng team.',
+          'Isaalang-alang ang pagkilala at paggantimpala sa epektibong effort sa tugon.'
+        ]
+      });
+    }
+
+    // Aged active alerts
+    const oldActive = docs.filter(d => {
+      const age = (Date.now() - new Date(d.createdAt)) / (1000*60*60*24);
+      return d.status === 'Active' && age > 3; // More than 3 days
+    }).length;
+    if (oldActive > 0) {
+      insights.push({
+        label: 'Long-Standing Active Alerts',
+        value: oldActive,
+        type: 'error',
+        urgent: true,
+        message: `${oldActive} alert(s) have been active for more than 3 days. These require immediate review and escalation.`,
+        message_tl: `Mayroong ${oldActive} alerto na aktibo nang higit sa 3 araw. Ang mga ito ay nangangailangan ng agarang pagsusuri at escalation.`,
+        recommendations: [
+          'Immediately review all alerts active for >3 days.',
+          'Escalate to management and partner agencies if needed.',
+          'Reassign or provide additional support to accelerate resolution.',
+          'Ensure victim safety is prioritized during extended alert period.'
+        ],
+        recommendations_tl: [
+          'Agad na suriin ang lahat ng alerto na aktibo nang higit sa 3 araw.',
+          'I-escalate sa management at partner agencies kung kinakailangan.',
+          'I-reassign o magbigay ng dagdag na suporta upang mapabilis ang resolusyon.',
+          'Siguraduhin na ang kaligtasan ng biktima ay prioridad sa pahabang panahon ng alerto.'
+        ]
+      });
+    }
+
+    // Geographic concentration
+    try {
+      const locations = {};
+      docs.forEach(d => {
+        if (d.location && d.location.latitude && d.location.longitude) {
+          const key = `${Math.round(d.location.latitude * 100) / 100},${Math.round(d.location.longitude * 100) / 100}`;
+          locations[key] = (locations[key] || 0) + 1;
+        }
+      });
+      const clusterCounts = Object.values(locations);
+      if (clusterCounts.length > 0) {
+        const maxCluster = Math.max(...clusterCounts);
+        if (maxCluster > 2 && (maxCluster / (total || 1)) > 0.3) {
+          insights.push({
+            label: 'Geographic Clustering',
+            value: maxCluster,
+            type: 'warning',
+            message: `${maxCluster} alert(s) are concentrated in a single geographic area (${Math.round((maxCluster / (total || 1)) * 100)}% of total). This may indicate a hotspot requiring focused intervention.`,
+            message_tl: `Mayroong ${maxCluster} alerto na nakonsentrado sa isang lugar (${Math.round((maxCluster / (total || 1)) * 100)}% ng kabuuan). Ito ay maaaring nagpapahiwatig ng hotspot na nangangailangan ng nakatuong intervention.`,
+            recommendations: [
+              'Conduct targeted field assessment in the concentrated area.',
+              'Increase presence and visibility in the hotspot.',
+              'Coordinate community patrols or prevention activities.',
+              'Document patterns to inform strategic planning.'
+            ],
+            recommendations_tl: [
+              'Magsagawa ng nakatuong field assessment sa nakonsentradong lugar.',
+              'Pataas ang presensya at visibility sa hotspot.',
+              'I-coordinate ang community patrols o prevention activities.',
+              'I-dokumento ang mga pattern upang maibalik sa strategic planning.'
+            ]
+          });
+        }
+      }
+    } catch (e) { /* ignore */ }
+
+    // Alert cancellation ratio
+    const cancelledRate = cancelled / (total || 1);
+    if (cancelledRate > 0.2) {
+      insights.push({
+        label: 'High Cancellation Rate',
+        value: cancelledRate * 100,
+        type: 'warning',
+        message: `About ${Math.round(cancelledRate * 100)}% of alerts have been cancelled. Review cancellation reasons to improve alert quality.`,
+        message_tl: `Tinatayang ${Math.round(cancelledRate * 100)}% ng mga alerto ay kinansela. Suriin ang dahilan ng pagkakansela upang mapabuti ang kalidad ng alerto.`,
+        recommendations: [
+          'Analyze cancelled alerts to identify false alarm patterns.',
+          'Provide feedback to alert sources on quality expectations.',
+          'Refine alert criteria to reduce false positives.',
+          'Train teams on proper alert escalation procedures.'
+        ],
+        recommendations_tl: [
+          'Suriin ang mga kinansyang alerto upang tukuyin ang mga pattern ng false alarm.',
+          'Magbigay ng feedback sa mga source ng alerto tungkol sa quality expectations.',
+          'Palitan ang alert criteria upang mabawasan ang false positives.',
+          'Sanayin ang mga team sa tamang alert escalation procedures.'
+        ]
+      });
+    }
+
+    // Average response time for resolved alerts
+    try {
+      const resolvedWithDuration = docs.filter(d => d.status === 'Resolved' && d.durationMs);
+      if (resolvedWithDuration.length > 0) {
+        const avgDurationMs = resolvedWithDuration.reduce((sum, d) => sum + (d.durationMs || 0), 0) / resolvedWithDuration.length;
+        const avgDurationMins = avgDurationMs / 1000 / 60;
+        const avgDurationHours = avgDurationMins / 60;
+        
+        if (avgDurationHours > 4) {
+          insights.push({
+            label: 'Average Response Time',
+            value: Math.round(avgDurationMins),
+            type: 'warning',
+            message: `Average time to resolve alerts is ${Math.round(avgDurationMins)} minutes (approximately ${Math.round(avgDurationHours)} hours). Target faster response times for better victim safety outcomes.`,
+            message_tl: `Ang average na oras upang magresolba ng mga alerto ay ${Math.round(avgDurationMins)} minuto (tinatayang ${Math.round(avgDurationHours)} oras). Target ang mas mabilis na oras ng tugon para sa mas mahusay na resulta sa kaligtasan ng biktima.`,
+            recommendations: [
+              'Review response protocols to identify bottlenecks.',
+              'Improve communication channels between teams.',
+              'Set response time targets (e.g., 30 minutes for high-severity alerts).',
+              'Conduct regular drills to maintain response readiness.'
+            ],
+            recommendations_tl: [
+              'Suriin ang response protocols upang tukuyin ang mga hadlang.',
+              'Mapabuti ang communication channels sa pagitan ng mga team.',
+              'Magtakda ng response time targets (hal., 30 minuto para sa mataas na kalidad ng alerto).',
+              'Magsagawa ng regular na drills upang mapanatili ang readiness ng response.'
+            ]
+          });
+        } else if (avgDurationHours > 2) {
+          insights.push({
+            label: 'Average Response Time',
+            value: Math.round(avgDurationMins),
+            type: 'info',
+            message: `Average response time is ${Math.round(avgDurationMins)} minutes (${Math.round(avgDurationHours)} hours). Consider optimizing for faster victim assistance.`,
+            message_tl: `Ang average response time ay ${Math.round(avgDurationMins)} minuto (${Math.round(avgDurationHours)} oras). Isaalang-alang ang pag-optimize para sa mas mabilis na tulong sa biktima.`,
+            recommendations: [
+              'Analyze high-performing response times and document best practices.',
+              'Share effective strategies across teams.'
+            ],
+            recommendations_tl: [
+              'Suriin ang mataas na performance na oras ng tugon at i-dokumento ang best practices.',
+              'Ibahagi ang epektibong estratehiya sa iba\'t ibang team.'
+            ]
+          });
+        }
+      }
+    } catch (e) { /* ignore */ }
+
+    return { total, active, resolved, cancelled, trend, insights, meta: { since: since ? since.toISOString() : null, until: until ? until.toISOString() : null, range: options.range || null } };
+  } catch (err) {
+    console.error('suggestForAlertsInsights error:', err);
+    return { total: 0, active: 0, resolved: 0, cancelled: 0, trend: [], insights: [] };
+  }
+}
+
+module.exports = { trainModelFromCases, suggestForCase, suggestForCasesInsights, suggestForReportsInsights, suggestForAlertsInsights };

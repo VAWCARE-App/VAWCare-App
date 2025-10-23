@@ -44,6 +44,14 @@ const suggestReportsInsights = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, data: result });
 });
 
+// POST /api/dss/suggest/alerts
+const suggestAlertsInsights = asyncHandler(async (req, res) => {
+  const opts = req.body || {};
+  const result = await dssService.suggestForAlertsInsights(opts).catch(e => null);
+  if (!result) return res.status(500).json({ success: false, message: 'Failed to compute alerts insights' });
+  res.status(200).json({ success: true, data: result });
+});
+
 // GET /api/dss/cancellations?victimId=... or ?incidentType=...
 const cancellations = asyncHandler(async (req, res) => {
   const { victimId, victimID, incidentType } = req.query || {};
@@ -85,6 +93,7 @@ module.exports = {
   suggest,
   suggestCasesInsights,
   suggestReportsInsights,
+  suggestAlertsInsights,
   testRules,
   cancellations,
 };

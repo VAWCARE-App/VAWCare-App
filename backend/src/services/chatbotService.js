@@ -9,7 +9,10 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const CONTEXTS = [
   {
     name: "emergency",
-    keywords: ["emergency", "help now", "tulong", "delikado", "banta", "panganib", "nakakatakot"],
+    keywords: [
+      "emergency", "help now", "tulong", "delikado", "banta", "panganib", "nakakatakot",
+      "abuse", "abused", "inaabuso", "sinaktan", "binugbog", "rape", "molested", "violence"
+    ],
     priority: 1,
     prompt: `
       The user may be in danger. Calmly tell them to:
@@ -95,6 +98,19 @@ const CONTEXTS = [
       Include hotlines, shelters, counseling services, and legal aid.
       - They can access provided resources found in the Dashboard labeled "VAWC Hub".
     `
+  },
+  {
+    name: "system",
+    keywords: ["system", "app", "error", "bug", "crash", "login", "account", "settings", "technical", "problem", "issue", "loading"],
+    priority: 2,
+    prompt: `
+    The user is experiencing a system or technical issue.
+    - Politely acknowledge the problem.
+    - Ask for more details about what happened (e.g., error message, what they were trying to do).
+    - Suggest simple troubleshooting steps (like restarting the app, checking internet connection, or logging in again).
+    - If the issue continues, tell them to report the problem using the in-app feedback or contact support.
+    Keep the tone helpful and professional.
+  `
   }
 ];
 
@@ -134,6 +150,12 @@ When unsure, advise the user to contact a professional or hotline.
 - Do not use markdown, asterisks, or formatting.
 - Keep answers clear and conversational.
 - Do not answer questions outside the scope of VAWCare.
+
+Limitations:
+- You cannot access personal data unless shared in conversation.
+- You cannot perform actions in the app.
+- You cannot provide real-time emergency assistance.
+- You can only provide information about hotlines and resources, and what the system does.
 
 ${contextPrompt || ""}
 `;

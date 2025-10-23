@@ -34,6 +34,7 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
+import Chatbot from "../../components/Chatbot";
 
 const { Content } = Layout;
 const { Title, Text } = Typography;

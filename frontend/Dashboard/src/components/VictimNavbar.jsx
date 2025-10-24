@@ -96,7 +96,7 @@ export default function VictimNavbar() {
 
   // Desktop nav items
   const desktopItems = [
-    { key: "/victim/victim-test", icon: <DashboardOutlined />, label: "Dashboard" },
+    { key: "/victim/dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
     { key: "/victim/report", icon: <FileAddOutlined />, label: "Report Case" },
     { key: "/victim/victim-cases", icon: <UserSwitchOutlined />, label: "My Cases" },
     { key: "/victim/victim-barangay", icon: <InfoCircleOutlined />, label: "Barangay" },
@@ -116,7 +116,7 @@ export default function VictimNavbar() {
       ),
     },
     {
-      key: "/victim/victim-test",
+      key: "/victim/dashboard",
       icon: <DashboardOutlined />,
       label: <span className="drawer-pill">Dashboard</span>,
     },

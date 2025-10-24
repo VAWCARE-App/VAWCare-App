@@ -132,7 +132,7 @@ export default function App() {
             </Route>
 
             {/* Admin shell moved to /admin */}
-            <Route path="/admin" element={<Protected roles={["admin"]}><Admin /></Protected>}>
+            <Route path="/admin" element={<Protected roles={["admin", "official"]}><Admin /></Protected>}>
               {/* Default (admin) */}
               <Route index element={<Protected roles={["admin", "official"]}><Dashboard /></Protected>} />
 
@@ -140,7 +140,7 @@ export default function App() {
               <Route path="official-dashboard" element={<Protected roles={["admin", "official"]}><OfficialDashboard /></Protected>} />
               <Route path="official-cases" element={<Protected roles={["admin", "official"]}><CaseManagement /></Protected>} />
               <Route path="official-cases/:id" element={<Protected roles={["admin", "official"]}><CaseDetail /></Protected>} />
-              <Route path="official-settings" element={<Protected roles={["admin", "official"]}><OfficialSettings /></Protected>} />
+              <Route path="official-settings" element={<Protected roles={["official"]}><OfficialSettings /></Protected>} />
               <Route path="create-official" element={<Protected roles={["admin", "official"]}><CreateOfficial /></Protected>} />
               <Route path="reports" element={<Protected roles={["admin", "official"]}><ReportManagement /></Protected>} />
               <Route path="alerts" element={<Protected roles={["admin", "official"]}><AlertsManagement /></Protected>} />

@@ -120,16 +120,19 @@ api.interceptors.response.use(
     const requestUrl = error.config?.url || "";
 
     if (status === 401) {
-      // Only force logout/redirect for explicit auth endpoints where we expect token exchange to fail
-      if (requestUrl.includes('/login') || requestUrl.includes('/register') || requestUrl.includes('/token/refresh') || requestUrl.includes('/auth/me')) {
-        console.log('[api] 401 on auth endpoint — clearing token and redirecting to login');
+      // Only force logout for critical auth verification endpoints
+      if (requestUrl.includes('/token/refresh') || requestUrl.includes('/auth/me')) {
+        console.log('[api] auth failure on critical endpoint — clearing token and redirecting to login');
         clearToken();
-        window.location.href = "/login";
+        // if user is in admin area, redirect to admin login; otherwise redirect to regular login
+        const redirectToAdmin = window.location.pathname.startsWith('/admin');
+        window.location.href = redirectToAdmin ? '/admin/login' : '/login';
       } else {
-        // Delegate other 401s to the caller (prevent unexpected global logout)
+        // Let the caller handle failed login attempts and other 401s
         console.warn('[api] 401 received for', requestUrl, '- delegating to caller (no auto-logout).');
       }
     }
+
     return Promise.reject(error);
   }
 );

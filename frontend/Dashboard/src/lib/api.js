@@ -117,10 +117,18 @@ api.interceptors.response.use(
   },
   (error) => {
     const status = error.response?.status;
+    const requestUrl = error.config?.url || "";
+
     if (status === 401) {
-      console.warn('[api] 401 Unauthorized — clearing token and redirecting to login');
-      clearToken();
-      window.location.href = "/login"; // 🔹 Redirect to login page
+      // Only force logout/redirect for explicit auth endpoints where we expect token exchange to fail
+      if (requestUrl.includes('/login') || requestUrl.includes('/register') || requestUrl.includes('/token/refresh') || requestUrl.includes('/auth/me')) {
+        console.log('[api] 401 on auth endpoint — clearing token and redirecting to login');
+        clearToken();
+        window.location.href = "/login";
+      } else {
+        // Delegate other 401s to the caller (prevent unexpected global logout)
+        console.warn('[api] 401 received for', requestUrl, '- delegating to caller (no auto-logout).');
+      }
     }
     return Promise.reject(error);
   }

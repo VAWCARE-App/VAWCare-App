@@ -267,7 +267,7 @@ export default function AdminLogin() {
                         message.warning('Logged in but Firebase client exchange failed. If protected requests fail, ensure VITE_FIREBASE_* are set and restart the dev server.');
                     }
                 } else if (userType === "victim") {
-                    saveToken("victim-test-token");
+                    saveToken("dashboard-token");
                 }
                 let userInfo = {};
                 if (userType === "victim") userInfo = { ...data.data.victim, userType: "victim" };

@@ -118,9 +118,34 @@ const resetPassword = async (req, res) => {
   }
 };
 
+const me = asyncHandler(async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const userInfo = {
+      uid: req.user.uid || null,
+      email: req.user.email || req.user.victimEmail,
+      role: req.user.role || 'victim',
+      name: req.user.name || req.user.victimName || 'Unknown',
+    };
+
+    res.status(200).json({
+      success: true,
+      user: userInfo,
+    });
+  } catch (error) {
+    console.error('[auth/me] error:', error);
+    res.status(500).json({ success: false, message: 'Failed to get user info' });
+  }
+});
+
+
 module.exports = {
   logout,
   sendOTP,
   verifyOTP,
   resetPassword,
+  me,
 };

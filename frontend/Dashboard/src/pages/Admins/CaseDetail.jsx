@@ -42,7 +42,7 @@ const BRAND = {
 export default function CaseDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const userType = getUserType();
+  const [userType, setUserType] = useState(null);
   const location = useLocation();
   const screens = Grid.useBreakpoint();
 
@@ -175,6 +175,17 @@ export default function CaseDetail() {
 
   // --- load case ---
   useEffect(() => {
+    const fetchUserType = async () => {
+      try {
+        const type = await getUserType();
+        setUserType(type);
+      } catch (err) {
+        console.error("Failed to get user type", err);
+        setUserType("user"); // fallback
+      }
+    };
+    fetchUserType();
+
     const fetchCase = async () => {
       try {
         const res = await api.get(`/api/cases/${id}`);
@@ -191,7 +202,7 @@ export default function CaseDetail() {
     try {
       const qp = new URLSearchParams(location.search);
       if (qp.get("edit") === "true") setEditOpen(true);
-    } catch {}
+    } catch { }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -412,7 +423,7 @@ export default function CaseDetail() {
               <Descriptions.Item label="Victim Type">
                 {caseData.victimType
                   ? caseData.victimType.charAt(0).toUpperCase() +
-                    caseData.victimType.slice(1)
+                  caseData.victimType.slice(1)
                   : ""}
               </Descriptions.Item>
               <Descriptions.Item label="Victim">

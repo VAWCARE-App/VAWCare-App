@@ -63,7 +63,8 @@ export default function LogManagement() {
   const [messageApi, contextHolder] = message.useMessage();
 
   const fetchLogs = async () => {
-    if (!isAuthed() || getUserType() !== "admin") return;
+    const userType = await getUserType();
+    if (!isAuthed() || userType !== "admin") return;
     setLoading(true);
     try {
       const params = { page, limit };
@@ -96,6 +97,7 @@ export default function LogManagement() {
       const res = await api.get("/api/logs", { params });
 
       const payload = res?.data;
+      console.log("Fetched logs:", payload);
       const data = Array.isArray(payload) ? payload : payload?.data || [];
       const metaTotal = Array.isArray(payload) ? data.length : payload?.total ?? data.length;
 

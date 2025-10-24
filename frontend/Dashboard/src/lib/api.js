@@ -55,10 +55,24 @@ export const clearToken = () => {
   localStorage.removeItem('actorBusinessId');
 };
 export const isAuthed = () => !!localStorage.getItem("token");
-export const getUserType = () => localStorage.getItem("userType") || 'victim';
+
+export const getUserType = async () => {
+  const token = localStorage.getItem("token");
+  if (!token) return null;
+
+  try {
+    const response = await api.get("api/auth/me");
+    // ✅ match backend: response.data.user.role
+    return response.data?.user?.role || null;
+  } catch (error) {
+    console.warn("[api] Failed to fetch user type:", error);
+    return null;
+  }
+};
+
 
 // Heuristic: Firebase ID tokens are JWTs (three period-separated segments).
-// Many dev/test tokens are placeholders like "victim-test-token" which are
+// Many dev/test tokens are placeholders like "dashboard-token" which are
 // not JWTs; avoid calling protected logout endpoints with those to prevent
 // needless 401s in the browser console during development.
 export const isTokenProbablyJwt = (token) => {
@@ -67,44 +81,46 @@ export const isTokenProbablyJwt = (token) => {
   } catch (e) { return false; }
 };
 
-// Add an axios response interceptor to handle unauthorized responses
 api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    // Attempt to recover from a 401 by refreshing the Firebase ID token (if available)
-    const status = error.response?.status;
-    const originalRequest = error.config;
-    if (status === 401 && originalRequest && !originalRequest._retry) {
-      originalRequest._retry = true;
-      try {
-        // Ensure Firebase is initialized, then try to refresh the current user's ID token
-        initFirebase();
-        const auth = getAuth();
-        const currentUser = auth.currentUser;
-        if (currentUser && typeof currentUser.getIdToken === 'function') {
-          const freshToken = await currentUser.getIdToken(true);
-          if (freshToken) {
-            saveToken(freshToken);
-            // attach refreshed token to the original request and retry
-            originalRequest.headers = originalRequest.headers || {};
-            originalRequest.headers.Authorization = `Bearer ${freshToken}`;
-            console.debug('[api] Retrying original request after refreshing ID token');
-            return api(originalRequest);
+  async (response) => {
+    try {
+      const maybeToken = response?.data?.data?.token;
+      const requestUrl = response.config?.url || '';
+      if (maybeToken && typeof maybeToken === 'string') {
+        if (
+          requestUrl.includes('/login') ||
+          requestUrl.includes('/register')
+        ) {
+          try {
+            const idToken = await exchangeCustomTokenForIdToken(maybeToken);
+            if (idToken && typeof idToken === 'string') {
+              saveToken(idToken);
+              console.debug('Token exchange successful, saved Firebase ID token (truncated):', idToken.slice(0, 12));
+            } else {
+              console.warn('Token exchange returned no ID token; clearing any existing token.');
+              clearToken();
+            }
+          } catch (ex) {
+            console.warn('Auto token exchange failed (non-fatal):', ex);
+            try {
+              message.warning('Authentication token exchange failed. If protected requests fail, ensure Firebase client config (VITE_FIREBASE_*) is set.');
+            } catch (mErr) {
+              console.warn('Unable to show UI message:', mErr);
+            }
           }
         }
-      } catch (refreshErr) {
-        // Refresh failed — fall through to delegate handling to caller
-        console.debug('[api] token refresh attempt failed', refreshErr && refreshErr.message);
       }
+    } catch (e) {
+      console.warn('Error in post-response token handler', e);
     }
-    // Delegate 401 handling to the caller when refresh isn't possible or failed
+    return response;
+  },
+  (error) => {
+    const status = error.response?.status;
     if (status === 401) {
-      try {
-        const requestUrl = error.config?.url || '';
-        console.warn(`[api] 401 response for ${requestUrl}`);
-      } catch (e) {
-        console.debug('Failed to log 401 handling', e && e.message);
-      }
+      console.warn('[api] 401 Unauthorized — clearing token and redirecting to login');
+      clearToken();
+      window.location.href = "/login"; // 🔹 Redirect to login page
     }
     return Promise.reject(error);
   }

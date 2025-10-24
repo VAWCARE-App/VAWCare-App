@@ -240,7 +240,7 @@ export default function Signup() {
           console.warn('Unable to persist actorBusinessId on signup', e && e.message);
         }
         message.success("Account created successfully!");
-        const redirect = data.data.victim?.victimAccount === "anonymous" ? "/victim/report" : "/victim/victim-test";
+        const redirect = data.data.victim?.victimAccount === "anonymous" ? "/victim/report" : "/victim/dashboard";
         navigate(redirect);
       } else throw new Error(data.message || "Registration failed");
     } catch (err) {

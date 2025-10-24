@@ -182,7 +182,7 @@ export default function Login() {
   React.useEffect(() => {
     if (isAuthed()) {
       const ut = getUserType();
-      if (ut === "victim") navigate("/victim/victim-test");
+      if (ut === "victim") navigate("/victim/dashboard");
       else if (ut === "official") navigate("/admin/official-dashboard");
       else navigate("/admin");
     }
@@ -225,7 +225,7 @@ export default function Login() {
             message.warning('Logged in but Firebase client exchange failed. If protected requests fail, ensure VITE_FIREBASE_* are set and restart the dev server.');
           }
         } else if (userType === "victim") {
-          saveToken("victim-test-token");
+          saveToken("dashboard-token");
         }
         let userInfo = {};
         if (userType === "victim") userInfo = { ...data.data.victim, userType: "victim" };
@@ -255,7 +255,7 @@ export default function Login() {
           userInfo.firstName || userInfo.victimUsername || userInfo.adminEmail || userInfo.officialEmail || "User";
         message.success(`Welcome back, ${userName}!`);
 
-        if (userType === "victim") navigate("/victim/victim-test");
+        if (userType === "victim") navigate("/victim/dashboard");
         else if (userType === "official") navigate("/admin/official-dashboard");
         else navigate("/admin");
       } else {

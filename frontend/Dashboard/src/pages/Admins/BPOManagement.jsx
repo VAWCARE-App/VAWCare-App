@@ -66,17 +66,21 @@ const glassCard = {
 };
 
 export default function BPOManagement() {
-  const userType = getUserType();
   const navigate = useNavigate();
   const { message } = AntApp.useApp();
   const screens = Grid.useBreakpoint();
 
   // Gate: only admin/official
   React.useEffect(() => {
-    if (userType !== "admin" && userType !== "official") {
-      navigate("/", { replace: true });
-    }
-  }, [userType, navigate]);
+    const checkUser = async () => {
+      const type = await getUserType(); // wait for the Promise
+      if (type !== "admin" && type !== "official") {
+        navigate("/", { replace: true });
+      }
+    };
+    checkUser();
+  }, [navigate]);
+
 
   // ---------- State ----------
   const [list, setList] = useState([]);
@@ -333,10 +337,10 @@ export default function BPOManagement() {
           s === "Active"
             ? "green"
             : s === "Expired"
-            ? "volcano"
-            : s === "Revoked"
-            ? "magenta"
-            : "default";
+              ? "volcano"
+              : s === "Revoked"
+                ? "magenta"
+                : "default";
         return (
           <Space size={6}>
             <Tag color={color} style={{ borderRadius: 999 }}>
@@ -370,7 +374,7 @@ export default function BPOManagement() {
       selectable
       multiple
       onClick={({ key }) =>
-      setVisibleCols((prev) => ({ ...prev, [key]: !prev[key] }))
+        setVisibleCols((prev) => ({ ...prev, [key]: !prev[key] }))
       }
       selectedKeys={Object.entries(visibleCols)
         .filter(([, v]) => v)
@@ -454,7 +458,7 @@ export default function BPOManagement() {
             type="primary"
             icon={<PlusOutlined />}
             onClick={() => navigate("/admin/bpo")}
-            style={{ background: BRAND.violet, borderColor: BRAND.violet}}
+            style={{ background: BRAND.violet, borderColor: BRAND.violet }}
           >
             Add BPO
           </Button>

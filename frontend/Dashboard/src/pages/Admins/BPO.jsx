@@ -30,12 +30,17 @@ const BRAND_PRIMARY = "#7A5AF8";
 const BRAND_PAGE_BG = "#F6F3FF";
 
 export default function BPO() {
-  const userType = getUserType();
   const navigate = useNavigate();
   React.useEffect(() => {
-    if (userType !== "admin" && userType !== "official")
-      navigate("/", { replace: true });
-  }, [userType, navigate]);
+    const checkUser = async () => {
+      const type = await getUserType(); // wait for the Promise
+      if (type !== "admin" && type !== "official") {
+        navigate("/", { replace: true });
+      }
+    };
+    checkUser();
+  }, [navigate]);
+
 
   const [form, setForm] = useState({
     controlNo: "",
@@ -140,10 +145,10 @@ export default function BPO() {
       v == null
         ? ""
         : String(v)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;");
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
     const fmtDate = (d) => {
       if (!d) return "";
       try {
@@ -304,7 +309,7 @@ export default function BPO() {
     popup.document.close();
     try {
       popup.focus();
-    } catch {}
+    } catch { }
   };
 
   const underlineStyle = {

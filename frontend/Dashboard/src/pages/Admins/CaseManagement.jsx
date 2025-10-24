@@ -42,6 +42,7 @@ export default function CaseManagement() {
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [reportsList, setReportsList] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
+  const [userType, setUserType] = useState(null);
   const [form] = Form.useForm();
   const [addForm] = Form.useForm();
   const navigate = useNavigate();
@@ -85,7 +86,20 @@ export default function CaseManagement() {
     }
   };
 
-  useEffect(() => { fetchAllCases(); }, []);
+  useEffect(() => {
+    fetchAllCases();
+    
+    const fetchUserType = async () => {
+      try {
+        const type = await getUserType();
+        setUserType(type);
+      } catch (err) {
+        console.error("Failed to get user type", err);
+        setUserType("user"); // fallback
+      }
+    };
+    fetchUserType();
+  }, []);
 
   const fetchReports = async () => {
     try {
@@ -119,13 +133,11 @@ export default function CaseManagement() {
   };
 
   const handleViewCase = (rec) => {
-    const userType = getUserType();
     const base = userType === "official" ? "/admin/official-cases" : "/admin/cases";
     navigate(`${base}/${rec.caseID}`);
   };
 
   const handleEditCase = (rec) => {
-    const userType = getUserType();
     const base = userType === "official" ? "/admin/official-cases" : "/admin/cases";
     navigate(`${base}/${rec.caseID}?edit=true`);
   };
@@ -187,8 +199,7 @@ export default function CaseManagement() {
           victimName:
             vals.victimName ||
             (selectedReport.victim
-              ? `${selectedReport.victim.firstName || ""} ${
-                  selectedReport.victim.middleInitial ? selectedReport.victim.middleInitial + " " : ""
+              ? `${selectedReport.victim.firstName || ""} ${selectedReport.victim.middleInitial ? selectedReport.victim.middleInitial + " " : ""
                 }${selectedReport.victim.lastName || ""}`.trim()
               : selectedReport.raw.victimID || ""),
           incidentType: selectedReport.incidentType,
@@ -246,7 +257,7 @@ export default function CaseManagement() {
           }));
           try {
             addForm.setFields(fields);
-          } catch {}
+          } catch { }
           message.error(resp.message || "Validation failed");
         } else {
           message.error(resp.message || "Failed to create case");
@@ -330,7 +341,7 @@ export default function CaseManagement() {
     if (v.includes("resolved")) return "green";
     if (v.includes("cancel")) return "default";
     return "default";
-    };
+  };
   const riskColor = (r) => {
     const v = String(r || "").toLowerCase();
     if (v.includes("high")) return "magenta";
@@ -699,7 +710,7 @@ export default function CaseManagement() {
                   <Option value="High">High</Option>
                 </Select>
               </Form.Item>
-              
+
               <Form.Item name="status" hidden>
                 <Input type="hidden" />
               </Form.Item>

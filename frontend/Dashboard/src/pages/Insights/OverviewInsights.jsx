@@ -54,7 +54,7 @@ function Sparkline({ points = [], width = 420, height = 120, stroke = "#7A5AF8" 
           <stop offset="100%" stopColor="#7A5AF8" stopOpacity="0" />
         </linearGradient>
       </defs>
-      <path d={`${d} L ${lastX} ${height-18} L 10 ${height-18} Z`} fill="url(#sparkFill)" />
+      <path d={`${d} L ${lastX} ${height - 18} L 10 ${height - 18} Z`} fill="url(#sparkFill)" />
       <path d={d} fill="none" stroke={stroke} strokeWidth="3" strokeLinecap="round" />
       <circle cx={lastX} cy={lastY} r="5.5" fill="#fff" stroke={stroke} strokeWidth="3" />
     </svg>
@@ -65,6 +65,7 @@ export default function OverviewInsights() {
   const { message } = AntApp.useApp();
   const screens = Grid.useBreakpoint();
   const loggedRef = React.useRef(false);
+  const [userType, setUserType] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -162,21 +163,21 @@ export default function OverviewInsights() {
       const reports = Array.isArray(reportsRes.data)
         ? reportsRes.data
         : Array.isArray(reportsRes.data?.data)
-        ? reportsRes.data.data
-        : reportsRes.data?.items || [];
+          ? reportsRes.data.data
+          : reportsRes.data?.items || [];
 
       const cases = Array.isArray(casesRes.data)
         ? casesRes.data
         : Array.isArray(casesRes.data?.data)
-        ? casesRes.data.data
-        : casesRes.data?.items || [];
+          ? casesRes.data.data
+          : casesRes.data?.items || [];
 
       const usersPayload = usersRes.data;
       const logs = Array.isArray(logsRes.data)
         ? logsRes.data
         : Array.isArray(logsRes.data?.data)
-        ? logsRes.data.data
-        : logsRes.data?.items || [];
+          ? logsRes.data.data
+          : logsRes.data?.items || [];
 
       let totalUsers = 0;
       if (Array.isArray(usersPayload)) {
@@ -249,6 +250,16 @@ export default function OverviewInsights() {
 
   useEffect(() => {
     loadMetrics(true);
+    const fetchUserType = async () => {
+      try {
+        const type = await getUserType();
+        setUserType(type);
+      } catch (err) {
+        console.error("Failed to get user type", err);
+        setUserType("user"); // fallback
+      }
+    };
+    fetchUserType();
   }, []);
 
   // Log page view to system logs (only once per mount)
@@ -586,14 +597,16 @@ export default function OverviewInsights() {
                 title={<span style={{ color: BRAND.violet }}>Recent Activity</span>}
                 variant="outlined"
                 style={glossyBase}
-                styles={{ body: {
-                  padding: 0,
-                  display: "flex",
-                  flexDirection: "column",
-                  minHeight: 200,
-                  maxHeight: 520,
-                  overflowY: "auto",
-                } }}
+                styles={{
+                  body: {
+                    padding: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    minHeight: 200,
+                    maxHeight: 520,
+                    overflowY: "auto",
+                  }
+                }}
               >
                 {loading ? (
                   <div style={{ padding: 16 }}>

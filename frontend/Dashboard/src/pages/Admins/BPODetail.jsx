@@ -14,12 +14,18 @@ const BRAND_PAGE_BG = '#F6F3FF';     // soft violet background
 
 export default function BPODetail() {
   const { id } = useParams();
-  const userType = getUserType();
   const navigate = useNavigate();
 
   React.useEffect(() => {
-    if (userType !== 'admin' && userType !== 'official') navigate('/', { replace: true });
-  }, [userType, navigate]);
+    const checkUser = async () => {
+      const type = await getUserType(); // wait for the Promise
+      if (type !== "admin" && type !== "official") {
+        navigate("/", { replace: true });
+      }
+    };
+    checkUser();
+  }, [navigate]);
+  
   const [form, setForm] = useState({});
   const [loading, setLoading] = useState(false);
 

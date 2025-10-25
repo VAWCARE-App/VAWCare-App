@@ -248,7 +248,7 @@ export default function Login() {
           const businessId = userInfo?.adminID || userInfo?.officialID || userInfo?.victimID || null;
           if (businessId) sessionStorage.setItem('actorBusinessId', String(businessId));
         } catch (e) {
-          console.warn('Unable to persist actorBusinessId to localStorage', e && e.message);
+          console.warn('Unable to persist actorBusinessId to sessionStorage', e && e.message);
         }
 
         const userName =

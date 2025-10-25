@@ -188,21 +188,21 @@ const registerVictim = asyncHandler(async (req, res) => {
             firebaseUid: victim.firebaseUid || 'Not created'
         });
 
-            // Set HttpOnly cookie for secure token storage
-            if (customToken) {
-                res.cookie('authToken', customToken, {
-                    httpOnly: true,
-                    secure: process.env.NODE_ENV === 'production',
-                    sameSite: 'Lax',
-                    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-                });
-            }
+
+
+
+
+
+
+
+
+
 
             res.status(201).json({
                 success: true,
                 message: 'Victim registered successfully',
                 data: {
-                    token: customToken, // Still included for fallback/compatibility
+                    token: customToken,
                     victim: {
                         id: victim._id,
                         victimID: victim.victimID,
@@ -276,21 +276,12 @@ const loginVictim = asyncHandler(async (req, res) => {
             isAnonymous: victim.victimAccount === "anonymous",
             victimUsername: victim.victimUsername
         });
-
-        // Set HttpOnly cookie for secure token storage
-        res.cookie('authToken', customToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'Lax',
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours
-        });
-
         // 5. Respond with token
         res.status(200).json({
             success: true,
             message: "Login successful",
             data: {
-                token: customToken, // Still included for fallback/compatibility
+                token: customToken,
                 victim: {
                     id: victim._id,
                     victimID: victim.victimID,

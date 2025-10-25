@@ -16,16 +16,16 @@ export default function MainLayout() {
     try {
       const path = location.pathname;
       // dedupe quick successive posts for same path
-      const lastPath = sessionStorage.getItem('__lastPageviewPath') || '';
-      const lastAt = Number(sessionStorage.getItem('__lastPageviewAt') || '0');
+      const lastPath = localStorage.getItem('__lastPageviewPath') || '';
+      const lastAt = Number(localStorage.getItem('__lastPageviewAt') || '0');
       const now = Date.now();
       // Only send if path changed or more than 3 seconds elapsed since last post
       if (lastPath !== path || (now - lastAt) > 3000) {
-        const actorId = sessionStorage.getItem('actorId');
-        const actorType = sessionStorage.getItem('actorType');
-        const actorBusinessId = sessionStorage.getItem('actorBusinessId');
+        const actorId = localStorage.getItem('actorId');
+        const actorType = localStorage.getItem('actorType');
+        const actorBusinessId = localStorage.getItem('actorBusinessId');
         api.post('/api/logs/pageview', { path, actorId, actorType, actorBusinessId }).catch(() => {});
-        try { sessionStorage.setItem('__lastPageviewPath', path); sessionStorage.setItem('__lastPageviewAt', String(now)); } catch (e) {}
+        try { localStorage.setItem('__lastPageviewPath', path); localStorage.setItem('__lastPageviewAt', String(now)); } catch (e) {}
       }
     } catch (e) { console.warn('Failed to call pageview API', e && e.message); }
   }, [location]);

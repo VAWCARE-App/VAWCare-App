@@ -4,7 +4,7 @@ import { WarningOutlined, CheckCircleOutlined, InfoCircleOutlined, ClockCircleOu
 import { api } from '../lib/api';
 
 export default function DssSuggestion({ caseData }) {
-  const userType = sessionStorage.getItem('userType') || 'victim';
+  const userType = localStorage.getItem('userType') || 'victim';
   if (userType !== 'admin' && userType !== 'official') return null;
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);

@@ -2,7 +2,7 @@ const express = require('express');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const cors = require('cors');
-const cookieParser = require('cookie-parser');
+
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpecs = require('./swagger/swagger');
 
@@ -17,19 +17,19 @@ const app = express();
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cors());
 
-// Configure CORS to allow credentials (cookies)
-const corsOptions = {
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173', // Vite default
-  credentials: true, // Allow cookies
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-actor-id', 'x-actor-type', 'x-actor-business-id', 'cache-control', 'pragma', 'expires'],
-  maxAge: 86400 // 24 hours
-};
-app.use(cors(corsOptions));
 
-// Cookie parser middleware (must come after CORS)
-app.use(cookieParser());
+
+
+
+
+
+
+
+
+
+
 
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));

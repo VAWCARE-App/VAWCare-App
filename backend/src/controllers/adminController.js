@@ -14,7 +14,7 @@ const asyncHandler = require('express-async-handler');
 exports.softDeleteVictim = asyncHandler(async (req, res) => {
     try {
         const victim = await Victim.findById(req.params.id);
-        
+
         if (!victim) {
             res.status(404);
             throw new Error('Victim not found');
@@ -39,7 +39,7 @@ exports.softDeleteVictim = asyncHandler(async (req, res) => {
 exports.restoreVictim = asyncHandler(async (req, res) => {
     try {
         const victim = await Victim.findById(req.params.id);
-        
+
         if (!victim) {
             res.status(404);
             throw new Error('Victim not found');
@@ -64,7 +64,7 @@ exports.restoreVictim = asyncHandler(async (req, res) => {
 exports.softDeleteOfficial = asyncHandler(async (req, res) => {
     try {
         const official = await BarangayOfficial.findById(req.params.id);
-        
+
         if (!official) {
             res.status(404);
             throw new Error('Official not found');
@@ -89,7 +89,7 @@ exports.softDeleteOfficial = asyncHandler(async (req, res) => {
 exports.restoreOfficial = asyncHandler(async (req, res) => {
     try {
         const official = await BarangayOfficial.findById(req.params.id);
-        
+
         if (!official) {
             res.status(404);
             throw new Error('Official not found');
@@ -112,9 +112,9 @@ exports.getAllUsers = asyncHandler(async (req, res) => {
     try {
     // Get all non-deleted users from each collection, excluding password fields
     const admins = await Admin.find({}, '-adminPassword');
-        
+
     const victims = await Victim.find({ isDeleted: false }, '-victimPassword');
-            
+
     const officials = await BarangayOfficial.find({ isDeleted: false }, '-officialPassword');
 
         res.status(200).json({
@@ -191,7 +191,7 @@ exports.registerVictim = asyncHandler(async (req, res) => {
 exports.updateVictim = asyncHandler(async (req, res) => {
     try {
         const victim = await Victim.findById(req.params.id);
-        
+
         if (!victim) {
             res.status(404);
             throw new Error('Victim not found');
@@ -285,7 +285,7 @@ exports.registerOfficial = asyncHandler(async (req, res) => {
 exports.updateOfficial = asyncHandler(async (req, res) => {
     try {
         const official = await BarangayOfficial.findById(req.params.id);
-        
+
         if (!official) {
             res.status(404);
             throw new Error('Official not found');
@@ -417,7 +417,7 @@ const verifyMFA = asyncHandler(async (req, res) => {
 exports.requestPasswordReset = async (req, res) => {
     try {
         const { email } = req.body;
-        
+
         const admin = await Admin.findOne({ adminEmail: email });
         if (!admin) {
             return res.status(200).json({
@@ -550,7 +550,7 @@ exports.updateOfficialStatus = asyncHandler(async (req, res) => {
 exports.resetAdminPassword = async (req, res) => {
     try {
         const { token, newPassword, confirmPassword } = req.body;
-        
+
         // Check if passwords match
         if (newPassword !== confirmPassword) {
             return res.status(400).json({
@@ -680,7 +680,7 @@ const registerAdmin = asyncHandler(async (req, res) => {
 exports.registerAdmin = async (req, res) => {
     try {
         const { adminID, adminEmail, adminRole, firstName, middleInitial, lastName, adminPassword } = req.body;
-        
+
         console.log(`Attempting to register new admin: ${firstName} ${lastName} (${adminRole})`);
 
         // Check if role is already taken
@@ -744,20 +744,11 @@ exports.registerAdmin = async (req, res) => {
         }
 
         console.log(`Successfully registered admin with ID: ${adminUser._id}, Firebase UID: ${adminUser.firebaseUid}`);
-
-        // Set HttpOnly cookie for secure token storage
-        res.cookie('authToken', customToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'Lax',
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours
-        });
-
         res.status(201).json({
             success: true,
             message: 'Admin registered successfully. Pending approval.',
             data: {
-                token: customToken, // Still included for fallback/compatibility
+                token: customToken,
                 admin: {
                     id: adminUser._id,
                     adminID: adminUser.adminID,
@@ -783,7 +774,7 @@ const generateToken = async (adminUser) => {
         if (adminUser.firebaseUid) {
             return await admin.auth().createCustomToken(adminUser.firebaseUid);
         }
-        
+
         // If no Firebase UID, try to get the user by email first
         try {
             const firebaseUser = await admin.auth().getUserByEmail(adminUser.adminEmail);
@@ -861,20 +852,11 @@ exports.loginAdmin = async (req, res) => {
 
         // Generate Firebase custom token
         const customToken = await generateToken(adminUser);
-
-        // Set HttpOnly cookie for secure token storage
-        res.cookie('authToken', customToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'Lax',
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours
-        });
-
         res.status(200).json({
             success: true,
             message: 'Login successful',
             data: {
-                token: customToken, // Still included for fallback/compatibility
+                token: customToken,
                 admin: {
                     id: adminUser._id,
                     adminID: adminUser.adminID,
@@ -885,7 +867,6 @@ exports.loginAdmin = async (req, res) => {
                 }
             }
         });
-
         // Record system log for admin login
         try {
             const forwarded = (req.headers && (req.headers['x-forwarded-for'] || req.headers['X-Forwarded-For'])) || null;
@@ -1033,7 +1014,7 @@ exports.getAllAdmins = async (req, res) => {
     try {
         const admins = await Admin.find({ isDeleted: false }, '-adminPassword')
             .select('adminID adminEmail adminRole firstName lastName contactNumber createdAt');
-        
+
         res.status(200).json({
             success: true,
             count: admins.length,
@@ -1054,7 +1035,7 @@ exports.getAllVictims = async (req, res) => {
     try {
         const victims = await Victim.find({ isDeleted: false })
             .select('victimID firstName lastName email contactNumber address createdAt status');
-        
+
         res.status(200).json({
             success: true,
             count: victims.length,
@@ -1075,7 +1056,7 @@ exports.getAllOfficials = async (req, res) => {
     try {
         const officials = await BarangayOfficial.find({ isDeleted: false })
             .select('officialID firstName lastName email contactNumber position barangay createdAt');
-        
+
         res.status(200).json({
             success: true,
             count: officials.length,

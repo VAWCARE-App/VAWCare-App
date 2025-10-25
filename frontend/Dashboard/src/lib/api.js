@@ -17,21 +17,21 @@ export const api = axios.create({
 // Add request interceptor
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    // Attach actor information from localStorage so backend can persist actorBusinessId
+    // Attach actor information from sessionStorage so backend can persist actorBusinessId
     try {
-      const actorBusinessId = localStorage.getItem('actorBusinessId');
-      const actorId = localStorage.getItem('actorId');
-      const actorType = localStorage.getItem('actorType');
+      const actorBusinessId = sessionStorage.getItem('actorBusinessId');
+      const actorId = sessionStorage.getItem('actorId');
+      const actorType = sessionStorage.getItem('actorType');
       if (actorBusinessId) config.headers['x-actor-business-id'] = actorBusinessId;
       if (actorId) config.headers['x-actor-id'] = actorId;
       if (actorType) config.headers['x-actor-type'] = actorType;
     } catch (e) {
-      // ignore localStorage errors (e.g., during SSR or restricted environments)
+      // ignore sessionStorage errors (e.g., during SSR or restricted environments)
     }
     try {
       // Debug: log outgoing requests for easier tracing (including method and url)
@@ -46,16 +46,24 @@ api.interceptors.request.use(
   }
 );
 
-export const saveToken = (t) => localStorage.setItem("token", t);
+export const saveToken = (t) => sessionStorage.setItem("token", t);
 export const clearToken = () => {
 
-  // Remove all authentication and actor-related keys from localStorage
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
-  localStorage.removeItem("userType");
-  localStorage.removeItem('actorId');
-  localStorage.removeItem('actorType');
-  localStorage.removeItem('actorBusinessId');
+  // Remove all authentication and actor-related keys from sessionStorage
+  sessionStorage.removeItem("token");
+  sessionStorage.removeItem("user");
+  sessionStorage.removeItem("userType");
+  sessionStorage.removeItem('actorId');
+  sessionStorage.removeItem('actorType');
+  sessionStorage.removeItem('actorBusinessId');
+  
+  // Also clear any auth-related cookies
+  const clearCookie = (name) => {
+    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax;`;
+    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname}; SameSite=Lax;`;
+  };
+  
+  ['token', 'auth_token', 'authToken', 'Authorization', 'session', 'sessionId'].forEach(clearCookie);
 };
 
 export const clearAllStorage = () => {
@@ -65,22 +73,42 @@ export const clearAllStorage = () => {
   // Clear sessionStorage
   sessionStorage.clear();
   
-  // Clear all cookies
+  // Clear all cookies with multiple strategies to ensure complete removal
+  const clearCookie = (name) => {
+    // Strategy 1: No domain specified
+    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax;`;
+    
+    // Strategy 2: With domain specified
+    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname}; SameSite=Lax;`;
+    
+    // Strategy 3: With root domain (if applicable)
+    const parts = window.location.hostname.split('.');
+    if (parts.length > 1) {
+      const rootDomain = parts.slice(-2).join('.');
+      if (rootDomain !== window.location.hostname) {
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${rootDomain}; SameSite=Lax;`;
+      }
+    }
+  };
+
+  // Get all cookies and clear them
   document.cookie.split(";").forEach((c) => {
     const eqPos = c.indexOf("=");
-    const name = eqPos > -1 ? c.substr(0, eqPos).trim() : c.trim();
+    const name = eqPos > -1 ? c.substring(0, eqPos).trim() : c.trim();
     if (name) {
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;`;
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname};`;
+      clearCookie(name);
     }
   });
+  
+  // Also explicitly clear known auth cookies
+  ['token', 'auth_token', 'authToken', 'Authorization', 'session', 'sessionId'].forEach(clearCookie);
 };
 
-export const isAuthed = () => !!localStorage.getItem("token");
+export const isAuthed = () => !!sessionStorage.getItem("token");
 
 
 export const getUserType = async () => {
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
   if (!token) return null;
 
   try {

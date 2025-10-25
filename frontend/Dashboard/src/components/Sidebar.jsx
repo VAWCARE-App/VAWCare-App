@@ -24,7 +24,7 @@ import {
   IdcardOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
-import { clearToken, api, isTokenProbablyJwt } from "../lib/api";
+import { clearToken, api, isTokenProbablyJwt, clearAllStorage } from "../lib/api";
 import logo from "../assets/logo1.png";
 
 const { Sider } = Layout;
@@ -54,9 +54,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         ]).catch(() => {});
       }
     } catch {}
-    clearToken();
-    localStorage.clear();
-    localStorage.clear();
+    clearAllStorage();
     navigate("/");
   };
 

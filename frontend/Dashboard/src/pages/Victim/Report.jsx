@@ -55,7 +55,7 @@ export default function Report() {
   const handleFinish = async (values) => {
     try {
       setLoading(true);
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      const user = JSON.parse(sessionStorage.getItem("user") || "{}");
       const victimID = user && (user._id || user.id);
       if (!victimID) {
         message.error("Victim ID not found. Please log in again.");

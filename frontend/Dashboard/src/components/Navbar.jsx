@@ -9,6 +9,7 @@ import {
   BulbOutlined,
   LogoutOutlined
 } from "@ant-design/icons";
+import { clearAllStorage } from "../lib/api";
 
 const { Header } = Layout;
 
@@ -32,7 +33,7 @@ export default function Navbar({
   }, [location]);
 
   const handleLogout = () => {
-    localStorage.clear();
+    clearAllStorage();
     setUser(null);
     window.location.reload(); // optional
   }

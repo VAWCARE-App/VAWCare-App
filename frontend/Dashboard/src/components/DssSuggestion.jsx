@@ -239,7 +239,15 @@ export default function DssSuggestion({ caseData }) {
             <Typography.Paragraph style={{ 
               whiteSpace: 'pre-line', 
               fontSize: '14px',
-              backgroundColor: '#f5f5f5',
+              backgroundColor: 
+                result.riskLevel === 'High' ? '#fff1f0' :
+                result.riskLevel === 'Medium' ? '#fffbe6' :
+                '#f6ffed',
+              borderLeft: `4px solid ${
+                result.riskLevel === 'High' ? '#ff4d4f' :
+                result.riskLevel === 'Medium' ? '#faad14' :
+                '#52c41a'
+              }`,
               padding: '12px',
               borderRadius: '4px',
               marginBottom: 0

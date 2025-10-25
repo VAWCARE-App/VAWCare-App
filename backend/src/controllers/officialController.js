@@ -13,7 +13,7 @@ const asyncHandler = require('express-async-handler');
 const getAllVictims = asyncHandler(async (req, res) => {
     try {
         const victims = await Victim.find();
-        
+
         res.status(200).json({
             success: true,
             data: {
@@ -151,7 +151,7 @@ const loginOfficial = asyncHandler(async (req, res) => {
         // First find the official in MongoDB
         console.log('Searching for official with email:', officialEmail);
         const official = await BarangayOfficial.findOne({ officialEmail });
-        
+
         if (!official) {
             console.log('Official not found with email:', officialEmail);
             return res.status(401).json({
@@ -182,7 +182,7 @@ const loginOfficial = asyncHandler(async (req, res) => {
     console.log('Attempting password comparison for official:', officialEmail);
     const isMatch = await official.comparePassword(password);
     console.log('Password comparison result for official:', officialEmail, isMatch);
-        
+
         if (!isMatch) {
             return res.status(401).json({
                 success: false,
@@ -211,20 +211,11 @@ const loginOfficial = asyncHandler(async (req, res) => {
             position: official.position,
             status: official.status
         });
-
-        // Set HttpOnly cookie for secure token storage
-        res.cookie('authToken', customToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'Lax',
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours
-        });
-
         console.log('Login successful for official, returning token');
         res.status(200).json({
             success: true,
             data: {
-                token: customToken, // Still included for fallback/compatibility
+                token: customToken,
                 official: {
                     id: official._id,
                     officialID: official.officialID,
@@ -359,10 +350,10 @@ const updateProfile = asyncHandler(async (req, res) => {
 const verifyEmail = asyncHandler(async (req, res) => {
     try {
         const uid = req.user.uid;
-        
+
         // Generate email verification link
         const emailVerificationLink = await admin.auth().generateEmailVerificationLink(req.user.email);
-        
+
         // Update official's email verification status
         await BarangayOfficial.findOneAndUpdate(
             { firebaseUid: uid },

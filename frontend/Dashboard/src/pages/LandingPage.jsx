@@ -80,11 +80,11 @@ export default function LandingPage() {
 
   // --- Dark mode state (persists)
   const [dark, setDark] = useState(() => {
-    const saved = localStorage.getItem("vawc_theme");
+    const saved = sessionStorage.getItem("vawc_theme");
     return saved ? saved === "dark" : false;
   });
   useEffect(() => {
-    localStorage.setItem("vawc_theme", dark ? "dark" : "light");
+    sessionStorage.setItem("vawc_theme", dark ? "dark" : "light");
   }, [dark]);
 
   // ---- Replace with real data later ----

@@ -362,9 +362,9 @@ export default function LandingPage() {
                           const { data } = await api.post('/api/victims/register', { victimAccount: 'anonymous' });
                           if (!data || !data.success) throw new Error(data?.message || 'Failed to create anonymous account');
                           const resp = data.data || {};
-                          if (resp && resp.victim) sessionStorage.setItem('user', JSON.stringify(resp.victim));
-                          try { if (resp && resp.victim && resp.victim.id) { sessionStorage.setItem('actorId', String(resp.victim.id)); sessionStorage.setItem('actorType', 'victim'); } } catch (e) { /* ignore */ }
-                          try { const businessId = resp?.victim?.victimID || null; if (businessId) sessionStorage.setItem('actorBusinessId', String(businessId)); } catch (e) { /* ignore */ }
+                          if (resp && resp.victim) localStorage.setItem('user', JSON.stringify(resp.victim));
+                          try { if (resp && resp.victim && resp.victim.id) { localStorage.setItem('actorId', String(resp.victim.id)); localStorage.setItem('actorType', 'victim'); } } catch (e) { /* ignore */ }
+                          try { const businessId = resp?.victim?.victimID || null; if (businessId) localStorage.setItem('actorBusinessId', String(businessId)); } catch (e) { /* ignore */ }
                           message.success({ content: 'Anonymous session ready', key: 'anon', duration: 1.2 });
                           navigate('/victim/report');
                         } catch (err) {

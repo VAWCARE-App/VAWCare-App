@@ -212,11 +212,19 @@ const loginOfficial = asyncHandler(async (req, res) => {
             status: official.status
         });
 
+        // Set HttpOnly cookie for secure token storage
+        res.cookie('authToken', customToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'Lax',
+            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        });
+
         console.log('Login successful for official, returning token');
         res.status(200).json({
             success: true,
             data: {
-                token: customToken,
+                token: customToken, // Still included for fallback/compatibility
                 official: {
                     id: official._id,
                     officialID: official.officialID,

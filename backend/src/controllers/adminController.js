@@ -745,11 +745,19 @@ exports.registerAdmin = async (req, res) => {
 
         console.log(`Successfully registered admin with ID: ${adminUser._id}, Firebase UID: ${adminUser.firebaseUid}`);
 
+        // Set HttpOnly cookie for secure token storage
+        res.cookie('authToken', customToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'Lax',
+            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        });
+
         res.status(201).json({
             success: true,
             message: 'Admin registered successfully. Pending approval.',
             data: {
-                token: customToken,
+                token: customToken, // Still included for fallback/compatibility
                 admin: {
                     id: adminUser._id,
                     adminID: adminUser.adminID,
@@ -854,11 +862,19 @@ exports.loginAdmin = async (req, res) => {
         // Generate Firebase custom token
         const customToken = await generateToken(adminUser);
 
+        // Set HttpOnly cookie for secure token storage
+        res.cookie('authToken', customToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'Lax',
+            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        });
+
         res.status(200).json({
             success: true,
             message: 'Login successful',
             data: {
-                token: customToken,
+                token: customToken, // Still included for fallback/compatibility
                 admin: {
                     id: adminUser._id,
                     adminID: adminUser.adminID,

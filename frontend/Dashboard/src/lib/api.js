@@ -67,9 +67,6 @@ export const clearToken = () => {
 };
 
 export const clearAllStorage = () => {
-  // Clear localStorage
-  localStorage.clear();
-  
   // Clear sessionStorage
   sessionStorage.clear();
   

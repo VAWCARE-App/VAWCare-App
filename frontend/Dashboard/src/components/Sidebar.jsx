@@ -46,7 +46,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   // ---- Logout ----
   const handleLogout = async () => {
     try {
-      const token = localStorage.getItem("token") || localStorage.getItem("token");
+      const token = sessionStorage.getItem("token") || sessionStorage.getItem("token");
       if (token && isTokenProbablyJwt(token)) {
         await Promise.race([
           api.post("/api/auth/logout"),
@@ -60,10 +60,10 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
   // ---- User ----
   const currentUser = useMemo(
-    () => JSON.parse(localStorage.getItem("user") || "{}"),
+    () => JSON.parse(sessionStorage.getItem("user") || "{}"),
     []
   );
-  const userType = localStorage.getItem("userType") || "victim";
+  const userType = sessionStorage.getItem("userType") || "victim";
   const initials = useMemo(() => {
     const a = (currentUser.firstName || "").charAt(0);
     const b = (currentUser.lastName || "").charAt(0);

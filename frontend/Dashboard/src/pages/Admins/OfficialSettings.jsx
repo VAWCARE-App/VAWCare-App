@@ -44,7 +44,7 @@ const BRAND = {
 export default function OfficialSettings() {
   const screens = Grid.useBreakpoint();
   const [loading, setLoading] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState(null);
   const [verified, setVerified] = useState(false);
 
   // cached/current user
@@ -75,9 +75,16 @@ export default function OfficialSettings() {
   /** Load profile from API and update local state + form */
   const loadProfile = async () => {
     try {
+      const token = localStorage.getItem("token");
+      console.debug("[OfficialSettings] loadProfile: token exists?", !!token);
+      if (!token) {
+        console.warn("[OfficialSettings] No token in localStorage");
+      }
+      
       const { data } = await api.get("/api/officials/profile");
       if (data?.success && data?.data) {
         const profile = { ...data.data };
+        console.debug("[OfficialSettings] Profile loaded successfully:", profile);
         if (profile.officialEmail && !profile.email) profile.email = profile.officialEmail;
         if (profile.photoURL) setAvatarUrl(profile.photoURL);
         setVerified(determineVerified(profile));
@@ -86,7 +93,11 @@ export default function OfficialSettings() {
         return profile;
       }
     } catch (err) {
-      console.debug("loadProfile failed", err?.message);
+      console.error("[OfficialSettings] loadProfile failed", {
+        message: err?.message,
+        status: err?.response?.status,
+        data: err?.response?.data
+      });
     }
     return null;
   };
@@ -364,7 +375,7 @@ export default function OfficialSettings() {
               <div className="avatar-inner">
                 <Avatar
                   size={96}
-                  src={avatarUrl}
+                  src={avatarUrl || undefined}
                   icon={<UserOutlined />}
                   style={{ background: BRAND.soft, color: verColor }}
                 />
@@ -401,7 +412,7 @@ export default function OfficialSettings() {
         </div>
 
         {/* SETTINGS */}
-        <Card className="main-card" bodyStyle={{ padding: screens.xs ? 16 : 24 }}>
+        <Card className="main-card" styles={{ body: { padding: screens.xs ? 16 : 24 } }}>
           <div className="section-head">
             <span className="brand-dot" />
             <div>

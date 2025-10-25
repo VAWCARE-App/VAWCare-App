@@ -49,7 +49,7 @@ export default function VictimNavbar() {
   const [open, setOpen] = useState(false);
 
   const currentUser = useMemo(
-    () => JSON.parse(localStorage.getItem("user") || "{}"),
+    () => JSON.parse(sessionStorage.getItem("user") || "{}"),
     []
   );
   const initials =
@@ -58,7 +58,7 @@ export default function VictimNavbar() {
 
   const handleLogout = async () => {
     try {
-      const token = localStorage.getItem("token") || localStorage.getItem("token");
+      const token = sessionStorage.getItem("token") || sessionStorage.getItem("token");
       if (token && isTokenProbablyJwt(token)) {
         await Promise.race([
           api.post("/api/auth/logout"),

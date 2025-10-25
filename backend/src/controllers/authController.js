@@ -27,6 +27,26 @@ const logout = asyncHandler(async (req, res) => {
     console.warn('Failed to record logout log', e && e.message);
   }
 
+  // Clear all cookies to prevent token persistence
+  const cookiesToClear = [
+    'token',
+    'authToken',
+    'sessionId',
+    'firebaseToken',
+    'firebaseUid',
+    'userId',
+    'userType',
+  ];
+  
+  cookiesToClear.forEach(cookieName => {
+    res.clearCookie(cookieName, {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Lax'
+    });
+  });
+
   res.status(200).json({ success: true, message: 'Logged out' });
 });
 

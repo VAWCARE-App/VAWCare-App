@@ -51,20 +51,20 @@ function AdminPageViewReporter() {
   useEffect(() => {
     try {
       const path = location.pathname;
-      const lastPath = localStorage.getItem('__lastPageviewPath') || '';
-      const lastAt = Number(localStorage.getItem('__lastPageviewAt') || '0');
+      const lastPath = sessionStorage.getItem('__lastPageviewPath') || '';
+      const lastAt = Number(sessionStorage.getItem('__lastPageviewAt') || '0');
       const now = Date.now();
       if (lastPath !== path || (now - lastAt) > 3000) {
-        const actorId = localStorage.getItem('actorId');
-        const actorType = localStorage.getItem('actorType');
-        const actorBusinessId = localStorage.getItem('actorBusinessId');
+        const actorId = sessionStorage.getItem('actorId');
+        const actorType = sessionStorage.getItem('actorType');
+        const actorBusinessId = sessionStorage.getItem('actorBusinessId');
         // Only send a ping when the client is authenticated OR there is
         // an actor header (walk-in or persisted actor) available. This
         // avoids extraneous pings during unauthenticated browsing.
         if (isAuthed() || actorBusinessId || actorId) {
           api.post('/api/logs/pageview', { path, actorId, actorType, actorBusinessId }).catch(() => {});
         }
-        try { localStorage.setItem('__lastPageviewPath', path); localStorage.setItem('__lastPageviewAt', String(now)); } catch (e) {}
+        try { sessionStorage.setItem('__lastPageviewPath', path); sessionStorage.setItem('__lastPageviewAt', String(now)); } catch (e) {}
       }
     } catch (e) { console.warn('Failed to send admin pageview', e && e.message); }
   }, [location]);

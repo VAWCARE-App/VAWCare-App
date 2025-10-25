@@ -26,7 +26,7 @@ import {
   HomeOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
-import { clearToken, api, isTokenProbablyJwt } from "../lib/api";
+import { clearToken, api, isTokenProbablyJwt, clearAllStorage } from "../lib/api";
 import logo from "../assets/logo1.png";
 import EmergencyButton from "./EmergencyButtonAlt";
 
@@ -66,9 +66,7 @@ export default function VictimNavbar() {
         ]).catch(() => { });
       }
     } catch { }
-    clearToken();
-    localStorage.clear();
-    localStorage.clear();
+    clearAllStorage();
     navigate("/");
   };
 

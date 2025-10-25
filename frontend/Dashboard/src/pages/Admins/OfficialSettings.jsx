@@ -75,10 +75,10 @@ export default function OfficialSettings() {
   /** Load profile from API and update local state + form */
   const loadProfile = async () => {
     try {
-      const token = localStorage.getItem("token") || localStorage.getItem("token");
+      const token = sessionStorage.getItem("token") || sessionStorage.getItem("token");
       console.debug("[OfficialSettings] loadProfile: token exists?", !!token);
       if (!token) {
-        console.warn("[OfficialSettings] No token in localStorage");
+        console.warn("[OfficialSettings] No token in sessionStorage");
       }
       
       const { data } = await api.get("/api/officials/profile");
@@ -102,10 +102,10 @@ export default function OfficialSettings() {
     return null;
   };
 
-  // on mount: warm start from localStorage, then refresh from API
+  // on mount: warm start from sessionStorage, then refresh from API
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("user");
+      const raw = sessionStorage.getItem("user");
       if (raw) {
         const cached = JSON.parse(raw);
         if (cached.officialEmail && !cached.email) cached.email = cached.officialEmail;
@@ -120,7 +120,7 @@ export default function OfficialSettings() {
       const fresh = await loadProfile();
       if (fresh) {
         try {
-          localStorage.setItem("user", JSON.stringify(fresh));
+          sessionStorage.setItem("user", JSON.stringify(fresh));
         } catch (_) {}
       }
     })();
@@ -141,7 +141,7 @@ export default function OfficialSettings() {
       if (refreshed && determineVerified(refreshed)) setVerified(true);
 
       try {
-        localStorage.setItem("user", JSON.stringify(refreshed || payload));
+        sessionStorage.setItem("user", JSON.stringify(refreshed || payload));
       } catch (_) {}
     } catch {
       message.error("Unable to update profile");
@@ -169,7 +169,7 @@ export default function OfficialSettings() {
       const fresh = await loadProfile();
       if (fresh) {
         try {
-          localStorage.setItem("user", JSON.stringify(fresh));
+          sessionStorage.setItem("user", JSON.stringify(fresh));
         } catch (_) {}
       }
 
@@ -480,7 +480,7 @@ export default function OfficialSettings() {
                     onClick={() => {
                       form.resetFields();
                       try {
-                        const raw = localStorage.getItem("user");
+                        const raw = sessionStorage.getItem("user");
                         if (raw) setUser(JSON.parse(raw));
                       } catch (_) {}
                     }}

@@ -59,12 +59,14 @@ export default function Chatbot() {
 
   const reply = async (userText) => {
     try {
+      const token = sessionStorage.getItem("token") || localStorage.getItem("token");
       const res = await fetch(`${API}/api/chatbot/message`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${token}`,
         },
+        credentials: 'include',  // Enable automatic cookie handling
         body: JSON.stringify({ message: userText }),
       });
 

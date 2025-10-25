@@ -41,10 +41,10 @@ const BRAND = {
   card: "rgba(255,255,255,0.85)",
 };
 
-export default function OfficialSettings() {
+export default function AdminSettings() {
   const screens = Grid.useBreakpoint();
   const [loading, setLoading] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState(null);
   const [verified, setVerified] = useState(false);
 
   // cached/current user
@@ -75,10 +75,10 @@ export default function OfficialSettings() {
   /** Load profile from API and update local state + form */
   const loadProfile = async () => {
     try {
-      const { data } = await api.get("/api/officials/profile");
+      const { data } = await api.get("/api/admin/profile");
       if (data?.success && data?.data) {
         const profile = { ...data.data };
-        if (profile.officialEmail && !profile.email) profile.email = profile.officialEmail;
+        if (profile.adminEmail && !profile.email) profile.email = profile.adminEmail;
         if (profile.photoURL) setAvatarUrl(profile.photoURL);
         setVerified(determineVerified(profile));
         setUser(profile);
@@ -97,7 +97,7 @@ export default function OfficialSettings() {
       const raw = localStorage.getItem("user");
       if (raw) {
         const cached = JSON.parse(raw);
-        if (cached.officialEmail && !cached.email) cached.email = cached.officialEmail;
+        if (cached.adminEmail && !cached.email) cached.email = cached.adminEmail;
         setUser(cached);
         if (cached.photoURL) setAvatarUrl(cached.photoURL);
         setVerified(determineVerified(cached));
@@ -121,9 +121,9 @@ export default function OfficialSettings() {
     setLoading(true);
     try {
       const payload = { ...values };
-      if (payload.email && !payload.officialEmail) payload.officialEmail = payload.email;
+      if (payload.email && !payload.adminEmail) payload.adminEmail = payload.email;
 
-      await api.put("/api/officials/profile", payload);
+      await api.put("/api/admin/profile", payload);
       message.success("Profile updated successfully!");
 
       const refreshed = await loadProfile();
@@ -148,12 +148,12 @@ export default function OfficialSettings() {
       const fd = new FormData();
       fd.append("avatar", file);
 
-      const { data } = await api.post("/api/officials/avatar", fd, {
+      const { data } = await api.post("/api/admin/avatar", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
       if (data?.url) setAvatarUrl(data.url);
-      await api.put("/api/officials/profile", { photoURL: data?.url || b64 });
+      await api.put("/api/admins/profile", { photoURL: data?.url || b64 });
 
       const fresh = await loadProfile();
       if (fresh) {
@@ -172,11 +172,11 @@ export default function OfficialSettings() {
   const displayName = useMemo(() => {
     if (user) {
       const name = [user.firstName, user.lastName].filter(Boolean).join(" ");
-      return name || user.position || user.officialID || "Official";
+      return name || user.adminRole || user.adminID || "admin";
     }
     const v = form.getFieldsValue();
-    const combo = [v.firstName, v.lastName].filter(Boolean).join(" ") || v.position || v.officialID;
-    return combo || "Official";
+    const combo = [v.firstName, v.lastName].filter(Boolean).join(" ") || v.adminRole || v.adminID;
+    return combo || "admin";
   }, [user, form]);
 
   const verColor = verified ? BRAND.green : BRAND.red;
@@ -304,7 +304,7 @@ export default function OfficialSettings() {
                 {displayName}
               </Title>
               <Text className="hero-sub" style={{ color: "#fff" }}>
-                Manage your official profile and contact information.
+                Manage your Admin profile and contact information.
               </Text>
             </div>
 
@@ -393,7 +393,7 @@ export default function OfficialSettings() {
             <Statistic title="Profile Completeness" value={92} suffix="%" />
           </Card>
           <Card className="stat-card">
-            <Statistic title="Role" value={form.getFieldValue("position") || "—"} />
+            <Statistic title="adminRole" value={form.getFieldValue("adminRole") || "—"} />
           </Card>
           <Card className="stat-card">
             <Statistic title="Last Updated" value="Just now" />
@@ -408,7 +408,7 @@ export default function OfficialSettings() {
               <Title level={4} style={{ margin: 0 }}>
                 Account Settings
               </Title>
-              <Text type="secondary">Update your official details and contact information.</Text>
+              <Text type="secondary">Update your Admin details and contact information.</Text>
             </div>
           </div>
 
@@ -417,13 +417,13 @@ export default function OfficialSettings() {
           <Form layout="vertical" form={form} onFinish={onSave}>
             <Row gutter={[16, 12]}>
               <Col xs={24} md={12}>
-                <Form.Item name="officialID" label="Official ID">
+                <Form.Item name="adminID" label="Admin ID">
                   <Input disabled prefix={<UserOutlined />} />
                 </Form.Item>
               </Col>
               <Col xs={24} md={12}>
-                <Form.Item name="position" label="Position">
-                  <Input placeholder="e.g. Barangay Captain" />
+                <Form.Item name="adminRole" label="adminRole">
+                  <Input disabled prefix={<UserOutlined />} />
                 </Form.Item>
               </Col>
 
@@ -440,16 +440,10 @@ export default function OfficialSettings() {
 
               <Col xs={24} md={12}>
                 <Form.Item name="middleInitial" label="Middle Initial">
-                  <Input maxLength={1} placeholder="M" />
+                  <Input maxLength={1} placeholder="M" style={{ color: '#000' }} />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={12}>
-                <Form.Item name="contactNumber" label="Contact Number">
-                  <Input prefix={<PhoneOutlined />} placeholder="+639123456789" />
-                </Form.Item>
-              </Col>
-
-              <Col xs={24}>
+              <Col xs={24} md ={12}>
                 <Form.Item name="email" label="Email">
                   <Input prefix={<MailOutlined />} placeholder="you@example.com" />
                 </Form.Item>

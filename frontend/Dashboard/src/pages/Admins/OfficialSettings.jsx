@@ -75,10 +75,10 @@ export default function OfficialSettings() {
   /** Load profile from API and update local state + form */
   const loadProfile = async () => {
     try {
-      const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+      const token = localStorage.getItem("token") || localStorage.getItem("token");
       console.debug("[OfficialSettings] loadProfile: token exists?", !!token);
       if (!token) {
-        console.warn("[OfficialSettings] No token in localStorage or sessionStorage");
+        console.warn("[OfficialSettings] No token in localStorage");
       }
       
       const { data } = await api.get("/api/officials/profile");

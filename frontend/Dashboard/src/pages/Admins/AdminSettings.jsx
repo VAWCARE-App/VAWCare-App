@@ -91,10 +91,10 @@ export default function AdminSettings() {
     return null;
   };
 
-  // on mount: warm start from localStorage, then refresh from API
+  // on mount: warm start from sessionStorage, then refresh from API
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("user");
+      const raw = sessionStorage.getItem("user");
       if (raw) {
         const cached = JSON.parse(raw);
         if (cached.adminEmail && !cached.email) cached.email = cached.adminEmail;
@@ -109,7 +109,7 @@ export default function AdminSettings() {
       const fresh = await loadProfile();
       if (fresh) {
         try {
-          localStorage.setItem("user", JSON.stringify(fresh));
+          sessionStorage.setItem("user", JSON.stringify(fresh));
         } catch (_) {}
       }
     })();
@@ -130,7 +130,7 @@ export default function AdminSettings() {
       if (refreshed && determineVerified(refreshed)) setVerified(true);
 
       try {
-        localStorage.setItem("user", JSON.stringify(refreshed || payload));
+        sessionStorage.setItem("user", JSON.stringify(refreshed || payload));
       } catch (_) {}
     } catch {
       message.error("Unable to update profile");
@@ -158,7 +158,7 @@ export default function AdminSettings() {
       const fresh = await loadProfile();
       if (fresh) {
         try {
-          localStorage.setItem("user", JSON.stringify(fresh));
+          sessionStorage.setItem("user", JSON.stringify(fresh));
         } catch (_) {}
       }
 
@@ -463,7 +463,7 @@ export default function AdminSettings() {
                     onClick={() => {
                       form.resetFields();
                       try {
-                        const raw = localStorage.getItem("user");
+                        const raw = sessionStorage.getItem("user");
                         if (raw) setUser(JSON.parse(raw));
                       } catch (_) {}
                     }}

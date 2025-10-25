@@ -33,13 +33,12 @@ export default function Navbar({
 
   const handleLogout = () => {
     localStorage.clear();
-    sessionStorage.clear();
     setUser(null);
     window.location.reload(); // optional
   }
 
   useEffect(() => {
-    const storedUser = sessionStorage.getItem("user");
+    const storedUser = localStorage.getItem("user");
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }

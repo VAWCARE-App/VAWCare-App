@@ -6,17 +6,22 @@ import { getAuth } from 'firebase/auth';
 
 const baseURL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
+// In-memory token storage (never persisted to localStorage for security)
+let inMemoryToken = null;
+
 export const api = axios.create({
   baseURL,
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  withCredentials: true  // Enable automatic cookie handling
 });
 
 // Add request interceptor
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
+    // Use getToken() helper which checks in-memory storage first, then sessionStorage
+    const token = getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -44,8 +49,14 @@ api.interceptors.request.use(
   }
 );
 
-export const saveToken = (t) => localStorage.setItem("token", t);
+export const saveToken = (t) => {
+  // Store token in memory and sessionStorage (cleared on browser close) instead of localStorage
+  inMemoryToken = t;
+  sessionStorage.setItem("token", t);
+};
 export const clearToken = () => {
+  // Clear in-memory token
+  inMemoryToken = null;
   // Remove all authentication and actor-related keys from localStorage
   localStorage.removeItem("token");
   localStorage.removeItem("user");
@@ -53,11 +64,14 @@ export const clearToken = () => {
   localStorage.removeItem('actorId');
   localStorage.removeItem('actorType');
   localStorage.removeItem('actorBusinessId');
+  // Also clear from sessionStorage
+  sessionStorage.removeItem("token");
 };
-export const isAuthed = () => !!localStorage.getItem("token");
+export const getToken = () => inMemoryToken || sessionStorage.getItem("token");
+export const isAuthed = () => !!getToken();
 
 export const getUserType = async () => {
-  const token = localStorage.getItem("token");
+  const token = getToken();
   if (!token) return null;
 
   try {

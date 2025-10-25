@@ -5,17 +5,9 @@ const OfficialModel = require('../models/BarangayOfficials');
 
 const protect = asyncHandler(async (req, res, next) => {
     let token;
-
-    // First, try to get token from Authorization header
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         token = req.headers.authorization.split(' ')[1];
     }
-    
-    // If no token in header, try to get from HttpOnly cookie
-    if (!token && req.cookies && req.cookies.authToken) {
-        token = req.cookies.authToken;
-    }
-
     if (!token) {
         res.status(401);
         throw new Error('Not authorized to access this route');

@@ -232,23 +232,23 @@ export default function Login() {
         else if (userType === "admin") userInfo = { ...data.data.admin, userType: "admin" };
         else if (userType === "official") userInfo = { ...data.data.official, userType: "official" };
 
-        sessionStorage.setItem("user", JSON.stringify(userInfo));
-        sessionStorage.setItem("userType", userType);
+        localStorage.setItem("user", JSON.stringify(userInfo));
+        localStorage.setItem("userType", userType);
         // Persist actor id (Mongo _id) and actor type for client-side reference
         try {
           if (userInfo && userInfo.id) {
-            sessionStorage.setItem('actorId', String(userInfo.id));
-            sessionStorage.setItem('actorType', userType);
+            localStorage.setItem('actorId', String(userInfo.id));
+            localStorage.setItem('actorType', userType);
           }
         } catch (e) {
-          console.warn('Unable to persist actorId to sessionStorage', e && e.message);
+          console.warn('Unable to persist actorId to localStorage', e && e.message);
         }
         try {
           // Persist the human/business id (ADM001 etc.) for display or where needed
           const businessId = userInfo?.adminID || userInfo?.officialID || userInfo?.victimID || null;
-          if (businessId) sessionStorage.setItem('actorBusinessId', String(businessId));
+          if (businessId) localStorage.setItem('actorBusinessId', String(businessId));
         } catch (e) {
-          console.warn('Unable to persist actorBusinessId to sessionStorage', e && e.message);
+          console.warn('Unable to persist actorBusinessId to localStorage', e && e.message);
         }
 
         const userName =

@@ -181,7 +181,7 @@ export default function EmergencyButton() {
         console.log('Emergency alert sent (best sample):', { latitude, longitude, accuracy, timestamp });
 
         // For emergency one-click alerts we send an anonymous alert payload
-        const user = JSON.parse(sessionStorage.getItem("user") || "{}");
+        const user = JSON.parse(localStorage.getItem("user") || "{}");
         const victimID = user && (user._id || user.id);
 
         const payload = {

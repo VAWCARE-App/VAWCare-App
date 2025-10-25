@@ -224,18 +224,18 @@ export default function Signup() {
           }
         }
 
-        if (data.data && data.data.victim) localStorage.setItem("user", JSON.stringify(data.data.victim));
+        if (data.data && data.data.victim) sessionStorage.setItem("user", JSON.stringify(data.data.victim));
         try {
           if (data.data && data.data.victim && data.data.victim.id) {
-            localStorage.setItem('actorId', String(data.data.victim.id));
-            localStorage.setItem('actorType', 'victim');
+            sessionStorage.setItem('actorId', String(data.data.victim.id));
+            sessionStorage.setItem('actorType', 'victim');
           }
         } catch (e) {
           console.warn('Unable to persist actorId on signup', e && e.message);
         }
         try {
           const businessId = data?.data?.victim?.victimID || null;
-          if (businessId) localStorage.setItem('actorBusinessId', String(businessId));
+          if (businessId) sessionStorage.setItem('actorBusinessId', String(businessId));
         } catch (e) {
           console.warn('Unable to persist actorBusinessId on signup', e && e.message);
         }
@@ -270,18 +270,18 @@ export default function Signup() {
           return;
         }
       }
-      if (resp.victim) localStorage.setItem("user", JSON.stringify(resp.victim));
+      if (resp.victim) sessionStorage.setItem("user", JSON.stringify(resp.victim));
       try {
         if (resp && resp.victim && resp.victim.id) {
-          localStorage.setItem('actorId', String(resp.victim.id));
-          localStorage.setItem('actorType', 'victim');
+          sessionStorage.setItem('actorId', String(resp.victim.id));
+          sessionStorage.setItem('actorType', 'victim');
         }
       } catch (e) {
         console.warn('Unable to persist actorId for anonymous signup', e && e.message);
       }
       try {
         const businessId = resp?.victim?.victimID || null;
-        if (businessId) localStorage.setItem('actorBusinessId', String(businessId));
+        if (businessId) sessionStorage.setItem('actorBusinessId', String(businessId));
       } catch (e) {
         console.warn('Unable to persist actorBusinessId for anonymous signup', e && e.message);
       }

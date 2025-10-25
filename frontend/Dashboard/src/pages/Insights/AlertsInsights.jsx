@@ -38,7 +38,6 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import MarkerClusterGroup from 'react-leaflet-markercluster';
 import '../../styles/marker-cluster.css';
-import '../../styles/pulsing-marker.css';
 import { api } from "../../lib/api";
 
 const { Content } = Layout;
@@ -57,7 +56,6 @@ const alertIcons = {
     Active: new L.DivIcon({
         className: '',
         html: `<div style="position: relative; width: 32px; height: 32px;">
-                <div class="pulsing-marker"></div>
                 <div style="width: 32px; height: 32px; background: #ff4d4f; border-radius: 50%; box-shadow: 0 3px 6px rgba(0,0,0,0.2); border: 2px solid #fff; position: absolute; top: 0; left: 0; z-index: 1;"></div>
                </div>`,
         iconSize: [32, 32],

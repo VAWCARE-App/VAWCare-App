@@ -2,6 +2,7 @@ const express = require('express');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpecs = require('./swagger/swagger');
@@ -14,10 +15,20 @@ connectDB();
 
 const app = express();
 
+// CORS configuration to allow credentials (cookies)
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,  // Allow credentials (cookies)
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-actor-business-id', 'x-actor-id', 'x-actor-type', 'cache-control'],
+  optionsSuccessStatus: 200
+};
+
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors());
+app.use(cors(corsOptions));
+app.use(cookieParser());
 
 
 
@@ -65,6 +76,23 @@ app.use('/api/alerts', alertRoutes);
 // Health check - lightweight endpoint for manual connectivity tests
 app.get('/api/ping', (req, res) => {
     res.json({ success: true, message: 'pong', now: new Date().toISOString() });
+});
+
+// Debug endpoint - show incoming cookies and headers
+app.get('/api/debug/cookies', (req, res) => {
+    res.json({
+        success: true,
+        cookies: req.cookies,
+        authToken: req.cookies?.authToken ? 'Present (length: ' + req.cookies.authToken.length + ')' : 'Not found',
+        headers: {
+            authorization: req.headers.authorization || 'Not provided',
+            'content-type': req.headers['content-type'] || 'Not provided'
+        },
+        environment: {
+            NODE_ENV: process.env.NODE_ENV,
+            FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173'
+        }
+    });
 });
 
 // Error handling middleware

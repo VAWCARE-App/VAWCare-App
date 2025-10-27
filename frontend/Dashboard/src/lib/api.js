@@ -82,45 +82,39 @@ export const clearUserDataCache = () => {
   userDataCacheExpiry = 0;
 };
 
-export const clearAllStorage = () => {
-  // Clear sessionStorage
+export const clearAllStorage = async () => {
+  // Clear user data cache
+  clearUserDataCache();
+  
+  // Call backend logout endpoint to clear HTTP-only cookies
+  // HTTP-only cookies cannot be accessed by JavaScript, so we must use the backend endpoint
+  try {
+    await api.post('/api/auth/logout', {
+      // Include actor info if available (best-effort)
+      actorId: sessionStorage.getItem('actorId'),
+      actorType: sessionStorage.getItem('actorType'),
+      actorBusinessId: sessionStorage.getItem('actorBusinessId'),
+    });
+  } catch (err) {
+    console.warn('Backend logout call failed:', err?.message);
+    // Continue clearing frontend storage even if backend call fails
+  }
+  
+  // Clear sessionStorage (must be after backend call in case it's needed)
   sessionStorage.clear();
   
   // Clear localStorage
   localStorage.clear();
   
-  // Clear user data cache
-  clearUserDataCache();
-  
-  // Clear all cookies with multiple strategies to ensure complete removal
+  // Clear any regular (non-HttpOnly) cookies
+  // Note: HTTP-only cookies CANNOT be cleared by JavaScript - only the backend can via the logout endpoint above
   const clearCookie = (name) => {
-    // Strategy 1: No domain specified
     document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax;`;
-    
-    // Strategy 2: With domain specified
     document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname}; SameSite=Lax;`;
-    
-    // Strategy 3: With root domain (if applicable)
-    const parts = window.location.hostname.split('.');
-    if (parts.length > 1) {
-      const rootDomain = parts.slice(-2).join('.');
-      if (rootDomain !== window.location.hostname) {
-        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${rootDomain}; SameSite=Lax;`;
-      }
-    }
   };
-
-  // Get all cookies and clear them
-  document.cookie.split(";").forEach((c) => {
-    const eqPos = c.indexOf("=");
-    const name = eqPos > -1 ? c.substring(0, eqPos).trim() : c.trim();
-    if (name) {
-      clearCookie(name);
-    }
-  });
   
-  // Also explicitly clear known auth cookies
-  ['token', 'auth_token', 'authToken', 'Authorization', 'session', 'sessionId', 'userData'].forEach(clearCookie);
+  // Clear any remaining non-HttpOnly cookies
+  ['token', 'auth_token', 'Authorization', 'session', 'sessionId'].forEach(clearCookie);
 };
 
 /**

@@ -3,6 +3,7 @@ const BarangayOfficial = require('../models/BarangayOfficials');
 const Victim = require('../models/Victims');
 const SystemLog = require('../models/SystemLogs');
 const asyncHandler = require('express-async-handler');
+const { setAuthCookie } = require('../utils/cookieUtils');
 
 // @desc    Register a new barangay official
 // @route   POST /api/officials/register
@@ -118,7 +119,6 @@ const registerOfficial = asyncHandler(async (req, res) => {
             success: true,
             message: 'Barangay Official registered successfully. Pending admin approval.',
             data: {
-                token: customToken,
                 official: {
                     id: official._id,
                     officialID: official.officialID,
@@ -211,7 +211,8 @@ const loginOfficial = asyncHandler(async (req, res) => {
             position: official.position,
             status: official.status
         });
-        console.log('Login successful for official, returning token');
+        
+        console.log('Login successful for official, returning custom token for exchange');
         res.status(200).json({
             success: true,
             data: {

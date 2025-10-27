@@ -9,7 +9,7 @@ import {
   BulbOutlined,
   LogoutOutlined
 } from "@ant-design/icons";
-import { clearAllStorage } from "../lib/api";
+import { clearAllStorage, getUserData } from "../lib/api";
 
 const { Header } = Layout;
 
@@ -39,10 +39,32 @@ export default function Navbar({
   }
 
   useEffect(() => {
-    const storedUser = sessionStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    // Fetch user data from secure backend endpoint
+    const fetchUser = async () => {
+      try {
+        // First check if user is authenticated by checking sessionStorage
+        const userType = sessionStorage.getItem("userType");
+        if (!userType) {
+          // Not authenticated
+          setUser(null);
+          return;
+        }
+        
+        const userData = await getUserData();
+        if (userData) {
+          setUser(userData);
+        } else {
+          // Backend returned no user data, clear state
+          setUser(null);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch user data:', err);
+        setUser(null);
+      }
+    };
+    
+    fetchUser();
+    
     const onScroll = () => setScrolled(window.scrollY > 6);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });

@@ -3,6 +3,7 @@ const { recordLog } = require('../middleware/logger');
 const User = require('../models/Victims');
 const bcrypt = require('bcryptjs');
 const { sendMail } = require('../utils/sendmail');
+const { clearAuthCookie, clearUserDataCookie } = require('../utils/cookieUtils');
 
 // POST /api/auth/logout
 const logout = asyncHandler(async (req, res) => {
@@ -26,6 +27,11 @@ const logout = asyncHandler(async (req, res) => {
   } catch (e) {
     console.warn('Failed to record logout log', e && e.message);
   }
+  
+  // Clear the HTTP-only authentication cookie and user data cookie
+  clearAuthCookie(res);
+  clearUserDataCookie(res);
+  
   res.status(200).json({ success: true, message: 'Logged out' });
 });
 
@@ -140,6 +146,62 @@ const me = asyncHandler(async (req, res) => {
   }
 });
 
+// POST /api/auth/set-token
+// Frontend calls this after exchanging custom token for ID token
+// Receives the ID token and user data, sets both in secure HTTP-only cookies
+const setToken = asyncHandler(async (req, res) => {
+  const { idToken, userData } = req.body;
+
+  if (!idToken) {
+    return res.status(400).json({ success: false, message: 'ID token is required' });
+  }
+
+  try {
+    // Verify the ID token is valid before setting it in cookie
+    const admin = require('../config/firebase-config');
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    
+    // Set the ID token in HTTP-only cookie
+    const { setAuthCookie, setUserDataCookie } = require('../utils/cookieUtils');
+    setAuthCookie(res, idToken);
+    
+    // Also set user data in secure HTTP-only cookie if provided
+    if (userData) {
+      setUserDataCookie(res, userData);
+    }
+    
+    res.status(200).json({ 
+      success: true, 
+      message: 'Token and user data set in HTTP-only cookies',
+      uid: decodedToken.uid 
+    });
+  } catch (error) {
+    console.error('[auth/set-token] Error:', error.message);
+    res.status(401).json({ success: false, message: 'Invalid ID token' });
+  }
+});
+
+// GET /api/auth/user-data
+// Returns user data from the secure HTTP-only cookie
+// This endpoint is used by frontend to retrieve user metadata without exposing it to XSS
+const getUserData = asyncHandler(async (req, res) => {
+  try {
+    const { getUserDataFromCookie } = require('../utils/cookieUtils');
+    const userData = getUserDataFromCookie(req);
+    
+    if (!userData) {
+      return res.status(401).json({ success: false, message: 'User data not found' });
+    }
+    
+    res.status(200).json({
+      success: true,
+      userData: userData
+    });
+  } catch (error) {
+    console.error('[auth/user-data] Error:', error.message);
+    res.status(500).json({ success: false, message: 'Error retrieving user data' });
+  }
+});
 
 module.exports = {
   logout,
@@ -147,4 +209,6 @@ module.exports = {
   verifyOTP,
   resetPassword,
   me,
+  setToken,
+  getUserData
 };

@@ -27,7 +27,7 @@ import {
   CheckCircleTwoTone,
   CloseCircleTwoTone,
 } from "@ant-design/icons";
-import { api } from "../../lib/api";
+import { api, getUserData } from "../../lib/api";
 
 const { Title, Text } = Typography;
 
@@ -102,25 +102,31 @@ export default function OfficialSettings() {
     return null;
   };
 
-  // on mount: warm start from sessionStorage, then refresh from API
+  // on mount: fetch from backend (user data is now in HTTP-only cookie)
   useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem("user");
-      if (raw) {
-        const cached = JSON.parse(raw);
-        if (cached.officialEmail && !cached.email) cached.email = cached.officialEmail;
-        setUser(cached);
-        if (cached.photoURL) setAvatarUrl(cached.photoURL);
-        setVerified(determineVerified(cached));
-        form.setFieldsValue(cached);
-      }
-    } catch (_) {}
-
     (async () => {
+      try {
+        const userData = await getUserData();
+        if (userData) {
+          const fresh = userData;
+          if (fresh.officialEmail && !fresh.email) fresh.email = fresh.officialEmail;
+          setUser(fresh);
+          if (fresh.photoURL) setAvatarUrl(fresh.photoURL);
+          setVerified(determineVerified(fresh));
+          form.setFieldsValue(fresh);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch user data:', err);
+      }
+
       const fresh = await loadProfile();
       if (fresh) {
         try {
-          sessionStorage.setItem("user", JSON.stringify(fresh));
+          if (fresh.officialEmail && !fresh.email) fresh.email = fresh.officialEmail;
+          setUser(fresh);
+          if (fresh.photoURL) setAvatarUrl(fresh.photoURL);
+          setVerified(determineVerified(fresh));
+          form.setFieldsValue(fresh);
         } catch (_) {}
       }
     })();
@@ -477,11 +483,11 @@ export default function OfficialSettings() {
                     Save changes
                   </Button>
                   <Button
-                    onClick={() => {
+                    onClick={async () => {
                       form.resetFields();
                       try {
-                        const raw = sessionStorage.getItem("user");
-                        if (raw) setUser(JSON.parse(raw));
+                        const userData = await getUserData();
+                        if (userData) setUser(userData);
                       } catch (_) {}
                     }}
                   >

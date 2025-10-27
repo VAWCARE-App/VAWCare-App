@@ -45,7 +45,7 @@ const BRAND = {
 export default function VictimSettings() {
   const screens = Grid.useBreakpoint();
   const [loading, setLoading] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState(null);
   const [verified, setVerified] = useState(false);
   const [form] = Form.useForm();
 

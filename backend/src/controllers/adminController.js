@@ -4,6 +4,7 @@ const Victim = require('../models/Victims');
 const BarangayOfficial = require('../models/BarangayOfficials');
 const SystemLog = require('../models/SystemLogs');
 const asyncHandler = require('express-async-handler');
+const { setAuthCookie } = require('../utils/cookieUtils');
 
 // @desc    Get all users (admins, victims, and officials)
 // @route   GET /api/admin/users
@@ -498,7 +499,7 @@ exports.updateOfficialStatus = asyncHandler(async (req, res) => {
                 // Save the changes
                 await official.save();
 
-                // Return success with token
+                // Return success (token not included in response for security)
                 return res.status(200).json({
                     success: true,
                     message: 'Official approved and Firebase account created',
@@ -511,8 +512,7 @@ exports.updateOfficialStatus = asyncHandler(async (req, res) => {
                             lastName: official.lastName,
                             position: official.position,
                             status: official.status
-                        },
-                        token: customToken
+                        }
                     }
                 });
             } catch (error) {
@@ -660,7 +660,6 @@ const registerAdmin = asyncHandler(async (req, res) => {
             success: true,
             message: 'Admin registered successfully',
             data: {
-                token: customToken,
                 admin: {
                     id: newAdmin._id,
                     firebaseUid: newAdmin.firebaseUid,
@@ -748,7 +747,6 @@ exports.registerAdmin = async (req, res) => {
             success: true,
             message: 'Admin registered successfully. Pending approval.',
             data: {
-                token: customToken,
                 admin: {
                     id: adminUser._id,
                     adminID: adminUser.adminID,
@@ -852,11 +850,26 @@ exports.loginAdmin = async (req, res) => {
 
         // Generate Firebase custom token
         const customToken = await generateToken(adminUser);
+        
+        // Prepare user data to be set in secure HTTP-only cookie
+        const userData = {
+            id: adminUser._id,
+            adminID: adminUser.adminID,
+            email: adminUser.adminEmail,
+            role: adminUser.adminRole,
+            firstName: adminUser.firstName,
+            lastName: adminUser.lastName,
+            userType: 'admin'
+        };
+        
+        // Note: userData will be set in HTTP-only cookie by frontend's set-token endpoint
         res.status(200).json({
             success: true,
             message: 'Login successful',
             data: {
                 token: customToken,
+                // User data NOT included in response anymore (will be sent via secure cookie)
+                // This prevents sensitive user info from being exposed in response body
                 admin: {
                     id: adminUser._id,
                     adminID: adminUser.adminID,

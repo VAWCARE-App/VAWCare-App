@@ -32,10 +32,10 @@ export default function Navbar({
     return "home";
   }, [location]);
 
-  const handleLogout = () => {
-    clearAllStorage();
+  const handleLogout = async () => {
+    await clearAllStorage();
     setUser(null);
-    window.location.reload(); // optional
+    window.location.href = '/landing'; // Redirect to landing page
   }
 
   useEffect(() => {

@@ -206,25 +206,25 @@ export default function Signup() {
         }
       const { data } = await api.post("/api/victims/register", victimData);
       if (data.success) {
-        // For regular flow, backend now creates the account immediately (no OTP required).
-        // Continue with token exchange (if provided) and local storage similar to anonymous flow.
-        if (data.data && data.data.token) {
-          try {
-            const idToken = await exchangeCustomTokenForIdToken(data.data.token);
-            if (idToken) {
-              saveToken(idToken);
-            } else {
-              throw new Error('Token exchange failed');
-            }
-          } catch (ex) {
-            message.error('Authentication failed after registration. Please try logging in.');
-            console.error('Token exchange error:', ex);
-            setLoading(false);
-            return;
-          }
+        // Exchange custom token for ID token
+        const customToken = data.data.token;
+        console.log('Received custom token from register, exchanging for ID token...');
+        
+        try {
+          const idToken = await exchangeCustomTokenForIdToken(customToken);
+          console.log('Successfully exchanged for ID token');
+          
+          // Send ID token and user data to backend to set in HTTP-only cookies
+          const userData = { ...data.data.victim, userType: "victim" };
+          await api.post('/api/auth/set-token', { idToken, userData });
+          console.log('ID token and user data set in HTTP-only cookies');
+        } catch (exchangeError) {
+          console.error('Token exchange failed:', exchangeError);
+          throw new Error('Authentication token exchange failed');
         }
-
-        if (data.data && data.data.victim) sessionStorage.setItem("user", JSON.stringify(data.data.victim));
+        
+        // Only store non-sensitive userType in sessionStorage
+        sessionStorage.setItem("userType", "victim");
         try {
           if (data.data && data.data.victim && data.data.victim.id) {
             sessionStorage.setItem('actorId', String(data.data.victim.id));
@@ -257,20 +257,26 @@ export default function Signup() {
       const { data } = await api.post("/api/victims/register", { victimAccount: "anonymous" });
       if (!data || !data.success) throw new Error(data?.message || "Failed to create account");
       const resp = data.data || {};
-      // If backend issued a Firebase custom token, exchange it for an ID token and save it.
-      if (resp.token) {
-        try {
-          const idToken = await exchangeCustomTokenForIdToken(resp.token);
-          if (idToken) saveToken(idToken);
-          else throw new Error('Token exchange failed');
-        } catch (ex) {
-          console.error('Token exchange error for anonymous signup:', ex);
-          message.error('Authentication failed after account creation. Please try logging in.');
-          setLoading(false);
-          return;
-        }
+      
+      // Exchange custom token for ID token
+      const customToken = resp.token;
+      console.log('Received custom token from anonymous register, exchanging for ID token...');
+      
+      try {
+        const idToken = await exchangeCustomTokenForIdToken(customToken);
+        console.log('Successfully exchanged for ID token');
+        
+        // Send ID token and user data to backend to set in HTTP-only cookies
+        const userData = { ...resp.victim, userType: "victim" };
+        await api.post('/api/auth/set-token', { idToken, userData });
+        console.log('ID token and user data set in HTTP-only cookies');
+      } catch (exchangeError) {
+        console.error('Token exchange failed:', exchangeError);
+        throw new Error('Authentication token exchange failed');
       }
-      if (resp.victim) sessionStorage.setItem("user", JSON.stringify(resp.victim));
+      
+      // Only store non-sensitive userType in sessionStorage
+      sessionStorage.setItem("userType", "victim");
       try {
         if (resp && resp.victim && resp.victim.id) {
           sessionStorage.setItem('actorId', String(resp.victim.id));

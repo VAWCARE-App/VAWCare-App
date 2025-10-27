@@ -29,6 +29,11 @@ import {
 import { motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import {
+  exchangeCustomTokenForIdToken,
+} from '../lib/firebase';
+
+// ... later in imports, make sure api is imported:
 import { api } from "../lib/api";
 import { message } from "antd";
 
@@ -356,15 +361,46 @@ export default function LandingPage() {
                       type="primary"
                       icon={<SafetyCertificateOutlined />}
                       onClick={async () => {
-                        // Create an anonymous account then route to report page
+                        // Create an anonymous account using HttpOnly cookies
                         try {
                           message.loading({ content: 'Preparing anonymous report...', key: 'anon' });
+                          
+                          // Request anonymous account creation
                           const { data } = await api.post('/api/victims/register', { victimAccount: 'anonymous' });
                           if (!data || !data.success) throw new Error(data?.message || 'Failed to create anonymous account');
+                          
                           const resp = data.data || {};
-                          if (resp && resp.victim) sessionStorage.setItem('user', JSON.stringify(resp.victim));
-                          try { if (resp && resp.victim && resp.victim.id) { sessionStorage.setItem('actorId', String(resp.victim.id)); sessionStorage.setItem('actorType', 'victim'); } } catch (e) { /* ignore */ }
-                          try { const businessId = resp?.victim?.victimID || null; if (businessId) sessionStorage.setItem('actorBusinessId', String(businessId)); } catch (e) { /* ignore */ }
+                          const customToken = resp.token;
+                          
+                          if (!customToken) {
+                            throw new Error('No token received from server');
+                          }
+                          
+                          // Exchange custom token for ID token
+                          console.log('Exchanging custom token for ID token...');
+                          const idToken = await exchangeCustomTokenForIdToken(customToken);
+                          console.log('Successfully exchanged for ID token');
+                          
+                          // Prepare user data for secure transmission
+                          const userData = { ...resp.victim, userType: "victim" };
+                          
+                          // Send ID token and user data to backend to set in HTTP-only cookies
+                          await api.post('/api/auth/set-token', { idToken, userData });
+                          console.log('ID token and user data set in HTTP-only cookies');
+                          
+                          // Store only non-sensitive data in sessionStorage
+                          sessionStorage.setItem("userType", "victim");
+                          try {
+                            if (resp?.victim?.id) {
+                              sessionStorage.setItem('actorId', String(resp.victim.id));
+                              sessionStorage.setItem('actorType', 'victim');
+                            }
+                          } catch (e) { /* ignore */ }
+                          try {
+                            const businessId = resp?.victim?.victimID || null;
+                            if (businessId) sessionStorage.setItem('actorBusinessId', String(businessId));
+                          } catch (e) { /* ignore */ }
+                          
                           message.success({ content: 'Anonymous session ready', key: 'anon', duration: 1.2 });
                           navigate('/victim/report');
                         } catch (err) {

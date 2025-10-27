@@ -5,6 +5,7 @@ const Alert = require('../models/Alert');
 const Chatbot = require('../models/Chatbot');
 const admin = require('../config/firebase-config');
 const { sendMail } = require('../utils/sendmail');
+const { setAuthCookie } = require('../utils/cookieUtils');
 
 // @desc    Register victim
 // @route   POST /api/victims/register  
@@ -188,16 +189,6 @@ const registerVictim = asyncHandler(async (req, res) => {
             firebaseUid: victim.firebaseUid || 'Not created'
         });
 
-
-
-
-
-
-
-
-
-
-
             res.status(201).json({
                 success: true,
                 message: 'Victim registered successfully',
@@ -276,7 +267,8 @@ const loginVictim = asyncHandler(async (req, res) => {
             isAnonymous: victim.victimAccount === "anonymous",
             victimUsername: victim.victimUsername
         });
-        // 5. Respond with token
+        
+        // 5. Respond with custom token - frontend will exchange it for ID token
         res.status(200).json({
             success: true,
             message: "Login successful",

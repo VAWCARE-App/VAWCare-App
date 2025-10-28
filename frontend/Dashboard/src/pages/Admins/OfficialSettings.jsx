@@ -143,15 +143,67 @@ export default function OfficialSettings() {
     return null;
   };
 
-  // on mount: fetch from backend (user data is now in HTTP-only cookie)
+  const loadAvatar = async () => {
+    try {
+      const { data } = await api.get('/api/officials/profile/photo');
+      if (data?.success && data?.data && data.data.photoData) {
+        const mime = data.data.photoMimeType || 'image/jpeg';
+        setAvatarUrl(data.data.photoData.startsWith('data:') ? data.data.photoData : `data:${mime};base64,${data.data.photoData}`);
+        setPhotoData(data.data.photoData.startsWith('data:') ? data.data.photoData.split(',')[1] : data.data.photoData);
+        setPhotoMimeType(data.data.photoMimeType || 'image/jpeg');
+      }
+    } catch (err) {
+      console.debug('[OfficialSettings] loadAvatar failed', err?.message);
+    }
+  };
+
+  // on mount: show cached profile immediately (if available) then refresh from backend
   useEffect(() => {
+    try {
+      const cached = sessionStorage.getItem("user");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setUser(parsed);
+        form.setFieldsValue(parsed);
+        if (parsed.photoURL) setAvatarUrl(parsed.photoURL);
+        if (parsed.photoData) {
+          const mime = parsed.photoMimeType || "image/jpeg";
+          setAvatarUrl(parsed.photoData.startsWith('data:') ? parsed.photoData : `data:${mime};base64,${parsed.photoData}`);
+          setPhotoData(parsed.photoData.startsWith('data:') ? parsed.photoData.split(',')[1] : parsed.photoData);
+          setPhotoMimeType(parsed.photoMimeType || "image/jpeg");
+        }
+        setVerified(determineVerified(parsed));
+        setIsFormDirty(false);
+      }
+    } catch (e) {
+      /* ignore parse errors */
+    }
+
     (async () => {
       try {
-        const fresh = await loadProfile();
+        const [fresh, avatarResp] = await Promise.all([
+          loadProfile(),
+          api.get('/api/officials/profile/photo').catch(() => null),
+        ]);
+
         if (fresh) {
           if (fresh.officialEmail && !fresh.email) fresh.email = fresh.officialEmail;
+
+          let avatarUrlToSet = null;
+          let photoBase64 = null;
+          let photoMime = null;
+          if (avatarResp?.data?.success && avatarResp.data.data && avatarResp.data.data.photoData) {
+            photoBase64 = avatarResp.data.data.photoData;
+            photoMime = avatarResp.data.data.photoMimeType || 'image/jpeg';
+            avatarUrlToSet = photoBase64.startsWith('data:') ? photoBase64 : `data:${photoMime};base64,${photoBase64}`;
+          } else if (fresh.photoURL) {
+            avatarUrlToSet = fresh.photoURL;
+          }
+
           setUser(fresh);
-          if (fresh.photoURL) setAvatarUrl(fresh.photoURL);
+          if (avatarUrlToSet) setAvatarUrl(avatarUrlToSet);
+          setPhotoData(photoBase64 || null);
+          setPhotoMimeType(photoMime || null);
           setVerified(determineVerified(fresh));
           form.setFieldsValue(fresh);
           setIsFormDirty(false);
@@ -198,8 +250,26 @@ export default function OfficialSettings() {
       await api.put("/api/officials/profile", payload);
       message.success("Profile updated successfully!");
 
-      const refreshed = await loadProfile();
-      if (refreshed && determineVerified(refreshed)) setVerified(true);
+      const [refreshed, avatarResp] = await Promise.all([
+        loadProfile(),
+        api.get('/api/officials/profile/photo').catch(() => null),
+      ]);
+      if (refreshed) {
+        if (refreshed.officialEmail && !refreshed.email) refreshed.email = refreshed.officialEmail;
+        let avatarUrlToSet = null;
+        if (avatarResp?.data?.success && avatarResp.data.data && avatarResp.data.data.photoData) {
+          const mime = avatarResp.data.data.photoMimeType || 'image/jpeg';
+          avatarUrlToSet = avatarResp.data.data.photoData.startsWith('data:') ? avatarResp.data.data.photoData : `data:${mime};base64,${avatarResp.data.data.photoData}`;
+          setPhotoData(avatarResp.data.data.photoData.startsWith('data:') ? avatarResp.data.data.photoData.split(',')[1] : avatarResp.data.data.photoData);
+          setPhotoMimeType(avatarResp.data.data.photoMimeType || 'image/jpeg');
+        } else if (refreshed.photoURL) {
+          avatarUrlToSet = refreshed.photoURL;
+        }
+        setUser(refreshed);
+        if (avatarUrlToSet) setAvatarUrl(avatarUrlToSet);
+        setVerified(determineVerified(refreshed));
+        form.setFieldsValue(refreshed);
+      }
 
       try {
         sessionStorage.setItem("user", JSON.stringify(refreshed || payload));

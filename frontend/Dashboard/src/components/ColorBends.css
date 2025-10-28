@@ -1,0 +1,6 @@
+.color-bends-container {
+  position: fixed;
+  inset: 0;
+  z-index: 0;           /* behind page chrome */
+  pointer-events: none; /* so UI stays interactive */
+}

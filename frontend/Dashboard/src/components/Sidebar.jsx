@@ -1,5 +1,14 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { Layout, Button, Typography, Avatar, Badge, Divider, Grid, Popover } from "antd";
+import {
+  Layout,
+  Button,
+  Typography,
+  Avatar,
+  Badge,
+  Divider,
+  Grid,
+  Popover,
+} from "antd";
 import {
   DashboardOutlined,
   FileTextOutlined,
@@ -22,18 +31,23 @@ import {
   FolderOpenOutlined,
   BankOutlined,
   IdcardOutlined,
+  MenuOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
-import { clearToken, api, clearAllStorage, getUserData } from "../lib/api";
+import { clearAllStorage, api, getUserData } from "../lib/api";
 import logo from "../assets/logo1.png";
 
 const { Sider } = Layout;
 const { Text } = Typography;
 
+/** Adjust to your actual header height */
+const HEADER_HEIGHT = 64;
+
 export default function Sidebar({ collapsed, setCollapsed }) {
   const navigate = useNavigate();
   const location = useLocation();
   const screens = Grid.useBreakpoint();
+  const isMobile = !screens.md;
 
   const BRAND = {
     primary: "#7A5AF8",
@@ -46,8 +60,6 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   // ---- Logout ----
   const handleLogout = async () => {
     try {
-      // Token is now in HTTP-only cookie, always attempt logout
-      // The API call will use the cookie automatically via withCredentials
       await Promise.race([
         api.post("/api/auth/logout"),
         new Promise((r) => setTimeout(r, 1500)),
@@ -59,22 +71,17 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
   // ---- User ----
   const [currentUser, setCurrentUser] = useState({});
-  
-  // Fetch user data from secure backend endpoint
   useEffect(() => {
-    const fetchUser = async () => {
+    (async () => {
       try {
         const userData = await getUserData();
-        if (userData) {
-          setCurrentUser(userData);
-        }
+        if (userData) setCurrentUser(userData);
       } catch (err) {
-        console.warn('Failed to fetch user data:', err);
+        console.warn("Failed to fetch user data:", err);
       }
-    };
-    
-    fetchUser();
+    })();
   }, []);
+
   const userType = sessionStorage.getItem("userType") || "victim";
   const initials = useMemo(() => {
     const a = (currentUser.firstName || "").charAt(0);
@@ -82,7 +89,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     return (a + b || "U").toUpperCase();
   }, [currentUser]);
 
-  // ---- Menus with grouped children (now with icons) ----
+  // ---- Menus ----
   const adminMenu = [
     { type: "item", key: "/admin", icon: <DashboardOutlined />, label: "Dashboard" },
     {
@@ -153,7 +160,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   if (userType === "official") menu = officialMenu;
   else if (userType === "victim") menu = victimMenu;
 
-  // ---- Default open groups (for expanded state) ----
+  // ---- Default open groups ----
   const defaultOpen = (pathname) => {
     const open = [];
     if (
@@ -190,12 +197,18 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   const isActive = (key) =>
     location.pathname === key || location.pathname.startsWith(key + "/");
 
-  // ---- Auto-collapse for phones / small tablets ----
+  // ---- Mobile behavior ----
   useEffect(() => {
-    if (!screens.md && !collapsed) setCollapsed(true);
-  }, [screens.md, collapsed, setCollapsed]);
+    if (isMobile && !collapsed) setCollapsed(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMobile]);
 
-  // ---- Submenu panel used in collapsed mode (hover/tap fly-out) ----
+  useEffect(() => {
+    if (isMobile) setCollapsed(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  // ---- Collapsed-mode flyout ----
   const SubmenuFlyout = ({ node }) => (
     <div className="flyout">
       <div className="flyout-title">
@@ -219,352 +232,448 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
   // ---- Render ----
   return (
-    <Sider
-      trigger={null}
-      collapsible
-      collapsed={collapsed}
-      width={280}
-      collapsedWidth={screens.xs ? 0 : 98}
-      style={{
-        background: BRAND.panel,
-        borderRight: `1px solid ${BRAND.border}`,
-        display: "flex",
-        flexDirection: "column",
-        minHeight: "100vh",
-        overflow: "hidden",
-      }}
-      className="sider-modern"
-    >
-      {/* BRAND */}
-      <div className="brand">
-        <Avatar
-          src={!collapsed ? logo : undefined}
-          size={44}
-          style={{ background: "#efeafd", color: BRAND.primary, fontWeight: 700 }}
-        >
-          <img alt="VAWCare" src={logo} style={{ width: 26, height: 26 }} />
-        </Avatar>
-
-        {!collapsed && (
-          <div className="brand-text">
-            <Text style={{ color: BRAND.primary, fontWeight: 800 }}>VAWCare</Text>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <Badge color={BRAND.primary} dot />
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                {currentUser.firstName ? `Hi, ${currentUser.firstName}` : "Welcome"}
-              </Text>
-            </div>
-          </div>
-        )}
-
-        <Button
-          size="small"
-          type="text"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-          onClick={() => setCollapsed(!collapsed)}
-          style={{ color: BRAND.primary, borderRadius: 8 }}
-        />
-      </div>
-
-      {/* NAV */}
-      <div className="nav-wrap">
-        <div className={`rail ${collapsed ? "collapsed" : ""}`}>
-          {menu.map((node) => {
-            if (node.type === "item") {
-              return (
-                <button
-                  key={node.key}
-                  className={`rail-btn ${isActive(node.key) ? "active" : ""}`}
-                  onClick={() => navigate(node.key)}
-                  title={collapsed ? node.label : undefined}
-                >
-                  <span className="rail-icon">{node.icon}</span>
-                  {!collapsed && <span className="rail-label">{node.label}</span>}
-                </button>
-              );
-            }
-
-            const isOpen = openGroups.includes(node.key);
-            const parentActive =
-              (node.base && location.pathname.startsWith(node.base)) ||
-              node.children?.some((c) => isActive(c.key));
-
-            // When collapsed: show fly-out popover so users can access children
-            const GroupButton = (
-              <button
-                className={`rail-btn ${parentActive ? "active" : ""}`}
-                onClick={() => (collapsed ? null : toggleGroup(node.key))}
-                title={collapsed ? node.label : undefined}
-              >
-                <span className="rail-icon">{node.icon}</span>
-                {!collapsed && (
-                  <>
-                    <span className={`rail-label ${node.labelClass || ""}`}>{node.label}</span>
-                    <DownOutlined className={`chev ${isOpen ? "open" : ""}`} />
-                  </>
-                )}
-              </button>
-            );
-
-            return (
-              <div key={node.key} className="group">
-                {collapsed ? (
-                  <Popover
-                    overlayClassName="sider-flyout"
-                    placement="rightTop"
-                    trigger={["hover", "click"]}
-                    content={<SubmenuFlyout node={node} />}
-                  >
-                    {GroupButton}
-                  </Popover>
-                ) : (
-                  GroupButton
-                )}
-
-                {/* Expanded subitems */}
-                {!collapsed && isOpen && (
-                  <div className="sub-flat">
-                    {node.children?.map((child) => (
-                      <button
-                        key={child.key}
-                        className={`sub-btn ${isActive(child.key) ? "active" : ""}`}
-                        onClick={() => navigate(child.key)}
-                      >
-                        <span className="sub-icon">{child.icon}</span>
-                        <span className="sub-label">{child.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-          <Divider style={{ margin: 10 }} />
-
-          <button
-            className="rail-btn danger"
-            onClick={handleLogout}
-            title={collapsed ? "Logout" : undefined}
-          >
-            <span className="rail-icon"><LogoutOutlined /></span>
-            {!collapsed && <span className="rail-label">Logout</span>}
-          </button>
-        </div>
-      </div>
-
-      {/* FOOTER */}
-      <div
-        className="footer"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: collapsed ? "center" : "flex-start",
-          padding: "8px 12px",
-        }}
-      >
+    <>
+      {/* Backdrop (mobile) – cover ENTIRE screen incl. header */}
+      {isMobile && !collapsed && (
         <div
-          className="user-chip"
+          className="sider-backdrop"
+          onClick={() => setCollapsed(true)}
+          aria-hidden="true"
           style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(17,17,26,0.44)",
+            zIndex: 1090,
+            backdropFilter: "blur(2px)",
+          }}
+        />
+      )}
+
+      {/* Mobile opener: BELOW header, upper-left */}
+      {isMobile && collapsed && (
+        <Button
+          className="mobile-menu-btn"
+          type="text"
+          icon={<MenuOutlined />}
+          onClick={() => setCollapsed(false)}
+          aria-label="Open menu"
+          style={{
+            position: "fixed",
+            top: HEADER_HEIGHT + 8,
+            left: 8,
+            zIndex: 1200,
+            width: 44,
+            height: 44,
+            borderRadius: 12,
             display: "flex",
             alignItems: "center",
-            gap: 8,
-            justifyContent: collapsed ? "center" : "flex-start",
-            width: "100%",
+            justifyContent: "center",
+            background: "rgba(255,255,255,0.9)",
+            boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
+          }}
+        />
+      )}
+
+      <Sider
+        trigger={null}
+        collapsible
+        collapsed={collapsed}
+        /* Mobile: left overlay covering header */
+        width={isMobile ? "84%" : 280}
+        collapsedWidth={isMobile ? 0 : 98}
+        style={{
+          background: BRAND.panel,
+          borderRight: `1px solid ${BRAND.border}`,
+          display: "flex",
+          flexDirection: "column",
+          minHeight: "100vh",
+          overflow: "hidden",
+          position: isMobile ? "fixed" : "sticky",
+          top: 0,
+          left: 0,
+          zIndex: isMobile ? 1101 : 2,
+          transform: isMobile
+            ? (collapsed ? "translateX(-100%)" : "translateX(0)")
+            : "translateX(0)",
+          transition: "transform .26s ease",
+          boxShadow: isMobile && !collapsed ? "0 20px 60px rgba(16,24,40,0.22)" : undefined,
+        }}
+        className="sider-modern"
+      >
+        {/* BRAND */}
+        <div
+          className="brand"
+          style={{
+            height: 72,
+            padding: 12,
+            borderBottom: `1px solid ${BRAND.border}`,
+            display: "grid",
+            gridTemplateColumns: collapsed ? "40px 1fr auto" : "48px 1fr auto",
+            alignItems: "center",
+            gap: 10,
+            background: BRAND.panel,
+            position: "sticky",
+            top: 0,
+            zIndex: 2,
           }}
         >
-          <Avatar style={{ background: BRAND.primary, fontWeight: 700 }} size={30}>
-            {initials}
+          <Avatar
+            src={!collapsed ? logo : undefined}
+            size={44}
+            style={{ background: "#efeafd", color: BRAND.primary, fontWeight: 700 }}
+          >
+            <img alt="VAWCare" src={logo} style={{ width: 26, height: 26 }} />
           </Avatar>
 
           {!collapsed && (
-            <div style={{ lineHeight: 1 }}>
-              <Text strong style={{ fontSize: 12 }}>
-                {currentUser.firstName
-                  ? `${currentUser.firstName} ${currentUser.lastName || ""}`
-                  : "User"}
-              </Text>
-              <div>
-                <Text type="secondary" style={{ fontSize: 11 }}>
-                  {userType.charAt(0).toUpperCase() + userType.slice(1)}
+            <div className="brand-text" style={{ lineHeight: 1.1 }}>
+              <Text style={{ color: BRAND.primary, fontWeight: 800 }}>VAWCare</Text>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Badge color={BRAND.primary} dot />
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  {currentUser.firstName ? `Hi, ${currentUser.firstName}` : "Welcome"}
                 </Text>
               </div>
             </div>
           )}
+
+          <Button
+            size="small"
+            type="text"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            onClick={() => setCollapsed(!collapsed)}
+            style={{ color: BRAND.primary, borderRadius: 8 }}
+          />
         </div>
-      </div>
 
-      {/* STYLES */}
+        {/* NAV */}
+        <div
+          className="nav-wrap"
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            padding: 12,
+            overflowY: "auto",
+            overflowX: "hidden",
+          }}
+        >
+          <div
+            className={`rail ${collapsed ? "collapsed" : ""}`}
+            style={{
+              background: BRAND.rail,
+              border: `1px solid ${BRAND.border}`,
+              borderRadius: 18,
+              padding: "10px 8px",
+              display: "grid",
+              gap: 8,
+              boxShadow: "0 10px 26px rgba(122,90,248,0.08)",
+            }}
+          >
+            {menu.map((node) => {
+              if (node.type === "item") {
+                return (
+                  <button
+                    key={node.key}
+                    className={`rail-btn ${isActive(node.key) ? "active" : ""}`}
+                    onClick={() => navigate(node.key)}
+                    title={collapsed ? node.label : undefined}
+                    style={railBtnStyle(BRAND, isActive(node.key))}
+                  >
+                    <span className="rail-icon" style={railIconStyle(BRAND)}>
+                      {node.icon}
+                    </span>
+                    {!collapsed && (
+                      <span className="rail-label" style={{ whiteSpace: "nowrap" }}>
+                        {node.label}
+                      </span>
+                    )}
+                  </button>
+                );
+              }
+
+              const isOpen = openGroups.includes(node.key);
+              const parentActive =
+                (node.base && location.pathname.startsWith(node.base)) ||
+                node.children?.some((c) => isActive(c.key));
+
+              const GroupButton = (
+                <button
+                  className={`rail-btn ${parentActive ? "active" : ""}`}
+                  onClick={() => (collapsed ? null : toggleGroup(node.key))}
+                  title={collapsed ? node.label : undefined}
+                  style={railBtnStyle(BRAND, parentActive)}
+                >
+                  <span className="rail-icon" style={railIconStyle(BRAND)}>
+                    {node.icon}
+                  </span>
+                  {!collapsed && (
+                    <>
+                      <span
+                        className={`rail-label ${node.labelClass || ""}`}
+                        style={{
+                          whiteSpace: "nowrap",
+                          color: node.labelClass === "pink" ? BRAND.primaryAlt : undefined,
+                        }}
+                      >
+                        {node.label}
+                      </span>
+                      <DownOutlined
+                        className={`chev ${isOpen ? "open" : ""}`}
+                        style={{
+                          marginLeft: "auto",
+                          fontSize: 10,
+                          color: "#8a7ef2",
+                          transform: isOpen ? "rotate(180deg)" : "none",
+                          transition: "transform .2s ease",
+                        }}
+                      />
+                    </>
+                  )}
+                </button>
+              );
+
+              return (
+                <div key={node.key} className="group">
+                  {collapsed ? (
+                    <Popover
+                      overlayClassName="sider-flyout"
+                      placement="right"
+                      trigger={["hover", "click"]}
+                      mouseEnterDelay={0.05}
+                      destroyTooltipOnHide
+                      overlayStyle={{ padding: 0, zIndex: 1300, marginLeft: 4 }}
+                      content={<SubmenuFlyout node={node} />}
+                    >
+                      {GroupButton}
+                    </Popover>
+                  ) : (
+                    GroupButton
+                  )}
+
+                  {!collapsed && isOpen && (
+                    <div className="sub-flat" style={{ display: "grid", gap: 8, marginTop: 6 }}>
+                      {node.children?.map((child) => (
+                        <button
+                          key={child.key}
+                          className={`sub-btn ${isActive(child.key) ? "active" : ""}`}
+                          onClick={() => navigate(child.key)}
+                          style={subBtnStyle(BRAND, isActive(child.key))}
+                        >
+                          <span
+                            className="sub-icon"
+                            style={{
+                              width: 20,
+                              display: "grid",
+                              placeItems: "center",
+                              color: BRAND.primary,
+                              fontSize: 16,
+                            }}
+                          >
+                            {child.icon}
+                          </span>
+                          <span className="sub-label">{child.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            <Divider style={{ margin: 10 }} />
+
+            <button
+              className="rail-btn danger"
+              onClick={handleLogout}
+              title={collapsed ? "Logout" : undefined}
+              style={{ ...railBtnStyle(BRAND, false), color: BRAND.primaryAlt }}
+            >
+              <span className="rail-icon" style={{ ...railIconStyle(BRAND), color: BRAND.primaryAlt }}>
+                <LogoutOutlined />
+              </span>
+              {!collapsed && <span className="rail-label">Logout</span>}
+            </button>
+          </div>
+        </div>
+
+        {/* FOOTER */}
+        <div
+          className="footer"
+          style={{
+            height: 86,
+            padding: 12,
+            borderTop: `1px solid ${BRAND.border}`,
+            background: BRAND.panel,
+            position: "sticky",
+            bottom: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: collapsed ? "center" : "flex-start",
+          }}
+        >
+          <div
+            className="user-chip"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              justifyContent: collapsed ? "center" : "flex-start",
+              width: "100%",
+            }}
+          >
+            <Avatar style={{ background: BRAND.primary, fontWeight: 700 }} size={30}>
+              {initials}
+            </Avatar>
+
+            {!collapsed && (
+              <div style={{ lineHeight: 1 }}>
+                <Text strong style={{ fontSize: 12 }}>
+                  {currentUser.firstName
+                    ? `${currentUser.firstName} ${currentUser.lastName || ""}`
+                    : "User"}
+                </Text>
+                <div>
+                  <Text type="secondary" style={{ fontSize: 11 }}>
+                    {userType.charAt(0).toUpperCase() + userType.slice(1)}
+                  </Text>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </Sider>
+
+      {/* --- FLYOUT STYLE FIXES --- */}
       <style>{`
-        /* Layout */
-        .sider-modern .brand{
-          height: 72px;
-          padding: 12px;
-          border-bottom: 1px solid ${BRAND.border};
+        .sider-flyout .ant-popover-inner {
+          padding: 10px !important;
+          background: #ffffff !important;
+          border: 1px solid rgba(122,90,248,0.18) !important;
+          border-radius: 14px !important;
+          box-shadow: 0 18px 48px rgba(16,24,40,0.18) !important;
+        }
+        .sider-flyout .ant-popover-inner-content {
+          padding: 0 !important;
+        }
+        .sider-flyout .flyout {
+          min-width: 240px;
+          max-width: 280px;
           display: grid;
-          grid-template-columns: ${collapsed ? "40px 1fr auto" : "48px 1fr auto"};
-          align-items: center;
           gap: 10px;
-          background: ${BRAND.panel};
-          position: sticky; top: 0; z-index: 2;
         }
-        .sider-modern .brand-text{ line-height: 1.1; }
-
-        .sider-modern .nav-wrap{
-          flex: 1;
-          display: flex; flex-direction: column;
-          padding: 12px;
-          overflow-y: auto; overflow-x: hidden;
-        }
-
-        .sider-modern .footer{
-          height: 86px; padding: 12px;
-          border-top: 1px solid ${BRAND.border};
-          background: ${BRAND.panel};
-          position: sticky; bottom: 0;
-        }
-
-        /* Rail base */
-        .sider-modern .rail{
-          background: ${BRAND.rail};
-          border: 1px solid ${BRAND.border};
-          border-radius: 18px;
-          padding: 10px 8px;
-          display: grid;
+        .sider-flyout .flyout-title {
+          display: flex;
+          align-items: center;
           gap: 8px;
-          box-shadow: 0 10px 26px rgba(122,90,248,0.08);
-        }
-
-        .sider-modern .rail-btn{
-          width: 100%;
-          display: flex; align-items: center; gap: 10px;
-          height: 44px; padding: 0 14px;
-          font-size: 14px; font-weight: 600; color: #5a4eb1;
-          border: none; border-radius: 12px;
-          background: #fff;
-          box-shadow: 0 6px 18px rgba(0,0,0,0.06);
-          cursor: pointer;
-          transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
-        }
-        .sider-modern .rail-btn .rail-icon{
-          font-size: 18px; width: 24px; display: grid; place-items: center;
-          color: ${BRAND.primary};
-        }
-        .sider-modern .rail-btn:hover{
-          transform: translateY(-2px);
-          box-shadow: 0 10px 22px rgba(122,90,248,0.15);
-          background: #f7f4ff; color: ${BRAND.primary};
-        }
-        .sider-modern .rail-btn.active{
-          background: #f2edff;
-          box-shadow: 0 14px 28px rgba(122,90,248,0.18);
-          color: ${BRAND.primary};
-        }
-        .sider-modern .rail-btn.danger{ color: ${BRAND.primaryAlt}; }
-        .sider-modern .rail-btn.danger .rail-icon{ color: ${BRAND.primaryAlt}; }
-        .sider-modern .rail-btn.danger:hover{ background: #ffe9f1; }
-        .sider-modern .rail-label{ white-space: nowrap; }
-        .sider-modern .rail-label.pink{ color: ${BRAND.primaryAlt}; }
-
-        /* Collapsed (overflow-safe) */
-        .sider-modern .rail.collapsed{ padding: 8px 6px; }
-        .sider-modern .rail.collapsed .rail-btn{ width: 58px; padding: 0; justify-content: center; }
-        .sider-modern .rail.collapsed .rail-icon{ width: 22px; font-size: 18px; }
-        .sider-modern .rail.collapsed .rail-label{ display: none !important; }
-        .sider-modern .rail.collapsed .chev{ display: none; }
-
-        /* Group chevron */
-        .sider-modern .group .chev{
-          margin-left: auto;
-          font-size: 10px;
-          transition: transform .2s ease;
-          color: #8a7ef2;
-        }
-        .sider-modern .group .chev.open{ transform: rotate(180deg); }
-
-        /* Expanded children list */
-        .sider-modern .sub-flat{
-          display: grid;
-          gap: 8px;
-          margin-top: 6px;
-        }
-        .sider-modern .sub-btn{
-          height: 44px;
-          display: flex; align-items: center; gap: 10px;
-          border: none; border-radius: 12px;
-          background: #fff;
-          color: #5a4eb1; font-weight: 600;
-          padding: 0 14px;
-          text-align: left;
-          box-shadow: 0 4px 10px rgba(0,0,0,0.04);
-          cursor: pointer;
-          transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
-        }
-        .sider-modern .sub-btn:hover{
-          transform: translateY(-1px);
+          padding: 8px 10px;
+          border-radius: 10px;
           background: #f7f4ff;
-          box-shadow: 0 8px 18px rgba(122,90,248,0.12);
-        }
-        .sider-modern .sub-btn.active{
-          background: #f2edff;
-          box-shadow: 0 12px 24px rgba(122,90,248,0.16);
-          color: ${BRAND.primary};
-        }
-        .sider-modern .sub-icon{
-          width: 20px; display: grid; place-items: center;
-          color: ${BRAND.primary};
-          font-size: 16px;
-        }
-
-        /* Fly-out (collapsed) */
-        .sider-flyout .ant-popover-inner{
-          padding: 10px;
-          border-radius: 14px;
-          border: 1px solid ${BRAND.border};
-          background: #ffffffee;
-          backdrop-filter: blur(8px) saturate(140%);
-        }
-        .flyout{
-          min-width: 220px;
-          max-width: 260px;
-          display: grid; gap: 10px;
-        }
-        .flyout-title{
-          display: flex; align-items: center; gap: 8px;
-          padding: 6px 8px; border-radius: 10px;
-          background: #f7f4ff;
-          color: ${BRAND.primary};
+          color: #7A5AF8;
           font-weight: 700;
         }
-        .flyout-title-icon{ font-size: 16px; display: grid; place-items: center; }
-        .flyout-list{ display: grid; gap: 6px; }
-        .flyout-item{
-          height: 40px; border: none; border-radius: 10px;
-          display: flex; align-items: center; gap: 10px;
-          background: #fff; color: #5a4eb1; font-weight: 600;
-          padding: 0 10px; text-align: left;
-          box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+        .sider-flyout .flyout-list {
+          display: flex !important;
+          flex-direction: column !important;
+          gap: 8px !important;
+        }
+        .sider-flyout .flyout-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          height: 42px;
+          padding: 0 12px;
+          border: 1px solid rgba(122,90,248,0.15);
+          border-radius: 10px;
+          background: #fff !important;
+          color: #5a4eb1 !important;
+          font-weight: 600;
+          text-align: left;
           cursor: pointer;
-          transition: background .15s ease, transform .15s ease, box-shadow .15s ease;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+          transition: background .15s ease, box-shadow .15s ease, transform .15s ease, color .15s ease;
         }
-        .flyout-item:hover{
-          background: #f7f4ff;
+        .sider-flyout .flyout-item:hover {
+          background: #f7f4ff !important;
+          box-shadow: 0 10px 20px rgba(122,90,248,0.14);
           transform: translateY(-1px);
-          box-shadow: 0 8px 18px rgba(122,90,248,0.12);
         }
-        .flyout-item.active{
-          background: #f2edff;
-          color: ${BRAND.primary};
-          box-shadow: 0 12px 24px rgba(122,90,248,0.16);
+        .sider-flyout .flyout-item.active {
+          background: #f2edff !important;
+          color: #7A5AF8 !important;
+          border-color: rgba(122,90,248,0.35);
         }
-        .flyout-icon{ width: 18px; display: grid; place-items: center; font-size: 16px; color: ${BRAND.primary}; }
-
-        /* Mobile tweaks */
-        @media (max-width: 576px) {
-          .sider-modern .rail.collapsed .rail-btn{ width: 60px; }
+        .sider-flyout .flyout-icon {
+          width: 18px;
+          display: grid;
+          place-items: center;
+          font-size: 16px;
+          color: #7A5AF8 !important;
+        }
+        .sider-flyout .flyout-item *,
+        .sider-flyout .flyout-title * {
+          filter: none !important;
+        }
+        .sider-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(17,17,26,0.44);
+          z-index: 1090;
+          backdrop-filter: blur(2px);
         }
       `}</style>
-    </Sider>
+    </>
   );
+}
+
+/* helpers for button styles */
+function railBtnStyle(BRAND, active) {
+  return {
+    width: "100%",
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    height: 44,
+    padding: "0 14px",
+    fontSize: 14,
+    fontWeight: 600,
+    color: active ? BRAND.primary : "#5a4eb1",
+    border: "none",
+    borderRadius: 12,
+    background: active ? "#f2edff" : "#fff",
+    boxShadow: active
+      ? "0 14px 28px rgba(122,90,248,0.18)"
+      : "0 6px 18px rgba(0,0,0,0.06)",
+    cursor: "pointer",
+    transition:
+      "transform .15s ease, box-shadow .15s ease, background .15s ease, color .15s ease",
+  };
+}
+function railIconStyle(BRAND) {
+  return {
+    fontSize: 18,
+    width: 24,
+    display: "grid",
+    placeItems: "center",
+    color: BRAND.primary,
+  };
+}
+function subBtnStyle(BRAND, active) {
+  return {
+    height: 44,
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    border: "none",
+    borderRadius: 12,
+    background: active ? "#f2edff" : "#fff",
+    color: active ? BRAND.primary : "#5a4eb1",
+    fontWeight: 600,
+    padding: "0 14px",
+    textAlign: "left",
+    boxShadow: active
+      ? "0 12px 24px rgba(122,90,248,0.16)"
+      : "0 4px 10px rgba(0,0,0,0.04)",
+  };
 }

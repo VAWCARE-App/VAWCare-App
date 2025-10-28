@@ -35,6 +35,8 @@ import ReportCase from "./pages/Victim/Report";
 import EmergencyButton from "./pages/Victim/EmergencyButton";
 import LogManagement from "./pages/Admins/LogManagement";
 import VictimSettings from "./pages/Victim/VictimSettings";
+import ColorBends from "./components/ColorBends";
+
 
 import { isAuthed, getUserType } from "./lib/api";
 
@@ -118,6 +120,7 @@ export default function App() {
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/2fa" element={<TwoFactor />} />
+            <Route path="/color-bends" element={<ColorBends />} />
 
 
 

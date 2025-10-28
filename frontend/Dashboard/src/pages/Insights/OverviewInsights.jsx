@@ -602,8 +602,8 @@ export default function OverviewInsights() {
                     padding: 0,
                     display: "flex",
                     flexDirection: "column",
-                    minHeight: 200,
-                    maxHeight: 520,
+                    minHeight: 220,
+                    maxHeight: 545,
                     overflowY: "auto",
                   }
                 }}

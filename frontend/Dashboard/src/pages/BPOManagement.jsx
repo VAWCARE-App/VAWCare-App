@@ -231,7 +231,7 @@ export default function BPOManagement() {
           </div>
         </>
       )}
-
+ 
   </Layout>
   );
 }

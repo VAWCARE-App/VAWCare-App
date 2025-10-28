@@ -3,8 +3,8 @@ const router = express.Router();
 const { logout, sendOTP, verifyOTP, resetPassword, me, setToken, getUserData } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 
-// Allow clients to call this on logout to record a logout event
-router.post('/logout', protect, logout);
+// Allow clients to call this on logout to record a logout event (no auth required since user is logging out)
+router.post('/logout', logout);
 
 // Token exchange endpoint - frontend calls this after exchanging custom token for ID token
 router.post('/set-token', setToken);

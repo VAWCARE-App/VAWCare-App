@@ -34,10 +34,6 @@ const barangayOfficialSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Position is required'],
         trim: true,
-        enum: {
-            values: ['Barangay Captain', 'Kagawad', 'Secretary', 'Treasurer', 'SK Chairman', 'Chief Tanod'],
-            message: 'Please enter a valid position'
-        }
     },
     isDeleted: {
         type: Boolean,
@@ -79,6 +75,15 @@ const barangayOfficialSchema = new mongoose.Schema({
     firebaseUid: {
         type: String,
         sparse: true
+    },
+    photoData: {
+        type: String,
+        default: null
+    },
+    photoMimeType: {
+        type: String,
+        default: null,
+        enum: [null, 'image/jpeg', 'image/png', 'image/gif', 'image/webp']
     }
 });
 

@@ -34,7 +34,7 @@ import {
 } from '../lib/firebase';
 
 // ... later in imports, make sure api is imported:
-import { api } from "../lib/api";
+import { api, getUserData, clearAllStorage } from "../lib/api";
 import { message } from "antd";
 
 const { Content, Footer } = Layout;
@@ -91,6 +91,25 @@ export default function LandingPage() {
   useEffect(() => {
     sessionStorage.setItem("vawc_theme", dark ? "dark" : "light");
   }, [dark]);
+
+  // --- Session / cookie restore for landing CTA ---
+  const [hasSession, setHasSession] = useState(false);
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const userData = await getUserData();
+        if (!mounted) return;
+  // Only show Landing-page Logout when the cookie belongs to an admin OR an official
+  const role = userData?.userType || userData?.role || null;
+  if (role === 'admin' || role === 'official') setHasSession(true);
+  else setHasSession(false);
+      } catch (e) {
+        if (mounted) setHasSession(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   // ---- Replace with real data later ----
   const newsItems = useMemo(
@@ -413,14 +432,37 @@ export default function LandingPage() {
                     >
                       Report
                     </Button>
-                    <Button
-                      size="large"
-                      className="btn-dark"
-                      icon={<UserSwitchOutlined />}
-                      onClick={() => navigate("/admin/login")}
-                    >
-                      Admin Login
-                    </Button>
+                    {hasSession ? (
+                      <Button
+                        size="large"
+                        className="btn-dark"
+                        icon={<UserSwitchOutlined />}
+                        onClick={async () => {
+                          try {
+                            message.loading({ content: 'Signing out...', key: 'logout' });
+                            await clearAllStorage();
+                            // reflect UI
+                            setHasSession(false);
+                            message.success({ content: 'Signed out', key: 'logout', duration: 1 });
+                            navigate('/');
+                          } catch (err) {
+                            console.error('Logout failed', err);
+                            message.error(err?.message || 'Failed to sign out');
+                          }
+                        }}
+                      >
+                        Logout
+                      </Button>
+                    ) : (
+                      <Button
+                        size="large"
+                        className="btn-dark"
+                        icon={<UserSwitchOutlined />}
+                        onClick={() => navigate("/admin/login")}
+                      >
+                        Admin Login
+                      </Button>
+                    )}
                   </div>
 
                   {/* KPIs — stack on phones */}

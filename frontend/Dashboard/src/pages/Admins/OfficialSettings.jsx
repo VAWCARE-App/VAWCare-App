@@ -46,9 +46,14 @@ export default function OfficialSettings() {
   const [loading, setLoading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [verified, setVerified] = useState(false);
+  const [isFormDirty, setIsFormDirty] = useState(false);
 
   // cached/current user
   const [user, setUser] = useState(null);
+  
+  // Store photo data in state
+  const [photoData, setPhotoData] = useState(null);
+  const [photoMimeType, setPhotoMimeType] = useState(null);
 
   const [form] = Form.useForm();
 
@@ -85,8 +90,44 @@ export default function OfficialSettings() {
       if (data?.success && data?.data) {
         const profile = { ...data.data };
         console.debug("[OfficialSettings] Profile loaded successfully:", profile);
+        
+        // Handle photoData for display and storage
+        if (profile.photoData) {
+          console.log("[OfficialSettings] photoData found, type:", typeof profile.photoData, "length:", profile.photoData?.length);
+          
+          let displayUrl = profile.photoData;
+          let storeBase64 = profile.photoData;
+          
+          // If it's raw base64 (doesn't start with data:), construct the data URL
+          if (!profile.photoData.startsWith('data:image')) {
+            const mimeType = profile.photoMimeType || "image/jpeg";
+            displayUrl = `data:${mimeType};base64,${profile.photoData}`;
+            console.log("[OfficialSettings] Constructed data URL for display");
+            storeBase64 = profile.photoData; // Store raw base64
+          } else {
+            // It already has the data URL prefix, extract the raw base64
+            const matches = profile.photoData.match(/^data:image\/[a-zA-Z0-9+/.-]+;base64,(.+)$/);
+            if (matches) {
+              storeBase64 = matches[1];
+              displayUrl = profile.photoData;
+            }
+          }
+          
+          setAvatarUrl(displayUrl);
+          setPhotoData(storeBase64);
+          setPhotoMimeType(profile.photoMimeType || "image/jpeg");
+          console.log("[OfficialSettings] Avatar URL set, will display photo");
+        } else if (profile.photoURL) {
+          setAvatarUrl(profile.photoURL);
+          setPhotoData(null);
+          setPhotoMimeType(null);
+        } else {
+          console.log("[OfficialSettings] No photo data found");
+          setPhotoData(null);
+          setPhotoMimeType(null);
+        }
+        
         if (profile.officialEmail && !profile.email) profile.email = profile.officialEmail;
-        if (profile.photoURL) setAvatarUrl(profile.photoURL);
         setVerified(determineVerified(profile));
         setUser(profile);
         form.setFieldsValue(profile);
@@ -106,32 +147,26 @@ export default function OfficialSettings() {
   useEffect(() => {
     (async () => {
       try {
-        const userData = await getUserData();
-        if (userData) {
-          const fresh = userData;
+        const fresh = await loadProfile();
+        if (fresh) {
           if (fresh.officialEmail && !fresh.email) fresh.email = fresh.officialEmail;
           setUser(fresh);
           if (fresh.photoURL) setAvatarUrl(fresh.photoURL);
           setVerified(determineVerified(fresh));
           form.setFieldsValue(fresh);
+          setIsFormDirty(false);
         }
       } catch (err) {
-        console.warn('Failed to fetch user data:', err);
-      }
-
-      const fresh = await loadProfile();
-      if (fresh) {
-        try {
-          if (fresh.officialEmail && !fresh.email) fresh.email = fresh.officialEmail;
-          setUser(fresh);
-          if (fresh.photoURL) setAvatarUrl(fresh.photoURL);
-          setVerified(determineVerified(fresh));
-          form.setFieldsValue(fresh);
-        } catch (_) {}
+        console.warn('Failed to fetch profile:', err);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Simple function to check if form has changes
+  const handleFormValuesChange = () => {
+    setIsFormDirty(true);
+  };
 
   /** Save profile */
   const onSave = async (values) => {
@@ -139,7 +174,27 @@ export default function OfficialSettings() {
     try {
       const payload = { ...values };
       if (payload.email && !payload.officialEmail) payload.officialEmail = payload.email;
+      
+      // Don't send position - it should not be editable
+      delete payload.position;
+      
+      // Include photoData in payload if it exists
+      if (photoData) {
+        // Make sure we're sending just the base64 string, not the data URL
+        let cleanBase64 = photoData;
+        if (cleanBase64.includes('data:image')) {
+          const matches = cleanBase64.match(/^data:image\/[a-zA-Z0-9+/.-]+;base64,(.+)$/);
+          if (matches) {
+            cleanBase64 = matches[1];
+          }
+        }
+        payload.photoData = cleanBase64;
+        payload.photoMimeType = photoMimeType || "image/jpeg";
+        
+        console.log("[OfficialSettings] Saving profile with photo - size:", cleanBase64.length);
+      }
 
+      console.log("[OfficialSettings] Saving profile with photoData:", !!payload.photoData);
       await api.put("/api/officials/profile", payload);
       message.success("Profile updated successfully!");
 
@@ -149,6 +204,8 @@ export default function OfficialSettings() {
       try {
         sessionStorage.setItem("user", JSON.stringify(refreshed || payload));
       } catch (_) {}
+      
+      setIsFormDirty(false);
     } catch {
       message.error("Unable to update profile");
     } finally {
@@ -162,26 +219,28 @@ export default function OfficialSettings() {
       const b64 = await toBase64(file);
       setAvatarUrl(String(b64)); // instant preview
 
-      const fd = new FormData();
-      fd.append("avatar", file);
-
-      const { data } = await api.post("/api/officials/avatar", fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      if (data?.url) setAvatarUrl(data.url);
-      await api.put("/api/officials/profile", { photoURL: data?.url || b64 });
-
-      const fresh = await loadProfile();
-      if (fresh) {
-        try {
-          sessionStorage.setItem("user", JSON.stringify(fresh));
-        } catch (_) {}
+      // Extract MIME type from data URL
+      let mimeType = "image/jpeg";
+      let base64String = b64;
+      
+      if (b64.includes(";base64,")) {
+        const matches = b64.match(/^data:(image\/[a-zA-Z0-9+/.-]+);base64,(.+)$/);
+        if (matches) {
+          mimeType = matches[1];
+          base64String = matches[2];
+        }
       }
 
-      message.success("Profile photo updated");
-    } catch {
-      message.error("Failed to upload photo");
+      // Store in state for saving later
+      setPhotoData(base64String);
+      setPhotoMimeType(mimeType);
+      setIsFormDirty(true); // Mark form as dirty when photo changes
+
+      console.log("[OfficialSettings] Photo selected - MIME type:", mimeType, "Will save on 'Save changes' click");
+      message.info("Photo selected. Click 'Save changes' to save to profile.");
+    } catch (error) {
+      console.error("Photo selection error:", error);
+      message.error("Failed to select photo");
     }
   };
 
@@ -431,7 +490,7 @@ export default function OfficialSettings() {
 
           <Divider />
 
-          <Form layout="vertical" form={form} onFinish={onSave}>
+          <Form layout="vertical" form={form} onFinish={onSave} onValuesChange={handleFormValuesChange}>
             <Row gutter={[16, 12]}>
               <Col xs={24} md={12}>
                 <Form.Item name="officialID" label="Official ID">
@@ -440,7 +499,7 @@ export default function OfficialSettings() {
               </Col>
               <Col xs={24} md={12}>
                 <Form.Item name="position" label="Position">
-                  <Input placeholder="e.g. Barangay Captain" />
+                  <Input placeholder="e.g. Barangay Captain" disabled />
                 </Form.Item>
               </Col>
 
@@ -478,6 +537,7 @@ export default function OfficialSettings() {
                     type="primary"
                     htmlType="submit"
                     loading={loading}
+                    disabled={!isFormDirty}
                     className="btn-primary"
                   >
                     Save changes
@@ -485,6 +545,7 @@ export default function OfficialSettings() {
                   <Button
                     onClick={async () => {
                       form.resetFields();
+                      setIsFormDirty(false);
                       try {
                         const userData = await getUserData();
                         if (userData) setUser(userData);

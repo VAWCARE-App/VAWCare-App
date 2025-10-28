@@ -72,7 +72,16 @@ const adminSchema = new mongoose.Schema({
         required: true
     },
     resetToken: String,
-    resetTokenExpiry: Date
+    resetTokenExpiry: Date,
+    photoData: {
+        type: String,
+        default: null
+    },
+    photoMimeType: {
+        type: String,
+        default: null,
+        enum: [null, 'image/jpeg', 'image/png', 'image/gif', 'image/webp']
+    }
 });
 
 // Two-factor  for Admin

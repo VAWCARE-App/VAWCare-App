@@ -47,7 +47,12 @@ export default function VictimSettings() {
   const [loading, setLoading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [verified, setVerified] = useState(false);
+  const [isFormDirty, setIsFormDirty] = useState(false);
   const [form] = Form.useForm();
+  
+  // Store photo data in state
+  const [photoData, setPhotoData] = useState(null);
+  const [photoMimeType, setPhotoMimeType] = useState(null);
 
   // tolerantly determine verification from backend profile
   const determineVerified = (profile) => {
@@ -79,7 +84,43 @@ export default function VictimSettings() {
       const { data } = await api.get("/api/victims/profile");
       if (data?.success && data?.data) {
         const profile = { ...data.data };
-        if (profile.photoURL) setAvatarUrl(profile.photoURL);
+        
+        // Handle photoData for display and storage
+        if (profile.photoData) {
+          console.log("[VictimSettings] photoData found, type:", typeof profile.photoData, "length:", profile.photoData?.length);
+          
+          let displayUrl = profile.photoData;
+          let storeBase64 = profile.photoData;
+          
+          // If it's raw base64 (doesn't start with data:), construct the data URL
+          if (!profile.photoData.startsWith('data:image')) {
+            const mimeType = profile.photoMimeType || "image/jpeg";
+            displayUrl = `data:${mimeType};base64,${profile.photoData}`;
+            console.log("[VictimSettings] Constructed data URL for display");
+            storeBase64 = profile.photoData; // Store raw base64
+          } else {
+            // It already has the data URL prefix, extract the raw base64
+            const matches = profile.photoData.match(/^data:image\/[a-zA-Z0-9+/.-]+;base64,(.+)$/);
+            if (matches) {
+              storeBase64 = matches[1];
+              displayUrl = profile.photoData;
+            }
+          }
+          
+          setAvatarUrl(displayUrl);
+          setPhotoData(storeBase64);
+          setPhotoMimeType(profile.photoMimeType || "image/jpeg");
+          console.log("[VictimSettings] Avatar URL set, will display photo");
+        } else if (profile.photoURL) {
+          setAvatarUrl(profile.photoURL);
+          setPhotoData(null);
+          setPhotoMimeType(null);
+        } else {
+          console.log("[VictimSettings] No photo data found");
+          setPhotoData(null);
+          setPhotoMimeType(null);
+        }
+        
         setVerified(determineVerified(profile));
 
         if (profile.emergencyContacts?.length) {
@@ -102,8 +143,14 @@ export default function VictimSettings() {
 
   useEffect(() => {
     loadProfile();
+    setIsFormDirty(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form]);
+
+  // Simple function to check if form has changes
+  const handleFormValuesChange = () => {
+    setIsFormDirty(true);
+  };
 
   // Save profile
   const onSave = async (values) => {
@@ -128,12 +175,31 @@ export default function VictimSettings() {
           },
         ];
       }
+      
+      // Include photoData in payload if it exists
+      if (photoData) {
+        // Make sure we're sending just the base64 string, not the data URL
+        let cleanBase64 = photoData;
+        if (cleanBase64.includes('data:image')) {
+          const matches = cleanBase64.match(/^data:image\/[a-zA-Z0-9+/.-]+;base64,(.+)$/);
+          if (matches) {
+            cleanBase64 = matches[1];
+          }
+        }
+        payload.photoData = cleanBase64;
+        payload.photoMimeType = photoMimeType || "image/jpeg";
+        
+        console.log("[VictimSettings] Saving profile with photo - size:", cleanBase64.length);
+      }
 
+      console.log("[VictimSettings] Saving profile with photoData:", !!payload.photoData);
       await api.put("/api/victims/profile", payload);
       message.success("Profile updated successfully!");
       // refresh profile from backend to pick up any verification changes
       const refreshed = await loadProfile();
       if (refreshed && determineVerified(refreshed)) setVerified(true);
+      
+      setIsFormDirty(false);
     } catch {
       message.error("Unable to update profile");
     } finally {
@@ -147,22 +213,28 @@ export default function VictimSettings() {
       const b64 = await toBase64(file);
       setAvatarUrl(String(b64)); // instant preview
 
-      const fd = new FormData();
-      fd.append("avatar", file);
+      // Extract MIME type from data URL
+      let mimeType = "image/jpeg";
+      let base64String = b64;
+      
+      if (b64.includes(";base64,")) {
+        const matches = b64.match(/^data:(image\/[a-zA-Z0-9+/.-]+);base64,(.+)$/);
+        if (matches) {
+          mimeType = matches[1];
+          base64String = matches[2];
+        }
+      }
 
-      const { data } = await api.post("/api/victims/avatar", fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      // Store in state for saving later
+      setPhotoData(base64String);
+      setPhotoMimeType(mimeType);
+      setIsFormDirty(true); // Mark form as dirty when photo changes
 
-      if (data?.url) setAvatarUrl(data.url);
-      await api.put("/api/victims/profile", { photoURL: data?.url || b64 });
-
-      // reload profile to ensure verification state is current
-      await loadProfile();
-
-      message.success("Profile photo updated");
-    } catch {
-      message.error("Failed to upload photo");
+      console.log("[VictimSettings] Photo selected - MIME type:", mimeType, "Will save on 'Save changes' click");
+      message.info("Photo selected. Click 'Save changes' to save to profile.");
+    } catch (error) {
+      console.error("Photo selection error:", error);
+      message.error("Failed to select photo");
     }
   };
 
@@ -420,7 +492,7 @@ export default function VictimSettings() {
 
           <Divider />
 
-          <Form layout="vertical" form={form} onFinish={onSave}>
+          <Form layout="vertical" form={form} onFinish={onSave} onValuesChange={handleFormValuesChange}>
             <Row gutter={[16, 12]}>
               <Col xs={24} md={12}>
                 <Form.Item name="firstName" label="First Name">
@@ -482,11 +554,15 @@ export default function VictimSettings() {
                     type="primary"
                     htmlType="submit"
                     loading={loading}
+                    disabled={!isFormDirty}
                     className="btn-primary"
                   >
                     Save changes
                   </Button>
-                  <Button onClick={() => form.resetFields()}>Discard</Button>
+                  <Button onClick={() => {
+                    form.resetFields();
+                    setIsFormDirty(false);
+                  }}>Discard</Button>
                 </Space>
               </Col>
             </Row>

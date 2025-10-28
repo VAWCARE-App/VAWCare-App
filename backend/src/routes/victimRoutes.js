@@ -13,6 +13,7 @@ router.post('/anonymous/alert', victimController.sendAnonymousAlert);
 
 // Protected routes (require authentication)
 router.get('/profile', protect, victimController.getProfile);
+router.get('/profile/photo', protect, victimController.getProfilePhoto);
 router.put('/profile', protect, victimController.updateProfile);
 
 // Victim-specific metrics and reports

@@ -141,8 +141,70 @@ export default function VictimSettings() {
     return null;
   };
 
+  const loadAvatar = async () => {
+    try {
+      const { data } = await api.get('/api/victims/profile/photo');
+      if (data?.success && data?.data && data.data.photoData) {
+        const mime = data.data.photoMimeType || 'image/jpeg';
+        setAvatarUrl(data.data.photoData.startsWith('data:') ? data.data.photoData : `data:${mime};base64,${data.data.photoData}`);
+        setPhotoData(data.data.photoData.startsWith('data:') ? data.data.photoData.split(',')[1] : data.data.photoData);
+        setPhotoMimeType(data.data.photoMimeType || 'image/jpeg');
+      }
+    } catch (err) {
+      console.debug('[VictimSettings] loadAvatar failed', err?.message);
+    }
+  };
+
   useEffect(() => {
-    loadProfile();
+    try {
+      const cached = sessionStorage.getItem("user");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        form.setFieldsValue(parsed);
+        if (parsed.photoURL) setAvatarUrl(parsed.photoURL);
+        if (parsed.photoData) {
+          const mime = parsed.photoMimeType || "image/jpeg";
+          setAvatarUrl(parsed.photoData.startsWith('data:') ? parsed.photoData : `data:${mime};base64,${parsed.photoData}`);
+          setPhotoData(parsed.photoData.startsWith('data:') ? parsed.photoData.split(',')[1] : parsed.photoData);
+          setPhotoMimeType(parsed.photoMimeType || "image/jpeg");
+        }
+        setVerified(determineVerified(parsed));
+        setIsFormDirty(false);
+      }
+    } catch (e) {
+      /* ignore parse errors */
+    }
+
+    // then refresh from server: fetch profile and avatar in parallel and apply together
+    (async () => {
+      try {
+        const [fresh, avatarResp] = await Promise.all([
+          loadProfile(),
+          api.get('/api/victims/profile/photo').catch(() => null),
+        ]);
+
+        if (fresh) {
+          let avatarUrlToSet = null;
+          let photoBase64 = null;
+          let photoMime = null;
+          if (avatarResp?.data?.success && avatarResp.data.data && avatarResp.data.data.photoData) {
+            photoBase64 = avatarResp.data.data.photoData;
+            photoMime = avatarResp.data.data.photoMimeType || 'image/jpeg';
+            avatarUrlToSet = photoBase64.startsWith('data:') ? photoBase64 : `data:${photoMime};base64,${photoBase64}`;
+          } else if (fresh.photoURL) {
+            avatarUrlToSet = fresh.photoURL;
+          }
+
+          setVerified(determineVerified(fresh));
+          form.setFieldsValue(fresh);
+          if (avatarUrlToSet) setAvatarUrl(avatarUrlToSet);
+          setPhotoData(photoBase64 || null);
+          setPhotoMimeType(photoMime || null);
+        }
+      } catch (err) {
+        console.debug('[VictimSettings] parallel load failed', err?.message);
+      }
+    })();
     setIsFormDirty(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form]);
@@ -198,6 +260,8 @@ export default function VictimSettings() {
       // refresh profile from backend to pick up any verification changes
       const refreshed = await loadProfile();
       if (refreshed && determineVerified(refreshed)) setVerified(true);
+  // refresh avatar separately
+  loadAvatar();
       
       setIsFormDirty(false);
     } catch {

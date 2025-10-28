@@ -24,13 +24,12 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
 import Navbar from "../components/Navbar";
-import {
-  exchangeCustomTokenForIdToken,
-} from '../lib/firebase';
+import ColorBends from "../components/ColorBends"; // GLSL bg
+import { exchangeCustomTokenForIdToken } from "../lib/firebase";
+import { api, getUserData } from "../lib/api";
 
-// ... later in imports, make sure api is imported:
-import { api } from "../lib/api";
-import { message } from "antd";
+/** React Bits (from your bits/index.jsx) */
+import { Container, Section, GlassCard, KPI, CTAButton, BrandPill } from "../components/bits";
 
 const { Content, Footer } = Layout;
 const { Title, Paragraph, Text } = Typography;
@@ -62,7 +61,7 @@ export default function LandingPage() {
     sessionStorage.setItem("vawc_theme", dark ? "dark" : "light");
   }, [dark]);
 
-  // --- Session / cookie restore for landing CTA ---
+  // --- Session / cookie restore for landing CTA (from friend)
   const [hasSession, setHasSession] = useState(false);
   useEffect(() => {
     let mounted = true;
@@ -70,15 +69,16 @@ export default function LandingPage() {
       try {
         const userData = await getUserData();
         if (!mounted) return;
-  // Only show Landing-page Logout when the cookie belongs to an admin OR an official
-  const role = userData?.userType || userData?.role || null;
-  if (role === 'admin' || role === 'official') setHasSession(true);
-  else setHasSession(false);
+        const role = userData?.userType || userData?.role || null;
+        if (role === "admin" || role === "official") setHasSession(true);
+        else setHasSession(false);
       } catch (e) {
         if (mounted) setHasSession(false);
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // ── Brand and surfaces (same brand, darker surface mixes)
@@ -314,16 +314,12 @@ export default function LandingPage() {
                       }}
                     >
                       Report
-                    </Button>
-                    <Button
-                      size="large"
-                      className="btn-dark"
-                      icon={<UserSwitchOutlined />}
-                      onClick={() => navigate("/admin/login")}
-                    >
+                    </CTAButton>
+
+                    <CTAButton icon={<UserSwitchOutlined />} onClick={() => navigate("/admin/login")}>
                       Admin Login
-                    </Button>
-                  </div>
+                    </CTAButton>
+                  </Space>
 
                   {/* KPIs */}
                   <Row gutter={[16, 16]} style={{ marginTop: 28, maxWidth: 820, marginInline: "auto" }}>

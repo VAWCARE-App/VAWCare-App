@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { message } from "antd";
-import { api } from "../../lib/api";
+import { api, getUserData } from "../../lib/api";
 import { BellFilled } from "@ant-design/icons";
 
 export default function EmergencyButton() {
@@ -181,8 +181,8 @@ export default function EmergencyButton() {
         console.log('Emergency alert sent (best sample):', { latitude, longitude, accuracy, timestamp });
 
         // For emergency one-click alerts we send an anonymous alert payload
-        const user = JSON.parse(sessionStorage.getItem("user") || "{}");
-        const victimID = user && (user._id || user.id);
+        const userData = await getUserData();
+        const victimID = userData && (userData._id || userData.id);
 
         const payload = {
           location: { latitude, longitude, accuracy: (typeof accuracy === 'number' ? Math.round(accuracy) : null), timestamp },

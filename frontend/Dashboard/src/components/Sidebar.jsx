@@ -24,7 +24,7 @@ import {
   IdcardOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
-import { clearToken, api, isTokenProbablyJwt, clearAllStorage } from "../lib/api";
+import { clearToken, api, clearAllStorage, getUserData } from "../lib/api";
 import logo from "../assets/logo1.png";
 
 const { Sider } = Layout;
@@ -46,23 +46,35 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   // ---- Logout ----
   const handleLogout = async () => {
     try {
-      const token = sessionStorage.getItem("token") || sessionStorage.getItem("token");
-      if (token && isTokenProbablyJwt(token)) {
-        await Promise.race([
-          api.post("/api/auth/logout"),
-          new Promise((r) => setTimeout(r, 1500)),
-        ]).catch(() => {});
-      }
+      // Token is now in HTTP-only cookie, always attempt logout
+      // The API call will use the cookie automatically via withCredentials
+      await Promise.race([
+        api.post("/api/auth/logout"),
+        new Promise((r) => setTimeout(r, 1500)),
+      ]).catch(() => {});
     } catch {}
     clearAllStorage();
     navigate("/");
   };
 
   // ---- User ----
-  const currentUser = useMemo(
-    () => JSON.parse(sessionStorage.getItem("user") || "{}"),
-    []
-  );
+  const [currentUser, setCurrentUser] = useState({});
+  
+  // Fetch user data from secure backend endpoint
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const userData = await getUserData();
+        if (userData) {
+          setCurrentUser(userData);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch user data:', err);
+      }
+    };
+    
+    fetchUser();
+  }, []);
   const userType = sessionStorage.getItem("userType") || "victim";
   const initials = useMemo(() => {
     const a = (currentUser.firstName || "").charAt(0);

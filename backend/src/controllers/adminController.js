@@ -4,6 +4,7 @@ const Victim = require('../models/Victims');
 const BarangayOfficial = require('../models/BarangayOfficials');
 const SystemLog = require('../models/SystemLogs');
 const asyncHandler = require('express-async-handler');
+const { setAuthCookie } = require('../utils/cookieUtils');
 
 // @desc    Get all users (admins, victims, and officials)
 // @route   GET /api/admin/users
@@ -498,7 +499,7 @@ exports.updateOfficialStatus = asyncHandler(async (req, res) => {
                 // Save the changes
                 await official.save();
 
-                // Return success with token
+                // Return success (token not included in response for security)
                 return res.status(200).json({
                     success: true,
                     message: 'Official approved and Firebase account created',
@@ -511,8 +512,7 @@ exports.updateOfficialStatus = asyncHandler(async (req, res) => {
                             lastName: official.lastName,
                             position: official.position,
                             status: official.status
-                        },
-                        token: customToken
+                        }
                     }
                 });
             } catch (error) {
@@ -660,7 +660,6 @@ const registerAdmin = asyncHandler(async (req, res) => {
             success: true,
             message: 'Admin registered successfully',
             data: {
-                token: customToken,
                 admin: {
                     id: newAdmin._id,
                     firebaseUid: newAdmin.firebaseUid,
@@ -748,7 +747,6 @@ exports.registerAdmin = async (req, res) => {
             success: true,
             message: 'Admin registered successfully. Pending approval.',
             data: {
-                token: customToken,
                 admin: {
                     id: adminUser._id,
                     adminID: adminUser.adminID,
@@ -852,11 +850,26 @@ exports.loginAdmin = async (req, res) => {
 
         // Generate Firebase custom token
         const customToken = await generateToken(adminUser);
+        
+        // Prepare user data to be set in secure HTTP-only cookie
+        const userData = {
+            id: adminUser._id,
+            adminID: adminUser.adminID,
+            email: adminUser.adminEmail,
+            role: adminUser.adminRole,
+            firstName: adminUser.firstName,
+            lastName: adminUser.lastName,
+            userType: 'admin'
+        };
+        
+        // Note: userData will be set in HTTP-only cookie by frontend's set-token endpoint
         res.status(200).json({
             success: true,
             message: 'Login successful',
             data: {
                 token: customToken,
+                // User data NOT included in response anymore (will be sent via secure cookie)
+                // This prevents sensitive user info from being exposed in response body
                 admin: {
                     id: adminUser._id,
                     adminID: adminUser.adminID,
@@ -925,7 +938,9 @@ exports.getProfile = asyncHandler(async (req, res) => {
                 firstName: adminUser.firstName,
                 middleInitial: adminUser.middleInitial,
                 lastName: adminUser.lastName,
-                adminRole: adminUser.adminRole
+                adminRole: adminUser.adminRole,
+                photoData: adminUser.photoData,
+                photoMimeType: adminUser.photoMimeType
             }
         });
     } else {
@@ -938,6 +953,9 @@ exports.getProfile = asyncHandler(async (req, res) => {
 // @route   PUT /api/admin/profile
 // @access  Private (Admin)
 exports.updateProfile = asyncHandler(async (req, res) => {
+    console.log("[updateProfile] Request body keys:", Object.keys(req.body));
+    console.log("[updateProfile] Has photoData?", !!req.body.photoData);
+    
     // Try to find by firebaseUid first, else fallback to adminEmail
     let adminUser = null;
     if (req.user && req.user.uid) adminUser = await Admin.findOne({ firebaseUid: req.user.uid });
@@ -952,6 +970,58 @@ exports.updateProfile = asyncHandler(async (req, res) => {
     if (req.body.firstName !== undefined) adminUser.firstName = req.body.firstName;
     if (req.body.middleInitial !== undefined) adminUser.middleInitial = req.body.middleInitial;
     if (req.body.lastName !== undefined) adminUser.lastName = req.body.lastName;
+
+    // Process base64 photo if provided
+    if (req.body.photoData) {
+        console.log("[updateProfile] Processing photoData, length:", req.body.photoData.length);
+        try {
+            let base64String = req.body.photoData;
+            let mimeType = req.body.photoMimeType || 'image/jpeg';
+
+            // If the base64 string includes data URL prefix, extract it
+            if (base64String.includes(';base64,')) {
+                const matches = base64String.match(/^data:(image\/[a-zA-Z0-9+/.-]+);base64,(.+)$/);
+                if (matches) {
+                    mimeType = matches[1];
+                    base64String = matches[2];
+                } else {
+                    res.status(400);
+                    throw new Error('Invalid base64 image format');
+                }
+            }
+
+            // Validate base64 string
+            if (!/^[A-Za-z0-9+/=]+$/.test(base64String.replace(/\n/g, ''))) {
+                res.status(400);
+                throw new Error('Invalid base64 string');
+            }
+
+            // Validate mime type
+            const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            if (!allowedMimes.includes(mimeType)) {
+                res.status(400);
+                throw new Error('Invalid image MIME type. Allowed: ' + allowedMimes.join(', '));
+            }
+
+            // Validate file size (max 5MB for base64)
+            const fileSizeInBytes = Buffer.byteLength(base64String, 'base64');
+            const maxSizeInBytes = 5 * 1024 * 1024; // 5MB
+            if (fileSizeInBytes > maxSizeInBytes) {
+                res.status(400);
+                throw new Error('Image file size exceeds 5MB limit');
+            }
+
+            adminUser.photoData = base64String;
+            adminUser.photoMimeType = mimeType;
+            console.log("[updateProfile] photoData and photoMimeType set successfully");
+        } catch (error) {
+            console.error("[updateProfile] Photo processing error:", error.message);
+            if (error.statusCode !== 400) {
+                res.status(400);
+            }
+            throw error;
+        }
+    }
 
     // If email is being updated, update in Firebase too (if uid available)
     if (req.body.email && req.body.email !== adminUser.adminEmail) {
@@ -986,7 +1056,9 @@ exports.updateProfile = asyncHandler(async (req, res) => {
         adminUser.firebaseUid = req.user.uid;
     }
 
+    console.log("[updateProfile] Before save - photoData present?", !!adminUser.photoData);
     const updated = await adminUser.save();
+    console.log("[updateProfile] After save - photoData present?", !!updated.photoData);
 
     res.status(200).json({
         success: true,
@@ -999,7 +1071,9 @@ exports.updateProfile = asyncHandler(async (req, res) => {
             firstName: updated.firstName,
             middleInitial: updated.middleInitial,
             lastName: updated.lastName,
-            adminRole: updated.adminRole
+            adminRole: updated.adminRole,
+            photoData: updated.photoData,
+            photoMimeType: updated.photoMimeType
         }
     });
     // record admin profile update

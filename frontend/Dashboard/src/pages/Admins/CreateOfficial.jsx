@@ -62,6 +62,7 @@ export default function CreateOfficial() {
   };
 
   const [avatar, setAvatar] = useState(null);
+  const [photoMimeType, setPhotoMimeType] = useState(null);
   const password = Form.useWatch("password", form);
 
   const strength = useMemo(() => {
@@ -96,6 +97,8 @@ export default function CreateOfficial() {
         barangay: values.barangay,
         city: values.city,
         province: values.province,
+        photoData: avatar || undefined,
+        photoMimeType: photoMimeType || undefined,
       };
 
       const res = await api.post("/api/officials/register", payload);
@@ -109,6 +112,7 @@ export default function CreateOfficial() {
         );
         form.resetFields();
         setAvatar(null);
+        setPhotoMimeType(null);
       } else throw new Error(res?.data?.message || "Failed to create official");
     } catch (err) {
       const serverMsg =
@@ -124,7 +128,10 @@ export default function CreateOfficial() {
       return Upload.LIST_IGNORE;
     }
     const reader = new FileReader();
-    reader.onload = () => setAvatar(reader.result);
+    reader.onload = () => {
+      setAvatar(reader.result);
+      setPhotoMimeType(file.type);
+    };
     reader.readAsDataURL(file);
     return Upload.LIST_IGNORE;
   };
@@ -214,7 +221,10 @@ export default function CreateOfficial() {
                     <Button
                       icon={<DeleteOutlined />}
                       danger
-                      onClick={() => setAvatar(null)}
+                      onClick={() => {
+                        setAvatar(null);
+                        setPhotoMimeType(null);
+                      }}
                     >
                       Delete
                     </Button>

@@ -8,20 +8,23 @@ const baseURL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export const api = axios.create({
   baseURL,
+  withCredentials: true,  // Enable sending cookies with requests (CRITICAL!)
   headers: {
     'Content-Type': 'application/json'
   }
+});
 
+// Log API configuration for debugging
+console.log('[api] Initialized with config:', {
+  baseURL,
+  withCredentials: true,
+  environment: import.meta.env.MODE
 });
 
 // Add request interceptor
 api.interceptors.request.use(
   (config) => {
-    const token = sessionStorage.getItem("token");
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    // Token is now sent automatically via HTTP-only cookies with withCredentials: true
     // Attach actor information from sessionStorage so backend can persist actorBusinessId
     try {
       const actorBusinessId = sessionStorage.getItem('actorBusinessId');
@@ -35,7 +38,7 @@ api.interceptors.request.use(
     }
     try {
       // Debug: log outgoing requests for easier tracing (including method and url)
-      console.debug('[api] outgoing request', { method: config.method, url: config.baseURL ? `${config.baseURL}${config.url}` : config.url, hasAuth: !!token });
+      console.debug('[api] outgoing request', { method: config.method, url: config.baseURL ? `${config.baseURL}${config.url}` : config.url, withCredentials: config.withCredentials });
     } catch (e) {
       console.debug('[api] failed to log request', e && e.message);
     }
@@ -46,9 +49,13 @@ api.interceptors.request.use(
   }
 );
 
-export const saveToken = (t) => sessionStorage.setItem("token", t);
-export const clearToken = () => {
+export const saveToken = (t) => {
+  // Token is now stored in HTTP-only cookies by the backend
+  // We no longer need to store it in sessionStorage for security reasons (XSS prevention)
+  console.debug('[api] Token received and stored in HTTP-only cookie by backend');
+};
 
+export const clearToken = () => {
   // Remove all authentication and actor-related keys from sessionStorage
   sessionStorage.removeItem("token");
   sessionStorage.removeItem("user");
@@ -57,56 +64,93 @@ export const clearToken = () => {
   sessionStorage.removeItem('actorType');
   sessionStorage.removeItem('actorBusinessId');
   
-  // Also clear any auth-related cookies
-  const clearCookie = (name) => {
-    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax;`;
-    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname}; SameSite=Lax;`;
-  };
-  
-  ['token', 'auth_token', 'authToken', 'Authorization', 'session', 'sessionId'].forEach(clearCookie);
+  // HTTP-only cookies are cleared by the backend on logout via Set-Cookie header
+  console.debug('[api] Cleared auth data from sessionStorage');
 };
 
-export const clearAllStorage = () => {
-  // Clear sessionStorage
+/**
+ * Cache for user data to avoid repeated API calls
+ */
+let userDataCache = null;
+let userDataCacheExpiry = 0;
+
+/**
+ * Clear user data cache
+ */
+export const clearUserDataCache = () => {
+  userDataCache = null;
+  userDataCacheExpiry = 0;
+};
+
+export const clearAllStorage = async () => {
+  // Clear user data cache
+  clearUserDataCache();
+  
+  // Call backend logout endpoint to clear HTTP-only cookies
+  // HTTP-only cookies cannot be accessed by JavaScript, so we must use the backend endpoint
+  try {
+    await api.post('/api/auth/logout', {
+      // Include actor info if available (best-effort)
+      actorId: sessionStorage.getItem('actorId'),
+      actorType: sessionStorage.getItem('actorType'),
+      actorBusinessId: sessionStorage.getItem('actorBusinessId'),
+    });
+  } catch (err) {
+    console.warn('Backend logout call failed:', err?.message);
+    // Continue clearing frontend storage even if backend call fails
+  }
+  
+  // Clear sessionStorage (must be after backend call in case it's needed)
   sessionStorage.clear();
   
-  // Clear all cookies with multiple strategies to ensure complete removal
-  const clearCookie = (name) => {
-    // Strategy 1: No domain specified
-    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax;`;
-    
-    // Strategy 2: With domain specified
-    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname}; SameSite=Lax;`;
-    
-    // Strategy 3: With root domain (if applicable)
-    const parts = window.location.hostname.split('.');
-    if (parts.length > 1) {
-      const rootDomain = parts.slice(-2).join('.');
-      if (rootDomain !== window.location.hostname) {
-        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${rootDomain}; SameSite=Lax;`;
-      }
-    }
-  };
-
-  // Get all cookies and clear them
-  document.cookie.split(";").forEach((c) => {
-    const eqPos = c.indexOf("=");
-    const name = eqPos > -1 ? c.substring(0, eqPos).trim() : c.trim();
-    if (name) {
-      clearCookie(name);
-    }
-  });
+  // Clear localStorage
+  localStorage.clear();
   
-  // Also explicitly clear known auth cookies
-  ['token', 'auth_token', 'authToken', 'Authorization', 'session', 'sessionId'].forEach(clearCookie);
+  // Clear any regular (non-HttpOnly) cookies
+  // Note: HTTP-only cookies CANNOT be cleared by JavaScript - only the backend can via the logout endpoint above
+  const clearCookie = (name) => {
+    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax;`;
+    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname}; SameSite=Lax;`;
+  };
+  
+  // Clear any remaining non-HttpOnly cookies
+  ['token', 'auth_token', 'Authorization', 'session', 'sessionId'].forEach(clearCookie);
 };
 
-export const isAuthed = () => !!sessionStorage.getItem("token");
+/**
+ * Get user data from secure backend endpoint
+ * Since user data is in HTTP-only cookie, we must fetch it from backend
+ * @returns {Promise<Object|null>} User data or null if not authenticated
+ */
+export const getUserData = async () => {
+  // Return cached data if still valid (cache for 5 minutes)
+  if (userDataCache && Date.now() < userDataCacheExpiry) {
+    return userDataCache;
+  }
+
+  try {
+    const response = await api.get('/api/auth/user-data');
+    if (response.data?.success && response.data?.userData) {
+      userDataCache = response.data.userData;
+      userDataCacheExpiry = Date.now() + (5 * 60 * 1000); // 5 minute cache
+      return userDataCache;
+    }
+  } catch (error) {
+    console.debug('[api] Could not fetch user data:', error.message);
+  }
+  return null;
+};
+
+export const isAuthed = () => {
+  // Check if userType exists in sessionStorage as indicator of authentication
+  // The actual auth token and user data are in HTTP-only cookies
+  return !!sessionStorage.getItem("userType");
+};
 
 
 export const getUserType = async () => {
-  const token = sessionStorage.getItem("token");
-  if (!token) return null;
+  const userType = sessionStorage.getItem("userType");
+  if (!userType) return null;
 
   try {
     const response = await api.get("api/auth/me");
@@ -118,49 +162,9 @@ export const getUserType = async () => {
   }
 };
 
-
-// Heuristic: Firebase ID tokens are JWTs (three period-separated segments).
-// Many dev/test tokens are placeholders like "dashboard-token" which are
-// not JWTs; avoid calling protected logout endpoints with those to prevent
-// needless 401s in the browser console during development.
-export const isTokenProbablyJwt = (token) => {
-  try {
-    return typeof token === 'string' && token.split('.').length === 3;
-  } catch (e) { return false; }
-};
-
 api.interceptors.response.use(
-  async (response) => {
-    try {
-      const maybeToken = response?.data?.data?.token;
-      const requestUrl = response.config?.url || '';
-      if (maybeToken && typeof maybeToken === 'string') {
-        if (
-          requestUrl.includes('/login') ||
-          requestUrl.includes('/register')
-        ) {
-          try {
-            const idToken = await exchangeCustomTokenForIdToken(maybeToken);
-            if (idToken && typeof idToken === 'string') {
-              saveToken(idToken);
-              console.debug('Token exchange successful, saved Firebase ID token (truncated):', idToken.slice(0, 12));
-            } else {
-              console.warn('Token exchange returned no ID token; clearing any existing token.');
-              clearToken();
-            }
-          } catch (ex) {
-            console.warn('Auto token exchange failed (non-fatal):', ex);
-            try {
-              message.warning('Authentication token exchange failed. If protected requests fail, ensure Firebase client config (VITE_FIREBASE_*) is set.');
-            } catch (mErr) {
-              console.warn('Unable to show UI message:', mErr);
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('Error in post-response token handler', e);
-    }
+  (response) => {
+    // Token is now in HTTP-only cookie, no need to handle it in response
     return response;
   },
   (error) => {
@@ -170,7 +174,7 @@ api.interceptors.response.use(
     if (status === 401) {
       // Only force logout for critical auth verification endpoints
       if (requestUrl.includes('/token/refresh') || requestUrl.includes('/auth/me')) {
-        console.log('[api] auth failure on critical endpoint — clearing token and redirecting to login');
+        console.log('[api] auth failure on critical endpoint — clearing session and redirecting to login');
         clearToken();
         // if user is in admin area, redirect to admin login; otherwise redirect to regular login
         const redirectToAdmin = window.location.pathname.startsWith('/admin');
@@ -184,51 +188,5 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-// Post-response handler: if backend returned a Firebase custom token in data.data.token,
-// exchange it for an ID token automatically so the stored token is verifiable by backend.
-api.interceptors.response.use(async (response) => {
-  try {
-    const maybeToken = response?.data?.data?.token;
-    const requestUrl = response.config?.url || '';
-    if (maybeToken && typeof maybeToken === 'string') {
-      // Only auto-exchange for known auth endpoints to avoid surprising behavior
-      if (requestUrl.includes('/login') || requestUrl.includes('/register') || requestUrl.includes('/anonymous/report')) {
-        try {
-          const idToken = await exchangeCustomTokenForIdToken(maybeToken);
-          // Only save the token if exchange produced an ID token
-          if (idToken && typeof idToken === 'string') {
-            saveToken(idToken);
-            console.debug('Token exchange successful, saved Firebase ID token (truncated):', idToken.slice(0, 12));
-          } else {
-            console.warn('Token exchange returned no ID token; clearing any existing token.');
-            clearToken();
-          }
-        } catch (ex) {
-          // Exchange failed — don't forcibly clear the stored token here. Some development setups
-          // don't have Firebase client config and we want the login flow to decide what to do.
-          console.warn('Auto token exchange failed (non-fatal):', ex);
-          // Show a visible warning to help devs/users diagnose the issue, but don't clear token.
-          try {
-            message.warning('Authentication token exchange failed. If protected requests fail, ensure Firebase client config (VITE_FIREBASE_*) is set.');
-          } catch (mErr) {
-            console.warn('Unable to show UI message:', mErr);
-          }
-          console.warn('Token exchange failed. Ensure Firebase client config (VITE_FIREBASE_*) is available to the frontend.');
-        }
-      }
-    }
-  } catch (e) {
-    console.warn('Error in post-response token handler', e);
-  }
-  return response;
-}, (error) => {
-  if (error.response?.status === 401) {
-    // Delegate 401 handling to the caller; do not mutate auth storage here to avoid
-    // race conditions that cause components to redirect unexpectedly.
-    console.warn('[api] intercepted 401 error (delegating to caller)');
-  }
-  return Promise.reject(error);
-});
 
 export default api;

@@ -2,32 +2,36 @@ const admin = require('firebase-admin');
 const asyncHandler = require('express-async-handler');
 const AdminModel = require('../models/Admin');
 const OfficialModel = require('../models/BarangayOfficials');
+const { getTokenFromRequest } = require('../utils/cookieUtils');
 
 const protect = asyncHandler(async (req, res, next) => {
-    let token;
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-        token = req.headers.authorization.split(' ')[1];
-    }
+    // Get token from HTTP-only cookie or Authorization header (for backward compatibility)
+    const token = getTokenFromRequest(req);
+    
     if (!token) {
         res.status(401);
         throw new Error('Not authorized to access this route');
     }
 
     try {
-        // Verify token with Firebase Admin
+        // Verify as ID token (frontend exchanges custom token for ID token before setting cookie)
         const decodedToken = await admin.auth().verifyIdToken(token);
         const firebaseUser = await admin.auth().getUser(decodedToken.uid);
+
+        if (!decodedToken || !decodedToken.uid) {
+            throw new Error('Token decoded but no UID found');
+        }
 
         let roleFromToken = decodedToken.role || 'victim';
         if (String(roleFromToken).toLowerCase() === 'barangay_official') roleFromToken = 'official';
 
         req.user = {
             uid: decodedToken.uid,
-            email: decodedToken.email,
+            email: decodedToken.email || firebaseUser?.email,
             role: roleFromToken,
             isAnonymous: decodedToken.isAnonymous || false,
-            phoneNumber: firebaseUser.phoneNumber,
-            emailVerified: firebaseUser.emailVerified
+            phoneNumber: firebaseUser?.phoneNumber,
+            emailVerified: firebaseUser?.emailVerified
         };
 
         // Attach business IDs for admins or officials
@@ -47,8 +51,13 @@ const protect = asyncHandler(async (req, res, next) => {
 
         next();
     } catch (error) {
+        console.error('[auth/protect] ✗ Authentication failed:', {
+            errorCode: error.code,
+            errorMessage: error.message,
+            tokenLength: token ? token.length : 0
+        });
         res.status(401);
-        throw new Error('Not authorized to access this route');
+        throw new Error('Not authorized to access this route: ' + error.message);
     }
 });
 

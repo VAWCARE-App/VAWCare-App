@@ -254,27 +254,31 @@ export default function AdminLogin() {
             const loginData = formatLoginData(values, userType);
             const { data } = await api.post(endpoint, loginData);
             if (data.success) {
-                if (data.data?.token) {
-                    // Backend issues a Firebase custom token. Exchange it for an ID token so backend.verifyIdToken accepts it.
-                    try {
-                        const idToken = await exchangeCustomTokenForIdToken(data.data.token);
-                        saveToken(idToken);
-                    } catch (ex) {
-                        // Exchange failed (likely missing/invalid Firebase client config). Fall back to saving the server token
-                        // to avoid completely blocking login for non-protected flows, but note this may cause 401s on protected routes.
-                        console.warn('Failed to exchange custom token for ID token:', ex);
-                        saveToken(data.data.token);
-                        message.warning('Logged in but Firebase client exchange failed. If protected requests fail, ensure VITE_FIREBASE_* are set and restart the dev server.');
-                    }
-                } else if (userType === "victim") {
-                    saveToken("dashboard-token");
-                }
+                // Exchange custom token for ID token
+                const customToken = data.data.token;
+                console.log('Received custom token, exchanging for ID token...');
+                
+                // Prepare user data to send to backend for secure storage
                 let userInfo = {};
                 if (userType === "victim") userInfo = { ...data.data.victim, userType: "victim" };
                 else if (userType === "admin") userInfo = { ...data.data.admin, userType: "admin" };
                 else if (userType === "official") userInfo = { ...data.data.official, userType: "official" };
-
-                sessionStorage.setItem("user", JSON.stringify(userInfo));
+                
+                try {
+                  const idToken = await exchangeCustomTokenForIdToken(customToken);
+                  console.log('Successfully exchanged for ID token');
+                  
+                  // Send ID token AND user data to backend for secure HTTP-only cookie storage
+                  // User data will be stored in a secure HTTP-only cookie (NOT accessible to JS)
+                  await api.post('/api/auth/set-token', { idToken, userData: userInfo });
+                  console.log('ID token and user data set in HTTP-only cookies');
+                } catch (exchangeError) {
+                  console.error('Token exchange failed:', exchangeError);
+                  throw new Error('Authentication token exchange failed');
+                }
+                
+                // Only store userType in sessionStorage (not sensitive data)
+                // User data is now in secure HTTP-only cookie, inaccessible to JavaScript
                 sessionStorage.setItem("userType", userType);
                 try {
                     if (userInfo && userInfo.id) {

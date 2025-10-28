@@ -212,32 +212,35 @@ export default function Login() {
 
       const { data } = await api.post(endpoint, loginData);
       if (data.success) {
-        if (data.data?.token) {
-          // Backend issues a Firebase custom token. Exchange it for an ID token so backend.verifyIdToken accepts it.
-          try {
-            const idToken = await exchangeCustomTokenForIdToken(data.data.token);
-            saveToken(idToken);
-          } catch (ex) {
-            // Exchange failed (likely missing/invalid Firebase client config). Fall back to saving the server token
-            // to avoid completely blocking login for non-protected flows, but note this may cause 401s on protected routes.
-            console.warn('Failed to exchange custom token for ID token:', ex);
-            saveToken(data.data.token);
-            message.warning('Logged in but Firebase client exchange failed. If protected requests fail, ensure VITE_FIREBASE_* are set and restart the dev server.');
-          }
-        } else if (userType === "victim") {
-          saveToken("dashboard-token");
+        // Exchange custom token for ID token
+        const customToken = data.data.token;
+        console.log('Received custom token, exchanging for ID token...');
+        
+        try {
+          const idToken = await exchangeCustomTokenForIdToken(customToken);
+          console.log('Successfully exchanged for ID token');
+          
+          // Prepare user data object for secure transmission
+          let userData = {};
+          if (userType === "victim") userData = { ...data.data.victim, userType: "victim" };
+          else if (userType === "admin") userData = { ...data.data.admin, userType: "admin" };
+          else if (userType === "official") userData = { ...data.data.official, userType: "official" };
+          
+          // Send ID token and user data to backend to set in HTTP-only cookies
+          await api.post('/api/auth/set-token', { idToken, userData });
+          console.log('ID token and user data set in HTTP-only cookies');
+        } catch (exchangeError) {
+          console.error('Token exchange failed:', exchangeError);
+          throw new Error('Authentication token exchange failed');
         }
-        let userInfo = {};
-        if (userType === "victim") userInfo = { ...data.data.victim, userType: "victim" };
-        else if (userType === "admin") userInfo = { ...data.data.admin, userType: "admin" };
-        else if (userType === "official") userInfo = { ...data.data.official, userType: "official" };
 
-        sessionStorage.setItem("user", JSON.stringify(userInfo));
+        // Only store non-sensitive userType in sessionStorage
         sessionStorage.setItem("userType", userType);
         // Persist actor id (Mongo _id) and actor type for client-side reference
         try {
-          if (userInfo && userInfo.id) {
-            sessionStorage.setItem('actorId', String(userInfo.id));
+          const userId = data.data.victim?.id || data.data.admin?.id || data.data.official?.id;
+          if (userId) {
+            sessionStorage.setItem('actorId', String(userId));
             sessionStorage.setItem('actorType', userType);
           }
         } catch (e) {
@@ -245,14 +248,19 @@ export default function Login() {
         }
         try {
           // Persist the human/business id (ADM001 etc.) for display or where needed
-          const businessId = userInfo?.adminID || userInfo?.officialID || userInfo?.victimID || null;
+          const businessId = data.data.admin?.adminID || data.data.official?.officialID || data.data.victim?.victimID || null;
           if (businessId) sessionStorage.setItem('actorBusinessId', String(businessId));
         } catch (e) {
           console.warn('Unable to persist actorBusinessId to sessionStorage', e && e.message);
         }
 
+        // Get user info from the appropriate user type
+        const userInfo = userType === "victim" ? data.data.victim : 
+                         userType === "admin" ? data.data.admin : 
+                         data.data.official;
+
         const userName =
-          userInfo.firstName || userInfo.victimUsername || userInfo.adminEmail || userInfo.officialEmail || "User";
+          userInfo?.firstName || userInfo?.victimUsername || userInfo?.adminEmail || userInfo?.officialEmail || "User";
         message.success(`Welcome back, ${userName}!`);
 
         if (userType === "victim") navigate("/victim/dashboard");

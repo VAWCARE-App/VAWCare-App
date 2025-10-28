@@ -15,7 +15,7 @@ import {
 import { UserOutlined, SafetyOutlined, TeamOutlined, CloseOutlined } from "@ant-design/icons";
 import { api, saveToken } from "../../lib/api";
 import { useNavigate, Link } from "react-router-dom";
-import { isAuthed, getUserType } from "../../lib/api";
+import { isAuthed, getUserType, getUserData } from "../../lib/api";
 // Firebase client SDK (used to exchange server custom token for an ID token)
 import { exchangeCustomTokenForIdToken } from '../../lib/firebase';
 
@@ -190,11 +190,28 @@ export default function AdminLogin() {
     const navigate = useNavigate();
     // Redirect away if already authed
     React.useEffect(() => {
-        if (isAuthed()) {
-            const ut = getUserType();
-            if (ut === "official") navigate("/admin/official-dashboard");
-            else navigate("/admin");
-        }
+        let mounted = true;
+        (async () => {
+            try {
+                if (isAuthed()) {
+                    const ut = await getUserType();
+                    if (!mounted) return;
+                    if (ut === "official") return navigate("/admin/official-dashboard");
+                    return navigate("/admin");
+                }
+
+                const userData = await getUserData();
+                if (!mounted) return;
+                if (userData) {
+                    const role = userData.userType || userData.role || null;
+                    if (role === 'official') return navigate('/admin/official-dashboard');
+                    return navigate('/admin');
+                }
+            } catch (e) {
+                console.debug('[AdminLogin] session restore failed', e && e.message);
+            }
+        })();
+        return () => { mounted = false; };
     }, []);
     const [loading, setLoading] = useState(false);
     const [userType, setUserType] = useState("official");

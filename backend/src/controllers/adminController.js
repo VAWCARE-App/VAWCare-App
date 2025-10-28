@@ -254,6 +254,50 @@ exports.registerOfficial = asyncHandler(async (req, res) => {
         }
 
         console.log('Creating new official record...');
+
+        // Process optional photo in registration payload
+        let processedPhoto = null;
+        if (req.body.photoData) {
+            try {
+                let base64String = req.body.photoData;
+                let mimeType = req.body.photoMimeType || 'image/jpeg';
+
+                if (base64String.includes(';base64,')) {
+                    const matches = base64String.match(/^data:(image\/[a-zA-Z0-9+/.-]+);base64,(.+)$/);
+                    if (matches) {
+                        mimeType = matches[1];
+                        base64String = matches[2];
+                    } else {
+                        res.status(400);
+                        throw new Error('Invalid base64 image format');
+                    }
+                }
+
+                if (!/^[A-Za-z0-9+/=]+$/.test(base64String.replace(/\n/g, ''))) {
+                    res.status(400);
+                    throw new Error('Invalid base64 string');
+                }
+
+                const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                if (!allowedMimes.includes(mimeType)) {
+                    res.status(400);
+                    throw new Error('Invalid image MIME type. Allowed: ' + allowedMimes.join(', '));
+                }
+
+                const fileSizeInBytes = Buffer.byteLength(base64String, 'base64');
+                const maxSizeInBytes = 5 * 1024 * 1024; // 5MB
+                if (fileSizeInBytes > maxSizeInBytes) {
+                    res.status(400);
+                    throw new Error('Image file size exceeds 5MB limit');
+                }
+
+                processedPhoto = { base64: base64String, mime: mimeType };
+            } catch (photoErr) {
+                console.error('Admin registration photo processing error:', photoErr.message);
+                throw photoErr;
+            }
+        }
+
         // Create new official
         const official = await BarangayOfficial.create({
             officialID,
@@ -263,7 +307,9 @@ exports.registerOfficial = asyncHandler(async (req, res) => {
             lastName,
             position,
             status: 'pending', // Default status
-            isDeleted: false
+            isDeleted: false,
+            photoData: processedPhoto ? processedPhoto.base64 : null,
+            photoMimeType: processedPhoto ? processedPhoto.mime : null
         });
 
         console.log(`Successfully registered new official with ID: ${official._id} and officialID: ${officialID}`);
@@ -938,15 +984,39 @@ exports.getProfile = asyncHandler(async (req, res) => {
                 firstName: adminUser.firstName,
                 middleInitial: adminUser.middleInitial,
                 lastName: adminUser.lastName,
-                adminRole: adminUser.adminRole,
-                photoData: adminUser.photoData,
-                photoMimeType: adminUser.photoMimeType
+                adminRole: adminUser.adminRole
             }
         });
     } else {
         res.status(404);
         throw new Error('Admin not found');
     }
+});
+
+// @desc    Get admin profile photo only
+// @route   GET /api/admin/profile/photo
+// @access  Private (Admin)
+exports.getProfilePhoto = asyncHandler(async (req, res) => {
+    let adminUser = null;
+    if (req.user && req.user.uid) adminUser = await Admin.findOne({ firebaseUid: req.user.uid });
+    if (!adminUser && req.user && req.user.email) adminUser = await Admin.findOne({ adminEmail: req.user.email });
+
+    if (!adminUser) {
+        res.status(404);
+        throw new Error('Admin not found');
+    }
+
+    if (!adminUser.photoData) {
+        return res.status(200).json({ success: true, data: { photoData: null, photoMimeType: null } });
+    }
+
+    res.status(200).json({
+        success: true,
+        data: {
+            photoData: adminUser.photoData,
+            photoMimeType: adminUser.photoMimeType || 'image/jpeg'
+        }
+    });
 });
 
 // @desc    Update admin profile (current authenticated admin)

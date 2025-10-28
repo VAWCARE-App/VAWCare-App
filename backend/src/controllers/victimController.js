@@ -335,15 +335,34 @@ const getProfile = asyncHandler(async (req, res) => {
                 victimType: victim.victimType,
                 isAnonymous: victim.isAnonymous,
                 emergencyContacts: victim.emergencyContacts,
-                location: victim.location,
-                photoData: victim.photoData,
-                photoMimeType: victim.photoMimeType
+                location: victim.location
+                // photo fields intentionally omitted to reduce payload size
             }
         });
     } else {
         res.status(404);
         throw new Error('Victim not found');
     }
+});
+
+// @desc    Get victim profile photo only
+// @route   GET /api/victims/profile/photo
+// @access  Private
+const getProfilePhoto = asyncHandler(async (req, res) => {
+    const victim = await Victim.findOne({ firebaseUid: req.user.uid });
+    if (!victim) {
+        res.status(404);
+        throw new Error('Victim not found');
+    }
+
+    if (!victim.photoData) {
+        return res.status(200).json({ success: true, data: { photoData: null, photoMimeType: null } });
+    }
+
+    res.status(200).json({
+        success: true,
+        data: { photoData: victim.photoData, photoMimeType: victim.photoMimeType || 'image/jpeg' }
+    });
 });
 
 // @desc    Update victim profile
@@ -793,6 +812,7 @@ module.exports = {
 
     loginVictim,
     getProfile,
+    getProfilePhoto,
     getMetrics,
     verifyEmail,    
     verifyPhone,

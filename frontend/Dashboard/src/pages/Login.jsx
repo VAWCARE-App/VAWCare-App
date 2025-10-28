@@ -16,7 +16,7 @@ import { UserOutlined, SafetyOutlined, TeamOutlined, CloseOutlined } from "@ant-
 import ForgotPasswordModal from "../components/Modals/ForgotPasswordModal";
 import { api, saveToken } from "../lib/api";
 import { useNavigate, Link } from "react-router-dom";
-import { isAuthed, getUserType } from "../lib/api";
+import { isAuthed, getUserType, getUserData } from "../lib/api";
 // Firebase client SDK (used to exchange server custom token for an ID token)
 import { exchangeCustomTokenForIdToken } from '../lib/firebase';
 
@@ -180,12 +180,31 @@ export default function Login() {
   const navigate = useNavigate();
   // If already authenticated, redirect to their dashboard
   React.useEffect(() => {
-    if (isAuthed()) {
-      const ut = getUserType();
-      if (ut === "victim") navigate("/victim/dashboard");
-      else if (ut === "official") navigate("/admin/official-dashboard");
-      else navigate("/admin");
-    }
+    let mounted = true;
+    (async () => {
+      try {
+        if (isAuthed()) {
+          const ut = await getUserType();
+          if (!mounted) return;
+          if (ut === "victim") return navigate("/victim/dashboard");
+          if (ut === "official") return navigate("/admin/official-dashboard");
+          return navigate("/admin");
+        }
+
+        // Try to restore from HTTP-only cookie (backend)
+        const userData = await getUserData();
+        if (!mounted) return;
+        if (userData) {
+          const role = userData.userType || userData.role || null;
+          if (role === 'victim') return navigate('/victim/dashboard');
+          if (role === 'official') return navigate('/admin/official-dashboard');
+          return navigate('/admin');
+        }
+      } catch (e) {
+        console.debug('[Login] session restore failed', e && e.message);
+      }
+    })();
+    return () => { mounted = false; };
   }, []);
   const [loading, setLoading] = useState(false);
   const [userType, setUserType] = useState("victim");

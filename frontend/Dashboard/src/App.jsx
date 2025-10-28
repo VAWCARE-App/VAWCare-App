@@ -38,7 +38,7 @@ import VictimSettings from "./pages/Victim/VictimSettings";
 import ColorBends from "./components/ColorBends";
 
 
-import { isAuthed, getUserType } from "./lib/api";
+import { isAuthed, getUserType, getUserData } from "./lib/api";
 
 function Protected({ children, roles }) {
   const [loading, setLoading] = useState(true);
@@ -50,7 +50,26 @@ function Protected({ children, roles }) {
     let isMounted = true;
 
     const checkAuth = async () => {
-      const logged = isAuthed();
+      let logged = isAuthed();
+      // If not logged according to sessionStorage, try restoring from HTTP-only cookie
+      if (!logged) {
+        try {
+          const userData = await getUserData();
+          if (userData) {
+            // populate sessionStorage so other parts of the app behave normally
+            const role = userData.userType || userData.role || null;
+            if (role) sessionStorage.setItem('userType', role);
+            if (userData.id) sessionStorage.setItem('actorId', String(userData.id));
+            const businessId = userData.adminID || userData.officialID || userData.victimID || null;
+            if (businessId) sessionStorage.setItem('actorBusinessId', String(businessId));
+            logged = true;
+          }
+        } catch (e) {
+          // ignore; we'll treat as not logged
+          console.debug('[App] restore session failed', e && e.message);
+        }
+      }
+
       if (!isMounted) return;
 
       setAuthed(logged);

@@ -42,21 +42,34 @@ export default function Navbar({
     // Fetch user data from secure backend endpoint
     const fetchUser = async () => {
       try {
-        // First check if user is authenticated by checking sessionStorage
-        const userType = sessionStorage.getItem("userType");
+        // Try to restore from sessionStorage first, but if empty attempt server-side restore
+        let userType = sessionStorage.getItem("userType");
+        let userData = null;
+
         if (!userType) {
-          // Not authenticated
-          setUser(null);
-          return;
+          // attempt to fetch user data from the backend (HTTP-only cookie)
+          try {
+            userData = await getUserData();
+            if (userData) {
+              // populate sessionStorage for other parts of the app
+              const role = userData.userType || userData.role || null;
+              if (role) sessionStorage.setItem('userType', role);
+              if (userData.id) sessionStorage.setItem('actorId', String(userData.id));
+              const businessId = userData.adminID || userData.officialID || userData.victimID || null;
+              if (businessId) sessionStorage.setItem('actorBusinessId', String(businessId));
+              userType = role;
+            }
+          } catch (e) {
+            console.debug('[Navbar] server session restore failed', e && e.message);
+          }
         }
-        
-        const userData = await getUserData();
-        if (userData) {
-          setUser(userData);
-        } else {
-          // Backend returned no user data, clear state
-          setUser(null);
+
+        // If we didn't already fetch userData above, but sessionStorage exists, fetch userData for display
+        if (!userData && userType) {
+          userData = await getUserData();
         }
+
+        if (userData) setUser(userData); else setUser(null);
       } catch (err) {
         console.warn('Failed to fetch user data:', err);
         setUser(null);

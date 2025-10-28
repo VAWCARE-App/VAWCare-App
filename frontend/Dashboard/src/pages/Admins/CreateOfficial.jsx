@@ -164,7 +164,14 @@ export default function CreateOfficial() {
           </Title>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <Button icon={<CloseOutlined />} onClick={() => navigate("/admin/users")}>
+          <Button
+            icon={<CloseOutlined />}
+            onClick={() => {
+              form.resetFields();
+              setAvatar(null);
+              setPhotoMimeType(null);
+            }}
+          >
             Cancel
           </Button>
           <Button
@@ -395,23 +402,6 @@ export default function CreateOfficial() {
                   >
                     <Input.Password />
                   </Form.Item>
-                </Col>
-
-                <Col span={24}>
-                  <Divider />
-                  <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                    <Button icon={<CloseOutlined />} onClick={() => navigate("/admin/users")}>
-                      Cancel
-                    </Button>
-                    <Button
-                      type="primary"
-                      icon={<SaveOutlined />}
-                      htmlType="submit"
-                      style={{ background: BRAND.violet, borderColor: BRAND.violet }}
-                    >
-                      Save Changes
-                    </Button>
-                  </div>
                 </Col>
               </Row>
             </Form>

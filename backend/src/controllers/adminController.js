@@ -984,15 +984,39 @@ exports.getProfile = asyncHandler(async (req, res) => {
                 firstName: adminUser.firstName,
                 middleInitial: adminUser.middleInitial,
                 lastName: adminUser.lastName,
-                adminRole: adminUser.adminRole,
-                photoData: adminUser.photoData,
-                photoMimeType: adminUser.photoMimeType
+                adminRole: adminUser.adminRole
             }
         });
     } else {
         res.status(404);
         throw new Error('Admin not found');
     }
+});
+
+// @desc    Get admin profile photo only
+// @route   GET /api/admin/profile/photo
+// @access  Private (Admin)
+exports.getProfilePhoto = asyncHandler(async (req, res) => {
+    let adminUser = null;
+    if (req.user && req.user.uid) adminUser = await Admin.findOne({ firebaseUid: req.user.uid });
+    if (!adminUser && req.user && req.user.email) adminUser = await Admin.findOne({ adminEmail: req.user.email });
+
+    if (!adminUser) {
+        res.status(404);
+        throw new Error('Admin not found');
+    }
+
+    if (!adminUser.photoData) {
+        return res.status(200).json({ success: true, data: { photoData: null, photoMimeType: null } });
+    }
+
+    res.status(200).json({
+        success: true,
+        data: {
+            photoData: adminUser.photoData,
+            photoMimeType: adminUser.photoMimeType || 'image/jpeg'
+        }
+    });
 });
 
 // @desc    Update admin profile (current authenticated admin)

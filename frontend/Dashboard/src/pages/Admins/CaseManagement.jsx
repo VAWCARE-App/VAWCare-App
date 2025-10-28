@@ -671,7 +671,6 @@ export default function CaseManagement() {
                   <Option value="Psychological">Psychological</Option>
                   <Option value="Physical">Physical</Option>
                   <Option value="Sexual">Sexual</Option>
-                  <Option value="Emergency">Emergency</Option>
                 </Select>
               </Form.Item>
 

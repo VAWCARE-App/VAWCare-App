@@ -322,15 +322,34 @@ const getProfile = asyncHandler(async (req, res) => {
                 middleInitial: official.middleInitial,
                 lastName: official.lastName,
                 position: official.position,
-                contactNumber: official.contactNumber,
-                photoData: official.photoData,
-                photoMimeType: official.photoMimeType
+                contactNumber: official.contactNumber
+                // photo fields intentionally omitted to keep payload small
             }
         });
     } else {
         res.status(404);
         throw new Error('Barangay Official not found');
     }
+});
+
+// @desc    Get official profile photo only
+// @route   GET /api/officials/profile/photo
+// @access  Private
+const getProfilePhoto = asyncHandler(async (req, res) => {
+    const official = await BarangayOfficial.findOne({ firebaseUid: req.user.uid });
+    if (!official) {
+        res.status(404);
+        throw new Error('Barangay Official not found');
+    }
+
+    if (!official.photoData) {
+        return res.status(200).json({ success: true, data: { photoData: null, photoMimeType: null } });
+    }
+
+    res.status(200).json({
+        success: true,
+        data: { photoData: official.photoData, photoMimeType: official.photoMimeType || 'image/jpeg' }
+    });
 });
 
 // @desc    Update official profile
@@ -566,5 +585,6 @@ module.exports = {
     verifyEmail,
     verifyPhone,
     sendPasswordResetEmail,
+    getProfilePhoto,
     getAllVictims
 };

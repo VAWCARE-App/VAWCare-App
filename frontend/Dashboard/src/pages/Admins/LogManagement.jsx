@@ -23,6 +23,7 @@ import {
   SearchOutlined,
   FilterOutlined,
   DownloadOutlined,
+  MenuOutlined,
 } from "@ant-design/icons";
 import { api, isAuthed, getUserType } from "../../lib/api";
 import { message } from "antd";
@@ -42,6 +43,8 @@ const BRAND = {
 
 export default function LogManagement() {
   const screens = Grid.useBreakpoint();
+  const isMdUp = !!screens.md;
+  const isXs = !!screens.xs && !screens.sm;
 
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -97,7 +100,6 @@ export default function LogManagement() {
       const res = await api.get("/api/logs", { params });
 
       const payload = res?.data;
-      console.log("Fetched logs:", payload);
       const data = Array.isArray(payload) ? payload : payload?.data || [];
       const metaTotal = Array.isArray(payload) ? data.length : payload?.total ?? data.length;
 
@@ -151,10 +153,11 @@ export default function LogManagement() {
   const copy = async (text) => {
     try {
       await navigator.clipboard.writeText(String(text || ""));
-      messageApi.success("Copied to clipboard");
     } catch {
       messageApi.warning("Copy failed");
+      return;
     }
+    messageApi.success("Copied to clipboard");
   };
 
   const columns = useMemo(
@@ -234,7 +237,6 @@ export default function LogManagement() {
         render: (id) => <Text type="secondary">{id || "—"}</Text>,
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 
@@ -259,8 +261,7 @@ export default function LogManagement() {
           : "",
     }));
 
-    const header =
-      "LogID,Action,Actor,IP,TimestampLocal,TimestampISO,Details";
+    const header = "LogID,Action,Actor,IP,TimestampLocal,TimestampISO,Details";
     const body = rows
       .map((row) =>
         Object.values(row)
@@ -289,7 +290,7 @@ export default function LogManagement() {
     >
       {contextHolder}
 
-      {/* ReportManagement-style sticky header */}
+      {/* Header with mobile sidebar toggle */}
       <Header
         style={{
           position: "sticky",
@@ -301,30 +302,51 @@ export default function LogManagement() {
           alignItems: "center",
           justifyContent: "space-between",
           paddingInline: 16,
-          paddingBlock: 12,
+          paddingBlock: isXs ? 8 : 12,
           height: "auto",
           lineHeight: 1.2,
         }}
       >
-        <Space direction="vertical" size={0}>
-          <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
-            Log Management
-          </Title>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            Audit trail of actions across the system. Filter, review, and export logs.
-          </Text>
-        </Space>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+          {!isMdUp && (
+            <Button
+              type="text"
+              icon={<MenuOutlined />}
+              onClick={() => window.dispatchEvent(new Event("toggle-sider"))}
+              aria-label="Toggle sidebar"
+              style={{
+                width: isXs ? 36 : 40,
+                height: isXs ? 36 : 40,
+                display: "grid",
+                placeItems: "center",
+                borderRadius: 10,
+                background: "#ffffffcc",
+                boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
+              }}
+            />
+          )}
+
+          <Space direction="vertical" size={0}>
+            <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
+              Log Management
+            </Title>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Audit trail of actions across the system. Filter, review, and export logs.
+            </Text>
+          </Space>
+        </div>
 
         <Space wrap>
           <Button
             icon={<ReloadOutlined />}
             onClick={fetchLogs}
             style={{ borderColor: BRAND.violet, color: BRAND.violet }}
+            title="Refresh"
           >
-            Refresh
+            {isMdUp ? "Refresh" : null}
           </Button>
-          <Button icon={<DownloadOutlined />} onClick={exportCsv}>
-            Export
+          <Button icon={<DownloadOutlined />} onClick={exportCsv} title="Export">
+            {isMdUp ? "Export" : null}
           </Button>
         </Space>
       </Header>
@@ -349,9 +371,7 @@ export default function LogManagement() {
                 placeholder="Search action/details…"
                 prefix={<SearchOutlined />}
                 value={filters.q}
-                onChange={(e) =>
-                  setFilters((f) => ({ ...f, q: e.target.value }))
-                }
+                onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
               />
             </Col>
 
@@ -381,9 +401,7 @@ export default function LogManagement() {
                     : "Victim ID (e.g. VIC000)"
                 }
                 value={filters.actorId}
-                onChange={(e) =>
-                  setFilters((f) => ({ ...f, actorId: e.target.value }))
-                }
+                onChange={(e) => setFilters((f) => ({ ...f, actorId: e.target.value }))}
               />
             </Col>
 
@@ -392,9 +410,7 @@ export default function LogManagement() {
                 allowClear
                 placeholder="IP Address"
                 value={filters.ipAddress}
-                onChange={(e) =>
-                  setFilters((f) => ({ ...f, ipAddress: e.target.value }))
-                }
+                onChange={(e) => setFilters((f) => ({ ...f, ipAddress: e.target.value }))}
               />
             </Col>
 
@@ -469,10 +485,7 @@ export default function LogManagement() {
             sticky
             locale={{
               emptyText: (
-                <Empty
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  description="No logs found"
-                />
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No logs found" />
               ),
             }}
             expandable={{
@@ -497,8 +510,7 @@ export default function LogManagement() {
                   </pre>
                 </div>
               ),
-              rowExpandable: (record) =>
-                !!record?.details && typeof record.details === "object",
+              rowExpandable: (record) => !!record?.details && typeof record.details === "object",
             }}
             pagination={{
               current: page,
@@ -506,8 +518,7 @@ export default function LogManagement() {
               total: total || undefined,
               showSizeChanger: true,
               pageSizeOptions: [10, 20, 50, 100],
-              showTotal: (t, range) =>
-                `${range[0]}–${range[1]} of ${t || logs.length}`,
+              showTotal: (t, range) => `${range[0]}–${range[1]} of ${t || logs.length}`,
               onChange: (p, ps) => {
                 setPage(p);
                 setLimit(ps);

@@ -14,6 +14,7 @@ import {
   Tooltip,
   Modal,
   Form,
+  Grid,
 } from "antd";
 import {
   SearchOutlined,
@@ -21,6 +22,7 @@ import {
   EyeOutlined,
   EditOutlined,
   DeleteOutlined,
+  MenuOutlined,
 } from "@ant-design/icons";
 import { api, getUserType } from "../../lib/api";
 import { useNavigate } from "react-router-dom";
@@ -31,6 +33,9 @@ const { Option } = Select;
 
 export default function CaseManagement() {
   const { message } = AntApp.useApp();
+  const screens = Grid.useBreakpoint();
+  const isXs = !!screens.xs && !screens.sm;
+  const isMdUp = !!screens.md;
   const [loading, setLoading] = useState(true);
   const [allCases, setAllCases] = useState([]);
   const [filteredCases, setFilteredCases] = useState([]);
@@ -439,26 +444,48 @@ export default function CaseManagement() {
         style={{
           position: "sticky",
           top: 0,
-          zIndex: 5,
+          zIndex: 60,
           background: BRAND.bg,
           borderBottom: `1px solid ${BRAND.soft}`,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          paddingInline: 16,
-          paddingBlock: 12,
-          height: "auto",
+          paddingInline: isMdUp ? 20 : 12,
+          paddingBlock: isXs ? 8 : 12,
+          height: isXs ? 64 : "auto",
           lineHeight: 1.2,
+          backdropFilter: "blur(6px)",
         }}
       >
-        <Space direction="vertical" size={0}>
-          <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
-            Case Management
-          </Title>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            Review, create, and update cases
-          </Text>
-        </Space>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+          {/* sidebar toggle (visible on small screens) */}
+          {!isMdUp && (
+            <Button
+              type="text"
+              icon={<MenuOutlined />}
+              onClick={() => window.dispatchEvent(new Event("toggle-sider"))}
+              aria-label="Toggle sidebar"
+              style={{
+                width: isXs ? 36 : 40,
+                height: isXs ? 36 : 40,
+                display: "grid",
+                placeItems: "center",
+                borderRadius: 10,
+                background: "#ffffffcc",
+                boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
+              }}
+            />
+          )}
+
+          <Space direction="vertical" size={0}>
+            <Title level={isMdUp ? 4 : 5} style={{ margin: 0, color: BRAND.violet }}>
+              Case Management
+            </Title>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Review, create, and update cases
+            </Text>
+          </Space>
+        </div>
 
         <Space wrap>
           <Button
@@ -470,15 +497,17 @@ export default function CaseManagement() {
               borderRadius: 12,
               fontWeight: 700,
             }}
+            icon={!isMdUp ? undefined : undefined}
           >
-            Add Case
+            {isMdUp ? "Add Case" : "Add"}
           </Button>
           <Button
             icon={<ReloadOutlined />}
             onClick={fetchAllCases}
             style={{ borderColor: BRAND.violet, color: BRAND.violet, borderRadius: 12, fontWeight: 700 }}
+            title="Refresh"
           >
-            Refresh
+            {isMdUp ? "Refresh" : null}
           </Button>
         </Space>
       </Header>

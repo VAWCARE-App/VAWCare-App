@@ -29,6 +29,7 @@ import {
   CalendarOutlined,
   MailOutlined,
   IdcardOutlined,
+  MenuOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 
@@ -39,6 +40,10 @@ const { RangePicker } = DatePicker;
 export default function UserManagement() {
   const { message } = AntApp.useApp();
   const screens = Grid.useBreakpoint();
+  const isXs = !!screens.xs && !screens.sm; // very small phones
+  const isSm = !!screens.sm && !screens.md; // small
+  const isMdUp = !!screens.md; // tablet and up
+  const HEADER_H = isXs ? 56 : isMdUp ? 72 : 64;
 
   // Brand (matches Alerts/other updated pages)
   const BRAND = {
@@ -449,42 +454,96 @@ export default function UserManagement() {
         overflow: "hidden",
       }}
     >
-      {/* Sticky header like Alerts */}
+      {/* Sticky responsive header */}
       <Header
         style={{
           position: "sticky",
           top: 0,
-          zIndex: 5,
+          zIndex: 80,
           background: BRAND.pageBg,
           borderBottom: `1px solid ${BRAND.softBorder}`,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          paddingInline: 16,
-          paddingBlock: 12,
-          height: "auto",
+          paddingInline: isMdUp ? 20 : isSm ? 16 : 12,
+          paddingBlock: isXs ? 8 : 10,
+          height: HEADER_H,
           lineHeight: 1.2,
+          backdropFilter: "blur(6px)",
+          WebkitBackdropFilter: "blur(6px)",
+          boxShadow: isXs ? "0 6px 18px rgba(0,0,0,0.04)" : "none",
         }}
       >
-        <Space direction="vertical" size={0}>
-          <Typography.Title level={4} style={{ margin: 0, color: BRAND.violet }}>
-            User Management
-          </Typography.Title>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            Review, filter, and manage all users across roles and accounts.
-          </Typography.Text>
-        </Space>
+        <div style={{ display: "flex", alignItems: "center", gap: isXs ? 8 : 12, minWidth: 0 }}>
+          {/* Sidebar toggle only on phones & small screens (dispatches existing toggle event Sidebar listens for) */}
+          {!isMdUp && (
+            <Button
+              type="text"
+              icon={<MenuOutlined />}
+              onClick={() => window.dispatchEvent(new Event("toggle-sider"))}
+              aria-label="Toggle sidebar"
+              style={{
+                width: isXs ? 36 : 40,
+                height: isXs ? 36 : 40,
+                display: "grid",
+                placeItems: "center",
+                borderRadius: 10,
+                background: "#ffffffcc",
+                boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
+              }}
+            />
+          )}
 
-        <Space wrap>
+          <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+            <Typography.Title
+              level={isMdUp ? 4 : 5}
+              style={{
+                margin: 0,
+                color: BRAND.violet,
+                fontSize: isXs ? 18 : undefined,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              User Management
+            </Typography.Title>
+            {/* subtitle hidden on the smallest screens */}
+            {!isXs && (
+              <Typography.Text type="secondary" style={{ fontSize: isSm ? 12 : 13, overflow: "hidden", textOverflow: "ellipsis" }}>
+                Review, filter, and manage all users across roles and accounts.
+              </Typography.Text>
+            )}
+          </div>
+        </div>
+
+        <Space wrap align="center" size={12}>
+          {/* compact icon-only on xs, text on md+ */}
           <Button
             icon={<ReloadOutlined />}
             onClick={fetchAllUsers}
-            style={{ borderColor: BRAND.violet, color: BRAND.violet }}
+            style={{
+              borderColor: BRAND.violet,
+              color: BRAND.violet,
+              borderRadius: 999,
+              paddingInline: isMdUp ? 12 : 8,
+            }}
+            size={isXs ? "small" : "middle"}
+            title="Refresh"
+            aria-label="Refresh"
           >
-            Refresh
+            {isMdUp ? "Refresh" : null}
           </Button>
-          <Button icon={<DownloadOutlined />} onClick={exportCsv}>
-            Export
+
+          <Button
+            onClick={exportCsv}
+            style={{ borderRadius: 999, paddingInline: isMdUp ? 12 : 8 }}
+            size={isXs ? "small" : "middle"}
+            title="Export"
+            aria-label="Export"
+            icon={!isMdUp ? <DownloadOutlined /> : undefined}
+          >
+            {isMdUp ? "Export" : null}
           </Button>
         </Space>
       </Header>

@@ -1,3 +1,4 @@
+// src/pages/admin/AlertsManagement.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Table,
@@ -20,6 +21,7 @@ import {
   EnvironmentOutlined,
   SearchOutlined,
   ExclamationCircleOutlined,
+  MenuOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 
@@ -31,13 +33,19 @@ const { Option } = Select;
 const BRAND = {
   violet: "#7A5AF8",
   pink: "#e91e63",
-  bg: "linear-gradient(180deg, #ffffff 0%, #faf7ff 60%, #f6f3ff 100%)",
+  bg: "linear-gradient(180deg, #faf7ff 0%, #f6f3ff 60%, #ffffff 100%)",
   soft: "rgba(122,90,248,0.18)",
-  chip: "#fff0f7",
 };
 
 export default function AlertsManagement() {
   const screens = Grid.useBreakpoint();
+  const isXs = !!screens.xs && !screens.sm;
+  const isMdUp = !!screens.md;
+  const isMobile = !isMdUp;
+
+  // Header is sticky and in-flow (like ReportManagement), so no marginTop math
+  const TOP_PAD = 12;
+
   const [alerts, setAlerts] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -45,17 +53,16 @@ export default function AlertsManagement() {
   const [showMapModal, setShowMapModal] = useState(false);
   const [iframeCoords, setIframeCoords] = useState({ lat: 0, lng: 0 });
 
-  // --- dynamic table height ---
+  // --- dynamic table height (relative to where the card starts) ---
   const tableWrapRef = useRef(null);
   const [tableY, setTableY] = useState(420);
 
   const recalcTableY = () => {
     if (!tableWrapRef.current) return;
     const rect = tableWrapRef.current.getBoundingClientRect();
-    const bottomGap = 16;
-    const available = window.innerHeight - rect.top - bottomGap;
-    const buffer = 24;
-    setTableY(Math.max(240, available - buffer));
+    const available = window.innerHeight - rect.top - 12; // bottom gap
+    const buffer = isMobile ? 12 : 24;
+    setTableY(Math.max(isMobile ? 180 : 240, available - buffer));
   };
 
   useEffect(() => {
@@ -63,7 +70,7 @@ export default function AlertsManagement() {
     const ro = new ResizeObserver(recalcTableY);
     ro.observe(document.body);
     window.addEventListener("resize", recalcTableY);
-    const t = setTimeout(recalcTableY, 50);
+    const t = setTimeout(recalcTableY, 80);
     return () => {
       ro.disconnect();
       window.removeEventListener("resize", recalcTableY);
@@ -144,13 +151,13 @@ export default function AlertsManagement() {
     }
   };
 
-  // ✅ Updated columns (with map icon only)
-  const columns = [
+  // Desktop columns
+  const columnsDesktop = [
     {
       title: "Alert ID",
       dataIndex: "alertID",
       key: "alertID",
-      width: 120,
+      width: 140,
       ellipsis: true,
       render: (t) => <Text strong>{t}</Text>,
     },
@@ -159,7 +166,7 @@ export default function AlertsManagement() {
       title: "Victim",
       dataIndex: ["victimID", "victimID"],
       key: "victim",
-      width: 90,
+      width: 140,
       ellipsis: true,
       render: (_, r) =>
         r.victimID
@@ -172,7 +179,7 @@ export default function AlertsManagement() {
       dataIndex: "location",
       key: "location",
       align: "center",
-      width: 100,
+      width: 110,
       render: (loc) => {
         if (!loc) return "—";
         const lat = loc?.latitude ?? loc?.lat;
@@ -193,7 +200,7 @@ export default function AlertsManagement() {
       title: "Status",
       dataIndex: "status",
       key: "status",
-      width: 110,
+      width: 120,
       ellipsis: true,
       render: (s) => {
         const st = String(s || "").toLowerCase();
@@ -220,15 +227,69 @@ export default function AlertsManagement() {
     },
   ];
 
+  // Mobile columns
+  const columnsMobile = [
+    {
+      title: "Alert",
+      dataIndex: "alertID",
+      key: "alertID",
+      ellipsis: true,
+      render: (t) => <Text strong style={{ fontSize: 13 }}>{t}</Text>,
+    },
+    {
+      title: "Type",
+      dataIndex: "type",
+      key: "type",
+      ellipsis: true,
+      render: (t) => <span style={{ fontSize: 13 }}>{t}</span>,
+    },
+    {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      render: (s) => {
+        const st = String(s || "").toLowerCase();
+        if (st === "active") return <Tag color="red">Active</Tag>;
+        if (st === "cancelled") return <Tag>Cancelled</Tag>;
+        return <Tag color="green">Resolved</Tag>;
+      },
+    },
+    {
+      title: "",
+      dataIndex: "location",
+      key: "loc",
+      align: "right",
+      render: (loc) => {
+        if (!loc) return null;
+        const lat = loc?.latitude ?? loc?.lat;
+        const lng = loc?.longitude ?? loc?.lng;
+        return (
+          <Button
+            size="small"
+            type="text"
+            icon={<EnvironmentOutlined style={{ color: BRAND.violet }} />}
+            onClick={(e) => {
+              e.stopPropagation();
+              openMap(lat ?? loc.latitude, lng ?? loc.longitude);
+            }}
+          />
+        );
+      },
+    },
+  ];
+
+  const columns = isMobile ? columnsMobile : columnsDesktop;
+
   return (
     <Layout
       style={{
         minHeight: "100vh",
         width: "100%",
         background: BRAND.bg,
-        overflowX: "hidden",
+        overflow: "hidden",
       }}
     >
+      {/* STICKY, IN-FLOW HEADER (same behavior as ReportManagement) */}
       <Header
         style={{
           position: "sticky",
@@ -240,32 +301,63 @@ export default function AlertsManagement() {
           alignItems: "center",
           justifyContent: "space-between",
           paddingInline: 16,
-          paddingBlock: 12,
+          paddingBlock: isXs ? 8 : 12,
           height: "auto",
           lineHeight: 1.2,
         }}
       >
-        <Space direction="vertical" size={0}>
-          <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
-            Alert Management
-          </Title>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            Review, manage, and monitor emergency alerts submitted by victims.
-          </Text>
-        </Space>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+          {!isMdUp && (
+            <Button
+              type="text"
+              icon={<MenuOutlined />}
+              onClick={() => window.dispatchEvent(new Event("toggle-sider"))}
+              aria-label="Toggle sidebar"
+              style={{
+                width: 36,
+                height: 36,
+                display: "grid",
+                placeItems: "center",
+                borderRadius: 10,
+                background: "#ffffffcc",
+                boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
+              }}
+            />
+          )}
 
-        <Space>
+          <Space direction="vertical" size={0}>
+            <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
+              Alert Management
+            </Title>
+            {!isXs && (
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Review, manage, and monitor emergency alerts submitted by victims.
+              </Text>
+            )}
+          </Space>
+        </div>
+
+        <Space wrap>
           <Button
             icon={<ReloadOutlined />}
             onClick={load}
             style={{ borderColor: BRAND.violet, color: BRAND.violet }}
+            title="Refresh"
           >
-            Refresh
+            {isMdUp ? "Refresh" : null}
           </Button>
         </Space>
       </Header>
 
-      <Content style={{ padding: screens.md ? 20 : 12, overflowX: "hidden" }}>
+      <Content
+        style={{
+          padding: TOP_PAD,
+          width: "100%",
+          minWidth: 0,
+          overflow: "hidden",
+          boxSizing: "border-box",
+        }}
+      >
         <div
           style={{
             maxWidth: 1200,
@@ -276,9 +368,9 @@ export default function AlertsManagement() {
             overflowX: "hidden",
           }}
         >
-          {/* Top Stats */}
+          {/* KPIs */}
           <Row gutter={[12, 12]}>
-            <Col xs={24} md={6}>
+            <Col xs={12} sm={12} md={6}>
               <Card style={{ borderRadius: 12, textAlign: "center" }}>
                 <Text type="secondary">Total</Text>
                 <Title level={3} style={{ margin: 0, color: BRAND.pink }}>
@@ -286,7 +378,7 @@ export default function AlertsManagement() {
                 </Title>
               </Card>
             </Col>
-            <Col xs={24} md={6}>
+            <Col xs={12} sm={12} md={6}>
               <Card style={{ borderRadius: 12, textAlign: "center" }}>
                 <Text type="secondary">Active</Text>
                 <Title level={3} style={{ margin: 0, color: "#f50" }}>
@@ -294,7 +386,7 @@ export default function AlertsManagement() {
                 </Title>
               </Card>
             </Col>
-            <Col xs={24} md={6}>
+            <Col xs={12} sm={12} md={6}>
               <Card style={{ borderRadius: 12, textAlign: "center" }}>
                 <Text type="secondary">Under/Resolved</Text>
                 <Title level={3} style={{ margin: 0, color: "#52c41a" }}>
@@ -302,10 +394,10 @@ export default function AlertsManagement() {
                 </Title>
               </Card>
             </Col>
-            <Col xs={24} md={6}>
+            <Col xs={12} sm={12} md={6}>
               <Card style={{ borderRadius: 12, textAlign: "center" }}>
                 <Text type="secondary">Cancelled</Text>
-                <Title level={3} style={{ margin: 0, color: BRAND.muted }}>
+                <Title level={3} style={{ margin: 0 }}>
                   {stats.cancelled}
                 </Title>
               </Card>
@@ -314,29 +406,53 @@ export default function AlertsManagement() {
 
           {/* Filters */}
           <Card style={{ borderRadius: 12 }}>
-            <Space style={{ width: "100%", justifyContent: "space-between" }}>
-              <Space>
+            {isMdUp ? (
+              <Space style={{ width: "100%", justifyContent: "space-between" }}>
+                <Space wrap>
+                  <Search
+                    placeholder="Search alerts…"
+                    allowClear
+                    enterButton={<SearchOutlined />}
+                    onSearch={onSearch}
+                    style={{ width: 360, minWidth: 220 }}
+                  />
+                  <Select defaultValue="all" onChange={onFilterStatus} style={{ width: 180 }}>
+                    <Option value="all">All Status</Option>
+                    <Option value="Active">Active</Option>
+                    <Option value="Resolved">Resolved</Option>
+                    <Option value="Cancelled">Cancelled</Option>
+                  </Select>
+                </Space>
+                <Space>
+                  <Tooltip title="Reload alerts">
+                    <Button icon={<ReloadOutlined />} onClick={load}>
+                      Refresh
+                    </Button>
+                  </Tooltip>
+                </Space>
+              </Space>
+            ) : (
+              <Space direction="vertical" style={{ width: "100%" }}>
                 <Search
                   placeholder="Search alerts…"
                   allowClear
                   enterButton={<SearchOutlined />}
                   onSearch={onSearch}
-                  style={{ width: screens.xs ? 220 : 360 }}
+                  style={{ width: "100%" }}
                 />
-                <Select defaultValue="all" onChange={onFilterStatus} style={{ width: 180 }}>
+                <Select defaultValue="all" onChange={onFilterStatus} style={{ width: "100%" }}>
                   <Option value="all">All Status</Option>
                   <Option value="Active">Active</Option>
                   <Option value="Resolved">Resolved</Option>
                   <Option value="Cancelled">Cancelled</Option>
                 </Select>
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <Tooltip title="Reload alerts">
+                    <Button icon={<ReloadOutlined />} onClick={load} />
+                  </Tooltip>
+                </div>
               </Space>
-
-              <Space>
-                <Tooltip title="Reload alerts">
-                  <Button icon={<ReloadOutlined />} onClick={load} />
-                </Tooltip>
-              </Space>
-            </Space>
+            )}
           </Card>
 
           {/* Table */}
@@ -349,7 +465,8 @@ export default function AlertsManagement() {
               pagination={false}
               sticky
               tableLayout="fixed"
-              scroll={{ y: tableY }}
+              scroll={{ y: tableY, x: isMobile ? undefined : "max-content" }}
+              size={isMobile ? "small" : "middle"}
               onRow={(record) => ({
                 style: { cursor: "pointer" },
                 onClick: () => {
@@ -376,14 +493,16 @@ export default function AlertsManagement() {
           open={showMapModal}
           onCancel={() => setShowMapModal(false)}
           footer={null}
-          width={820}
+          width={isMdUp ? 820 : Math.min(window.innerWidth * 0.96, 820)}
+          style={{ top: isMobile ? 16 : 24 }}
+          bodyStyle={{ padding: isMobile ? 12 : 24 }}
         >
-          <Card bodyStyle={{ padding: 8 }}>
+          <Card bodyStyle={{ padding: isMobile ? 8 : 12 }}>
             <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
               <Input value={iframeCoords.lat?.toFixed?.(6) ?? ""} readOnly style={{ textAlign: "center" }} />
               <Input value={iframeCoords.lng?.toFixed?.(6) ?? ""} readOnly style={{ textAlign: "center" }} />
             </div>
-            <div style={{ width: "100%", height: 420, borderRadius: 8, overflow: "hidden" }}>
+            <div style={{ width: "100%", height: isMdUp ? 420 : 300, borderRadius: 8, overflow: "hidden" }}>
               <iframe
                 title="Alert location"
                 width="100%"
@@ -418,10 +537,19 @@ export default function AlertsManagement() {
       </Content>
 
       <style>{`
-        html, body, #root { overflow-x: hidden; }
-        .ant-layout, .ant-layout-content { overflow-x: hidden; }
-        .ant-card { transition: transform .15s ease, box-shadow .15s ease; }
-        .ant-card:hover { transform: translateY(-4px); box-shadow: 0 16px 28px rgba(16,24,40,0.06); }
+         html, body, #root { overflow-x: hidden; }
+         .ant-layout, .ant-layout-content { overflow-x: hidden; }
+         .ant-card { transition: transform .15s ease, box-shadow .15s ease; }
+         .ant-card:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(16,24,40,0.06); }
+
+         .ant-table-thead > tr > th { background: #fff !important; }
+         .ant-table .ant-table-tbody > tr:hover > td { background: #F1EEFF !important; }
+
+         @media (max-width: 575.98px) {
+           .ant-typography, .ant-card { font-size: 13px; }
+           .ant-table { font-size: 12px; }
+           .ant-space { row-gap: 6px; }
+         }
       `}</style>
     </Layout>
   );

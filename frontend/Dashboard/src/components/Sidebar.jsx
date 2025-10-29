@@ -40,7 +40,7 @@ import logo from "../assets/logo1.png";
 const { Sider } = Layout;
 const { Text } = Typography;
 
-/** Adjust to your actual header height */
+/** Keep in sync with header height */
 const HEADER_HEIGHT = 64;
 
 export default function Sidebar({ collapsed, setCollapsed }) {
@@ -56,6 +56,13 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     rail: "linear-gradient(180deg, #f6f0ff 0%, #ffe9f3 100%)",
     border: "rgba(122,90,248,0.18)",
   };
+
+  // ---- Global toggle hook (called from AdminDashboard header) ----
+  useEffect(() => {
+    const handler = () => setCollapsed((c) => !c);
+    window.addEventListener("toggle-sider", handler);
+    return () => window.removeEventListener("toggle-sider", handler);
+  }, [setCollapsed]);
 
   // ---- Logout ----
   const handleLogout = async () => {
@@ -249,30 +256,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         />
       )}
 
-      {/* Mobile opener: BELOW header, upper-left */}
-      {isMobile && collapsed && (
-        <Button
-          className="mobile-menu-btn"
-          type="text"
-          icon={<MenuOutlined />}
-          onClick={() => setCollapsed(false)}
-          aria-label="Open menu"
-          style={{
-            position: "fixed",
-            top: HEADER_HEIGHT + 8,
-            left: 8,
-            zIndex: 1200,
-            width: 44,
-            height: 44,
-            borderRadius: 12,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "rgba(255,255,255,0.9)",
-            boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
-          }}
-        />
-      )}
+      {/* Mobile opener removed — header menu icon should toggle the sidebar (use window event 'toggle-sider' or setCollapsed from parent) */}
 
       <Sider
         trigger={null}

@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import LandingPage from "./pages/LandingPage";
 import AdminLogin from "./pages/Admins/AdminLogin";
+import Sidebar from "./components/Sidebar";
 
 import Signup from "./pages/Signup";
 import TwoFactor from "./pages/2FA";
@@ -140,6 +141,7 @@ export default function App() {
             <Route path="/signup" element={<Signup />} />
             <Route path="/2fa" element={<TwoFactor />} />
             <Route path="/color-bends" element={<ColorBends />} />
+            <Route path="/sidebar" element={<Sidebar />} />
 
 
 

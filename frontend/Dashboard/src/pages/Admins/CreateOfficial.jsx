@@ -30,6 +30,7 @@ import {
   PhoneOutlined,
   UserOutlined,
   SafetyOutlined,
+  MenuOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { useNavigate } from "react-router-dom";
@@ -148,17 +149,30 @@ export default function CreateOfficial() {
           borderBottom: `1px solid ${BRAND.softBorder}`,
           display: "flex",
           alignItems: "center",
-          paddingInline: 16,
-          height: 72,
+          paddingInline: screens.md ? 20 : 12,
+          height: screens.xs && !screens.sm ? 64 : 72,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
-          <Button
-            type="text"
-            icon={<ArrowLeftOutlined />}
-            onClick={() => navigate(-1)}
-            style={{ borderRadius: 999 }}
-          />
+          {/* Sidebar toggle visible on small devices — matching UserManagement design */}
+          {!screens.md && (
+            <Button
+              type="text"
+              icon={<MenuOutlined />}
+              onClick={() => window.dispatchEvent(new Event("toggle-sider"))}
+              aria-label="Toggle sidebar"
+              style={{
+                width: screens.md ? 40 : 36,
+                height: screens.md ? 40 : 36,
+                display: "grid",
+                placeItems: "center",
+                borderRadius: 10,
+                background: "#ffffffcc",
+                boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
+              }}
+            />
+          )}
+
           <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
             Create Barangay Official
           </Title>

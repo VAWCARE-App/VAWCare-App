@@ -28,6 +28,7 @@ import {
   CalendarOutlined,
   EnvironmentOutlined,
   AlertOutlined,
+  MenuOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 
@@ -459,42 +460,68 @@ export default function ReportManagement() {
         overflow: "hidden",
       }}
     >
-      {/* Alerts-style sticky header */}
+      {/* Alerts-style sticky header with mobile sidebar toggle */}
       <Header
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 5,
-          background: BRAND.pageBg,
-          borderBottom: `1px solid ${BRAND.softBorder}`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          paddingInline: 16,
-          paddingBlock: 12,
-          height: "auto",
-          lineHeight: 1.2,
-        }}
-      >
-        <Space direction="vertical" size={0}>
-          <Typography.Title level={4} style={{ margin: 0, color: BRAND.violet }}>
-            Report Management
-          </Typography.Title>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            Review, manage, and monitor reports submitted by victims.
-          </Typography.Text>
-        </Space>
+         style={{
+           position: "sticky",
+           top: 0,
+           zIndex: 5,
+           background: BRAND.pageBg,
+           borderBottom: `1px solid ${BRAND.softBorder}`,
+           display: "flex",
+           alignItems: "center",
+           justifyContent: "space-between",
+           paddingInline: 16,
+           paddingBlock: 12,
+           height: "auto",
+           lineHeight: 1.2,
+         }}
+       >
+         <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+          {/* sidebar toggle only on small screens */}
+          {!screens.md && (
+            <Button
+              type="text"
+              icon={<MenuOutlined />}
+              onClick={() => window.dispatchEvent(new Event("toggle-sider"))}
+              aria-label="Toggle sidebar"
+              style={{
+                width: 36,
+                height: 36,
+                display: "grid",
+                placeItems: "center",
+                borderRadius: 10,
+                background: "#ffffffcc",
+                boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
+              }}
+            />
+          )}
+
+          <Space direction="vertical" size={0}>
+            <Typography.Title level={4} style={{ margin: 0, color: BRAND.violet }}>
+              Report Management
+            </Typography.Title>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              Review, manage, and monitor reports submitted by victims.
+            </Typography.Text>
+          </Space>
+        </div>
 
         <Space wrap>
           <Button
             icon={<ReloadOutlined />}
             onClick={fetchAllReports}
             style={{ borderColor: BRAND.violet, color: BRAND.violet }}
+            title="Refresh"
           >
-            Refresh
+            {screens.md ? "Refresh" : null}
           </Button>
-          <Button icon={<DownloadOutlined />} onClick={exportCsv}>
-            Export
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={exportCsv}
+            title="Export"
+          >
+            {screens.md ? "Export" : null}
           </Button>
         </Space>
       </Header>
@@ -585,9 +612,19 @@ export default function ReportManagement() {
                 />
               </Space>
               <Space>
-                <Button icon={<ReloadOutlined />} onClick={fetchAllReports} />
-                <Button icon={<DownloadOutlined />} onClick={exportCsv}>
-                  Export
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={fetchAllReports}
+                  title="Refresh"
+                >
+                  {screens.md ? "Refresh" : null}
+                </Button>
+                <Button
+                  icon={<DownloadOutlined />}
+                  onClick={exportCsv}
+                  title="Export"
+                >
+                  {screens.md ? "Export" : null}
                 </Button>
               </Space>
             </Space>
@@ -900,29 +937,7 @@ export default function ReportManagement() {
         }
 
         /* SIDE + VERTICAL CENTER (sticky header is in flow; HEADER_H = 0) */
-        .floating-side {
-          display: flex;
-          justify-content: flex-end;
-          align-items: center;
-          height: calc(100vh - ${HEADER_H}px);
-          padding: 12px;
-          box-sizing: border-box;
-        }
-
-        .floating-side .ant-modal {
-          top: auto !important;
-          margin: 0;
-          max-height: calc(100vh - ${HEADER_H}px - 24px);
-        }
-
-        .floating-modal .ant-modal-content {
-          border-radius: 14px;
-          overflow: hidden;
-          border: 1px solid ${BRAND.softBorder};
-          background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(255,255,255,0.92));
-          box-shadow: 0 20px 48px rgba(16,24,40,0.16);
-          max-height: calc(100vh - ${HEADER_H}px - 24px);
-          display: flex;
+        .floating-side
           flex-direction: column;
         }
 

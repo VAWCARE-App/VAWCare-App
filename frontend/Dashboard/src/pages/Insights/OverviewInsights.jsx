@@ -90,7 +90,8 @@ export default function OverviewInsights() {
 
   // Reusable glossy card styles (glass, not too bright)
   const glossyBase = {
-    borderRadius: 18,
+    // less rounded for a cleaner, more modern look
+    borderRadius: 12,
     background: "linear-gradient(145deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85))",
     backdropFilter: "blur(16px)",
     WebkitBackdropFilter: "blur(16px)",
@@ -99,7 +100,7 @@ export default function OverviewInsights() {
   };
 
   const glossyTintViolet = {
-    borderRadius: 18,
+    borderRadius: 12,
     background:
       "linear-gradient(145deg, rgba(155,130,255,0.45), rgba(190,170,255,0.35)), linear-gradient(145deg, rgba(255,255,255,0.85), rgba(255,255,255,0.65))",
     backdropFilter: "blur(18px)",
@@ -109,7 +110,7 @@ export default function OverviewInsights() {
   };
 
   const glossyTintPink = {
-    borderRadius: 18,
+    borderRadius: 12,
     background:
       "linear-gradient(145deg, rgba(255,160,190,0.45), rgba(255,190,210,0.35)), linear-gradient(145deg, rgba(255,255,255,0.85), rgba(255,255,255,0.65))",
     backdropFilter: "blur(18px)",
@@ -119,7 +120,7 @@ export default function OverviewInsights() {
   };
 
   const overviewSurface = {
-    borderRadius: 18,
+    borderRadius: 12,
     background:
       "linear-gradient(160deg, rgba(122,90,248,0.85) 0%, rgba(233,30,99,0.68) 100%)",
     backdropFilter: "blur(22px)",
@@ -323,9 +324,16 @@ export default function OverviewInsights() {
   }, [metrics]);
 
   return (
-    <Layout style={{ minHeight: "100vh", width: "100%", background: BRAND.bg }}>
+    <Layout
+      style={{
+        // allow the layout to size to its contents instead of forcing full viewport height
+        minHeight: "auto",
+        width: "100%",
+        background: BRAND.bg,
+      }}
+    >
       {/* Header */}
-      <Header
+      {/* <Header
         style={{
           position: "sticky",
           top: 0,
@@ -346,11 +354,11 @@ export default function OverviewInsights() {
             level={screens.md ? 4 : 5}
             style={{ margin: 0, color: BRAND.violet, fontSize: "clamp(18px,2.2vw,22px)" }}
           >
-            Dashboard
+            Overview
           </Title>
         </Space>
 
-        <Space>
+        {/* <Space>
           <Input
             allowClear
             placeholder="Search…"
@@ -370,8 +378,8 @@ export default function OverviewInsights() {
           >
             Refresh
           </Button>
-        </Space>
-      </Header>
+        </Space> */}
+      {/* </Header> */} 
 
       <Content
         style={{
@@ -381,10 +389,11 @@ export default function OverviewInsights() {
           display: "flex",
           justifyContent: "center",
           overflow: "auto",
-          paddingBottom: "max(16px, env(safe-area-inset-bottom))",
+          // fixed, small bottom padding to avoid extra whitespace from env() on some platforms
+          paddingBottom: 16,
         }}
       >
-        <div style={{ width: "100%", maxWidth: 1320 }}>
+        <div style={{ width: "100%", maxWidth: 1320, marginBottom: 12 }}>
           <Row gutter={[16, 16]}>
             {/* Left main column */}
             <Col xs={24} xl={16}>
@@ -452,7 +461,7 @@ export default function OverviewInsights() {
                           background:
                             "linear-gradient(145deg, rgba(255,255,255,0.22), rgba(255,255,255,0.10))",
                           border: "1px solid rgba(255,255,255,0.35)",
-                          borderRadius: 16,
+                          borderRadius: 10,
                           backdropFilter: "blur(10px)",
                           WebkitBackdropFilter: "blur(10px)",
                           padding: 12,
@@ -461,7 +470,7 @@ export default function OverviewInsights() {
                           flexDirection: "column",
                           alignItems: "center",
                           justifyContent: "center",
-                          minHeight: screens.md ? 260 : 220,
+                          minHeight: screens.md ? 240 : 200,
                         }}
                       >
                         {loading ? (
@@ -660,14 +669,41 @@ export default function OverviewInsights() {
         .fade-in-card { opacity: 0; transform: translateY(30px); animation: fadeUp .7s ease forwards; }
         @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
 
-        .ant-card { transition: transform .18s ease, box-shadow .18s ease, filter .18s ease; }
-        .ant-card:hover { transform: translateY(-3px); box-shadow: 0 16px 36px rgba(16,24,40,0.08); }
+        /* smoother interactions */
+        .ant-card { transition: transform .22s cubic-bezier(.2,.9,.25,1), box-shadow .22s ease, filter .18s ease; }
+        .ant-card:hover { transform: translateY(-4px); box-shadow: 0 18px 44px rgba(16,24,40,0.10); }
+
+        /* segmented control: smooth selection transition and less round look */
+        .ant-segmented {
+          transition: all .18s ease;
+          border-radius: 10px;
+          overflow: visible;
+        }
+        .ant-segmented-item {
+          transition: background-color .18s ease, color .18s ease, transform .12s ease;
+          border-radius: 8px;
+        }
+        .ant-segmented-item-selected {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(122,90,248,0.12);
+        }
+
+        /* make selection look slightly flatter (less pillly) on small screens */
+        @media (max-width: 576px) {
+          .ant-segmented { border-radius: 8px; }
+          .ant-segmented-item { border-radius: 6px; padding: 4px 8px; }
+        }
 
         .mini-stat .mini-value{
           font-weight: 800;
           font-size: clamp(16px,3vw,22px);
           color: #fff;
           text-shadow: 0 1px 0 rgba(0,0,0,0.06);
+        }
+        
+        /* reduce border-radius across some local cards on very small screens */
+        @media (max-width: 576px) {
+          .ant-card, .fade-in-card { border-radius: 10px !important; }
         }
       `}</style>
     </Layout>

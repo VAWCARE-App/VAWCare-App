@@ -1,0 +1,160 @@
+:root{
+  /* fallback tokens if not provided elsewhere */
+  --brand: #7A5AF8;
+  --accent: #FF4D80;
+  --ink: #0f172a;
+  --card: #fff;
+  --border: rgba(15,23,42,0.06);
+  --radius: 12px; /* unified radius */
+  --btn-height: 40px;
+  --shadow-soft: 0 8px 24px rgba(16,24,40,0.06);
+  --shadow-strong: 0 12px 32px rgba(2,6,23,0.32);
+}
+
+/* container */
+.nav-wrap {
+  width: 100%;
+  margin: 12px auto;
+  padding: 10px 14px;
+  max-width: 1200px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--card) 90%, transparent);
+  backdrop-filter: blur(8px) saturate(130%);
+  transition: background .2s ease, border-color .2s ease, box-shadow .2s ease, transform .12s ease;
+}
+
+/* consistent shadows */
+.nav-shadow-none { box-shadow: none; }
+.nav-shadow-lite { box-shadow: var(--shadow-soft); }
+.nav-shadow-dark { box-shadow: var(--shadow-strong); }
+
+/* brand */
+.brand-dot { width: 10px; height: 10px; border-radius: 999px; background: var(--brand); display:inline-block; }
+.brand-title { font-weight: 800; letter-spacing: .2px; color: var(--ink); font-size: 16px; margin-left:6px; }
+
+/* primary & outline buttons share sizing and radius */
+.btn-primary,
+.btn-outline,
+.nav-icon-btn,
+.ant-btn {
+  height: var(--btn-height);
+  min-height: var(--btn-height);
+  padding: 0 14px;
+  border-radius: calc(var(--radius) - 2px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+/* primary style */
+.btn-primary {
+  background: linear-gradient(90deg, var(--brand), var(--accent));
+  color: #fff;
+  border: none;
+  box-shadow: 0 8px 20px rgba(122,90,248,0.10);
+}
+
+/* outline style */
+.btn-outline {
+  background: transparent;
+  border: 1px solid rgba(15,23,42,0.06);
+  color: var(--ink);
+}
+
+/* icon-only nav button */
+.nav-icon-btn {
+  width: var(--btn-height);
+  padding: 0;
+  background: rgba(255,255,255,0.92);
+  box-shadow: var(--shadow-soft);
+}
+
+/* Drawer body (light + dark handled) */
+.ant-drawer .ant-drawer-body {
+  padding: 14px;
+  border-radius: calc(var(--radius) - 4px);
+  box-sizing: border-box;
+}
+
+/* menu: unified pill items */
+.ant-drawer .ant-menu,
+.ant-drawer .ant-menu-vertical {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+/* pill-like menu items for consistent look */
+.ant-drawer .ant-menu-item {
+  margin: 8px 0;
+  padding: 12px 14px;
+  border-radius: calc(var(--radius) - 4px);
+  transition: background .14s ease, transform .12s ease, box-shadow .12s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 700;
+  color: inherit !important;
+  background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.02));
+}
+
+/* icon sizing */
+.ant-drawer .ant-menu-item .anticon { font-size: 18px; color: inherit; }
+
+/* hover / active — subtle and consistent */
+.ant-drawer .ant-menu-item:hover,
+.ant-drawer .ant-menu-item-active,
+.ant-drawer .ant-menu-item-selected {
+  transform: translateY(-2px);
+  background: linear-gradient(90deg, rgba(122,90,248,0.10), rgba(255,77,128,0.06));
+  box-shadow: 0 10px 24px rgba(16,24,40,0.06);
+  color: var(--ink-contrast, #fff) !important;
+}
+
+/* drawer header area */
+.ant-drawer-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 16px;
+}
+
+/* footer CTA area inside drawer */
+.ant-drawer .drawer-cta-wrap {
+  margin-top: 18px;
+  border-top: 1px solid rgba(15,23,42,0.04);
+  padding-top: 14px;
+}
+
+/* CTA button full width and consistent radius */
+.ant-drawer .drawer-cta-wrap .ant-btn {
+  width: 100%;
+  border-radius: calc(var(--radius) - 2px);
+  padding: 10px 14px;
+}
+
+/* dark mode tweaks (applied by adding a wrapper class from component) */
+.sidebar-clean--dark .ant-drawer-body {
+  background: linear-gradient(180deg, rgba(6,6,8,0.98), rgba(14,12,18,0.98));
+  color: #e9e9ee;
+  border: 1px solid rgba(255,255,255,0.04);
+}
+.sidebar-clean--light .ant-drawer-body {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid rgba(15,23,42,0.04);
+}
+
+/* responsive adjustments */
+@media (max-width:420px) {
+  .nav-wrap { padding: 8px 12px; }
+  .btn-primary, .btn-outline { padding: 0 12px; }
+  .ant-drawer .ant-menu-item { padding: 14px 12px; font-size: 15px; }
+}

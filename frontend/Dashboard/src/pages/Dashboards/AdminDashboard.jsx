@@ -190,7 +190,7 @@ export default function AdminDashboard() {
           </Button>
 
           {!isXs && (
-            <Badge count={3} overflowCount={99}>
+            <Badge overflowCount={99}>
               <Avatar
                 shape="square"
                 style={{ background: BRAND.light, color: BRAND.violet }}
@@ -278,7 +278,7 @@ export default function AdminDashboard() {
                       padding: "10px 12px",
                       borderRadius: 12,
                       justifyContent: "flex-start",
-                      fontWeight: 600,
+                      fontWeight: 500,
                       whiteSpace: "nowrap",
                       textOverflow: "ellipsis",
                       overflow: "hidden",
@@ -362,6 +362,34 @@ export default function AdminDashboard() {
         /* ensure mobile content area doesn't get overlapped */
         .mobile-tab-content { z-index: 0; }
 
+        /* ----------------------------------------------------------
+           When the same navbar selection is shown inside a Modal,
+           force a single-line horizontal layout so items appear neat
+           and don't wrap. This converts the grid into a horizontal
+           scroller and makes each button inline and truncated.
+           ---------------------------------------------------------- */
+        .ant-modal .mobile-tabs-grid {
+          display: flex;
+          flex-direction: row;
+          gap: 8px;
+          overflow-x: auto;
+          padding: 8px 4px;
+          -webkit-overflow-scrolling: touch;
+          margin-top: 0; /* keep it tight in modal */
+        }
+        .ant-modal .mobile-tabs-grid .ant-btn {
+          width: auto !important;
+          flex: 0 0 auto;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .ant-modal .mobile-tabs-grid .ant-btn .anticon {
+          margin-right: 8px;
+        }
+        .ant-modal .mobile-tabs-grid .ant-btn-primary {
+          transform: none; /* avoid translateY inside modal for alignment */
+        }
       `}</style>
     </Layout>
   );

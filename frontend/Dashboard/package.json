@@ -16,6 +16,7 @@
     "framer-motion": "^12.23.22",
     "html2canvas": "^1.4.1",
     "leaflet": "^1.9.4",
+    "motion": "^12.23.24",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-leaflet": "^5.0.0",

@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react';
-import * as THREE from 'three';
-import './ColorBends.css';
+import React, { useEffect, useRef } from "react";
+import * as THREE from "three";
+import "./ColorBends.css";
 
 const MAX_COLORS = 8;
 
@@ -16,7 +16,7 @@ uniform int uTransparent;
 uniform float uScale;
 uniform float uFrequency;
 uniform float uWarpStrength;
-uniform vec2 uPointer; // in NDC [-1,1]
+uniform vec2 uPointer;
 uniform float uMouseInfluence;
 uniform float uParallax;
 uniform float uNoise;
@@ -34,57 +34,57 @@ void main() {
   vec2 toward = (uPointer - rp);
   q += toward * uMouseInfluence * 0.2;
 
-  vec3 col = vec3(0.0);
-  float a = 1.0;
+    vec3 col = vec3(0.0);
+    float a = 1.0;
 
-  if (uColorCount > 0) {
-    vec2 s = q;
-    vec3 sumCol = vec3(0.0);
-    float cover = 0.0;
-    for (int i = 0; i < MAX_COLORS; ++i) {
-      if (i >= uColorCount) break;
-      s -= 0.01;
-      vec2 r = sin(1.5 * (s.yx * uFrequency) + 2.0 * cos(s * uFrequency));
-      float m0 = length(r + sin(5.0 * r.y * uFrequency - 3.0 * t + float(i)) / 4.0);
-      float kBelow = clamp(uWarpStrength, 0.0, 1.0);
-      float kMix = pow(kBelow, 0.3);
-      float gain = 1.0 + max(uWarpStrength - 1.0, 0.0);
-      vec2 disp = (r - s) * kBelow;
-      vec2 warped = s + disp * gain;
-      float m1 = length(warped + sin(5.0 * warped.y * uFrequency - 3.0 * t + float(i)) / 4.0);
-      float m = mix(m0, m1, kMix);
-      float w = 1.0 - exp(-6.0 / exp(6.0 * m));
-      sumCol += uColors[i] * w;
-      cover = max(cover, w);
+    if (uColorCount > 0) {
+      vec2 s = q;
+      vec3 sumCol = vec3(0.0);
+      float cover = 0.0;
+      for (int i = 0; i < MAX_COLORS; ++i) {
+            if (i >= uColorCount) break;
+            s -= 0.01;
+            vec2 r = sin(1.5 * (s.yx * uFrequency) + 2.0 * cos(s * uFrequency));
+            float m0 = length(r + sin(5.0 * r.y * uFrequency - 3.0 * t + float(i)) / 4.0);
+            float kBelow = clamp(uWarpStrength, 0.0, 1.0);
+            float kMix = pow(kBelow, 0.3);
+            float gain = 1.0 + max(uWarpStrength - 1.0, 0.0);
+            vec2 disp = (r - s) * kBelow;
+            vec2 warped = s + disp * gain;
+            float m1 = length(warped + sin(5.0 * warped.y * uFrequency - 3.0 * t + float(i)) / 4.0);
+            float m = mix(m0, m1, kMix);
+            float w = 1.0 - exp(-6.0 / exp(6.0 * m));
+            sumCol += uColors[i] * w;
+            cover = max(cover, w);
+      }
+      col = clamp(sumCol, 0.0, 1.0);
+      a = uTransparent > 0 ? cover : 1.0;
+    } else {
+        vec2 s = q;
+        for (int k = 0; k < 3; ++k) {
+            s -= 0.01;
+            vec2 r = sin(1.5 * (s.yx * uFrequency) + 2.0 * cos(s * uFrequency));
+            float m0 = length(r + sin(5.0 * r.y * uFrequency - 3.0 * t + float(k)) / 4.0);
+            float kBelow = clamp(uWarpStrength, 0.0, 1.0);
+            float kMix = pow(kBelow, 0.3);
+            float gain = 1.0 + max(uWarpStrength - 1.0, 0.0);
+            vec2 disp = (r - s) * kBelow;
+            vec2 warped = s + disp * gain;
+            float m1 = length(warped + sin(5.0 * warped.y * uFrequency - 3.0 * t + float(k)) / 4.0);
+            float m = mix(m0, m1, kMix);
+            col[k] = 1.0 - exp(-6.0 / exp(6.0 * m));
+        }
+        a = uTransparent > 0 ? max(max(col.r, col.g), col.b) : 1.0;
     }
-    col = clamp(sumCol, 0.0, 1.0);
-    a = uTransparent > 0 ? cover : 1.0;
-  } else {
-    vec2 s = q;
-    for (int k = 0; k < 3; ++k) {
-      s -= 0.01;
-      vec2 r = sin(1.5 * (s.yx * uFrequency) + 2.0 * cos(s * uFrequency));
-      float m0 = length(r + sin(5.0 * r.y * uFrequency - 3.0 * t + float(k)) / 4.0);
-      float kBelow = clamp(uWarpStrength, 0.0, 1.0);
-      float kMix = pow(kBelow, 0.3);
-      float gain = 1.0 + max(uWarpStrength - 1.0, 0.0);
-      vec2 disp = (r - s) * kBelow;
-      vec2 warped = s + disp * gain;
-      float m1 = length(warped + sin(5.0 * warped.y * uFrequency - 3.0 * t + float(k)) / 4.0);
-      float m = mix(m0, m1, kMix);
-      col[k] = 1.0 - exp(-6.0 / exp(6.0 * m));
+
+    if (uNoise > 0.0001) {
+      float n = fract(sin(dot(gl_FragCoord.xy + vec2(uTime), vec2(12.9898, 78.233))) * 43758.5453123);
+      col += (n - 0.5) * uNoise;
+      col = clamp(col, 0.0, 1.0);
     }
-    a = uTransparent > 0 ? max(max(col.r, col.g), col.b) : 1.0;
-  }
 
-  if (uNoise > 0.0001) {
-    float n = fract(sin(dot(gl_FragCoord.xy + vec2(uTime), vec2(12.9898, 78.233))) * 43758.5453123);
-    col += (n - 0.5) * uNoise;
-    col = clamp(col, 0.0, 1.0);
-  }
-
-  vec3 rgb = (uTransparent > 0) ? col * a : col;
-  gl_FragColor = vec4(rgb, a);
+    vec3 rgb = (uTransparent > 0) ? col * a : col;
+    gl_FragColor = vec4(rgb, a);
 }
 `;
 
@@ -97,8 +97,8 @@ void main() {
 `;
 
 export default function ColorBends({
-  className,
-  style,
+  className = "",
+  style = {},
   rotation = 45,
   speed = 0.2,
   colors = [],
@@ -122,9 +122,10 @@ export default function ColorBends({
   const pointerCurrentRef = useRef(new THREE.Vector2(0, 0));
   const pointerSmoothRef = useRef(8);
 
-  // Mount once; we’ll update uniforms in a separate effect.
   useEffect(() => {
     const container = containerRef.current;
+    if (!container) return;
+
     const scene = new THREE.Scene();
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
@@ -159,16 +160,22 @@ export default function ColorBends({
 
     const renderer = new THREE.WebGLRenderer({
       antialias: false,
-      powerPreference: 'high-performance',
+      powerPreference: "high-performance",
       alpha: true,
     });
     rendererRef.current = renderer;
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    try {
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+    } catch (e) {
+      // fallback for older three builds
+    }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setClearColor(0x000000, transparent ? 0 : 1);
-    renderer.domElement.style.width = '100%';
-    renderer.domElement.style.height = '100%';
-    renderer.domElement.style.display = 'block';
+    renderer.domElement.style.width = "100%";
+    renderer.domElement.style.height = "100%";
+    renderer.domElement.style.display = "block";
+    renderer.domElement.style.position = "absolute";
+    renderer.domElement.style.inset = "0";
     container.appendChild(renderer.domElement);
 
     const clock = new THREE.Clock();
@@ -182,12 +189,12 @@ export default function ColorBends({
 
     handleResize();
 
-    if ('ResizeObserver' in window) {
+    if ("ResizeObserver" in window) {
       const ro = new ResizeObserver(handleResize);
       ro.observe(container);
       resizeObserverRef.current = ro;
     } else {
-      window.addEventListener('resize', handleResize);
+      window.addEventListener("resize", handleResize);
     }
 
     const loop = () => {
@@ -206,7 +213,6 @@ export default function ColorBends({
       const amt = Math.min(1, dt * pointerSmoothRef.current);
       cur.lerp(tgt, amt);
       material.uniforms.uPointer.value.copy(cur);
-
       renderer.render(scene, camera);
       rafRef.current = requestAnimationFrame(loop);
     };
@@ -215,7 +221,7 @@ export default function ColorBends({
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
       if (resizeObserverRef.current) resizeObserverRef.current.disconnect();
-      else window.removeEventListener('resize', handleResize);
+      else window.removeEventListener("resize", handleResize);
       geometry.dispose();
       material.dispose();
       renderer.dispose();
@@ -223,14 +229,16 @@ export default function ColorBends({
         container.removeChild(renderer.domElement);
       }
     };
-  }, []); // mount once
+  }, [frequency, mouseInfluence, noise, parallax, scale, speed, transparent, warpStrength]);
 
-  // Uniform updates on prop changes
+  // update uniforms / colors
   useEffect(() => {
     const material = materialRef.current;
     const renderer = rendererRef.current;
     if (!material) return;
 
+    rotationRef.current = rotation;
+    autoRotateRef.current = autoRotate;
     material.uniforms.uSpeed.value = speed;
     material.uniforms.uScale.value = scale;
     material.uniforms.uFrequency.value = frequency;
@@ -239,18 +247,14 @@ export default function ColorBends({
     material.uniforms.uParallax.value = parallax;
     material.uniforms.uNoise.value = noise;
 
-    rotationRef.current = rotation;
-    autoRotateRef.current = autoRotate;
-
     const toVec3 = (hex) => {
-      const h = String(hex || '').replace('#', '').trim();
-      let r = 0, g = 0, b = 0;
-      if (h.length === 3) {
-        r = parseInt(h[0] + h[0], 16); g = parseInt(h[1] + h[1], 16); b = parseInt(h[2] + h[2], 16);
-      } else if (h.length === 6 || h.length === 8) {
-        r = parseInt(h.slice(0, 2), 16); g = parseInt(h.slice(2, 4), 16); b = parseInt(h.slice(4, 6), 16);
-      }
-      return new THREE.Vector3(r / 255, g / 255, b / 255);
+      const h = (hex || "").replace("#", "").trim();
+      if (!h) return new THREE.Vector3(0, 0, 0);
+      const v =
+        h.length === 3
+          ? [parseInt(h[0] + h[0], 16), parseInt(h[1] + h[1], 16), parseInt(h[2] + h[2], 16)]
+          : [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+      return new THREE.Vector3(v[0] / 255, v[1] / 255, v[2] / 255);
     };
 
     const arr = (colors || []).filter(Boolean).slice(0, MAX_COLORS).map(toVec3);
@@ -277,11 +281,10 @@ export default function ColorBends({
     transparent,
   ]);
 
-  // Pointer parallax
+  // pointer handling
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-
     const handlePointerMove = (e) => {
       const rect = container.getBoundingClientRect();
       const x = ((e.clientX - rect.left) / (rect.width || 1)) * 2 - 1;
@@ -289,9 +292,10 @@ export default function ColorBends({
       pointerTargetRef.current.set(x, y);
     };
 
-    container.addEventListener('pointermove', handlePointerMove);
-    return () => container.removeEventListener('pointermove', handlePointerMove);
+    // container is behind UI (pointer-events: none) — listen on window instead
+    window.addEventListener("pointermove", handlePointerMove);
+    return () => window.removeEventListener("pointermove", handlePointerMove);
   }, []);
 
-  return <div ref={containerRef} className={`color-bends-container ${className || ''}`} style={style} />;
+  return <div ref={containerRef} className={`color-bends-container ${className}`} style={style} />;
 }

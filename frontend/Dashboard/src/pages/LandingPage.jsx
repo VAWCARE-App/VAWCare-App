@@ -256,17 +256,17 @@ export default function LandingPage() {
         <div className="page-bg" />
         <ColorBends
           rotation={dark ? 25 : 35}
-          autoRotate={dark ? 2.4 : 1.8}
+          autoRotate={prefersReduced ? 0 : (dark ? 2.4 : 1.8)}
           speed={dark ? 0.28 : 0.22}
           scale={dark ? 1.1 : 1.2}
           frequency={dark ? 1.25 : 1.1}
           warpStrength={dark ? 1.25 : 1.1}
-          mouseInfluence={0.85}
+          mouseInfluence={prefersReduced ? 0 : 0.85}
           parallax={0.35}
           noise={dark ? 0.08 : 0.05}
           transparent
           colors={dark ? shaderColorsDark : shaderColorsLight}
-          style={{ width: "120%", height: "120%" }}
+          style={{ position: "absolute", inset: "-10% 0 0 -10%", width: "120%", height: "120%" }}
         />
 
         <div className={`shell`} style={{ position: "relative", zIndex: 1 }}>

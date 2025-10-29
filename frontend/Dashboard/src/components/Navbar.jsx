@@ -1,15 +1,21 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Layout, Menu, Button, Drawer, Grid, Space, Tooltip, Badge } from "antd";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   MenuOutlined,
   LoginOutlined,
   UserSwitchOutlined,
   MoonOutlined,
   BulbOutlined,
-  LogoutOutlined
+  LogoutOutlined,
+  HomeOutlined,
+  TeamOutlined,
+  FileTextOutlined,
+  UserAddOutlined,
 } from "@ant-design/icons";
 import { clearAllStorage, getUserData } from "../lib/api";
+import BrandPill from "./bits/BrandPill"; // adjust import if your BrandPill path differs
+import "./Navbar.css";
 
 const { Header } = Layout;
 
@@ -20,6 +26,7 @@ export default function Navbar({
 }) {
   const screens = Grid.useBreakpoint();
   const location = useLocation();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [user, setUser] = useState(null);
@@ -89,6 +96,13 @@ export default function Navbar({
     { key: "about", label: <a href="#about">About</a> },
     { key: "news", label: <a href="#news">News</a> },
     { key: "location", label: <a href="#location">Location</a> },
+  ];
+
+  const items = [
+    { key: "home", label: "Home", icon: <HomeOutlined />, onClick: () => navigate("/") },
+    { key: "reports", label: "Report", icon: <FileTextOutlined />, onClick: () => navigate("/victim/report") },
+    { key: "officials", label: "Officials", icon: <TeamOutlined />, onClick: () => navigate("/officials") },
+    { key: "admin", label: "Admin Login", icon: <LoginOutlined />, onClick: () => navigate("/admin/login") },
   ];
 
   return (

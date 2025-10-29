@@ -1,0 +1,47 @@
+.dock-outer { display: flex; align-items: flex-start; justify-content: center; pointer-events: none; }
+.dock-panel {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start; /* anchor icons to the top for top navbar */
+  gap: 12px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(6px);
+  border-radius: 999px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+  margin: 6px;
+}
+
+/* dock item */
+.dock-item {
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: linear-gradient(180deg,#fff,#faf7ff);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease;
+  overflow: visible;
+  position: relative;
+}
+
+/* icon wrapper */
+.dock-icon { display: inline-grid; place-items: center; pointer-events: none; }
+
+/* label (tooltip) — for top navbar show below the icon */
+.dock-label {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  bottom: auto;
+  transform: translateX(-50%);
+  margin-top: 10px;
+  background: rgba(0,0,0,0.75);
+  color: #fff;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 9999;
+}

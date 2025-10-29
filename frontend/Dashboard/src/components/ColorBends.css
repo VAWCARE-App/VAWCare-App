@@ -1,6 +1,15 @@
 .color-bends-container {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  z-index: 0;           /* behind page chrome */
-  pointer-events: none; /* so UI stays interactive */
+  width: 100%;
+  height: 100%;
+  z-index: -1;           /* keep behind UI */
+  pointer-events: none;  /* don't block clicks / interactions */
+}
+
+/* small tweaks if you render the shader inside a bounded container */
+.color-bends-container > canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }

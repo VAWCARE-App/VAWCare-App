@@ -62,53 +62,6 @@ const registerOfficial = asyncHandler(async (req, res) => {
             passwordLength: officialPassword?.length
         });
 
-        // If a photo was provided in the registration payload, validate and extract it
-        let processedPhoto = null;
-        if (req.body.photoData) {
-            try {
-                let base64String = req.body.photoData;
-                let mimeType = req.body.photoMimeType || 'image/jpeg';
-
-                // If the base64 string includes data URL prefix, extract it
-                if (base64String.includes(';base64,')) {
-                    const matches = base64String.match(/^data:(image\/[a-zA-Z0-9+/.-]+);base64,(.+)$/);
-                    if (matches) {
-                        mimeType = matches[1];
-                        base64String = matches[2];
-                    } else {
-                        res.status(400);
-                        throw new Error('Invalid base64 image format');
-                    }
-                }
-
-                // Validate base64 string
-                if (!/^[A-Za-z0-9+/=]+$/.test(base64String.replace(/\n/g, ''))) {
-                    res.status(400);
-                    throw new Error('Invalid base64 string');
-                }
-
-                // Validate mime type
-                const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-                if (!allowedMimes.includes(mimeType)) {
-                    res.status(400);
-                    throw new Error('Invalid image MIME type. Allowed: ' + allowedMimes.join(', '));
-                }
-
-                // Validate file size (max 5MB for base64)
-                const fileSizeInBytes = Buffer.byteLength(base64String, 'base64');
-                const maxSizeInBytes = 5 * 1024 * 1024; // 5MB
-                if (fileSizeInBytes > maxSizeInBytes) {
-                    res.status(400);
-                    throw new Error('Image file size exceeds 5MB limit');
-                }
-
-                processedPhoto = { base64: base64String, mime: mimeType };
-            } catch (photoErr) {
-                console.error('Registration photo processing error:', photoErr.message);
-                throw photoErr;
-            }
-        }
-
         // Create Firebase user first
             // Create official in MongoDB first (without firebaseUid)
             const official = await BarangayOfficial.create({
@@ -124,9 +77,7 @@ const registerOfficial = asyncHandler(async (req, res) => {
                 city: city,
                 province: province,
                 status: 'pending',
-                firebaseUid: null,
-                photoData: processedPhoto ? processedPhoto.base64 : null,
-                photoMimeType: processedPhoto ? processedPhoto.mime : null
+                firebaseUid: null
             });
 
             // Now attempt to create Firebase user and attach UID to the created official
@@ -176,8 +127,6 @@ const registerOfficial = asyncHandler(async (req, res) => {
                     lastName: official.lastName,
                     position: official.position,
                     status: official.status,
-                    photoData: official.photoData || null,
-                    photoMimeType: official.photoMimeType || null
                 }
             }
         });
@@ -332,32 +281,11 @@ const getProfile = asyncHandler(async (req, res) => {
     }
 });
 
-// @desc    Get official profile photo only
-// @route   GET /api/officials/profile/photo
-// @access  Private
-const getProfilePhoto = asyncHandler(async (req, res) => {
-    const official = await BarangayOfficial.findOne({ firebaseUid: req.user.uid });
-    if (!official) {
-        res.status(404);
-        throw new Error('Barangay Official not found');
-    }
-
-    if (!official.photoData) {
-        return res.status(200).json({ success: true, data: { photoData: null, photoMimeType: null } });
-    }
-
-    res.status(200).json({
-        success: true,
-        data: { photoData: official.photoData, photoMimeType: official.photoMimeType || 'image/jpeg' }
-    });
-});
-
 // @desc    Update official profile
 // @route   PUT /api/officials/profile
 // @access  Private
 const updateProfile = asyncHandler(async (req, res) => {
     console.log("[updateProfile] Request body keys:", Object.keys(req.body));
-    console.log("[updateProfile] Has photoData?", !!req.body.photoData);
     
     const official = await BarangayOfficial.findOne({ firebaseUid: req.user.uid });
 
@@ -379,58 +307,6 @@ const updateProfile = asyncHandler(async (req, res) => {
         }
         official.contactNumber = req.body.contactNumber || official.contactNumber;
 
-        // Process base64 photo if provided
-        if (req.body.photoData) {
-            try {
-                console.log("[updateProfile] Processing photoData, length:", req.body.photoData.length);
-                let base64String = req.body.photoData;
-                let mimeType = req.body.photoMimeType || 'image/jpeg';
-
-                // If the base64 string includes data URL prefix, extract it
-                if (base64String.includes(';base64,')) {
-                    const matches = base64String.match(/^data:(image\/[a-zA-Z0-9+/.-]+);base64,(.+)$/);
-                    if (matches) {
-                        mimeType = matches[1];
-                        base64String = matches[2];
-                    } else {
-                        res.status(400);
-                        throw new Error('Invalid base64 image format');
-                    }
-                }
-
-                // Validate base64 string
-                if (!/^[A-Za-z0-9+/=]+$/.test(base64String.replace(/\n/g, ''))) {
-                    res.status(400);
-                    throw new Error('Invalid base64 string');
-                }
-
-                // Validate mime type
-                const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-                if (!allowedMimes.includes(mimeType)) {
-                    res.status(400);
-                    throw new Error('Invalid image MIME type. Allowed: ' + allowedMimes.join(', '));
-                }
-
-                // Validate file size (max 5MB for base64)
-                const fileSizeInBytes = Buffer.byteLength(base64String, 'base64');
-                const maxSizeInBytes = 5 * 1024 * 1024; // 5MB
-                if (fileSizeInBytes > maxSizeInBytes) {
-                    res.status(400);
-                    throw new Error('Image file size exceeds 5MB limit');
-                }
-
-                official.photoData = base64String;
-                official.photoMimeType = mimeType;
-                console.log("[updateProfile] photoData and photoMimeType set successfully");
-            } catch (error) {
-                console.error("[updateProfile] Photo processing error:", error.message);
-                if (error.statusCode !== 400) {
-                    res.status(400);
-                }
-                throw error;
-            }
-        }
-
         // If email is being updated, update in Firebase too
         if (req.body.email && req.body.email !== official.officialEmail) {
             await admin.auth().updateUser(req.user.uid, {
@@ -448,9 +324,7 @@ const updateProfile = asyncHandler(async (req, res) => {
             official.officialPassword = req.body.password;
         }
 
-        console.log("[updateProfile] Before save - photoData present?", !!official.photoData);
-        const updatedOfficial = await official.save();
-        console.log("[updateProfile] After save - photoData present?", !!updatedOfficial.photoData);
+    const updatedOfficial = await official.save();
 
         res.status(200).json({
             success: true,
@@ -464,10 +338,7 @@ const updateProfile = asyncHandler(async (req, res) => {
                 middleInitial: updatedOfficial.middleInitial,
                 lastName: updatedOfficial.lastName,
                 position: updatedOfficial.position,
-                contactNumber: updatedOfficial.contactNumber,
-                photoData: updatedOfficial.photoData,
-                photoMimeType: updatedOfficial.photoMimeType
-            }
+                contactNumber: updatedOfficial.contactNumber,            }
         });
         try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: 'official', actorId: updatedOfficial._id, action: 'official_profile_updated', details: `Official profile updated ${updatedOfficial.officialID || updatedOfficial._id}` }); } catch(e) { console.warn('Failed to record official profile update log', e && e.message); }
     } else {
@@ -585,6 +456,5 @@ module.exports = {
     verifyEmail,
     verifyPhone,
     sendPasswordResetEmail,
-    getProfilePhoto,
     getAllVictims
 };

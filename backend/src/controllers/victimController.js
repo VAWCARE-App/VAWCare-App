@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const Victim = require('../models/Victims');
+const Photos = require('../models/Photos');
 const IncidentReport = require('../models/IncidentReports');
 const Alert = require('../models/Alert');
 const Chatbot = require('../models/Chatbot');
@@ -365,6 +366,39 @@ const updateProfile = asyncHandler(async (req, res) => {
     let updateData = { ...req.body };
 
     
+        // If client included photoData in the payload (admin-style save), persist it to Photos
+        if (req.body.photoData && req.body.photoMimeType) {
+            try {
+                const rawBase64 = req.body.photoData;
+                const mime = req.body.photoMimeType || 'image/jpeg';
+                const photo = new Photos({
+                    owner: victim._id,
+                    ownerModel: 'Victim',
+                    mimeType: mime,
+                    image: rawBase64,
+                });
+
+                // Optional thumbnail generation (if sharp available)
+                try {
+                  const sharp = require('sharp');
+                  const imgBuf = Buffer.from(rawBase64, 'base64');
+                  const thumbBuf = await sharp(imgBuf).resize({ width: 300 }).jpeg({ quality: 70 }).toBuffer();
+                  photo.thumbnail = thumbBuf.toString('base64');
+                } catch (e) {
+                  if (e && e.code !== 'MODULE_NOT_FOUND') console.warn('[updateProfile] thumbnail generation failed:', e && e.message);
+                }
+
+                await photo.save();
+                delete updateData.photoData;
+                delete updateData.photoMimeType;
+            } catch (e) {
+                console.warn('Failed to save photo from profile update:', e && e.message);
+                delete updateData.photoData;
+                delete updateData.photoMimeType;
+            }
+
+        }
+
     const updatedVictim = await Victim.findByIdAndUpdate(
         victim._id,
         updateData,
@@ -459,6 +493,210 @@ const verifyPhone = asyncHandler(async (req, res) => {
         throw new Error('Phone verification failed');
     }
 });
+
+// @desc    Upload or replace victim profile photo (base64 payload)
+// @route   POST /api/victims/profile/photo
+// @access  Private
+const uploadPhoto = asyncHandler(async (req, res) => {
+    // Support two upload modes:
+    // 1) multipart/form-data with file field 'photo' (preferred — binary upload)
+    // 2) JSON body with { photoData: '<base64>', photoMimeType: 'image/png' }
+    const { photoData, photoMimeType } = req.body || {};
+
+    // find victim by firebase uid
+    const victim = await Victim.findOne({ firebaseUid: req.user.uid });
+    if (!victim) {
+        res.status(404);
+        throw new Error('Victim not found');
+    }
+    let finalBuffer = null;
+    let finalMime = null;
+
+    // If multer parsed a file, use it (binary upload)
+    if (req.file && req.file.buffer) {
+        finalBuffer = req.file.buffer;
+        finalMime = req.file.mimetype || 'application/octet-stream';
+    } else if (photoData && photoMimeType) {
+        // Otherwise fall back to base64 JSON payload
+        const approxSize = Buffer.from(photoData, 'base64').length;
+        if (approxSize > 4 * 1024 * 1024) {
+            res.status(413);
+            throw new Error('Photo too large');
+        }
+        finalBuffer = Buffer.from(photoData, 'base64');
+        finalMime = photoMimeType;
+    } else {
+        res.status(400);
+        throw new Error('Missing photo data (multipart "photo" file or JSON photoData)');
+    }
+
+    // If sharp is available, resize/compress the main image to a reasonable max width
+    try {
+        const sharp = require('sharp');
+        // Resize if width > 1920px, convert to JPEG to reduce size where appropriate
+        const img = sharp(finalBuffer);
+        const meta = await img.metadata();
+        if (meta && meta.width && meta.width > 1920) {
+            finalBuffer = await img.resize({ width: 1920 }).jpeg({ quality: 80 }).toBuffer();
+            finalMime = 'image/jpeg';
+        } else {
+            // For non-resize path, still optimize/normalize to JPEG for size savings (optional)
+            finalBuffer = await img.jpeg({ quality: 85 }).toBuffer();
+            finalMime = 'image/jpeg';
+        }
+    } catch (e) {
+        // sharp not installed — continue with original buffer
+        if (e && e.code !== 'MODULE_NOT_FOUND') console.warn('[uploadPhoto] sharp processing failed:', e && e.message);
+    }
+
+    // Save a new Photos document storing the base64 string directly (mark public: true)
+    const photo = new Photos({
+        owner: victim._id,
+        ownerModel: 'Victim',
+        mimeType: finalMime || 'application/octet-stream',
+        image: finalBuffer.toString('base64'),
+    });
+
+    // Try to generate a small thumbnail if 'sharp' is available
+    try {
+    const sharp = require('sharp');
+    const thumbBuf = await sharp(finalBuffer).resize({ width: 300 }).jpeg({ quality: 70 }).toBuffer();
+    photo.thumbnail = thumbBuf.toString('base64');
+    } catch (e) {
+        if (e && e.code !== 'MODULE_NOT_FOUND') console.warn('[uploadPhoto] thumbnail generation failed:', e && e.message);
+    }
+
+    await photo.save();
+
+    res.status(201).json({ success: true, message: 'Photo uploaded', data: { photoId: photo._id } });
+});
+
+// @desc    Get latest public profile photo for current victim
+// @route   GET /api/victims/profile/photo
+// @access  Private
+const getPhoto = asyncHandler(async (req, res) => {
+    const victim = await Victim.findOne({ firebaseUid: req.user.uid });
+    if (!victim) {
+        res.status(404);
+        throw new Error('Victim not found');
+    }
+
+    const photo = await Photos.findOne({ owner: victim._id }).sort({ createdAt: -1 }).lean();
+    if (!photo) {
+        return res.status(200).json({ success: true, data: null });
+    }
+
+        // Prefer returning a small thumbnail if available (faster for UI), otherwise return the main image
+        let base64 = null;
+        let mime = photo.mimeType || 'image/jpeg';
+        try {
+            if (photo.thumbnail && typeof photo.thumbnail === 'string') {
+                base64 = photo.thumbnail;
+                mime = 'image/jpeg'; // thumbnails are generated as JPEG
+            } else if (typeof photo.image === 'string') {
+                base64 = photo.image;
+                mime = photo.mimeType || mime;
+            } else if (photo.image && photo.image.buffer) {
+                base64 = Buffer.from(photo.image.buffer).toString('base64');
+            }
+        } catch (e) {
+            console.warn('[getPhoto] failed to normalize photo to base64:', e && e.message);
+        }
+
+        res.status(200).json({ success: true, data: { photoData: base64, photoMimeType: mime, photoId: photo._id } });
+});
+
+    // @desc    Get raw photo bytes (suitable for <img src="/api/..../raw")
+    // @route   GET /api/victims/profile/photo/raw
+    // @access  Private
+    const getPhotoRaw = asyncHandler(async (req, res) => {
+        const victim = await Victim.findOne({ firebaseUid: req.user.uid });
+        if (!victim) {
+            res.status(404);
+            throw new Error('Victim not found');
+        }
+
+        const photo = await Photos.findOne({ owner: victim._id }).sort({ createdAt: -1 }).lean();
+        if (!photo) return res.status(404).json({ success: false, message: 'Photo not found' });
+
+    let buf = null;
+    if (typeof photo.image === 'string') buf = Buffer.from(photo.image, 'base64');
+    else if (Buffer.isBuffer(photo.image)) buf = photo.image;
+    else if (photo.image && photo.image.buffer) buf = Buffer.from(photo.image.buffer);
+
+        if (!buf) {
+            return res.status(500).json({ success: false, message: 'Invalid photo data' });
+        }
+
+        // Compute ETag for conditional GETs
+        try {
+            const crypto = require('crypto');
+            const etag = crypto.createHash('md5').update(buf).digest('hex');
+            res.setHeader('ETag', etag);
+            const ifNoneMatch = req.headers['if-none-match'];
+            if (ifNoneMatch && ifNoneMatch === etag) {
+                return res.status(304).end();
+            }
+        } catch (e) {
+            // ignore etag failures
+        }
+
+    res.setHeader('Content-Type', photo.mimeType || 'image/jpeg');
+        // cache for 1 week by default; clients/edge caches can cache in front of server
+        res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+        res.send(buf);
+    });
+
+    // @desc    Get thumbnail image bytes (if available), otherwise try to generate if 'sharp' present
+    // @route   GET /api/victims/profile/photo/thumbnail
+    // @access  Private
+    const getPhotoThumbnail = asyncHandler(async (req, res) => {
+        const victim = await Victim.findOne({ firebaseUid: req.user.uid });
+        if (!victim) {
+            res.status(404);
+            throw new Error('Victim not found');
+        }
+
+        const photo = await Photos.findOne({ owner: victim._id }).sort({ createdAt: -1 }).lean();
+        if (!photo) return res.status(404).json({ success: false, message: 'Photo not found' });
+
+        // If thumbnail stored, return it
+        if (photo.thumbnail && typeof photo.thumbnail === 'string') {
+            const buf = Buffer.from(photo.thumbnail, 'base64');
+            try {
+                const crypto = require('crypto');
+                const etag = crypto.createHash('md5').update(buf).digest('hex');
+                res.setHeader('ETag', etag);
+                const ifNoneMatch = req.headers['if-none-match'];
+                if (ifNoneMatch && ifNoneMatch === etag) return res.status(304).end();
+            } catch (e) {}
+            res.setHeader('Content-Type', 'image/jpeg');
+            res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+            return res.send(buf);
+        }
+
+    // Otherwise, attempt to generate on-the-fly if sharp is available
+    let originalBuf = null;
+    if (typeof photo.image === 'string') originalBuf = Buffer.from(photo.image, 'base64');
+    else if (Buffer.isBuffer(photo.image)) originalBuf = photo.image;
+    else if (photo.image && photo.image.buffer) originalBuf = Buffer.from(photo.image.buffer);
+
+        if (!originalBuf) return res.status(500).json({ success: false, message: 'Invalid photo data' });
+
+        try {
+            const sharp = require('sharp');
+            const thumb = await sharp(originalBuf).resize({ width: 300 }).jpeg({ quality: 70 }).toBuffer();
+            res.setHeader('Content-Type', 'image/jpeg');
+            res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+            return res.send(thumb);
+        } catch (e) {
+            // sharp not available or generation failed — fallback to original image
+            console.warn('[getPhotoThumbnail] sharp unavailable or failed, returning original image:', e && e.message);
+            res.setHeader('Content-Type', photo.mimeType || 'image/jpeg');
+            res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+            return res.send(originalBuf);
+        }
+    });
 
 // @desc    Submit anonymous report
 // @route   POST /api/victims/anonymous/report
@@ -748,4 +986,6 @@ module.exports = {
     sendAnonymousAlert,
     getReports,
     updateReport
+    , uploadPhoto, getPhoto
+    , getPhotoRaw, getPhotoThumbnail
 };

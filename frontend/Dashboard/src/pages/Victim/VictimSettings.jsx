@@ -14,7 +14,7 @@ import {
   Statistic,
   Divider,
   Tag,
-  Upload,
+  
   Tooltip,
 } from "antd";
 import {
@@ -23,7 +23,7 @@ import {
   PhoneOutlined,
   HomeOutlined,
   UserOutlined,
-  CameraOutlined,
+  
   CheckCircleTwoTone,
   CloseCircleTwoTone,
 } from "@ant-design/icons";
@@ -45,14 +45,12 @@ const BRAND = {
 export default function VictimSettings() {
   const screens = Grid.useBreakpoint();
   const [loading, setLoading] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState(null);
   const [verified, setVerified] = useState(false);
-  const [isFormDirty, setIsFormDirty] = useState(false);
-  const [form] = Form.useForm();
-  
-  // Store photo data in state
+  const [avatarUrl, setAvatarUrl] = useState(null);
   const [photoData, setPhotoData] = useState(null);
   const [photoMimeType, setPhotoMimeType] = useState(null);
+  const [isFormDirty, setIsFormDirty] = useState(false);
+  const [form] = Form.useForm();
 
   // tolerantly determine verification from backend profile
   const determineVerified = (profile) => {
@@ -69,14 +67,6 @@ export default function VictimSettings() {
     return false;
   };
 
-  // Convert to Base64 for preview
-  const toBase64 = (file) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = (error) => reject(error);
-    });
 
   // Load profile info
   const loadProfile = async () => {
@@ -84,42 +74,6 @@ export default function VictimSettings() {
       const { data } = await api.get("/api/victims/profile");
       if (data?.success && data?.data) {
         const profile = { ...data.data };
-        
-        // Handle photoData for display and storage
-        if (profile.photoData) {
-          console.log("[VictimSettings] photoData found, type:", typeof profile.photoData, "length:", profile.photoData?.length);
-          
-          let displayUrl = profile.photoData;
-          let storeBase64 = profile.photoData;
-          
-          // If it's raw base64 (doesn't start with data:), construct the data URL
-          if (!profile.photoData.startsWith('data:image')) {
-            const mimeType = profile.photoMimeType || "image/jpeg";
-            displayUrl = `data:${mimeType};base64,${profile.photoData}`;
-            console.log("[VictimSettings] Constructed data URL for display");
-            storeBase64 = profile.photoData; // Store raw base64
-          } else {
-            // It already has the data URL prefix, extract the raw base64
-            const matches = profile.photoData.match(/^data:image\/[a-zA-Z0-9+/.-]+;base64,(.+)$/);
-            if (matches) {
-              storeBase64 = matches[1];
-              displayUrl = profile.photoData;
-            }
-          }
-          
-          setAvatarUrl(displayUrl);
-          setPhotoData(storeBase64);
-          setPhotoMimeType(profile.photoMimeType || "image/jpeg");
-          console.log("[VictimSettings] Avatar URL set, will display photo");
-        } else if (profile.photoURL) {
-          setAvatarUrl(profile.photoURL);
-          setPhotoData(null);
-          setPhotoMimeType(null);
-        } else {
-          console.log("[VictimSettings] No photo data found");
-          setPhotoData(null);
-          setPhotoMimeType(null);
-        }
         
         setVerified(determineVerified(profile));
 
@@ -146,7 +100,8 @@ export default function VictimSettings() {
       const { data } = await api.get('/api/victims/profile/photo');
       if (data?.success && data?.data && data.data.photoData) {
         const mime = data.data.photoMimeType || 'image/jpeg';
-        setAvatarUrl(data.data.photoData.startsWith('data:') ? data.data.photoData : `data:${mime};base64,${data.data.photoData}`);
+        const full = data.data.photoData.startsWith('data:') ? data.data.photoData : `data:${mime};base64,${data.data.photoData}`;
+        setAvatarUrl(full);
         setPhotoData(data.data.photoData.startsWith('data:') ? data.data.photoData.split(',')[1] : data.data.photoData);
         setPhotoMimeType(data.data.photoMimeType || 'image/jpeg');
       }
@@ -161,13 +116,6 @@ export default function VictimSettings() {
       if (cached) {
         const parsed = JSON.parse(cached);
         form.setFieldsValue(parsed);
-        if (parsed.photoURL) setAvatarUrl(parsed.photoURL);
-        if (parsed.photoData) {
-          const mime = parsed.photoMimeType || "image/jpeg";
-          setAvatarUrl(parsed.photoData.startsWith('data:') ? parsed.photoData : `data:${mime};base64,${parsed.photoData}`);
-          setPhotoData(parsed.photoData.startsWith('data:') ? parsed.photoData.split(',')[1] : parsed.photoData);
-          setPhotoMimeType(parsed.photoMimeType || "image/jpeg");
-        }
         setVerified(determineVerified(parsed));
         setIsFormDirty(false);
       }
@@ -175,34 +123,18 @@ export default function VictimSettings() {
       /* ignore parse errors */
     }
 
-    // then refresh from server: fetch profile and avatar in parallel and apply together
+    // Refresh profile from server
     (async () => {
       try {
-        const [fresh, avatarResp] = await Promise.all([
-          loadProfile(),
-          api.get('/api/victims/profile/photo').catch(() => null),
-        ]);
-
+        const fresh = await loadProfile();
         if (fresh) {
-          let avatarUrlToSet = null;
-          let photoBase64 = null;
-          let photoMime = null;
-          if (avatarResp?.data?.success && avatarResp.data.data && avatarResp.data.data.photoData) {
-            photoBase64 = avatarResp.data.data.photoData;
-            photoMime = avatarResp.data.data.photoMimeType || 'image/jpeg';
-            avatarUrlToSet = photoBase64.startsWith('data:') ? photoBase64 : `data:${photoMime};base64,${photoBase64}`;
-          } else if (fresh.photoURL) {
-            avatarUrlToSet = fresh.photoURL;
-          }
-
-          setVerified(determineVerified(fresh));
           form.setFieldsValue(fresh);
-          if (avatarUrlToSet) setAvatarUrl(avatarUrlToSet);
-          setPhotoData(photoBase64 || null);
-          setPhotoMimeType(photoMime || null);
+          setVerified(determineVerified(fresh));
+          // try to load avatar for this victim
+          try { await loadAvatar(); } catch (e) { /* ignore avatar load errors */ }
         }
       } catch (err) {
-        console.debug('[VictimSettings] parallel load failed', err?.message);
+        console.debug('[VictimSettings] profile refresh failed', err?.message);
       }
     })();
     setIsFormDirty(false);
@@ -238,30 +170,12 @@ export default function VictimSettings() {
         ];
       }
       
-      // Include photoData in payload if it exists
-      if (photoData) {
-        // Make sure we're sending just the base64 string, not the data URL
-        let cleanBase64 = photoData;
-        if (cleanBase64.includes('data:image')) {
-          const matches = cleanBase64.match(/^data:image\/[a-zA-Z0-9+/.-]+;base64,(.+)$/);
-          if (matches) {
-            cleanBase64 = matches[1];
-          }
-        }
-        payload.photoData = cleanBase64;
-        payload.photoMimeType = photoMimeType || "image/jpeg";
-        
-        console.log("[VictimSettings] Saving profile with photo - size:", cleanBase64.length);
-      }
-
-      console.log("[VictimSettings] Saving profile with photoData:", !!payload.photoData);
+      // photo fields removed - not sent to backend
       await api.put("/api/victims/profile", payload);
       message.success("Profile updated successfully!");
       // refresh profile from backend to pick up any verification changes
       const refreshed = await loadProfile();
-      if (refreshed && determineVerified(refreshed)) setVerified(true);
-  // refresh avatar separately
-  loadAvatar();
+    if (refreshed && determineVerified(refreshed)) setVerified(true);
       
       setIsFormDirty(false);
     } catch {
@@ -271,36 +185,7 @@ export default function VictimSettings() {
     }
   };
 
-  // Upload avatar
-  const onAvatarChange = async ({ file }) => {
-    try {
-      const b64 = await toBase64(file);
-      setAvatarUrl(String(b64)); // instant preview
-
-      // Extract MIME type from data URL
-      let mimeType = "image/jpeg";
-      let base64String = b64;
-      
-      if (b64.includes(";base64,")) {
-        const matches = b64.match(/^data:(image\/[a-zA-Z0-9+/.-]+);base64,(.+)$/);
-        if (matches) {
-          mimeType = matches[1];
-          base64String = matches[2];
-        }
-      }
-
-      // Store in state for saving later
-      setPhotoData(base64String);
-      setPhotoMimeType(mimeType);
-      setIsFormDirty(true); // Mark form as dirty when photo changes
-
-      console.log("[VictimSettings] Photo selected - MIME type:", mimeType, "Will save on 'Save changes' click");
-      message.info("Photo selected. Click 'Save changes' to save to profile.");
-    } catch (error) {
-      console.error("Photo selection error:", error);
-      message.error("Failed to select photo");
-    }
-  };
+  // Photo upload removed
 
   const displayName = useMemo(() => {
     const v = form.getFieldsValue();
@@ -506,26 +391,12 @@ export default function VictimSettings() {
               <div className="avatar-inner">
                 <Avatar
                   size={96}
-                  src={avatarUrl}
-                  icon={<UserOutlined />}
-                  style={{ background: BRAND.soft, color: verColor }}
+                  src={avatarUrl || undefined}
+                  icon={!avatarUrl ? <UserOutlined /> : undefined}
+                  style={{ background: avatarUrl ? undefined : BRAND.soft, color: verColor }}
                 />
               </div>
             </div>
-            <Upload
-              showUploadList={false}
-              accept="image/*"
-              beforeUpload={() => false}
-              onChange={({ file }) => file && onAvatarChange({ file })}
-            >
-              <Tooltip title="Change photo">
-                <Button
-                  className="change-avatar"
-                  icon={<CameraOutlined />}
-                  style={{ background: verColor }}
-                />
-              </Tooltip>
-            </Upload>
           </div>
         </div>
 

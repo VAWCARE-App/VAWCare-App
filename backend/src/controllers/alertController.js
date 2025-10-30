@@ -210,7 +210,7 @@ const listAlerts = asyncHandler(async (req, res) => {
   const { status } = req.query;
   const filter = {};
   if (status) filter.status = status;
-  const alerts = await Alert.find(filter).sort({ createdAt: -1 }).populate('victimID');
+  const alerts = await Alert.find(filter).sort({ createdAt: -1 }).populate('victimID', "-photoData");
   res.status(200).json({ success: true, data: alerts });
 });
 

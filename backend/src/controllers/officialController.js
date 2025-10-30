@@ -1,5 +1,6 @@
 const admin = require('../config/firebase-config');
 const BarangayOfficial = require('../models/BarangayOfficials');
+const Photos = require('../models/Photos');
 const Victim = require('../models/Victims');
 const SystemLog = require('../models/SystemLogs');
 const asyncHandler = require('express-async-handler');
@@ -324,6 +325,33 @@ const updateProfile = asyncHandler(async (req, res) => {
             official.officialPassword = req.body.password;
         }
 
+        // Persist photoData if provided (mirror admin/victim behavior)
+        let createdPhotoId = null;
+        if (req.body.photoData && req.body.photoMimeType) {
+            try {
+                const rawBase64 = req.body.photoData;
+                const mime = req.body.photoMimeType || 'image/jpeg';
+                const photo = new Photos({ owner: official._id, ownerModel: 'Official', mimeType: mime, image: rawBase64 });
+                try {
+                    const sharp = require('sharp');
+                    const imgBuf = Buffer.from(rawBase64, 'base64');
+                    const thumbBuf = await sharp(imgBuf).resize({ width: 300 }).jpeg({ quality: 70 }).toBuffer();
+                    photo.thumbnail = thumbBuf.toString('base64');
+                } catch (e) {
+                    if (e && e.code !== 'MODULE_NOT_FOUND') console.warn('[official.updateProfile] thumbnail generation failed:', e && e.message);
+                }
+                await photo.save();
+                createdPhotoId = photo._id;
+                console.log(`[official.updateProfile] saved photo ${photo._id} for official ${official._id}`);
+                delete req.body.photoData;
+                delete req.body.photoMimeType;
+            } catch (e) {
+                console.warn('Failed to save official photo from profile update:', e && e.message);
+                delete req.body.photoData;
+                delete req.body.photoMimeType;
+            }
+        }
+
     const updatedOfficial = await official.save();
 
         res.status(200).json({
@@ -338,7 +366,9 @@ const updateProfile = asyncHandler(async (req, res) => {
                 middleInitial: updatedOfficial.middleInitial,
                 lastName: updatedOfficial.lastName,
                 position: updatedOfficial.position,
-                contactNumber: updatedOfficial.contactNumber,            }
+            contactNumber: updatedOfficial.contactNumber,
+            photoId: typeof createdPhotoId !== 'undefined' ? createdPhotoId : undefined
+            }
         });
         try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: 'official', actorId: updatedOfficial._id, action: 'official_profile_updated', details: `Official profile updated ${updatedOfficial.officialID || updatedOfficial._id}` }); } catch(e) { console.warn('Failed to record official profile update log', e && e.message); }
     } else {
@@ -346,6 +376,151 @@ const updateProfile = asyncHandler(async (req, res) => {
         throw new Error('Barangay Official not found');
     }
 });
+
+// @desc    Upload or replace official profile photo (base64 or multipart)
+// @route   POST /api/officials/profile/photo
+// @access  Private
+const uploadPhoto = asyncHandler(async (req, res) => {
+    const { photoData, photoMimeType } = req.body || {};
+
+    const official = await BarangayOfficial.findOne({ firebaseUid: req.user.uid });
+    if (!official) return res.status(404).json({ success: false, message: 'Official not found' });
+
+    let finalBuffer = null;
+    let finalMime = null;
+    if (req.file && req.file.buffer) {
+        finalBuffer = req.file.buffer;
+        finalMime = req.file.mimetype || 'application/octet-stream';
+    } else if (photoData && photoMimeType) {
+        const approxSize = Buffer.from(photoData, 'base64').length;
+        if (approxSize > 8 * 1024 * 1024) { res.status(413); throw new Error('Photo too large'); }
+        finalBuffer = Buffer.from(photoData, 'base64');
+        finalMime = photoMimeType;
+    } else {
+        res.status(400);
+        throw new Error('Missing photo data (multipart "photo" file or JSON photoData)');
+    }
+
+    try {
+        const sharp = require('sharp');
+        const img = sharp(finalBuffer);
+        const meta = await img.metadata();
+        if (meta && meta.width && meta.width > 1920) {
+            finalBuffer = await img.resize({ width: 1920 }).jpeg({ quality: 80 }).toBuffer();
+            finalMime = 'image/jpeg';
+        } else {
+            finalBuffer = await img.jpeg({ quality: 85 }).toBuffer();
+            finalMime = 'image/jpeg';
+        }
+    } catch (e) {
+        if (e && e.code !== 'MODULE_NOT_FOUND') console.warn('[official.uploadPhoto] sharp processing failed:', e && e.message);
+    }
+
+    const photo = new Photos({ owner: official._id, ownerModel: 'Official', mimeType: finalMime || 'application/octet-stream', image: finalBuffer.toString('base64') });
+    try {
+        const sharp = require('sharp');
+        const thumbBuf = await sharp(finalBuffer).resize({ width: 300 }).jpeg({ quality: 70 }).toBuffer();
+        photo.thumbnail = thumbBuf.toString('base64');
+    } catch (e) {
+        if (e && e.code !== 'MODULE_NOT_FOUND') console.warn('[official.uploadPhoto] thumbnail generation failed:', e && e.message);
+    }
+
+    await photo.save();
+    res.status(201).json({ success: true, message: 'Photo uploaded', data: { photoId: photo._id } });
+});
+
+// @desc    Get latest official profile photo (prefers thumbnail)
+// @route   GET /api/officials/profile/photo
+// @access  Private
+const getPhoto = asyncHandler(async (req, res) => {
+    const official = await BarangayOfficial.findOne({ firebaseUid: req.user.uid });
+    if (!official) return res.status(404).json({ success: false, message: 'Official not found' });
+
+    const photo = await Photos.findOne({ owner: official._id, ownerModel: 'Official' }).sort({ createdAt: -1 }).lean();
+    if (!photo) return res.status(200).json({ success: true, data: null });
+
+    let base64 = null;
+    let mime = photo.mimeType || 'image/jpeg';
+    try {
+        if (photo.thumbnail && typeof photo.thumbnail === 'string') {
+            base64 = photo.thumbnail;
+            mime = 'image/jpeg';
+        } else if (typeof photo.image === 'string') {
+            base64 = photo.image;
+            mime = photo.mimeType || mime;
+        } else if (photo.image && photo.image.buffer) {
+            base64 = Buffer.from(photo.image.buffer).toString('base64');
+        }
+    } catch (e) {
+        console.warn('[official.getPhoto] failed to normalize photo to base64:', e && e.message);
+    }
+
+    res.status(200).json({ success: true, data: { photoData: base64, photoMimeType: mime, photoId: photo._id } });
+});
+
+// Raw bytes endpoint
+const getPhotoRaw = asyncHandler(async (req, res) => {
+    const official = await BarangayOfficial.findOne({ firebaseUid: req.user.uid });
+    if (!official) return res.status(404).json({ success: false, message: 'Official not found' });
+
+    const photo = await Photos.findOne({ owner: official._id, ownerModel: 'Official' }).sort({ createdAt: -1 }).lean();
+    if (!photo) return res.status(404).json({ success: false, message: 'Photo not found' });
+
+    let buf = null;
+    if (typeof photo.image === 'string') buf = Buffer.from(photo.image, 'base64');
+    else if (Buffer.isBuffer(photo.image)) buf = photo.image;
+    else if (photo.image && photo.image.buffer) buf = Buffer.from(photo.image.buffer);
+
+    if (!buf) return res.status(500).json({ success: false, message: 'Invalid photo data' });
+
+    try { const crypto = require('crypto'); const etag = crypto.createHash('md5').update(buf).digest('hex'); res.setHeader('ETag', etag); const ifNoneMatch = req.headers['if-none-match']; if (ifNoneMatch && ifNoneMatch === etag) return res.status(304).end(); } catch (e) {}
+
+    res.setHeader('Content-Type', photo.mimeType || 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+    res.send(buf);
+});
+
+// Thumbnail endpoint
+const getPhotoThumbnail = asyncHandler(async (req, res) => {
+    const official = await BarangayOfficial.findOne({ firebaseUid: req.user.uid });
+    if (!official) return res.status(404).json({ success: false, message: 'Official not found' });
+
+    const photo = await Photos.findOne({ owner: official._id, ownerModel: 'Official' }).sort({ createdAt: -1 }).lean();
+    if (!photo) return res.status(404).json({ success: false, message: 'Photo not found' });
+
+    if (photo.thumbnail && typeof photo.thumbnail === 'string') {
+        const buf = Buffer.from(photo.thumbnail, 'base64');
+        try { const crypto = require('crypto'); const etag = crypto.createHash('md5').update(buf).digest('hex'); res.setHeader('ETag', etag); const ifNoneMatch = req.headers['if-none-match']; if (ifNoneMatch && ifNoneMatch === etag) return res.status(304).end(); } catch (e) {}
+        res.setHeader('Content-Type', 'image/jpeg');
+        res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+        return res.send(buf);
+    }
+
+    let originalBuf = null;
+    if (typeof photo.image === 'string') originalBuf = Buffer.from(photo.image, 'base64');
+    else if (Buffer.isBuffer(photo.image)) originalBuf = photo.image;
+    else if (photo.image && photo.image.buffer) originalBuf = Buffer.from(photo.image.buffer);
+    if (!originalBuf) return res.status(500).json({ success: false, message: 'Invalid photo data' });
+
+    try {
+        const sharp = require('sharp');
+        const thumb = await sharp(originalBuf).resize({ width: 300 }).jpeg({ quality: 70 }).toBuffer();
+        res.setHeader('Content-Type', 'image/jpeg');
+        res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+        return res.send(thumb);
+    } catch (e) {
+        console.warn('[official.getPhotoThumbnail] sharp unavailable or failed, returning original image:', e && e.message);
+        res.setHeader('Content-Type', photo.mimeType || 'image/jpeg');
+        res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+        return res.send(originalBuf);
+    }
+});
+
+// export photo handlers
+exports.uploadPhoto = uploadPhoto;
+exports.getPhoto = getPhoto;
+exports.getPhotoRaw = getPhotoRaw;
+exports.getPhotoThumbnail = getPhotoThumbnail;
 
 // @desc    Verify official's email
 // @route   POST /api/officials/verify-email
@@ -456,5 +631,9 @@ module.exports = {
     verifyEmail,
     verifyPhone,
     sendPasswordResetEmail,
-    getAllVictims
+    getAllVictims,
+    uploadPhoto,
+    getPhoto,
+    getPhotoRaw,
+    getPhotoThumbnail
 };

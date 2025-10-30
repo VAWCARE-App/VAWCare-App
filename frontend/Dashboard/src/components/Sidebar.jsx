@@ -711,7 +711,6 @@ function railBtnStyle(BRAND, active, isMobile) {
       fontSize: 15,
       fontWeight: 700,
       color: active ? BRAND.primary : "#5a4eb1",
-      border: "none",
       borderRadius: 16,
       background: active ? "#fff" : "#ffffff",
       /* active uses stronger shadow and subtle violet border */

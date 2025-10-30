@@ -14,6 +14,9 @@ router.post('/anonymous/alert', victimController.sendAnonymousAlert);
 // Protected routes (require authentication)
 router.get('/profile', protect, victimController.getProfile);
 router.put('/profile', protect, victimController.updateProfile);
+// Photo upload/get endpoints (base64 JSON)
+router.post('/profile/photo', protect, victimController.uploadPhoto);
+router.get('/profile/photo', protect, victimController.getPhoto);
 
 // Victim-specific metrics and reports
 router.get('/metrics', protect, victimController.getMetrics);

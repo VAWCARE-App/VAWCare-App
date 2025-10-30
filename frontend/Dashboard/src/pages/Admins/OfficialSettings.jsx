@@ -122,7 +122,6 @@ export default function OfficialSettings() {
           setPhotoData(null);
           setPhotoMimeType(null);
         } else {
-          console.log("[OfficialSettings] No photo data found");
           setPhotoData(null);
           setPhotoMimeType(null);
         }

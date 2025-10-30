@@ -156,15 +156,6 @@ const victimSchema = new mongoose.Schema({
         type: Date,
         default: null,
     },
-    photoData: {
-        type: String,
-        default: null
-    },
-    photoMimeType: {
-        type: String,
-        default: null,
-        enum: [null, 'image/jpeg', 'image/png', 'image/gif', 'image/webp']
-    }
 }, {
     // keep timestamps in a separate options object if needed later
 });

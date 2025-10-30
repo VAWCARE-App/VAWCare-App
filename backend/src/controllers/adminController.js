@@ -112,11 +112,11 @@ exports.restoreOfficial = asyncHandler(async (req, res) => {
 exports.getAllUsers = asyncHandler(async (req, res) => {
   try {
     // run queries in parallel, exclude photo/base64 fields
-    const [admins, victims, officials] = await Promise.all([
-      Admin.find({}, '-adminPassword -photoData -photoMimeType').lean(),
-      Victim.find({ isDeleted: false }, '-victimPassword -photoData -photoMimeType').lean(),
-      BarangayOfficial.find({ isDeleted: false }, '-officialPassword -photoData -photoMimeType').lean(),
-    ]);
+        const [admins, victims, officials] = await Promise.all([
+            Admin.find({}, '-adminPassword').lean(),
+            Victim.find({ isDeleted: false }, '-victimPassword').lean(),
+            BarangayOfficial.find({ isDeleted: false }, '-officialPassword').lean(),
+        ]);
 
     res.status(200).json({
       success: true,
@@ -250,48 +250,6 @@ exports.registerOfficial = asyncHandler(async (req, res) => {
 
         console.log('Creating new official record...');
 
-        // Process optional photo in registration payload
-        let processedPhoto = null;
-        if (req.body.photoData) {
-            try {
-                let base64String = req.body.photoData;
-                let mimeType = req.body.photoMimeType || 'image/jpeg';
-
-                if (base64String.includes(';base64,')) {
-                    const matches = base64String.match(/^data:(image\/[a-zA-Z0-9+/.-]+);base64,(.+)$/);
-                    if (matches) {
-                        mimeType = matches[1];
-                        base64String = matches[2];
-                    } else {
-                        res.status(400);
-                        throw new Error('Invalid base64 image format');
-                    }
-                }
-
-                if (!/^[A-Za-z0-9+/=]+$/.test(base64String.replace(/\n/g, ''))) {
-                    res.status(400);
-                    throw new Error('Invalid base64 string');
-                }
-
-                const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-                if (!allowedMimes.includes(mimeType)) {
-                    res.status(400);
-                    throw new Error('Invalid image MIME type. Allowed: ' + allowedMimes.join(', '));
-                }
-
-                const fileSizeInBytes = Buffer.byteLength(base64String, 'base64');
-                const maxSizeInBytes = 5 * 1024 * 1024; // 5MB
-                if (fileSizeInBytes > maxSizeInBytes) {
-                    res.status(400);
-                    throw new Error('Image file size exceeds 5MB limit');
-                }
-
-                processedPhoto = { base64: base64String, mime: mimeType };
-            } catch (photoErr) {
-                console.error('Admin registration photo processing error:', photoErr.message);
-                throw photoErr;
-            }
-        }
 
         // Create new official
         const official = await BarangayOfficial.create({
@@ -302,9 +260,7 @@ exports.registerOfficial = asyncHandler(async (req, res) => {
             lastName,
             position,
             status: 'pending', // Default status
-            isDeleted: false,
-            photoData: processedPhoto ? processedPhoto.base64 : null,
-            photoMimeType: processedPhoto ? processedPhoto.mime : null
+            isDeleted: false
         });
 
         console.log(`Successfully registered new official with ID: ${official._id} and officialID: ${officialID}`);
@@ -988,38 +944,13 @@ exports.getProfile = asyncHandler(async (req, res) => {
     }
 });
 
-// @desc    Get admin profile photo only
-// @route   GET /api/admin/profile/photo
-// @access  Private (Admin)
-exports.getProfilePhoto = asyncHandler(async (req, res) => {
-    let adminUser = null;
-    if (req.user && req.user.uid) adminUser = await Admin.findOne({ firebaseUid: req.user.uid });
-    if (!adminUser && req.user && req.user.email) adminUser = await Admin.findOne({ adminEmail: req.user.email });
-
-    if (!adminUser) {
-        res.status(404);
-        throw new Error('Admin not found');
-    }
-
-    if (!adminUser.photoData) {
-        return res.status(200).json({ success: true, data: { photoData: null, photoMimeType: null } });
-    }
-
-    res.status(200).json({
-        success: true,
-        data: {
-            photoData: adminUser.photoData,
-            photoMimeType: adminUser.photoMimeType || 'image/jpeg'
-        }
-    });
-});
+// Photo endpoints removed - admin profile photo no longer stored or served
 
 // @desc    Update admin profile (current authenticated admin)
 // @route   PUT /api/admin/profile
 // @access  Private (Admin)
 exports.updateProfile = asyncHandler(async (req, res) => {
     console.log("[updateProfile] Request body keys:", Object.keys(req.body));
-    console.log("[updateProfile] Has photoData?", !!req.body.photoData);
     
     // Try to find by firebaseUid first, else fallback to adminEmail
     let adminUser = null;
@@ -1036,57 +967,6 @@ exports.updateProfile = asyncHandler(async (req, res) => {
     if (req.body.middleInitial !== undefined) adminUser.middleInitial = req.body.middleInitial;
     if (req.body.lastName !== undefined) adminUser.lastName = req.body.lastName;
 
-    // Process base64 photo if provided
-    if (req.body.photoData) {
-        console.log("[updateProfile] Processing photoData, length:", req.body.photoData.length);
-        try {
-            let base64String = req.body.photoData;
-            let mimeType = req.body.photoMimeType || 'image/jpeg';
-
-            // If the base64 string includes data URL prefix, extract it
-            if (base64String.includes(';base64,')) {
-                const matches = base64String.match(/^data:(image\/[a-zA-Z0-9+/.-]+);base64,(.+)$/);
-                if (matches) {
-                    mimeType = matches[1];
-                    base64String = matches[2];
-                } else {
-                    res.status(400);
-                    throw new Error('Invalid base64 image format');
-                }
-            }
-
-            // Validate base64 string
-            if (!/^[A-Za-z0-9+/=]+$/.test(base64String.replace(/\n/g, ''))) {
-                res.status(400);
-                throw new Error('Invalid base64 string');
-            }
-
-            // Validate mime type
-            const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-            if (!allowedMimes.includes(mimeType)) {
-                res.status(400);
-                throw new Error('Invalid image MIME type. Allowed: ' + allowedMimes.join(', '));
-            }
-
-            // Validate file size (max 5MB for base64)
-            const fileSizeInBytes = Buffer.byteLength(base64String, 'base64');
-            const maxSizeInBytes = 5 * 1024 * 1024; // 5MB
-            if (fileSizeInBytes > maxSizeInBytes) {
-                res.status(400);
-                throw new Error('Image file size exceeds 5MB limit');
-            }
-
-            adminUser.photoData = base64String;
-            adminUser.photoMimeType = mimeType;
-            console.log("[updateProfile] photoData and photoMimeType set successfully");
-        } catch (error) {
-            console.error("[updateProfile] Photo processing error:", error.message);
-            if (error.statusCode !== 400) {
-                res.status(400);
-            }
-            throw error;
-        }
-    }
 
     // If email is being updated, update in Firebase too (if uid available)
     if (req.body.email && req.body.email !== adminUser.adminEmail) {
@@ -1121,9 +1001,7 @@ exports.updateProfile = asyncHandler(async (req, res) => {
         adminUser.firebaseUid = req.user.uid;
     }
 
-    console.log("[updateProfile] Before save - photoData present?", !!adminUser.photoData);
     const updated = await adminUser.save();
-    console.log("[updateProfile] After save - photoData present?", !!updated.photoData);
 
     res.status(200).json({
         success: true,
@@ -1136,9 +1014,7 @@ exports.updateProfile = asyncHandler(async (req, res) => {
             firstName: updated.firstName,
             middleInitial: updated.middleInitial,
             lastName: updated.lastName,
-            adminRole: updated.adminRole,
-            photoData: updated.photoData,
-            photoMimeType: updated.photoMimeType
+            adminRole: updated.adminRole
         }
     });
     // record admin profile update

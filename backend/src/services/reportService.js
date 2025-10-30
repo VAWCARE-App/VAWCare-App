@@ -9,7 +9,7 @@ function normalizeStatus(value) {
   if (s === "in-progress" || s === "in progress" || s === "under investigation")
     return "Under Investigation";
   if (s === "pending") return "Pending";
-  if (s === "closed" ) return "Closed";
+  if (s === "closed") return "Closed";
   return undefined;
 }
 
@@ -80,7 +80,11 @@ async function listReports(filters = {}) {
 
   return IncidentReport.find(query)
     .sort({ dateReported: -1 })
-    .populate("victimID", "-location");
+    .populate({
+      path: "victimID",
+      select: "-location -photoData" // exclude both
+    })
+    .lean();
 }
 
 async function updateReport(id, updates) {

@@ -82,7 +82,7 @@ async function listReports(filters = {}) {
     .sort({ dateReported: -1 })
     .populate({
       path: "victimID",
-      select: "-location -photoData" // exclude both
+      select: "-location"
     })
     .lean();
 }

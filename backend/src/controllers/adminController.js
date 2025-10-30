@@ -110,27 +110,22 @@ exports.restoreOfficial = asyncHandler(async (req, res) => {
 });
 
 exports.getAllUsers = asyncHandler(async (req, res) => {
-    try {
-    // Get all non-deleted users from each collection, excluding password fields
-    const admins = await Admin.find({}, '-adminPassword');
+  try {
+    // run queries in parallel, exclude photo/base64 fields
+    const [admins, victims, officials] = await Promise.all([
+      Admin.find({}, '-adminPassword -photoData -photoMimeType').lean(),
+      Victim.find({ isDeleted: false }, '-victimPassword -photoData -photoMimeType').lean(),
+      BarangayOfficial.find({ isDeleted: false }, '-officialPassword -photoData -photoMimeType').lean(),
+    ]);
 
-    const victims = await Victim.find({ isDeleted: false }, '-victimPassword');
-
-    const officials = await BarangayOfficial.find({ isDeleted: false }, '-officialPassword');
-
-        res.status(200).json({
-            success: true,
-            data: {
-                admins,
-                victims,
-                officials,
-                total: admins.length + victims.length + officials.length
-            }
-        });
-    } catch (error) {
-        res.status(500);
-        throw new Error('Error retrieving users: ' + error.message);
-    }
+    res.status(200).json({
+      success: true,
+      data: { admins, victims, officials, total: admins.length + victims.length + officials.length }
+    });
+  } catch (error) {
+    res.status(500);
+    throw new Error('Error retrieving users: ' + error.message);
+  }
 });
 
 // @desc    Register a new victim

@@ -115,7 +115,6 @@ export default function AdminSettings() {
           setPhotoData(null);
           setPhotoMimeType(null);
         } else {
-          console.log("[AdminSettings] No photo data found");
           setPhotoData(null);
           setPhotoMimeType(null);
         }

@@ -76,15 +76,6 @@ const barangayOfficialSchema = new mongoose.Schema({
         type: String,
         sparse: true
     },
-    photoData: {
-        type: String,
-        default: null
-    },
-    photoMimeType: {
-        type: String,
-        default: null,
-        enum: [null, 'image/jpeg', 'image/png', 'image/gif', 'image/webp']
-    }
 });
 
 // Two-factor for officials

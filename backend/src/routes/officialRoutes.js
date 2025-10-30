@@ -13,7 +13,6 @@ router.post('/verify-phone', protect, officialController.verifyPhone);
 
 // Protected routes requiring email verification
 router.get('/profile', protect, officialController.getProfile);
-router.get('/profile/photo', protect, officialController.getProfilePhoto);
 router.put('/profile', protect, officialController.updateProfile);
 
 // Protected routes for victim management

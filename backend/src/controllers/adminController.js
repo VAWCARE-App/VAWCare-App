@@ -1,5 +1,6 @@
 const admin = require('../config/firebase-config');
 const Admin = require('../models/Admin');
+const Photos = require('../models/Photos');
 const Victim = require('../models/Victims');
 const BarangayOfficial = require('../models/BarangayOfficials');
 const SystemLog = require('../models/SystemLogs');
@@ -946,6 +947,160 @@ exports.getProfile = asyncHandler(async (req, res) => {
 
 // Photo endpoints removed - admin profile photo no longer stored or served
 
+// @desc    Upload or replace admin profile photo (base64 payload or multipart)
+// @route   POST /api/admin/profile/photo
+// @access  Private (Admin)
+exports.uploadPhoto = asyncHandler(async (req, res) => {
+    const { photoData, photoMimeType } = req.body || {};
+
+    // find admin by firebase uid or email
+    let adminUser = null;
+    if (req.user && req.user.uid) adminUser = await Admin.findOne({ firebaseUid: req.user.uid });
+    if (!adminUser && req.user && req.user.email) adminUser = await Admin.findOne({ adminEmail: req.user.email });
+    if (!adminUser) { res.status(404); throw new Error('Admin not found'); }
+
+    let finalBuffer = null;
+    let finalMime = null;
+
+    if (req.file && req.file.buffer) {
+        finalBuffer = req.file.buffer;
+        finalMime = req.file.mimetype || 'application/octet-stream';
+    } else if (photoData && photoMimeType) {
+        const approxSize = Buffer.from(photoData, 'base64').length;
+        if (approxSize > 8 * 1024 * 1024) { res.status(413); throw new Error('Photo too large'); }
+        finalBuffer = Buffer.from(photoData, 'base64');
+        finalMime = photoMimeType;
+    } else {
+        res.status(400);
+        throw new Error('Missing photo data (multipart "photo" file or JSON photoData)');
+    }
+
+    try {
+        const sharp = require('sharp');
+        const img = sharp(finalBuffer);
+        const meta = await img.metadata();
+        if (meta && meta.width && meta.width > 1920) {
+            finalBuffer = await img.resize({ width: 1920 }).jpeg({ quality: 80 }).toBuffer();
+            finalMime = 'image/jpeg';
+        } else {
+            finalBuffer = await img.jpeg({ quality: 85 }).toBuffer();
+            finalMime = 'image/jpeg';
+        }
+    } catch (e) {
+        if (e && e.code !== 'MODULE_NOT_FOUND') console.warn('[admin.uploadPhoto] sharp processing failed:', e && e.message);
+    }
+
+    const photo = new Photos({ owner: adminUser._id, ownerModel: 'Admin', mimeType: finalMime || 'application/octet-stream', image: finalBuffer.toString('base64') });
+
+    try {
+        const sharp = require('sharp');
+        const thumbBuf = await sharp(finalBuffer).resize({ width: 300 }).jpeg({ quality: 70 }).toBuffer();
+        photo.thumbnail = thumbBuf.toString('base64');
+    } catch (e) {
+        if (e && e.code !== 'MODULE_NOT_FOUND') console.warn('[admin.uploadPhoto] thumbnail generation failed:', e && e.message);
+    }
+
+    await photo.save();
+    res.status(201).json({ success: true, message: 'Photo uploaded', data: { photoId: photo._id } });
+});
+
+// @desc    Get latest admin profile photo (prefers thumbnail)
+// @route   GET /api/admin/profile/photo
+// @access  Private (Admin)
+exports.getPhoto = asyncHandler(async (req, res) => {
+    let adminUser = null;
+    if (req.user && req.user.uid) adminUser = await Admin.findOne({ firebaseUid: req.user.uid });
+    if (!adminUser && req.user && req.user.email) adminUser = await Admin.findOne({ adminEmail: req.user.email });
+    if (!adminUser) { res.status(404); throw new Error('Admin not found'); }
+
+    const photo = await Photos.findOne({ owner: adminUser._id, ownerModel: 'Admin' }).sort({ createdAt: -1 }).lean();
+    if (!photo) return res.status(200).json({ success: true, data: null });
+
+    let base64 = null;
+    let mime = photo.mimeType || 'image/jpeg';
+    try {
+        if (photo.thumbnail && typeof photo.thumbnail === 'string') {
+            base64 = photo.thumbnail;
+            mime = 'image/jpeg';
+        } else if (typeof photo.image === 'string') {
+            base64 = photo.image;
+            mime = photo.mimeType || mime;
+        } else if (photo.image && photo.image.buffer) {
+            base64 = Buffer.from(photo.image.buffer).toString('base64');
+        }
+    } catch (e) {
+        console.warn('[admin.getPhoto] failed to normalize photo to base64:', e && e.message);
+    }
+
+    res.status(200).json({ success: true, data: { photoData: base64, photoMimeType: mime, photoId: photo._id } });
+});
+
+// @desc    Get raw admin photo bytes
+// @route   GET /api/admin/profile/photo/raw
+// @access  Private (Admin)
+exports.getPhotoRaw = asyncHandler(async (req, res) => {
+    let adminUser = null;
+    if (req.user && req.user.uid) adminUser = await Admin.findOne({ firebaseUid: req.user.uid });
+    if (!adminUser && req.user && req.user.email) adminUser = await Admin.findOne({ adminEmail: req.user.email });
+    if (!adminUser) { res.status(404); throw new Error('Admin not found'); }
+
+    const photo = await Photos.findOne({ owner: adminUser._id, ownerModel: 'Admin' }).sort({ createdAt: -1 }).lean();
+    if (!photo) return res.status(404).json({ success: false, message: 'Photo not found' });
+
+    let buf = null;
+    if (typeof photo.image === 'string') buf = Buffer.from(photo.image, 'base64');
+    else if (Buffer.isBuffer(photo.image)) buf = photo.image;
+    else if (photo.image && photo.image.buffer) buf = Buffer.from(photo.image.buffer);
+
+    if (!buf) return res.status(500).json({ success: false, message: 'Invalid photo data' });
+
+    try { const crypto = require('crypto'); const etag = crypto.createHash('md5').update(buf).digest('hex'); res.setHeader('ETag', etag); const ifNoneMatch = req.headers['if-none-match']; if (ifNoneMatch && ifNoneMatch === etag) return res.status(304).end(); } catch (e) {}
+
+    res.setHeader('Content-Type', photo.mimeType || 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+    res.send(buf);
+});
+
+// @desc    Get admin photo thumbnail bytes
+// @route   GET /api/admin/profile/photo/thumbnail
+// @access  Private (Admin)
+exports.getPhotoThumbnail = asyncHandler(async (req, res) => {
+    let adminUser = null;
+    if (req.user && req.user.uid) adminUser = await Admin.findOne({ firebaseUid: req.user.uid });
+    if (!adminUser && req.user && req.user.email) adminUser = await Admin.findOne({ adminEmail: req.user.email });
+    if (!adminUser) { res.status(404); throw new Error('Admin not found'); }
+
+    const photo = await Photos.findOne({ owner: adminUser._id, ownerModel: 'Admin' }).sort({ createdAt: -1 }).lean();
+    if (!photo) return res.status(404).json({ success: false, message: 'Photo not found' });
+
+    if (photo.thumbnail && typeof photo.thumbnail === 'string') {
+        const buf = Buffer.from(photo.thumbnail, 'base64');
+        try { const crypto = require('crypto'); const etag = crypto.createHash('md5').update(buf).digest('hex'); res.setHeader('ETag', etag); const ifNoneMatch = req.headers['if-none-match']; if (ifNoneMatch && ifNoneMatch === etag) return res.status(304).end(); } catch (e) {}
+        res.setHeader('Content-Type', 'image/jpeg');
+        res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+        return res.send(buf);
+    }
+
+    let originalBuf = null;
+    if (typeof photo.image === 'string') originalBuf = Buffer.from(photo.image, 'base64');
+    else if (Buffer.isBuffer(photo.image)) originalBuf = photo.image;
+    else if (photo.image && photo.image.buffer) originalBuf = Buffer.from(photo.image.buffer);
+    if (!originalBuf) return res.status(500).json({ success: false, message: 'Invalid photo data' });
+
+    try {
+        const sharp = require('sharp');
+        const thumb = await sharp(originalBuf).resize({ width: 300 }).jpeg({ quality: 70 }).toBuffer();
+        res.setHeader('Content-Type', 'image/jpeg');
+        res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+        return res.send(thumb);
+    } catch (e) {
+        console.warn('[admin.getPhotoThumbnail] sharp unavailable or failed, returning original image:', e && e.message);
+        res.setHeader('Content-Type', photo.mimeType || 'image/jpeg');
+        res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+        return res.send(originalBuf);
+    }
+});
+
 // @desc    Update admin profile (current authenticated admin)
 // @route   PUT /api/admin/profile
 // @access  Private (Admin)
@@ -1001,6 +1156,38 @@ exports.updateProfile = asyncHandler(async (req, res) => {
         adminUser.firebaseUid = req.user.uid;
     }
 
+    // Track created photo id (if any) so we can return it to client for immediate display
+    let createdPhotoId = null;
+
+    // If client included photoData in the payload (matches frontend behavior), persist it to Photos
+    if (req.body.photoData && req.body.photoMimeType) {
+        try {
+            const rawBase64 = req.body.photoData;
+            const mime = req.body.photoMimeType || 'image/jpeg';
+            const photo = new Photos({ owner: adminUser._id, ownerModel: 'Admin', mimeType: mime, image: rawBase64 });
+
+            try {
+                const sharp = require('sharp');
+                const imgBuf = Buffer.from(rawBase64, 'base64');
+                const thumbBuf = await sharp(imgBuf).resize({ width: 300 }).jpeg({ quality: 70 }).toBuffer();
+                photo.thumbnail = thumbBuf.toString('base64');
+            } catch (e) {
+                if (e && e.code !== 'MODULE_NOT_FOUND') console.warn('[admin.updateProfile] thumbnail generation failed:', e && e.message);
+            }
+
+            await photo.save();
+            createdPhotoId = photo._id;
+            console.log(`[admin.updateProfile] saved photo ${photo._id} for admin ${adminUser._id}`);
+            // Remove photoData from payload to avoid storing on the Admin document
+            delete req.body.photoData;
+            delete req.body.photoMimeType;
+        } catch (e) {
+            console.warn('Failed to save admin photo from profile update:', e && e.message);
+            delete req.body.photoData;
+            delete req.body.photoMimeType;
+        }
+    }
+
     const updated = await adminUser.save();
 
     res.status(200).json({
@@ -1015,6 +1202,7 @@ exports.updateProfile = asyncHandler(async (req, res) => {
             middleInitial: updated.middleInitial,
             lastName: updated.lastName,
             adminRole: updated.adminRole
+            , photoId: createdPhotoId || undefined
         }
     });
     // record admin profile update

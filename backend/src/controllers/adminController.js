@@ -945,8 +945,6 @@ exports.getProfile = asyncHandler(async (req, res) => {
     }
 });
 
-// Photo endpoints removed - admin profile photo no longer stored or served
-
 // @desc    Upload or replace admin profile photo (base64 payload or multipart)
 // @route   POST /api/admin/profile/photo
 // @access  Private (Admin)

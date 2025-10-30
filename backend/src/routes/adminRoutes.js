@@ -16,7 +16,6 @@ router.post('/verify-mfa', protect, adminOnly, adminController.verifyMFA);
 
 // Profile routes for the currently authenticated admin
 router.get('/profile', protect, adminOnly, adminController.getProfile);
-router.get('/profile/photo', protect, adminOnly, adminController.getProfilePhoto);
 router.put('/profile', protect, adminOnly, adminController.updateProfile);
 
 // Get all users route

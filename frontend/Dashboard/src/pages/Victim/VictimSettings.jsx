@@ -11,6 +11,7 @@ import {
   message,
   Grid,
   Avatar,
+  Upload,
   Statistic,
   Divider,
   Tag,
@@ -27,6 +28,7 @@ import {
   CheckCircleTwoTone,
   CloseCircleTwoTone,
 } from "@ant-design/icons";
+import { CameraOutlined } from "@ant-design/icons";
 import { api } from "../../lib/api";
 
 const { Title, Text } = Typography;
@@ -49,8 +51,54 @@ export default function VictimSettings() {
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [photoData, setPhotoData] = useState(null);
   const [photoMimeType, setPhotoMimeType] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewObjectUrl, setPreviewObjectUrl] = useState(null);
   const [isFormDirty, setIsFormDirty] = useState(false);
   const [form] = Form.useForm();
+
+  const toBase64 = (file) =>
+    new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.readAsDataURL(file);
+      r.onload = () => resolve(r.result);
+      r.onerror = (e) => reject(e);
+    });
+
+  const onAvatarChange = async ({ file }) => {
+    try {
+      // Fast preview using object URL (instant), compute base64 in background
+      if (previewObjectUrl) {
+        try { URL.revokeObjectURL(previewObjectUrl); } catch (_) {}
+      }
+      const objUrl = URL.createObjectURL(file);
+      setPreviewObjectUrl(objUrl);
+      setAvatarUrl(objUrl);
+      setSelectedFile(file);
+      setIsFormDirty(true);
+      message.info('Photo selected. Click "Save changes" to save to profile.');
+
+      // compute base64 asynchronously and store for eventual save
+      try {
+        const b64 = await toBase64(file);
+        let mimeType = file.type || "image/jpeg";
+        let base64String = b64;
+        if (b64.includes(";base64,")) {
+          const matches = b64.match(/^data:(image\/[a-zA-Z0-9+/.-]+);base64,(.+)$/);
+          if (matches) {
+            mimeType = matches[1];
+            base64String = matches[2];
+          }
+        }
+        setPhotoData(base64String);
+        setPhotoMimeType(mimeType);
+      } catch (err) {
+        console.debug('Failed to compute base64 preview in background', err && err.message);
+      }
+    } catch (err) {
+      console.error('Avatar selection error', err);
+      message.error('Failed to select photo');
+    }
+  };
 
   // tolerantly determine verification from backend profile
   const determineVerified = (profile) => {
@@ -138,6 +186,10 @@ export default function VictimSettings() {
       }
     })();
     setIsFormDirty(false);
+    return () => {
+      // cleanup any object URL created for preview
+      try { if (previewObjectUrl) { URL.revokeObjectURL(previewObjectUrl); } } catch (_) {}
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form]);
 
@@ -170,7 +222,32 @@ export default function VictimSettings() {
         ];
       }
       
-      // photo fields removed - not sent to backend
+      // include photo data if present (admin-style save)
+      // If user selected a file but base64 hasn't been computed yet, compute it now
+      if (!photoData && selectedFile) {
+        try {
+          const b64data = await toBase64(selectedFile);
+          let mime = selectedFile.type || 'image/jpeg';
+          let cleanBase64 = b64data;
+          if (cleanBase64.includes('data:image')) {
+            const matches = cleanBase64.match(/^data:image\/[a-zA-Z0-9+/.-]+;base64,(.+)$/);
+            if (matches) cleanBase64 = matches[1];
+          }
+          payload.photoData = cleanBase64;
+          payload.photoMimeType = mime;
+        } catch (e) {
+          console.debug('Failed to compute photo base64 on save', e && e.message);
+        }
+      } else if (photoData) {
+        let cleanBase64 = photoData;
+        if (cleanBase64.includes('data:image')) {
+          const matches = cleanBase64.match(/^data:image\/[a-zA-Z0-9+/.-]+;base64,(.+)$/);
+          if (matches) cleanBase64 = matches[1];
+        }
+        payload.photoData = cleanBase64;
+        payload.photoMimeType = photoMimeType || 'image/jpeg';
+      }
+
       await api.put("/api/victims/profile", payload);
       message.success("Profile updated successfully!");
       // refresh profile from backend to pick up any verification changes
@@ -397,6 +474,20 @@ export default function VictimSettings() {
                 />
               </div>
             </div>
+            <Upload
+              showUploadList={false}
+              accept="image/*"
+              beforeUpload={() => false}
+              onChange={({ file }) => file && onAvatarChange({ file })}
+            >
+              <Tooltip title="Change photo">
+                <Button
+                  className="change-avatar"
+                  icon={<CameraOutlined />}
+                  style={{ background: verColor }}
+                />
+              </Tooltip>
+            </Upload>
           </div>
         </div>
 

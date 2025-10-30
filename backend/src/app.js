@@ -30,18 +30,6 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cors(corsOptions));
 app.use(cookieParser());
 
-
-
-
-
-
-
-
-
-
-
-
-
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 

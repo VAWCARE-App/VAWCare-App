@@ -7,7 +7,7 @@ const PhotoSchema = new mongoose.Schema({
   thumbnail: { type: String },
   mimeType: { type: String, default: 'image/jpeg' },
 }, {
-  timestamps: true
+  timestamps: { createdAt: true, updatedAt: false }
 });
 
 module.exports = mongoose.model('Photos', PhotoSchema);

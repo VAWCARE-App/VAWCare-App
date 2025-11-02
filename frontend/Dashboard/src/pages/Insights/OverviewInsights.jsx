@@ -66,7 +66,8 @@ export default function OverviewInsights() {
   const screens = Grid.useBreakpoint();
   const loggedRef = React.useRef(false);
   const [userType, setUserType] = useState(null);
-
+  const [mode, setMode] = useState("Monthly");
+  const [casesData, setCasesData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [metrics, setMetrics] = useState({
@@ -149,7 +150,8 @@ export default function OverviewInsights() {
       const casesPromise = api.get("/api/cases").catch(() => ({ data: [] }));
       const logsPromise = api.get("/api/logs").catch(() => ({ data: [] }));
 
-      const shouldCallAdminUsers = isAuthed() && getUserType && getUserType() === "admin";
+      const currentType = getUserType ? await getUserType() : null;
+      const shouldCallAdminUsers = isAuthed() && currentType === "admin";
       const usersPromise = shouldCallAdminUsers
         ? api.get("/api/admin/users").catch(() => ({ data: [] }))
         : Promise.resolve({ data: [] });
@@ -173,6 +175,7 @@ export default function OverviewInsights() {
           ? casesRes.data.data
           : casesRes.data?.items || [];
 
+      setCasesData(cases);
       const usersPayload = usersRes.data;
       const logs = Array.isArray(logsRes.data)
         ? logsRes.data
@@ -233,6 +236,7 @@ export default function OverviewInsights() {
         totalCases: Number(totalCases || 0),
         openCases: Number(openCases || 0),
         recentActivities: recentActivities.slice(0, 10),
+        caseTimeline,
       });
     } catch (err) {
       message.error(err?.response?.data?.message || "Failed to load metrics");
@@ -314,14 +318,46 @@ export default function OverviewInsights() {
     </Card>
   );
 
-  // fake sparkline data derived from metrics so it changes slightly
   const sparkData = useMemo(() => {
-    const base = Math.max(metrics.totalCases, 5);
-    const open = Math.max(metrics.openCases, 1);
-    return [4, 6, 5, 7, 9, 8, 10, 9, 12, 11].map((n, i) =>
-      Math.round((n * base) / (8 + (i % 3))) - (i % 2 ? open : 0)
-    );
-  }, [metrics]);
+    if (!Array.isArray(metrics.caseTimeline)) return [];
+
+    return metrics.caseTimeline
+      .slice(-10) // last 10 days
+      .map((d) => d.count); // just the numbers
+  }, [metrics.caseTimeline]);
+
+  // Determine date range based on mode
+  const today = new Date();
+  let startDate = new Date(today);
+
+  if (mode === "Weekly") {
+    startDate.setDate(today.getDate() - 6); // Past 7 days including today
+  } else if (mode === "Monthly") {
+    startDate = new Date(today.getFullYear(), today.getMonth(), 1); // Start of month
+  }
+
+  // Initialize date buckets
+  const timelineMap = {};
+  for (let d = new Date(startDate); d <= today; d.setDate(d.getDate() + 1)) {
+    const key = d.toISOString().split("T")[0];
+    timelineMap[key] = 0;
+  }
+
+  // Count cases per day
+  casesData.forEach((c) => {
+    const key = (c.createdAt || "").split("T")[0];
+    if (timelineMap[key] !== undefined) {
+      timelineMap[key]++;
+    }
+  });
+
+
+  // Convert to array for charts
+  const caseTimeline = Object.entries(timelineMap).map(([date, count]) => ({
+    date,
+    count,
+  }));
+
 
   return (
     <Layout
@@ -379,7 +415,7 @@ export default function OverviewInsights() {
             Refresh
           </Button>
         </Space> */}
-      {/* </Header> */} 
+      {/* </Header> */}
 
       <Content
         style={{
@@ -420,11 +456,12 @@ export default function OverviewInsights() {
                           <Segmented
                             size="small"
                             options={["Weekly", "Monthly"]}
-                            defaultValue="Monthly"
+                            value={mode}
+                            onChange={setMode}
                           />
                         </div>
                         <div style={{ marginTop: 10 }}>
-                          {loading ? <Skeleton active /> : <Sparkline points={sparkData} />}
+                          {loading ? <Skeleton active /> : <Sparkline points={sparkData} labels={metrics.caseTimeline?.map(t => t.date)} />}
                         </div>
                         <div
                           style={{

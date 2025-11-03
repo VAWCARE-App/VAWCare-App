@@ -72,9 +72,54 @@ export default function VictimCases() {
     setLoading(true);
     setError("");
     try {
-      const { data } = await api.get("/api/victims/reports");
-      const list = Array.isArray(data?.data) ? data.data : [];
-      setCases(list);
+      let profile = null;
+      try {
+        const profRes = await api.get("/api/victims/profile");
+        profile = profRes?.data?.data || null;
+      } catch (e) {
+        profile = null;
+      }
+
+      const reportsPromise = api.get("/api/victims/reports");
+      const casesPromise = api.get("/api/cases", { params: { victimID: profile?._id || profile?.id || profile?.victimID || undefined } });
+
+      const [reportsRes, casesRes] = await Promise.all([reportsPromise, casesPromise]);
+
+      const reports = Array.isArray(reportsRes?.data?.data) ? reportsRes.data.data : [];
+      const casesList = Array.isArray(casesRes?.data) ? casesRes.data : Array.isArray(casesRes?.data?.data) ? casesRes.data.data : [];
+
+      const mappedReports = reports.map((r) => ({
+        _source: "report",
+        reportID: r.reportID || r._id || r.id,
+        incidentType: r.incidentType,
+        status: r.status,
+        dateReported: r.dateReported || r.createdAt,
+        description: r.description,
+        location: r.location,
+        perpetrator: r.perpetrator,
+        raw: r,
+      }));
+
+      const mappedCases = casesList
+        .filter((c) => {
+          if (!profile) return true; 
+          const vid = profile._id || profile.id || profile.victimID || profile.victimId;
+          return String(c.victimID || c.victimId || c.victim || c.victimID) === String(vid);
+        })
+        .map((c) => ({
+          _source: "case",
+          reportID: c.caseID || c.caseId || c._id || c.id,
+          incidentType: c.incidentType || c.title || "Case",
+          status: c.status,
+          dateReported: c.dateReported || c.createdAt,
+          description: c.description,
+          location: c.location,
+          perpetrator: c.perpetrator,
+          raw: c,
+        }));
+
+      const merged = [...mappedReports, ...mappedCases];
+      setCases(merged);
     } catch (e) {
       setError("Unable to load cases.");
       message.error("Unable to load cases. Please try again.");
@@ -116,10 +161,24 @@ export default function VictimCases() {
 
     const arr = cases.filter((c) => byFilter(c) && byQ(c));
     const getDate = (c) => (c.dateReported ? new Date(c.dateReported).getTime() : 0);
-    if (sort === "Newest") return arr.sort((a, b) => getDate(b) - getDate(a));
-    if (sort === "Oldest") return arr.sort((a, b) => getDate(a) - getDate(b));
-    if (sort === "Status") return arr.sort((a, b) => (a.status || "").localeCompare(b.status || ""));
-    return arr;
+    const sourceWeight = (c) => (c._source === "case" ? 0 : 1);
+    const compareBySourceThen = (a, b, tieBreaker) => {
+      const sa = sourceWeight(a);
+      const sb = sourceWeight(b);
+      if (sa !== sb) return sa - sb; 
+      return tieBreaker(a, b);
+    };
+
+    if (sort === "Newest")
+      return arr.sort((a, b) => compareBySourceThen(a, b, (x, y) => getDate(y) - getDate(x)));
+
+    if (sort === "Oldest")
+      return arr.sort((a, b) => compareBySourceThen(a, b, (x, y) => getDate(x) - getDate(y)));
+
+    if (sort === "Status")
+      return arr.sort((a, b) => compareBySourceThen(a, b, (x, y) => (x.status || "").localeCompare(y.status || "")));
+
+    return arr.sort((a, b) => sourceWeight(a) - sourceWeight(b));
   }, [cases, filter, qDebounced, sort]);
 
   const copy = async (text) => {
@@ -247,7 +306,7 @@ export default function VictimCases() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
               <div>
                 <Title level={isMobile ? 4 : 3} style={{ margin: 0, color: BRAND.violet, marginBottom: 4 }}>
-                  My Cases
+                  My Cases & Reports
                 </Title>
                 <Text type="secondary" style={{ fontSize: isMobile ? 13 : 14 }}>
                   Track your incident reports and their status

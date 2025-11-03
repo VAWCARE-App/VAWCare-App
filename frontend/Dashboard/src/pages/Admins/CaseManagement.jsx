@@ -112,8 +112,10 @@ export default function CaseManagement() {
   const fetchReports = async () => {
     try {
       const { data } = await api.get("/api/reports");
-      if (data?.success) {
-        const formatted = data.data.map((r) => {
+      const raw = data?.data ?? data ?? [];
+      const arr = Array.isArray(raw) ? raw : (raw || []);
+      if (arr.length) {
+        const formatted = arr.map((r) => {
           let victim = null;
           if (r.victimID) {
             const { location, ...victimNoLocation } = r.victimID;
@@ -134,6 +136,8 @@ export default function CaseManagement() {
           };
         });
         setReportsList(formatted);
+      } else {
+        setReportsList([]);
       }
     } catch (err) {
       console.error("Failed to fetch reports", err);
@@ -712,21 +716,30 @@ export default function CaseManagement() {
                     showSearch
                     placeholder="Search and select a report..."
                     onChange={handleReportSelect}
-                    optionFilterProp="children"
+                    // search against the label (string) so users can type reportID, incident type, or victim name
+                    optionFilterProp="label"
+                    optionLabelProp="label"
                     allowClear
                     size="large"
+                    filterOption={(input, option) => {
+                      if (!option?.label) return false;
+                      return String(option.label).toLowerCase().includes(String(input).toLowerCase());
+                    }}
                   >
-                    {reportsList.map((r) => (
-                      <Option key={r.reportID} value={r.reportID}>
-                        <Space direction="vertical" size={0}>
-                          <Text strong>{r.reportID}</Text>
-                          <Text type="secondary" style={{ fontSize: 12 }}>
-                            {r.incidentType} • {r.victim?.firstName || ""}{" "}
-                            {r.victim?.lastName || ""}
-                          </Text>
-                        </Space>
-                      </Option>
-                    ))}
+                    {reportsList.map((r) => {
+                      const victimName = r.victim ? `${r.victim.firstName || ""} ${r.victim.lastName || ""}`.trim() : "";
+                      const label = `${r.reportID} ${r.incidentType || ""} ${victimName}`.trim();
+                      return (
+                        <Option key={r.reportID} value={r.reportID} label={label}>
+                          <Space direction="vertical" size={0}>
+                            <Text strong>{r.reportID}</Text>
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              {r.incidentType} • {r.victim?.firstName || ""} {r.victim?.lastName || ""}
+                            </Text>
+                          </Space>
+                        </Option>
+                      );
+                    })}
                   </Select>
                 </Form.Item>
               </Card>

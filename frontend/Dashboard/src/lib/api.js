@@ -63,7 +63,7 @@ export const clearToken = () => {
   sessionStorage.removeItem('actorId');
   sessionStorage.removeItem('actorType');
   sessionStorage.removeItem('actorBusinessId');
-  
+
   // HTTP-only cookies are cleared by the backend on logout via Set-Cookie header
   console.debug('[api] Cleared auth data from sessionStorage');
 };
@@ -85,7 +85,7 @@ export const clearUserDataCache = () => {
 export const clearAllStorage = async () => {
   // Clear user data cache
   clearUserDataCache();
-  
+
   // Call backend logout endpoint to clear HTTP-only cookies
   // HTTP-only cookies cannot be accessed by JavaScript, so we must use the backend endpoint
   try {
@@ -99,20 +99,20 @@ export const clearAllStorage = async () => {
     console.warn('Backend logout call failed:', err?.message);
     // Continue clearing frontend storage even if backend call fails
   }
-  
+
   // Clear sessionStorage (must be after backend call in case it's needed)
   sessionStorage.clear();
-  
+
   // Clear localStorage
   localStorage.clear();
-  
+
   // Clear any regular (non-HttpOnly) cookies
   // Note: HTTP-only cookies CANNOT be cleared by JavaScript - only the backend can via the logout endpoint above
   const clearCookie = (name) => {
     document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax;`;
     document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname}; SameSite=Lax;`;
   };
-  
+
   // Clear any remaining non-HttpOnly cookies
   ['token', 'auth_token', 'Authorization', 'session', 'sessionId'].forEach(clearCookie);
 };
@@ -175,10 +175,18 @@ api.interceptors.response.use(
       // Only force logout for critical auth verification endpoints
       if (requestUrl.includes('/token/refresh') || requestUrl.includes('/auth/me')) {
         console.log('[api] auth failure on critical endpoint — clearing session and redirecting to login');
+
+        // Clear local session info
         clearToken();
-        // if user is in admin area, redirect to admin login; otherwise redirect to regular login
-        const redirectToAdmin = window.location.pathname.startsWith('/admin');
-        window.location.href = redirectToAdmin ? '/admin/login' : '/login';
+
+        // Prefer in-app navigation via an event so React Router can handle redirect without page reloads
+        try {
+          window.dispatchEvent(new CustomEvent('api:unauthorized', { detail: { requestUrl } }));
+        } catch (e) {
+          // Fallback to full reload redirect if CustomEvent dispatch is not available
+          const redirectToAdmin = window.location.pathname.startsWith('/admin');
+          window.location.href = redirectToAdmin ? '/admin/login' : '/login';
+        }
       } else {
         // Let the caller handle failed login attempts and other 401s
         console.warn('[api] 401 received for', requestUrl, '- delegating to caller (no auto-logout).');

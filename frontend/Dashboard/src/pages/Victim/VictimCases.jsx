@@ -71,9 +71,63 @@ export default function VictimCases() {
     setLoading(true);
     setError("");
     try {
-      const { data } = await api.get("/api/victims/reports");
-      const list = Array.isArray(data?.data) ? data.data : [];
-      setCases(list);
+      // Fetch victim profile (to identify the current victim)
+      const profileResp = await api.get('/api/victims/profile').catch(() => null);
+      const victim = profileResp?.data?.data || null;
+
+      // Fetch victim reports
+      const reportsResp = await api.get('/api/victims/reports').catch(() => ({ data: { data: [] } }));
+      const reportsRaw = Array.isArray(reportsResp?.data?.data) ? reportsResp.data.data : [];
+
+      // Fetch all cases and then filter those that belong to this victim
+      const casesResp = await api.get('/api/cases').catch(() => ({ data: { data: [] } }));
+      const casesRaw = Array.isArray(casesResp?.data?.data) ? casesResp.data.data : [];
+
+      // Build set of victim identifiers we can match against case.victimID
+      const victimIds = new Set();
+      if (victim) {
+        if (victim.id) victimIds.add(String(victim.id));
+        if (victim._id) victimIds.add(String(victim._id));
+        if (victim.victimID) victimIds.add(String(victim.victimID));
+      }
+
+      const mappedReports = (reportsRaw || []).map((r) => ({
+        key: r.reportID || r._id || Math.random().toString(36).slice(2),
+        reportID: r.reportID || r._id,
+        incidentType: r.incidentType,
+        description: r.description,
+        status: r.status,
+        dateReported: r.dateReported || r.createdAt,
+        raw: r,
+        _source: 'report',
+      }));
+
+      const mappedCases = (casesRaw || [])
+        .filter((c) => {
+          if (!victimIds.size) return false;
+          const vid = c.victimID || c.victimId || c.victim || null;
+          if (!vid) return false;
+          return victimIds.has(String(vid));
+        })
+        .map((c) => ({
+          key: c.caseID || c._id || Math.random().toString(36).slice(2),
+          reportID: c.reportID || null,
+          caseID: c.caseID,
+          incidentType: c.incidentType,
+          description: c.description,
+          status: c.status,
+          dateReported: c.dateReported || c.createdAt,
+          raw: c,
+          _source: 'case',
+        }));
+
+      const combined = [...mappedReports, ...mappedCases].sort((a, b) => {
+        const ta = a.dateReported ? new Date(a.dateReported).getTime() : 0;
+        const tb = b.dateReported ? new Date(b.dateReported).getTime() : 0;
+        return tb - ta;
+      });
+
+      setCases(combined);
     } catch (e) {
       setError("Unable to load cases.");
       message.error("Unable to load cases. Please try again.");
@@ -85,10 +139,19 @@ export default function VictimCases() {
   useEffect(() => { load(); }, []);
 
   const counts = useMemo(() => {
-    const openish = (s) => s === "Open" || s === "Under Investigation";
+    const openish = (s) => {
+      if (!s) return false;
+      const ss = String(s).toLowerCase();
+      return ss.includes('open') || ss.includes('investigat') || ss.includes('under investigation') || ss.includes('pending') || ss.includes('in progress');
+    };
+    const closedish = (s) => {
+      if (!s) return false;
+      const ss = String(s).toLowerCase();
+      return ss.includes('closed') || ss.includes('resolved') || ss.includes('completed') || ss.includes('done') || ss.includes('dismiss');
+    };
     const all = cases.length;
     const open = cases.filter((c) => openish(c.status)).length;
-    const closed = cases.filter((c) => c.status && !openish(c.status)).length;
+    const closed = cases.filter((c) => closedish(c.status)).length;
     return { all, open, closed };
   }, [cases]);
 
@@ -101,24 +164,45 @@ export default function VictimCases() {
   };
 
   const filtered = useMemo(() => {
-    const openish = (s) => s === "Open" || s === "Under Investigation";
+    const openish = (s) => {
+      if (!s) return false;
+      const ss = String(s).toLowerCase();
+      return ss.includes('open') || ss.includes('investigat') || ss.includes('under investigation') || ss.includes('pending') || ss.includes('in progress');
+    };
+    const closedish = (s) => {
+      if (!s) return false;
+      const ss = String(s).toLowerCase();
+      return ss.includes('closed') || ss.includes('resolved') || ss.includes('completed') || ss.includes('done') || ss.includes('dismiss');
+    };
     const byFilter = (c) =>
       filter === "All" ? true :
       filter === "Open" ? openish(c.status) :
-      c.status && !openish(c.status);
+      filter === "Closed" ? closedish(c.status) :
+      true;
 
     const byQ = (c) => {
       if (!qDebounced) return true;
-      const text = `${c.reportID} ${c.incidentType} ${c.status} ${c.description || ""}`.toLowerCase();
+      const text = `${c.reportID || ''} ${c.caseID || ''} ${c._source || ''} ${c.incidentType || ''} ${c.status || ''} ${c.description || ""}`.toLowerCase();
       return text.includes(qDebounced);
     };
 
     const arr = cases.filter((c) => byFilter(c) && byQ(c));
     const getDate = (c) => (c.dateReported ? new Date(c.dateReported).getTime() : 0);
-    if (sort === "Newest") return arr.sort((a, b) => getDate(b) - getDate(a));
-    if (sort === "Oldest") return arr.sort((a, b) => getDate(a) - getDate(b));
-    if (sort === "Status") return arr.sort((a, b) => (a.status || "").localeCompare(b.status || ""));
-    return arr;
+
+    const list = [...arr];
+    list.sort((a, b) => {
+      const src = (it) => (it && it._source === 'case' ? 0 : 1);
+      const sa = src(a);
+      const sb = src(b);
+      if (sa !== sb) return sa - sb; 
+
+      if (sort === "Newest") return getDate(b) - getDate(a);
+      if (sort === "Oldest") return getDate(a) - getDate(b);
+      if (sort === "Status") return (a.status || "").localeCompare(b.status || "");
+      return 0;
+    });
+
+    return list;
   }, [cases, filter, qDebounced, sort]);
 
   const copy = async (text) => {
@@ -128,9 +212,11 @@ export default function VictimCases() {
 
   const exportCsv = () => {
     const rows = [
-      ["Report ID", "Incident Type", "Status", "Date Reported"],
+      ["Source", "Report ID", "Case ID", "Incident Type", "Status", "Date Reported"],
       ...filtered.map((c) => [
+        c._source || "",
         c.reportID || "",
+        c.caseID || "",
         c.incidentType || "",
         c.status || "",
         c.dateReported ? new Date(c.dateReported).toLocaleString() : "",
@@ -241,33 +327,18 @@ export default function VictimCases() {
             }
           `}</style>
 
-          {/* Header */}
-          <div className="page-header">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-              <div>
-                <Title level={isMobile ? 4 : 3} style={{ margin: 0, color: BRAND.violet, marginBottom: 4 }}>
-                  My Cases
-                </Title>
-                <Text type="secondary" style={{ fontSize: isMobile ? 13 : 14 }}>
-                  Track your incident reports and their status
-                </Text>
-              </div>
-              
-              {/* Count Pills */}
-              <div className="counts">
-                <div className="count-pill">
-                  <span className="label">All</span>
-                  <Tag style={{ margin: 0, borderRadius: 8 }}>{counts.all}</Tag>
-                </div>
-                <div className="count-pill">
-                  <span className="label">Open</span>
-                  <Tag color="orange" style={{ margin: 0, borderRadius: 8 }}>{counts.open}</Tag>
-                </div>
-                <div className="count-pill">
-                  <span className="label">Closed</span>
-                  <Tag color="green" style={{ margin: 0, borderRadius: 8 }}>{counts.closed}</Tag>
-                </div>
-              </div>
+          {/* Header + Counts */}
+          <div className="toolbar">
+            <div className="toolbar-col" style={{ gap: 6 }}>
+              <Title level={screens.md ? 4 : 5} style={{ margin: 0, color: BRAND.violet }}>
+                My Cases
+              </Title>
+              <Text type="secondary">Track status and updates</Text>
+            </div>
+            <div className="counts">
+              <span className="count-pill">All <Tag style={{ marginInlineStart: 4 }}>{counts.all}</Tag></span>
+              <span className="count-pill">Open <Tag color="orange" style={{ marginInlineStart: 4 }}>{counts.open}</Tag></span>
+              <span className="count-pill">Closed <Tag color="green" style={{ marginInlineStart: 4 }}>{counts.closed}</Tag></span>
             </div>
           </div>
 
@@ -276,7 +347,7 @@ export default function VictimCases() {
             <div className={isMobile ? "filters-stack" : "toolbar-col"} style={{ marginBottom: isMobile ? 12 : 0 }}>
               <Input
                 allowClear
-                placeholder="Search cases by ID, type, or status..."
+                placeholder="Search cases…"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 suffix={<SearchOutlined style={{ color: BRAND.violet }} />}
@@ -348,6 +419,8 @@ export default function VictimCases() {
                 }}
                 renderItem={(r) => {
                   const when = r.dateReported ? new Date(r.dateReported).toLocaleString() : "—";
+                  const idDisplay = r._source === 'case' ? (r.caseID || r._id || r.reportID || "—") : (r.reportID || r._id || r.caseID || "—");
+                  const sourceTag = r._source === 'case' ? <Tag color="blue">Case</Tag> : <Tag color="purple">Report</Tag>;
                   return (
                     <List.Item
                       className="list-item"
@@ -361,16 +434,13 @@ export default function VictimCases() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 8 }}>
                           <Space size={8} wrap>
-                            <Text strong style={{ fontSize: isMobile ? 15 : 16, color: BRAND.violet }}>
-                              {r.reportID || "—"}
-                            </Text>
+                            <Text strong style={{ fontSize: isMobile ? 14 : 16 }}>{r.reportID || "—"}</Text>
                             <Tooltip title="Copy Report ID">
                               <Button
                                 size="small"
                                 type="text"
                                 icon={<CopyOutlined />}
                                 onClick={(e) => { e.stopPropagation(); copy(r.reportID || ""); }}
-                                style={{ color: BRAND.violet }}
                               />
                             </Tooltip>
                           </Space>
@@ -389,7 +459,7 @@ export default function VictimCases() {
                 }}
               />
             ) : (
-              <Empty description={error || "No cases match your filters"} style={{ margin: "24px 0" }} />
+              <Empty description={error || "No cases or reports match your filters"} style={{ margin: "24px 0" }} />
             )}
           </Card>
 
@@ -413,14 +483,14 @@ export default function VictimCases() {
                   labelStyle={{ fontWeight: 600 }}
                   colon={false}
                 >
-                  <Descriptions.Item label="Report ID">
+                  <Descriptions.Item label={drawer.item._source === 'case' ? 'Case ID' : 'Report ID'}>
                     <Space wrap>
-                      {drawer.item.reportID || "—"}
-                      <Tooltip title="Copy Report ID">
+                      {drawer.item._source === 'case' ? (drawer.item.caseID || drawer.item._id || drawer.item.reportID) : (drawer.item.reportID || drawer.item._id || drawer.item.caseID) || "—"}
+                      <Tooltip title={drawer.item._source === 'case' ? (drawer.item.caseID ? "Copy Case ID" : drawer.item._id ? "Copy ID" : "Copy ID") : (drawer.item.reportID ? "Copy Report ID" : drawer.item._id ? "Copy ID" : "Copy ID")}>
                         <Button
                           size="small"
                           icon={<CopyOutlined />}
-                          onClick={() => copy(drawer.item.reportID || "")}
+                          onClick={() => copy(drawer.item._source === 'case' ? (drawer.item.caseID || drawer.item._id || drawer.item.reportID || "") : (drawer.item.reportID || drawer.item._id || drawer.item.caseID || ""))}
                         />
                       </Tooltip>
                     </Space>

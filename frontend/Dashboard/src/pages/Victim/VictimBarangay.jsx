@@ -101,21 +101,21 @@ export default function VictimBarangay() {
               position: relative;
               border-radius: 24px;
               overflow: hidden;
-              background: linear-gradient(120deg, ${BRAND.violet}, ${BRAND.pink});
-              color: #fff;
+              background: linear-gradient(180deg, #fff1f7 0%, #ffe5f1 40%, #f4eaff 100%);
+              color: #6B49F6;
               padding: ${screens.xs ? "20px" : "32px"};
               margin-bottom: 24px;
               animation: fadeUp .5s ease-out;
               box-shadow: 0 20px 40px rgba(122,90,248,0.25);
             }
             .info-card {
-              border-radius: 20px;
-              background: ${BRAND.soft};
-              border: 1px solid rgba(233,30,99,0.08);
-              box-shadow: 0 12px 30px rgba(16,24,40,0.06);
+              border-radius: 18px;
+              background: rgba(255,255,255,0.9);
+              border: 1px solid rgba(122,90,248,0.18);
+              box-shadow: 0 24px 48px rgba(122,90,248,0.08);
               transition: all .25s ease;
             }
-            .info-card:hover { transform: translateY(-3px); box-shadow: 0 18px 40px rgba(122,90,248,0.15); }
+            .info-card:hover { transform: translateY(-3px); box-shadow: 0 28px 56px rgba(122,90,248,0.10); }
             .btn-brand { background: ${BRAND.violet}; border-color: ${BRAND.violet}; color: #fff; border-radius: 12px; }
             .leaflet-container { width: 100% !important; height: 420px !important; border-radius: 16px; }
             .map-shell { margin-top: 10px; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 24px rgba(0,0,0,0.14); }
@@ -125,10 +125,10 @@ export default function VictimBarangay() {
           {/* HERO */}
           <div className="hero">
             <Space direction="vertical" size={4}>
-              <Title level={2} style={{ color: "#fff", margin: 0 }}>
+              <Title level={2} style={{ color: "#6B49F6", margin: 0 }}>
                 Barangay Hall Locator
               </Title>
-              <Text style={{ color: "#fff", opacity: 0.9 }}>
+              <Text style={{ color: "#6f6f6f" }}>
                 Official location of Barangay Bonfal Proper Hall.
               </Text>
             </Space>

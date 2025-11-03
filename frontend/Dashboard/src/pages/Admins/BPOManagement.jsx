@@ -283,6 +283,7 @@ export default function BPOManagement() {
         String(a.bpoID || a._id || "").localeCompare(
           String(b.bpoID || b._id || "")
         ),
+      responsive: ["sm"],
     },
     {
       title: "Control No",
@@ -321,6 +322,7 @@ export default function BPOManagement() {
         ) : (
           "—"
         ),
+      responsive: ["md"],
     },
     {
       title: "Status",
@@ -349,19 +351,21 @@ export default function BPOManagement() {
               {s || "Unknown"}
             </Tag>
             {/* quick edit — stop row navigation */}
-            <Tooltip title="Quick edit status">
-              <Button
-                size="small"
-                type="text"
-                icon={<EditOutlined />}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setStatusEditing(r);
-                  setStatusNew(r.status || "Active");
-                  setStatusCardVisible(true);
-                }}
-              />
-            </Tooltip>
+            {screens.md && (
+              <Tooltip title="Quick edit status">
+                <Button
+                  size="small"
+                  type="text"
+                  icon={<EditOutlined />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setStatusEditing(r);
+                    setStatusNew(r.status || "Active");
+                    setStatusCardVisible(true);
+                  }}
+                />
+              </Tooltip>
+            )}
           </Space>
         );
       },
@@ -544,22 +548,36 @@ export default function BPOManagement() {
             ))}
           </Row>
 
-          {/* Toolbar — FORCE single row */}
-          <Card style={{ ...glassCard, padding: 10 }}>
-            <div className="toolbar-row">
+          {/* Toolbar */}
+          <Card style={{ ...glassCard, padding: isXs ? "12px 8px" : "14px 16px" }}>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: isXs 
+                ? "1fr" 
+                : screens.sm && !screens.md
+                ? "1fr 1fr" 
+                : screens.md 
+                ? "minmax(240px, 320px) repeat(auto-fit, minmax(140px, 1fr))" 
+                : "1fr 1fr",
+              gap: isXs ? 8 : 10,
+              width: "100%",
+              alignItems: "center",
+            }}>
               <Input
-                placeholder="Search BPO ID, Control No, Applicant, Served By…"
+                placeholder={isXs ? "Search BPO..." : "Search BPO ID, Control No, Applicant, Served By…"}
                 allowClear
                 prefix={<SearchOutlined />}
-                style={{ width: 320, flex: "0 0 auto" }}
+                style={{ width: "100%" }}
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
+                size={isXs ? "middle" : "large"}
               />
               <Select
                 value={statusFilter}
                 onChange={setStatusFilter}
-                style={{ width: 160, flex: "0 0 auto" }}
+                style={{ width: "100%" }}
                 suffixIcon={<FilterOutlined />}
+                size={isXs ? "middle" : "large"}
               >
                 <Option value="all">All Status</Option>
                 <Option value="Active">Active</Option>
@@ -569,8 +587,9 @@ export default function BPOManagement() {
               <Select
                 value={servedByFilter}
                 onChange={setServedByFilter}
-                style={{ width: 180, flex: "0 0 auto" }}
+                style={{ width: "100%" }}
                 suffixIcon={<FilterOutlined />}
+                size={isXs ? "middle" : "large"}
               >
                 {servedByOptions.map((v) => (
                   <Option key={v} value={v}>
@@ -579,35 +598,33 @@ export default function BPOManagement() {
                 ))}
               </Select>
 
-              {/* {(statusFilter !== "all" || servedByFilter !== "all" || searchText) && (
+              <div style={{
+                display: "flex",
+                gap: 8,
+                width: "100%",
+                gridColumn: isXs ? "span 1" : "auto",
+              }}>
+                <Dropdown overlay={colMenu} trigger={["click"]}>
+                  <Button 
+                    icon={<SettingOutlined />} 
+                    style={{ flex: 1 }}
+                    size={isXs ? "middle" : "large"}
+                  >
+                    {screens.md ? "Columns" : ""}
+                  </Button>
+                </Dropdown>
+
                 <Button
-                  onClick={() => {
-                    setStatusFilter("all");
-                    setServedByFilter("all");
-                    setSearchInput("");
-                    setSearchText("");
-                  }}
-                  style={{ flex: "0 0 auto" }}
+                  icon={<ColumnHeightOutlined />}
+                  onClick={() =>
+                    setDensity((d) => (d === "middle" ? "small" : "middle"))
+                  }
+                  style={{ flex: 1 }}
+                  size={isXs ? "middle" : "large"}
                 >
-                  Clear Filters
+                  {screens.md ? (density === "middle" ? "Compact" : "Comfortable") : ""}
                 </Button>
-              )} */}
-
-              <Dropdown overlay={colMenu} trigger={["click"]}>
-                <Button icon={<SettingOutlined />} style={{ flex: "0 0 auto" }}>
-                  Columns
-                </Button>
-              </Dropdown>
-
-              <Button
-                icon={<ColumnHeightOutlined />}
-                onClick={() =>
-                  setDensity((d) => (d === "middle" ? "small" : "middle"))
-                }
-                style={{ flex: "0 0 auto" }}
-              >
-                {density === "middle" ? "Compact" : "Comfortable"}
-              </Button>
+              </div>
             </div>
           </Card>
 
@@ -655,13 +672,13 @@ export default function BPOManagement() {
               rowKey={(r) => r.key}
               pagination={false}
               size={density}
-              rowSelection={{
+              rowSelection={screens.md ? {
                 selectedRowKeys,
                 onChange: setSelectedRowKeys,
-              }}
+              } : undefined}
               tableLayout="fixed"
               sticky
-              scroll={{ y: tableY, x: "max-content" }}
+              scroll={{ y: tableY, x: screens.xs ? 800 : "max-content" }}
               locale={{
                 emptyText: (
                   <Empty

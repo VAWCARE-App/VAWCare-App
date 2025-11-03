@@ -213,7 +213,7 @@ export default function VictimDashboard() {
         boxShadow: "0 24px 48px rgba(122,90,248,0.08)",
         ...style,
       }}
-      bodyStyle={{ padding: 16, ...bodyStyle }}
+      bodyStyle={{ padding: 20, ...bodyStyle }}
     >
       {children}
     </Card>
@@ -223,7 +223,7 @@ export default function VictimDashboard() {
     <div
       style={{
         borderRadius: 16,
-        padding: "14px 16px",
+        padding: "16px 20px",
         background: "linear-gradient(180deg, #ffffff, #f8f5ff)",
         border: `1px solid ${BRAND.soft}`,
         display: "flex",
@@ -233,8 +233,8 @@ export default function VictimDashboard() {
     >
       <div
         style={{
-          width: 38,
-          height: 38,
+          width: 40,
+          height: 40,
           borderRadius: 12,
           background: "#fff",
           display: "grid",
@@ -245,8 +245,8 @@ export default function VictimDashboard() {
         {icon}
       </div>
       <div>
-        <Text style={{ color: "#888" }}>{label}</Text>
-        <div style={{ fontSize: 22, color, fontWeight: 800, lineHeight: 1 }}>
+        <Text style={{ color: "#888", fontSize: 13 }}>{label}</Text>
+        <div style={{ fontSize: 24, color, fontWeight: 800, lineHeight: 1 }}>
           {value}
         </div>
       </div>
@@ -452,8 +452,8 @@ export default function VictimDashboard() {
     <Layout style={{ minHeight: "100vh", background: BRAND.bg }}>
       <Content
         style={{
-          padding: screens.md ? 12 : 8, // was 18/12
-          paddingBottom: "max(12px, env(safe-area-inset-bottom))",
+          padding: screens.md ? 16 : 12,
+          paddingBottom: "max(16px, env(safe-area-inset-bottom))",
           display: "flex",
           justifyContent: "center",
         }}
@@ -467,20 +467,20 @@ export default function VictimDashboard() {
           </Row>
 
           {/* Main layout */}
-          <Row gutter={[16, 16]} style={{ marginTop: 6 }}>
+          <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
             {/* LEFT column */}
             <Col xs={24} xl={16}>
               {/* Overview */}
               <GlassCard>
-                <Space direction="vertical" style={{ width: "100%" }} size={12}>
-                  <Text strong style={{ color: BRAND.violet }}>
+                <Space direction="vertical" style={{ width: "100%" }} size={16}>
+                  <Text strong style={{ color: BRAND.violet, fontSize: 16 }}>
                     Overview
                   </Text>
 
                   {loading ? (
                     <Skeleton active />
                   ) : (
-                    <Row gutter={[12, 12]}>
+                    <Row gutter={[16, 16]}>
                       <Col xs={24} sm={8}>
                         <StatPill
                           label="Total Reports"
@@ -522,15 +522,15 @@ export default function VictimDashboard() {
 
               {/* Latest Report */}
               <GlassCard style={{ marginTop: 16 }}>
-                <Text strong style={{ color: BRAND.violet }}>Latest Report</Text>
+                <Text strong style={{ color: BRAND.violet, fontSize: 16 }}>Latest Report</Text>
                 {reportsLoading ? (
-                  <Skeleton active style={{ marginTop: 10 }} />
+                  <Skeleton active style={{ marginTop: 16 }} />
                 ) : sortedReports.length ? (
                   <div
                     style={{
-                      marginTop: 10,
+                      marginTop: 16,
                       borderRadius: 16,
-                      padding: 14,
+                      padding: 16,
                       background: "#fff",
                       border: `1px solid ${BRAND.soft}`,
                     }}
@@ -538,8 +538,9 @@ export default function VictimDashboard() {
                     <Space
                       style={{ width: "100%", justifyContent: "space-between" }}
                     >
-                      <Space size={12}>
+                      <Space size={16}>
                         <Avatar
+                          size={40}
                           style={{ background: BRAND.violet }}
                           icon={<HistoryOutlined />}
                         />
@@ -547,7 +548,7 @@ export default function VictimDashboard() {
                           <Text strong>
                             {sortedReports[0]?.reportID || "Report"}
                           </Text>
-                          <div style={{ color: "#888", fontSize: 12 }}>
+                          <div style={{ color: "#888", fontSize: 13 }}>
                             {sortedReports[0]?.incidentType || "—"}
                           </div>
                         </div>
@@ -567,7 +568,7 @@ export default function VictimDashboard() {
                     <Button
                       type="link"
                       onClick={() => navigate("/victim/victim-cases")}
-                      style={{ padding: 0, marginTop: 6 }}
+                      style={{ padding: 0, marginTop: 8 }}
                     >
                       See details
                     </Button>
@@ -576,7 +577,7 @@ export default function VictimDashboard() {
                   <Empty
                     image={Empty.PRESENTED_IMAGE_SIMPLE}
                     description="No reports yet"
-                    style={{ marginTop: 12 }}
+                    style={{ marginTop: 16 }}
                   />
                 )}
               </GlassCard>
@@ -586,9 +587,9 @@ export default function VictimDashboard() {
                 style={{ marginTop: 16 }}
                 title={
                   <Space>
-                    <ReadOutlined style={{ color: BRAND.violet }} />
+                    <ReadOutlined style={{ color: BRAND.violet, fontSize: 16 }} />
                     <span
-                      style={{ color: BRAND.violet, fontWeight: 700 }}
+                      style={{ color: BRAND.violet, fontWeight: 700, fontSize: 16 }}
                     >{`VAWC Hub (PH)`}</span>
                   </Space>
                 }
@@ -608,7 +609,7 @@ export default function VictimDashboard() {
             <Col xs={24} xl={8}>
               {/* Report History */}
               <GlassCard
-                title={<span style={{ color: BRAND.violet }}>Report History</span>}
+                title={<span style={{ color: BRAND.violet, fontSize: 16 }}>Report History</span>}
               >
                 {loading ? (
                   <Skeleton active />
@@ -616,19 +617,20 @@ export default function VictimDashboard() {
                   <List
                     dataSource={sortedReports.slice(0, 6)}
                     renderItem={(r) => (
-                      <List.Item style={{ paddingLeft: 0, paddingRight: 0 }}>
+                      <List.Item style={{ padding: "12px 0" }}>
                         <Space
                           style={{ width: "100%", justifyContent: "space-between" }}
                           align="start"
                         >
-                          <Space>
+                          <Space size={12}>
                             <Avatar
+                              size={40}
                               style={{ background: "#efeaff", color: BRAND.violet }}
                               icon={<FileTextOutlined />}
                             />
                             <div>
                               <Text strong>{r.reportID || "Report"}</Text>
-                              <div style={{ color: "#888", fontSize: 12 }}>
+                              <div style={{ color: "#888", fontSize: 13 }}>
                                 {r.incidentType || "—"} •{" "}
                                 {r.dateReported
                                   ? new Date(r.dateReported).toLocaleString()
@@ -660,7 +662,7 @@ export default function VictimDashboard() {
               <GlassCard
                 style={{ marginTop: 16 }}
                 title={
-                  <span style={{ color: BRAND.violet }}>Tips & Resources</span>
+                  <span style={{ color: BRAND.violet, fontSize: 16 }}>Tips & Resources</span>
                 }
               >
                 {!tips.length ? (
@@ -670,17 +672,17 @@ export default function VictimDashboard() {
                     itemLayout="vertical"
                     dataSource={tips}
                     renderItem={(t) => (
-                      <List.Item style={{ paddingLeft: 0, paddingRight: 0 }}>
-                        <Space direction="vertical" size={2} style={{ width: "100%" }}>
+                      <List.Item style={{ padding: "12px 0" }}>
+                        <Space direction="vertical" size={8} style={{ width: "100%" }}>
                           <Text strong>{t.title}</Text>
-                          <Text type="secondary">{t.desc}</Text>
+                          <Text type="secondary" style={{ fontSize: 13 }}>{t.desc}</Text>
                           <div>
                             <Button
                               size="small"
                               icon={t.btn.icon}
                               onClick={t.btn.onClick}
                               style={{
-                                marginTop: 6,
+                                marginTop: 8,
                                 borderRadius: 999,
                                 ...(t.btn.primary
                                   ? {

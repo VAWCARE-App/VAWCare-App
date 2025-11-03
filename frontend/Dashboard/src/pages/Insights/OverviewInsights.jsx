@@ -32,7 +32,7 @@ const { Header, Content } = Layout;
 const { Title, Text } = Typography;
 
 /** Tiny inline sparkline (no extra deps) */
-function Sparkline({ points = [], width = 420, height = 120, stroke = "#7A5AF8" }) {
+function Sparkline({ points = [], width = 420, height = 120, stroke = "#fff" }) {
   if (!points.length) return null;
   const max = Math.max(...points);
   const min = Math.min(...points);
@@ -50,13 +50,13 @@ function Sparkline({ points = [], width = 420, height = 120, stroke = "#7A5AF8" 
     <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
       <defs>
         <linearGradient id="sparkFill" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor="#7A5AF8" stopOpacity="0.20" />
-          <stop offset="100%" stopColor="#7A5AF8" stopOpacity="0" />
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.20" />
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
         </linearGradient>
       </defs>
       <path d={`${d} L ${lastX} ${height - 18} L 10 ${height - 18} Z`} fill="url(#sparkFill)" />
       <path d={d} fill="none" stroke={stroke} strokeWidth="3" strokeLinecap="round" />
-      <circle cx={lastX} cy={lastY} r="5.5" fill="#fff" stroke={stroke} strokeWidth="3" />
+      <circle cx={lastX} cy={lastY} r="5.5" fill="#7A5AF8" stroke={stroke} strokeWidth="3" />
     </svg>
   );
 }
@@ -231,6 +231,37 @@ export default function OverviewInsights() {
         );
       recentActivities.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
+      // Calculate timeline data for the graph
+      const today = new Date();
+      let startDate = new Date(today);
+
+      if (mode === "Weekly") {
+        startDate.setDate(today.getDate() - 6); // Past 7 days including today
+      } else if (mode === "Monthly") {
+        startDate = new Date(today.getFullYear(), today.getMonth(), 1); // Start of month
+      }
+
+      // Initialize date buckets
+      const timelineMap = {};
+      for (let d = new Date(startDate); d <= today; d.setDate(d.getDate() + 1)) {
+        const key = d.toISOString().split("T")[0];
+        timelineMap[key] = 0;
+      }
+
+      // Count cases per day
+      cases.forEach((c) => {
+        const key = (c.createdAt || "").split("T")[0];
+        if (timelineMap[key] !== undefined) {
+          timelineMap[key]++;
+        }
+      });
+
+      // Convert to array for charts
+      const caseTimeline = Object.entries(timelineMap).map(([date, count]) => ({
+        date,
+        count,
+      }));
+
       setMetrics({
         totalUsers: Number(totalUsers || 0),
         totalCases: Number(totalCases || 0),
@@ -266,6 +297,13 @@ export default function OverviewInsights() {
     };
     fetchUserType();
   }, []);
+
+  // Reload when mode changes (Weekly/Monthly)
+  useEffect(() => {
+    if (casesData.length > 0) {
+      loadMetrics(false);
+    }
+  }, [mode]);
 
   // Log page view to system logs (only once per mount)
   useEffect(() => {
@@ -322,42 +360,8 @@ export default function OverviewInsights() {
     if (!Array.isArray(metrics.caseTimeline)) return [];
 
     return metrics.caseTimeline
-      .slice(-10) // last 10 days
-      .map((d) => d.count); // just the numbers
+      .map((d) => d.count); // all the numbers
   }, [metrics.caseTimeline]);
-
-  // Determine date range based on mode
-  const today = new Date();
-  let startDate = new Date(today);
-
-  if (mode === "Weekly") {
-    startDate.setDate(today.getDate() - 6); // Past 7 days including today
-  } else if (mode === "Monthly") {
-    startDate = new Date(today.getFullYear(), today.getMonth(), 1); // Start of month
-  }
-
-  // Initialize date buckets
-  const timelineMap = {};
-  for (let d = new Date(startDate); d <= today; d.setDate(d.getDate() + 1)) {
-    const key = d.toISOString().split("T")[0];
-    timelineMap[key] = 0;
-  }
-
-  // Count cases per day
-  casesData.forEach((c) => {
-    const key = (c.createdAt || "").split("T")[0];
-    if (timelineMap[key] !== undefined) {
-      timelineMap[key]++;
-    }
-  });
-
-
-  // Convert to array for charts
-  const caseTimeline = Object.entries(timelineMap).map(([date, count]) => ({
-    date,
-    count,
-  }));
-
 
   return (
     <Layout

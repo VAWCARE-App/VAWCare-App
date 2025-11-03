@@ -40,8 +40,10 @@ const BRAND = {
 export default function AlertsManagement() {
   const screens = Grid.useBreakpoint();
   const isXs = !!screens.xs && !screens.sm;
+  const isSm = !!screens.sm && !screens.md;
   const isMdUp = !!screens.md;
   const isMobile = !isMdUp;
+  const HEADER_H = isXs ? 56 : isMdUp ? 72 : 64;
 
   // Header is sticky and in-flow (like ReportManagement), so no marginTop math
   const TOP_PAD = 12;
@@ -283,30 +285,33 @@ export default function AlertsManagement() {
   return (
     <Layout
       style={{
-        minHeight: "100vh",
+        height: "100vh",
         width: "100%",
         background: BRAND.bg,
         overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
-      {/* STICKY, IN-FLOW HEADER (same behavior as ReportManagement) */}
+      {/* STICKY HEADER */}
       <Header
         style={{
           position: "sticky",
           top: 0,
-          zIndex: 5,
-          background: BRAND.bg,
+          zIndex: 100,
+          background: "rgba(250, 249, 255, 0.95)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
           borderBottom: `1px solid ${BRAND.soft}`,
+          boxShadow: "0 2px 12px rgba(16,24,40,0.06)",
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
-          paddingInline: 16,
-          paddingBlock: isXs ? 8 : 12,
-          height: "auto",
-          lineHeight: 1.2,
+          paddingInline: isXs ? 10 : isSm ? 12 : isMdUp ? 20 : 12,
+          height: HEADER_H,
+          flexShrink: 0,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: isXs ? 8 : 12, flex: 1 }}>
           {!isMdUp && (
             <Button
               type="text"
@@ -314,158 +319,213 @@ export default function AlertsManagement() {
               onClick={() => window.dispatchEvent(new Event("toggle-sider"))}
               aria-label="Toggle sidebar"
               style={{
-                width: 36,
-                height: 36,
-                display: "grid",
-                placeItems: "center",
+                width: isXs ? 34 : 38,
+                height: isXs ? 34 : 38,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 borderRadius: 10,
-                background: "#ffffffcc",
-                boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
+                background: "rgba(255, 255, 255, 0.9)",
+                border: `1px solid ${BRAND.soft}`,
+                boxShadow: "0 4px 12px rgba(122,90,248,0.08)",
               }}
             />
           )}
 
-          <Space direction="vertical" size={0}>
+          <div style={{ 
+            display: "flex", 
+            flexDirection: "column", 
+            minWidth: 0,
+            flex: 1,
+          }}>
             <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
               Alert Management
             </Title>
-            {!isXs && (
-              <Text type="secondary" style={{ fontSize: 12 }}>
+            {isMdUp && (
+              <Text type="secondary" style={{ fontSize: 13 }}>
                 Review, manage, and monitor emergency alerts submitted by victims.
               </Text>
             )}
-          </Space>
+          </div>
         </div>
-
-        {/* <Space wrap>
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={load}
-            style={{ borderColor: BRAND.violet, color: BRAND.violet }}
-            title="Refresh"
-          >
-            {isMdUp ? "Refresh" : null}
-          </Button>
-        </Space> */}
       </Header>
 
       <Content
         style={{
-          padding: TOP_PAD,
           width: "100%",
           minWidth: 0,
-          overflow: "hidden",
+          overflow: "auto",
           boxSizing: "border-box",
+          flex: 1,
         }}
       >
         <div
           style={{
-            maxWidth: 1200,
-            margin: "0 auto",
-            display: "grid",
-            gap: 12,
+            padding: isXs ? 8 : isSm ? 10 : 12,
             width: "100%",
-            overflowX: "hidden",
+            maxWidth: "100%",
+            margin: 0,
+            display: "flex",
+            flexDirection: "column",
+            gap: isXs ? 8 : 10,
+            paddingInline: isXs ? 4 : isSm ? 8 : 12,
+            transition: "width .25s ease",
+            boxSizing: "border-box",
+            minHeight: "100%",
           }}
         >
           {/* KPIs */}
-          <Row gutter={[12, 12]}>
+          <Row gutter={[isXs ? 8 : 10, isXs ? 8 : 10]}>
             <Col xs={12} sm={12} md={6}>
-              <Card style={{ borderRadius: 12, textAlign: "center" }}>
-                <Text type="secondary">Total</Text>
-                <Title level={3} style={{ margin: 0, color: BRAND.pink }}>
+              <Card style={{ 
+                borderRadius: 12, 
+                textAlign: isXs ? "center" : "left",
+                padding: isXs ? "8px 10px" : "10px 12px",
+              }}>
+                <Text type="secondary" style={{ fontSize: isXs ? 11 : 13, display: "block", marginBottom: 4 }}>
+                  Total
+                </Text>
+                <Title level={isXs ? 4 : 3} style={{ margin: 0, color: BRAND.pink, fontSize: isXs ? 20 : 24, fontWeight: 700 }}>
                   {stats.total}
                 </Title>
               </Card>
             </Col>
             <Col xs={12} sm={12} md={6}>
-              <Card style={{ borderRadius: 12, textAlign: "center" }}>
-                <Text type="secondary">Active</Text>
-                <Title level={3} style={{ margin: 0, color: "#f50" }}>
+              <Card style={{ 
+                borderRadius: 12, 
+                textAlign: isXs ? "center" : "left",
+                padding: isXs ? "8px 10px" : "10px 12px",
+              }}>
+                <Text type="secondary" style={{ fontSize: isXs ? 11 : 13, display: "block", marginBottom: 4 }}>
+                  Active
+                </Text>
+                <Title level={isXs ? 4 : 3} style={{ margin: 0, color: "#f50", fontSize: isXs ? 20 : 24, fontWeight: 700 }}>
                   {stats.active}
                 </Title>
               </Card>
             </Col>
             <Col xs={12} sm={12} md={6}>
-              <Card style={{ borderRadius: 12, textAlign: "center" }}>
-                <Text type="secondary">Under/Resolved</Text>
-                <Title level={3} style={{ margin: 0, color: "#52c41a" }}>
+              <Card style={{ 
+                borderRadius: 12, 
+                textAlign: isXs ? "center" : "left",
+                padding: isXs ? "8px 10px" : "10px 12px",
+              }}>
+                <Text type="secondary" style={{ fontSize: isXs ? 11 : 13, display: "block", marginBottom: 4 }}>
+                  {isXs ? "Resolved" : "Under/Resolved"}
+                </Text>
+                <Title level={isXs ? 4 : 3} style={{ margin: 0, color: "#52c41a", fontSize: isXs ? 20 : 24, fontWeight: 700 }}>
                   {stats.resolved}
                 </Title>
               </Card>
             </Col>
             <Col xs={12} sm={12} md={6}>
-              <Card style={{ borderRadius: 12, textAlign: "center" }}>
-                <Text type="secondary">Cancelled</Text>
-                <Title level={3} style={{ margin: 0 }}>
+              <Card style={{ 
+                borderRadius: 12, 
+                textAlign: isXs ? "center" : "left",
+                padding: isXs ? "8px 10px" : "10px 12px",
+              }}>
+                <Text type="secondary" style={{ fontSize: isXs ? 11 : 13, display: "block", marginBottom: 4 }}>
+                  Cancelled
+                </Text>
+                <Title level={isXs ? 4 : 3} style={{ margin: 0, fontSize: isXs ? 20 : 24, fontWeight: 700 }}>
                   {stats.cancelled}
                 </Title>
               </Card>
             </Col>
           </Row>
 
-          {/* Filters */}
-          <Card style={{ borderRadius: 12 }}>
-            {isMdUp ? (
-              <Space style={{ width: "100%", justifyContent: "space-between" }}>
-                <Space wrap>
-                  <Search
-                    placeholder="Search alerts…"
-                    allowClear
-                    enterButton={<SearchOutlined />}
-                    onSearch={onSearch}
-                    style={{ width: 360, minWidth: 220 }}
-                  />
-                  <Select defaultValue="all" onChange={onFilterStatus} style={{ width: 180 }}>
-                    <Option value="all">All Status</Option>
-                    <Option value="Active">Active</Option>
-                    <Option value="Resolved">Resolved</Option>
-                    <Option value="Cancelled">Cancelled</Option>
-                  </Select>
-                </Space>
-                <Space>
-                  <Tooltip title="Reload alerts">
-                    <Button icon={<ReloadOutlined />} onClick={load}>
-                      Refresh
-                    </Button>
-                  </Tooltip>
-                </Space>
-              </Space>
-            ) : (
-              <Space direction="vertical" style={{ width: "100%" }}>
-                <Search
-                  placeholder="Search alerts…"
-                  allowClear
-                  enterButton={<SearchOutlined />}
-                  onSearch={onSearch}
-                  style={{ width: "100%" }}
-                />
-                <Select defaultValue="all" onChange={onFilterStatus} style={{ width: "100%" }}>
-                  <Option value="all">All Status</Option>
-                  <Option value="Active">Active</Option>
-                  <Option value="Resolved">Resolved</Option>
-                  <Option value="Cancelled">Cancelled</Option>
-                </Select>
-                <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                  <Tooltip title="Reload alerts">
-                    <Button icon={<ReloadOutlined />} onClick={load} />
-                  </Tooltip>
-                </div>
-              </Space>
-            )}
+          {/* Toolbar - Sticky */}
+          <Card 
+            style={{ 
+              borderRadius: 14,
+              padding: isXs ? "12px 8px" : isSm ? "12px 10px" : "14px 16px",
+              position: "sticky",
+              top: 0,
+              zIndex: 99,
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              background: "rgba(250, 249, 255, 0.98)",
+              boxShadow: "0 4px 20px rgba(16,24,40,0.12)",
+              marginBottom: 2,
+            }}
+          >
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: isXs 
+                ? "1fr" 
+                : isSm 
+                ? "1fr 1fr" 
+                : isMdUp 
+                ? "minmax(240px, 320px) 1fr auto" 
+                : "1fr 1fr",
+              gap: isXs ? 8 : 10,
+              width: "100%",
+              alignItems: "center",
+            }}>
+              <Search
+                placeholder={isXs ? "Search alerts..." : "Search alerts…"}
+                allowClear
+                enterButton={
+                  <Button 
+                    type="primary" 
+                    icon={<SearchOutlined />}
+                    style={{
+                      background: BRAND.violet,
+                      borderColor: BRAND.violet,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    {!isXs && "Search"}
+                  </Button>
+                }
+                size={isXs ? "middle" : "large"}
+                style={{ width: "100%" }}
+                onSearch={onSearch}
+              />
+
+              <Select 
+                defaultValue="all" 
+                onChange={onFilterStatus} 
+                size={isXs ? "middle" : "large"}
+                style={{ width: "100%" }}
+              >
+                <Option value="all">All Status</Option>
+                <Option value="Active">Active</Option>
+                <Option value="Resolved">Resolved</Option>
+                <Option value="Cancelled">Cancelled</Option>
+              </Select>
+
+              <Button 
+                icon={<ReloadOutlined />} 
+                onClick={load} 
+                size={isXs ? "middle" : "large"}
+                style={{ 
+                  width: isXs ? "100%" : "auto",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  gridColumn: isXs ? "span 1" : "auto",
+                }}
+              >
+                {!isXs && "Refresh"}
+              </Button>
+            </div>
           </Card>
 
           {/* Table */}
-          <Card style={{ borderRadius: 12, padding: 8, overflowX: "hidden" }} ref={tableWrapRef}>
+          <Card style={{ borderRadius: 12, padding: 8, overflow: "hidden" }} ref={tableWrapRef}>
             <Table
               dataSource={filtered}
-              columns={columns}
+              columns={isMobile ? columnsMobile : columns}
               rowKey={(r) => r._id}
               loading={loading}
               pagination={false}
               sticky
-              tableLayout="fixed"
-              scroll={{ y: tableY, x: isMobile ? undefined : "max-content" }}
+              tableLayout={isMobile ? "auto" : "fixed"}
+              scroll={{ y: tableY, x: isMobile ? "max-content" : "max-content" }}
               size={isMobile ? "small" : "middle"}
               onRow={(record) => ({
                 style: { cursor: "pointer" },
@@ -537,10 +597,28 @@ export default function AlertsManagement() {
       </Content>
 
       <style>{`
-         html, body, #root { overflow-x: hidden; }
+         html, body, #root { height: 100%; overflow-x: hidden; }
          .ant-layout, .ant-layout-content { overflow-x: hidden; }
-         .ant-card { transition: transform .15s ease, box-shadow .15s ease; }
-         .ant-card:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(16,24,40,0.06); }
+         .ant-card { transition: transform .18s ease, box-shadow .18s ease; }
+         .ant-card:hover { transform: translateY(-1px); box-shadow: 0 16px 36px rgba(16,24,40,0.08); }
+
+         /* Smooth sticky transitions */
+         .ant-layout-header {
+           transition: box-shadow 0.3s ease, background 0.3s ease;
+         }
+
+         /* Better mobile input sizing */
+         @media (max-width: 576px) {
+           .ant-input-search .ant-input-group .ant-input {
+             font-size: 14px !important;
+           }
+           .ant-select-selector {
+             font-size: 14px !important;
+           }
+           .ant-btn {
+             font-size: 14px !important;
+           }
+         }
 
          .ant-table-thead > tr > th { background: #fff !important; }
          .ant-table .ant-table-tbody > tr:hover > td { background: #F1EEFF !important; }

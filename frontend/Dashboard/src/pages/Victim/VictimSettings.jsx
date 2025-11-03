@@ -15,7 +15,6 @@ import {
   Statistic,
   Divider,
   Tag,
-  
   Tooltip,
 } from "antd";
 import {
@@ -24,24 +23,27 @@ import {
   PhoneOutlined,
   HomeOutlined,
   UserOutlined,
-  
   CheckCircleTwoTone,
   CloseCircleTwoTone,
+  CameraOutlined,
+  DownloadOutlined,
+  SaveOutlined,
+  CloseOutlined,
 } from "@ant-design/icons";
-import { CameraOutlined } from "@ant-design/icons";
-import { api } from "../../lib/api";
+import { api, getUserData } from "../../lib/api";
 
 const { Title, Text } = Typography;
 
 const BRAND = {
   pink: "#e91e63",
   violet: "#7A5AF8",
-  purple: "#6C3CF0",
   green: "#4CAF50",
   red: "#f44336",
   soft: "#fff5f8",
   muted: "#6b7280",
   card: "rgba(255,255,255,0.85)",
+  pageBg: "linear-gradient(180deg, #faf9ff 0%, #f6f3ff 60%, #ffffff 100%)",
+  softBorder: "rgba(122,90,248,0.18)",
 };
 
 export default function VictimSettings() {
@@ -196,6 +198,7 @@ export default function VictimSettings() {
   // Simple function to check if form has changes
   const handleFormValuesChange = () => {
     setIsFormDirty(true);
+    updateDisplayName(); // Update display name when any field changes
   };
 
   // Save profile
@@ -264,259 +267,244 @@ export default function VictimSettings() {
 
   // Photo upload removed
 
-  const displayName = useMemo(() => {
+  const [displayName, setDisplayName] = useState("Anonymous User");
+
+  // Update display name whenever form values change
+  useEffect(() => {
     const v = form.getFieldsValue();
     const combo = [v.firstName, v.lastName].filter(Boolean).join(" ");
-    return combo || "Anonymous User";
+    setDisplayName(combo || "Anonymous User");
   }, [form]);
+
+  // Also update when form changes via onValuesChange
+  const updateDisplayName = () => {
+    const v = form.getFieldsValue();
+    const combo = [v.firstName, v.lastName].filter(Boolean).join(" ");
+    setDisplayName(combo || "Anonymous User");
+  };
 
   // --- verification color (green when verified, red when not) ---
   const verColor = verified ? BRAND.green : BRAND.red;
 
   return (
-    <div style={{ display: "flex", justifyContent: "center" }}>
+    <div style={{ minHeight: "100vh", background: BRAND.pageBg, position: "relative", paddingBottom: 80 }}>
+      <div style={{ display: "flex", justifyContent: "center" }}>
       <style>{`
-        .page-wrap {
-          width: 100%;
-          max-width: 1120px;
-          padding: ${screens.xs ? "12px" : "24px"};
+        :root {
+          /* Light theme matching AdminDashboard overview cards */
+          --panel-bg: #ffffff;
+          --panel-ink: #333333;
+          --muted-ink: ${BRAND.muted};
+          --chip-bg: #F8F4FF;
+          --chip-ink: #333333;
+          --soft-border: rgba(122,90,248,0.12);
         }
 
-        /* HERO */
-        .hero {
-          position: relative;
-          border-radius: 24px;
-          overflow: visible;
-          min-height: ${screens.md ? "220px" : "190px"};
-          padding-bottom: 72px;
-          box-shadow: 0 18px 40px rgba(16,24,40,0.14);
-          background: linear-gradient(135deg, ${BRAND.violet}, ${BRAND.pink});
-          animation: fadeUp 400ms ease-out;
-        }
-        .hero-inner {
-          padding: ${screens.xs ? "22px" : "32px"};
-          color: #fff;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          flex-wrap: wrap;
-        }
-        .hero-title { margin: 0; color: #fff; }
-        .hero-sub { margin: 6px 0 0; opacity: .95; }
+        .page-wrap{ width:100%; max-width:1120px; padding:${screens.xs ? "12px" : "24px"}; }
 
-        /* Avatar Overlay */
-        .avatar-wrap {
-          position: absolute;
-          left: 50%;
-          transform: translateX(-50%);
-          bottom: -40px;
-          width: 130px;
-          height: 130px;
-          border-radius: 50%;
-          background: #fff;
-          display: grid;
-          place-items: center;
-          box-shadow: 0 18px 36px rgba(16,24,40,0.22);
-          border: 8px solid #fff;
-          z-index: 3;
-          transition: transform 250ms ease;
-        }
-        .avatar-wrap:hover { transform: translateX(-50%) scale(1.02); }
-
-        .avatar-ring {
-          width: 115px; height: 115px; border-radius: 50%;
-          padding: 3px;
-          display: grid;
-          place-items: center;
-          animation: slowspin 20s linear infinite;
-        }
-        .avatar-inner {
-          width: 105px; height: 105px;
-          border-radius: 50%;
-          overflow: hidden;
-          background: ${BRAND.soft};
-          display: grid;
-          place-items: center;
-        }
-        .change-avatar {
-          position: absolute;
-          right: -4px; bottom: -4px;
-          border-radius: 50%;
-          padding: 0;
-          width: 32px; height: 32px;
-          font-size: 14px;
-          color: #fff;
-          box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+        .profile-panel{
+          position:relative; background:var(--panel-bg); color:var(--panel-ink);
+          border:1px solid var(--soft-border); border-radius:22px;
+          padding:${screens.sm ? "26px" : "20px"};
+          box-shadow: 0 2px 12px rgba(122,90,248,0.08);
         }
 
-        /* Stats */
-        .stats {
-          margin-top: 88px;
-          display: flex;
-          flex-wrap: wrap;
-          justify-content: center;
-          gap: 16px;
+        .panel-top{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+        .panel-left{ display:flex; align-items:center; gap:16px; min-width:260px; }
+
+        .avatar-shell{
+          position:relative; width:72px; height:72px; border-radius:50%;
+          display:grid; place-items:center;
+          background:linear-gradient(135deg, ${verColor}, ${BRAND.pink});
+          padding:2px; box-shadow: 0 4px 12px rgba(122,90,248,0.15);
         }
-        .stat-card {
-          flex: 1;
-          min-width: 260px;
-          border-radius: 20px;
-          background: ${BRAND.card};
-          text-align: center;
-          box-shadow: 0 10px 25px rgba(16,24,40,0.08);
-          border: 1px solid rgba(233,30,99,0.06);
-          transition: transform 200ms ease;
-        }
-        .stat-card:hover {
-          transform: translateY(-4px);
+        .avatar-shell .inner{
+          width:100%; height:100%; border-radius:50%; overflow:hidden; background:#f8f9fa; display:grid; place-items:center;
         }
 
-        /* Settings */
-        .main-card {
-          margin-top: 20px;
-          border-radius: 20px;
-          box-shadow: 0 12px 30px rgba(16,24,40,0.08);
-          border: 1px solid rgba(233,30,99,0.06);
-          animation: fadeUp 400ms ease-out;
+        .name-role{ display:flex; flex-direction:column; }
+        .name-role .name{ margin:0; color:var(--panel-ink); font-weight:800; letter-spacing:.2px; }
+        .name-role .role{ margin-top:2px; color:var(--muted-ink); font-size:13px; }
+
+        .panel-actions{ display:flex; align-items:center; gap:10px; flex-wrap: wrap; }
+        .soft-btn{
+          height:36px; border-radius:10px; padding:0 12px;
+          background:var(--chip-bg); color:var(--chip-ink); border:1px solid var(--soft-border);
+        }
+        .download-btn{
+          height:36px; border-radius:12px; padding:0 14px;
+          background:${BRAND.green}; color:#fff; font-weight:700; border:1px solid rgba(76,175,80,0.3);
+          box-shadow:0 2px 8px rgba(76,175,80,0.2);
         }
 
-        .section-head {
-          display: flex;
-          align-items: center;
-          gap: 10px;
+        .meta-grid{
+          margin-top:18px; display:grid;
+          grid-template-columns:repeat(${screens.lg ? 4 : screens.md ? 2 : 1}, 1fr);
+          gap:12px;
+        }
+        .meta-chip{
+          display:flex; gap:12px; align-items:center;
+          background:var(--chip-bg); border:1px solid var(--soft-border);
+          border-radius:14px; padding:14px 16px; color:var(--chip-ink);
+          box-shadow: 0 1px 4px rgba(122,90,248,0.05);
+        }
+        .meta-chip .label{ font-size:12px; color:var(--muted-ink); text-transform: uppercase; font-weight: 600; }
+        .meta-chip .value{ font-weight:700; color:var(--panel-ink); font-size: 14px; }
+
+        .main-card{
+          margin-top:18px; border-radius:18px; background:rgba(255,255,255,0.95);
+          color:#333; border:1px solid rgba(122,90,248,0.15);
+          box-shadow:0 8px 24px rgba(122,90,248,0.12), 0 2px 8px rgba(233,30,99,0.08);
         }
 
-        .brand-dot {
-          width: 10px;
-          height: 10px;
-          border-radius: 50%;
-          background: ${BRAND.pink};
+        .section-head{ display:flex; align-items:center; gap:10px; }
+        .brand-dot{ width:10px; height:10px; border-radius:50%; background:${BRAND.pink}; }
+
+        .btn-primary{
+          background:${BRAND.violet}; border-color:${BRAND.violet};
+          border-radius:12px; min-width:170px; height:40px; color:#fff; font-weight:700;
         }
 
-        .btn-primary {
-          background: ${BRAND.pink};
-          border-color: ${BRAND.pink};
-          border-radius: 12px;
-          min-width: 170px;
-          height: 40px;
-          transition: transform 150ms ease;
+        .ant-input, .ant-input-affix-wrapper{
+          background:#fff !important; color:#333 !important;
+          border-color: rgba(122,90,248,0.2) !important;
         }
-        .btn-primary:hover {
-          transform: scale(1.02);
-        }
-
-        @keyframes slowspin { to { transform: rotate(360deg); } }
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
+        .ant-input::placeholder{ color:#94a3b8 !important; }
+        
+        /* Typography colors - scoped to page-wrap to not affect header */
+        .page-wrap .ant-typography, 
+        .page-wrap .ant-form-item-label > label { color:#333 !important; }
+        
+        .ant-card { background: transparent; }
+        .section-head .ant-typography { color:${BRAND.violet} !important; }
       `}</style>
 
       <div className="page-wrap">
-        {/* HERO */}
-        <div className="hero">
-          <div className="hero-inner">
-            <div >
-              <Title level={2} className="hero-title" style={{ minWidth: 0, color: "#fff" }}>{displayName}</Title>
-              <Text className="hero-sub" style={{ minWidth: 0, color: "#fff" }}>Your safety & contact preferences in one place.</Text>
+        {/* ===== PROFILE PANEL ===== */}
+        <div className="profile-panel">
+          <div className="panel-top">
+            {/* Left: avatar + name/role */}
+            <div className="panel-left">
+              <div className="avatar-shell">
+                <div className="inner">
+                  <Avatar
+                    size={68}
+                    src={avatarUrl}
+                    icon={<UserOutlined />}
+                    style={{ background: "#f3f4f6", color: verColor }}
+                  />
+                </div>
+              </div>
+
+              <div className="name-role">
+                <Title level={4} className="name">
+                  {displayName}
+                </Title>
+                <Tag
+                  style={{
+                    background: verColor,
+                    color: "#fff",
+                    borderRadius: "999px",
+                    padding: "2px 10px",
+                    fontWeight: 600,
+                    border: `1px solid ${verColor}`,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    fontSize: 12,
+                  }}
+                >
+                  {verified ? <CheckCircleTwoTone twoToneColor="#fff" /> : <CloseCircleTwoTone twoToneColor="#fff" />}
+                  {verified ? "Verified" : "Not Verified"}
+                </Tag>
+              </div>
             </div>
 
-            <Space>
-              <Tag
-                style={{
-                 
-                  background: verColor,
-                  color: "#fff",
-                  borderRadius: "999px",
-                  padding: "6px 14px",
-                  fontWeight: 600,
-                  border: `1px solid ${verColor}`,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
+            {/* Right: actions (upload moved here) */}
+            <div className="panel-actions">
+              <Upload
+                showUploadList={false}
+                accept="image/*"
+                beforeUpload={() => false}
+                onChange={({ file }) => file && onAvatarChange({ file })}
               >
-                {verified ? <CheckCircleTwoTone twoToneColor="#fff" /> : <CloseCircleTwoTone twoToneColor="#fff" />}{" "}
-                {verified ? "Verified" : "Not Verified"}
-              </Tag>
+                <Button className="soft-btn" icon={<CameraOutlined />}>
+                  Change Photo
+                </Button>
+              </Upload>
+
+              <Button className="download-btn" icon={<DownloadOutlined />}>
+                Download Info
+              </Button>
 
               <Button
                 icon={<SafetyCertificateOutlined />}
-                onClick={() => form.resetFields()}
-                style={{
-                  background: BRAND.pink,
-                  borderColor: BRAND.pink,
-                  color: "#fff",
-                  borderRadius: 10,
-                  fontWeight: 600,
+                onClick={() => {
+                  form.resetFields();
+                  (async () => {
+                    await loadProfile();
+                  })();
                 }}
+                className="soft-btn"
               >
                 Reset
               </Button>
-            </Space>
+            </div>
           </div>
 
-          {/* Avatar */}
-          <div className="avatar-wrap">
-            <div
-              className="avatar-ring"
-              style={{
-                background: `conic-gradient(from 220deg, ${verColor}, ${BRAND.pink}, ${verColor})`,
-                border: `3px solid ${verColor}25`
-              }}
-            >
-              <div className="avatar-inner">
-                <Avatar
-                  size={96}
-                  src={avatarUrl || undefined}
-                  icon={!avatarUrl ? <UserOutlined /> : undefined}
-                  style={{ background: avatarUrl ? undefined : BRAND.soft, color: verColor }}
-                />
+          {/* Meta chips */}
+          <div className="meta-grid">
+            <div className="meta-chip">
+              <div>
+                <div className="label">Email Address</div>
+                <div className="value">
+                  {form.getFieldValue("victimEmail") || "—"}
+                </div>
               </div>
             </div>
-            <Upload
-              showUploadList={false}
-              accept="image/*"
-              beforeUpload={() => false}
-              onChange={({ file }) => file && onAvatarChange({ file })}
-            >
-              <Tooltip title="Change photo">
-                <Button
-                  className="change-avatar"
-                  icon={<CameraOutlined />}
-                  style={{ background: verColor }}
-                />
-              </Tooltip>
-            </Upload>
+
+            <div className="meta-chip">
+              <div>
+                <div className="label">Phone Number</div>
+                <div className="value">{form.getFieldValue("contactNumber") || "(—)"}</div>
+              </div>
+            </div>
+
+            <div className="meta-chip">
+              <div>
+                <div className="label">Role</div>
+                <div className="value">Victim</div>
+              </div>
+            </div>
+
+            <div className="meta-chip">
+              <div>
+                <div className="label">Trusted Contacts</div>
+                <div className="value">
+                  {form.getFieldValue("emergencyContactName") ? "1/1" : "0/1"}
+                </div>
+              </div>
+            </div>
           </div>
+
+          {/* Stats Cards - Removed Profile Completeness and Last Updated */}
         </div>
 
-        {/* Stats */}
-        <div className="stats">
-          <Card className="stat-card">
-            <Statistic title="Profile Completeness" value={92} suffix="%" />
-          </Card>
-          <Card className="stat-card">
-            <Statistic title="Trusted Contacts" value={1} suffix="/1" />
-          </Card>
-          <Card className="stat-card">
-            <Statistic title="Last Updated" value="Just now" />
-          </Card>
-        </div>
-
-        {/* SETTINGS */}
+        {/* ===== SETTINGS ===== */}
         <Card className="main-card" bodyStyle={{ padding: screens.xs ? 16 : 24 }}>
           <div className="section-head">
             <span className="brand-dot" />
             <div>
-              <Title level={4} style={{ margin: 0 }}>Account Settings</Title>
-              <Text type="secondary">
-                Update your contact details and emergency contact
+              <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
+                Account Settings
+              </Title>
+              <Text style={{ color: BRAND.muted }}>
+                Update your contact details and emergency contact information.
               </Text>
             </div>
           </div>
 
-          <Divider />
+          <Divider style={{ borderColor: "rgba(122,90,248,0.15)" }} />
 
           <Form layout="vertical" form={form} onFinish={onSave} onValuesChange={handleFormValuesChange}>
             <Row gutter={[16, 12]}>
@@ -543,7 +531,9 @@ export default function VictimSettings() {
               </Col>
 
               <Col span={24}>
-                <Divider plain orientation="left">Emergency Contact</Divider>
+                <Divider plain orientation="left" style={{ color: BRAND.violet, fontWeight: 600 }}>
+                  Emergency Contact
+                </Divider>
               </Col>
 
               <Col xs={24} md={12}>
@@ -573,28 +563,61 @@ export default function VictimSettings() {
                   <Input.TextArea rows={2} placeholder="Address (optional)" />
                 </Form.Item>
               </Col>
-
-              <Col xs={24} style={{ textAlign: "center", marginTop: 4 }}>
-                <Space>
-                  <Button
-                    type="primary"
-                    htmlType="submit"
-                    loading={loading}
-                    disabled={!isFormDirty}
-                    className="btn-primary"
-                  >
-                    Save changes
-                  </Button>
-                  <Button onClick={() => {
-                    form.resetFields();
-                    setIsFormDirty(false);
-                  }}>Discard</Button>
-                </Space>
-              </Col>
             </Row>
           </Form>
         </Card>
       </div>
+
+      {/* Fixed Bottom Action Bar */}
+      <div
+        style={{
+          position: "fixed",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(255,255,255,0.98)",
+          borderTop: `1px solid ${BRAND.softBorder}`,
+          padding: "12px 24px",
+          boxShadow: "0 -4px 16px rgba(0,0,0,0.08)",
+          zIndex: 100,
+          backdropFilter: "blur(10px)",
+        }}
+      >
+        <div style={{ maxWidth: 1120, margin: "0 auto", display: "flex", justifyContent: "flex-end", gap: 12 }}>
+          <Button
+            icon={<CloseOutlined />}
+            onClick={async () => {
+              form.resetFields();
+              setIsFormDirty(false);
+              try {
+                await loadProfile();
+              } catch {}
+            }}
+            size="large"
+            style={{ borderRadius: 10 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="primary"
+            icon={<SaveOutlined />}
+            onClick={() => form.submit()}
+            loading={loading}
+            disabled={!isFormDirty}
+            size="large"
+            style={{ 
+              background: BRAND.violet, 
+              borderColor: BRAND.violet, 
+              borderRadius: 10,
+              fontWeight: 600,
+              color: "#fff",
+            }}
+          >
+            Save Changes
+          </Button>
+        </div>
+      </div>
+        </div>
     </div>
   );
 }

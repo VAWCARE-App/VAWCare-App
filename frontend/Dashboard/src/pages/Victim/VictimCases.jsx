@@ -48,7 +48,10 @@ export default function VictimCases() {
 
   const BRAND = {
     violet: "#7A5AF8",
+    pink: "#e91e63",
     soft: "rgba(122,90,248,0.18)",
+    pageBg: "linear-gradient(180deg, #faf9ff 0%, #f6f3ff 60%, #ffffff 100%)",
+    cardBg: "rgba(255,255,255,0.95)",
   };
 
   // Debounce search
@@ -144,62 +147,141 @@ export default function VictimCases() {
   };
 
   return (
-    <Layout style={{ minHeight: "100vh", background: "linear-gradient(180deg,#faf7ff,#fff)" }}>
-      <Content style={{ padding: isMobile ? 12 : 16, display: "flex", justifyContent: "center" }}>
+    <Layout style={{ minHeight: "100vh", background: BRAND.pageBg }}>
+      <Content style={{ padding: isMobile ? 16 : 24, display: "flex", justifyContent: "center" }}>
         <div style={{ width: "100%", maxWidth: 1100 }}>
           <style>{`
+            .page-header {
+              background: linear-gradient(180deg, #fff1f7 0%, #ffe5f1 40%, #f4eaff 100%);
+              border: 1px solid rgba(122,90,248,0.12);
+              border-radius: 20px;
+              padding: ${isMobile ? "20px" : "28px"};
+              margin-bottom: 20px;
+              box-shadow: 0 20px 40px rgba(122,90,248,0.25);
+            }
+            
             .toolbar {
               width:100%;
-              display:flex; gap:12px; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap;
+              display:flex; gap:12px; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap;
             }
             .toolbar-col { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-            .counts { display:flex; gap:8px; flex-wrap:wrap; }
+            .counts { display:flex; gap:10px; flex-wrap:wrap; }
             .count-pill {
-              background: linear-gradient(180deg, ${BRAND.soft}, rgba(122,90,248,0.10));
-              color: #3b2e7e;
-              border: 1px solid ${BRAND.soft};
-              border-radius: 999px;
-              padding: 6px 12px;
+              background: linear-gradient(135deg, rgba(122,90,248,0.08), rgba(233,30,99,0.06));
+              border: 1px solid rgba(122,90,248,0.15);
+              border-radius: 12px;
+              padding: 10px 16px;
               font-weight: 600;
-              display:inline-flex; align-items:center; gap:8px;
+              display:inline-flex; 
+              align-items:center; 
+              gap:8px;
+              box-shadow: 0 2px 8px rgba(122,90,248,0.06);
+              transition: transform 0.2s ease;
             }
-            .list-item { transition: background 0.2s ease, transform 0.12s ease; }
-            .list-item:hover { background: #fff; transform: translateY(-1px); }
+            .count-pill:hover {
+              transform: translateY(-2px);
+            }
+            .count-pill .label {
+              color: ${BRAND.violet};
+              font-size: 13px;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            
+            .filters-card {
+              background: ${BRAND.cardBg};
+              border: 1px solid rgba(122,90,248,0.12);
+              border-radius: 16px;
+              padding: ${isMobile ? "16px" : "20px"};
+              margin-bottom: 20px;
+              box-shadow: 0 2px 12px rgba(122,90,248,0.08);
+            }
+            
+            .list-item { 
+              transition: all 0.2s ease;
+              border-bottom: 1px solid rgba(122,90,248,0.08);
+            }
+            .list-item:hover { 
+              background: linear-gradient(135deg, rgba(122,90,248,0.03), rgba(233,30,99,0.02));
+              transform: translateX(4px);
+            }
+            .list-item:last-child {
+              border-bottom: none;
+            }
+            
+            /* Enhanced input styles */
+            .ant-input-affix-wrapper {
+              border-radius: 12px !important;
+              border-color: rgba(122,90,248,0.2) !important;
+            }
+            .ant-input-affix-wrapper:hover,
+            .ant-input-affix-wrapper:focus,
+            .ant-input-affix-wrapper-focused {
+              border-color: ${BRAND.violet} !important;
+              box-shadow: 0 0 0 2px rgba(122,90,248,0.1) !important;
+            }
+            
+            /* Segmented styles */
+            .ant-segmented {
+              background: rgba(122,90,248,0.05) !important;
+              border-radius: 12px !important;
+              padding: 3px !important;
+            }
+            .ant-segmented-item-selected {
+              background: ${BRAND.violet} !important;
+              color: white !important;
+              border-radius: 10px !important;
+            }
+            
             @media (max-width: 767px) {
-              .toolbar { flex-direction: column; align-items: stretch; gap:10px; }
+              .toolbar { flex-direction: column; align-items: stretch; gap:12px; }
               .toolbar-col { width:100%; justify-content: space-between; }
-              .filters-stack { display:grid; grid-template-columns: 1fr; gap:8px; }
+              .filters-stack { display:grid; grid-template-columns: 1fr; gap:10px; }
               .actions-row { display:flex; gap:8px; justify-content: flex-end; }
             }
           `}</style>
 
-          {/* Header + Counts */}
-          <div className="toolbar">
-            <div className="toolbar-col" style={{ gap: 6 }}>
-              <Title level={screens.md ? 4 : 5} style={{ margin: 0, color: BRAND.violet }}>
-                My Cases
-              </Title>
-              <Text type="secondary">Track status and updates</Text>
-            </div>
-            <div className="counts">
-              <span className="count-pill">All <Tag style={{ marginInlineStart: 4 }}>{counts.all}</Tag></span>
-              <span className="count-pill">Open <Tag color="orange" style={{ marginInlineStart: 4 }}>{counts.open}</Tag></span>
-              <span className="count-pill">Closed <Tag color="green" style={{ marginInlineStart: 4 }}>{counts.closed}</Tag></span>
+          {/* Header */}
+          <div className="page-header">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+              <div>
+                <Title level={isMobile ? 4 : 3} style={{ margin: 0, color: BRAND.violet, marginBottom: 4 }}>
+                  My Cases
+                </Title>
+                <Text type="secondary" style={{ fontSize: isMobile ? 13 : 14 }}>
+                  Track your incident reports and their status
+                </Text>
+              </div>
+              
+              {/* Count Pills */}
+              <div className="counts">
+                <div className="count-pill">
+                  <span className="label">All</span>
+                  <Tag style={{ margin: 0, borderRadius: 8 }}>{counts.all}</Tag>
+                </div>
+                <div className="count-pill">
+                  <span className="label">Open</span>
+                  <Tag color="orange" style={{ margin: 0, borderRadius: 8 }}>{counts.open}</Tag>
+                </div>
+                <div className="count-pill">
+                  <span className="label">Closed</span>
+                  <Tag color="green" style={{ margin: 0, borderRadius: 8 }}>{counts.closed}</Tag>
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Filters & Actions */}
-          <div className="toolbar">
-            <div className={isMobile ? "filters-stack" : "toolbar-col"}>
+          <div className="filters-card">
+            <div className={isMobile ? "filters-stack" : "toolbar-col"} style={{ marginBottom: isMobile ? 12 : 0 }}>
               <Input
                 allowClear
-                placeholder="Search cases…"
+                placeholder="Search cases by ID, type, or status..."
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                suffix={<SearchOutlined />}
+                suffix={<SearchOutlined style={{ color: BRAND.violet }} />}
                 style={{
-                  borderRadius: 999,
-                  width: isMobile ? "100%" : 280,
+                  width: isMobile ? "100%" : 300,
                 }}
                 size={isMobile ? "large" : "middle"}
               />
@@ -222,18 +304,38 @@ export default function VictimCases() {
                 size={isMobile ? "large" : "middle"}
               />
             </div>
-            <div className={isMobile ? "actions-row" : "toolbar-col"}>
+            
+            <div className={isMobile ? "actions-row" : "toolbar-col"} style={{ marginTop: isMobile ? 12 : 0, justifyContent: "flex-end" }}>
               <Tooltip title="Refresh">
-                <Button icon={<ReloadOutlined />} onClick={load} size={isMobile ? "large" : "middle"} />
+                <Button 
+                  icon={<ReloadOutlined />} 
+                  onClick={load} 
+                  size={isMobile ? "large" : "middle"}
+                  style={{ borderRadius: 10 }}
+                />
               </Tooltip>
               <Tooltip title="Export CSV (filtered)">
-                <Button icon={<ExportOutlined />} onClick={exportCsv} size={isMobile ? "large" : "middle"} />
+                <Button 
+                  icon={<ExportOutlined />} 
+                  onClick={exportCsv} 
+                  size={isMobile ? "large" : "middle"}
+                  style={{ borderRadius: 10 }}
+                />
               </Tooltip>
             </div>
           </div>
 
           {/* List */}
-          <Card bordered style={{ borderRadius: 16, borderColor: BRAND.soft }} bodyStyle={{ padding: 0 }}>
+          <Card 
+            bordered 
+            style={{ 
+              borderRadius: 20, 
+              borderColor: "rgba(122,90,248,0.12)",
+              background: BRAND.cardBg,
+              boxShadow: "0 8px 24px rgba(122,90,248,0.12), 0 2px 8px rgba(233,30,99,0.08)",
+            }} 
+            bodyStyle={{ padding: 0 }}
+          >
             {loading ? (
               <div style={{ padding: isMobile ? 12 : 16 }}><Skeleton active /></div>
             ) : filtered.length ? (
@@ -250,30 +352,37 @@ export default function VictimCases() {
                     <List.Item
                       className="list-item"
                       style={{
-                        paddingInline: isMobile ? 12 : 16,
-                        paddingBlock: isMobile ? 10 : 14,
+                        paddingInline: isMobile ? 16 : 24,
+                        paddingBlock: isMobile ? 14 : 18,
                         cursor: "pointer",
                       }}
                       onClick={() => setDrawer({ open: true, item: r })}
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 8 }}>
                           <Space size={8} wrap>
-                            <Text strong style={{ fontSize: isMobile ? 14 : 16 }}>{r.reportID || "—"}</Text>
+                            <Text strong style={{ fontSize: isMobile ? 15 : 16, color: BRAND.violet }}>
+                              {r.reportID || "—"}
+                            </Text>
                             <Tooltip title="Copy Report ID">
                               <Button
                                 size="small"
                                 type="text"
                                 icon={<CopyOutlined />}
                                 onClick={(e) => { e.stopPropagation(); copy(r.reportID || ""); }}
+                                style={{ color: BRAND.violet }}
                               />
                             </Tooltip>
                           </Space>
                           <div style={{ flexShrink: 0 }}>{statusTag(r.status)}</div>
                         </div>
-                        <Text type="secondary" style={{ display: "block", marginTop: 2 }}>
-                          {(r.incidentType || "Incident")} • {when}
-                        </Text>
+                        <Space size={8} wrap style={{ fontSize: isMobile ? 13 : 14 }}>
+                          <Text type="secondary">
+                            <Text strong style={{ color: "#555" }}>{r.incidentType || "Incident"}</Text>
+                          </Text>
+                          <Text type="secondary">•</Text>
+                          <Text type="secondary">{when}</Text>
+                        </Space>
                       </div>
                     </List.Item>
                   );

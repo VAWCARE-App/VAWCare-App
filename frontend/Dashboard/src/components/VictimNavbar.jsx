@@ -39,11 +39,15 @@ export default function VictimNavbar() {
   const screens = Grid.useBreakpoint();
 
   const BRAND = {
+    primary: "#7A5AF8",
+    primaryAlt: "#e91e63",
     violet: "#7A5AF8",
     pink: "#e91e63",
-    soft: "rgba(122,90,248,0.18)",
-    headerBg:
-      "linear-gradient(180deg, rgba(255,255,255,.86) 0%, rgba(248,246,255,.72) 100%)",
+    border: "rgba(122,90,248,0.18)",
+    panel: "linear-gradient(180deg, #ffffff 0%, #faf7ff 60%, #f6f3ff 100%)",
+    rail: "linear-gradient(180deg, #f6f0ff 0%, #ffe9f3 100%)",
+    headerBg: "linear-gradient(180deg, #ffffff 0%, #faf7ff 60%, #f6f3ff 100%)",
+    shadow: "0 2px 12px rgba(0,0,0,0.04)",
   };
 
   const [open, setOpen] = useState(false);
@@ -109,15 +113,27 @@ export default function VictimNavbar() {
     ],
   };
 
-  // Desktop nav items
-  const desktopItems = [
-    { key: "/victim/dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
-    { key: "/victim/report", icon: <FileAddOutlined />, label: "Report Case" },
-    { key: "/victim/victim-cases", icon: <UserSwitchOutlined />, label: "My Cases" },
-    { key: "/victim/victim-barangay", icon: <InfoCircleOutlined />, label: "Barangay" },
-    { key: "/victim/victim-settings", icon: <SettingOutlined />, label: "Settings" },
-    
+  // Desktop nav items → render a custom "pill" inside each item
+  const desktopLinks = [
+    { key: "/victim/dashboard", icon: <DashboardOutlined />, text: "Dashboard" },
+    { key: "/victim/report", icon: <FileAddOutlined />, text: "Report Case" },
+    { key: "/victim/victim-cases", icon: <UserSwitchOutlined />, text: "My Cases" },
+    { key: "/victim/victim-barangay", icon: <InfoCircleOutlined />, text: "Barangay" },
+    { key: "/victim/victim-settings", icon: <SettingOutlined />, text: "Settings" },
   ];
+
+  const desktopItems = desktopLinks.map(({ key, icon, text }) => ({
+    key,
+    // put the rounded visual on an inner span we fully control
+    label: (
+      <span className="nav-pill">
+        {icon}
+        <span>{text}</span>
+      </span>
+    ),
+    // mark active item for CSS
+    className: location.pathname === key ? "is-active" : "",
+  }));
 
   // Mobile drawer items (Emergency first)
   const drawerItems = [
@@ -172,15 +188,34 @@ export default function VictimNavbar() {
           gap: 12,
           padding: "0 14px",
           background: BRAND.headerBg,
-          borderBottom: `1px solid ${BRAND.soft}`,
+          borderBottom: `1px solid ${BRAND.border}`,
           backdropFilter: "blur(10px) saturate(140%)",
+          boxShadow: BRAND.shadow,
         }}
       >
         {/* Brand */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {/* Hamburger Menu Button for Mobile */}
+          {!screens.md && (
+            <Button
+              type="text"
+              icon={<MenuOutlined />}
+              aria-label="Open menu"
+              onClick={() => setOpen(true)}
+              style={{ 
+                fontSize: 20, 
+                color: BRAND.primary, 
+                borderRadius: 10,
+                padding: "4px 8px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            />
+          )}
           <Avatar src={logo} size={36} />
           <div style={{ lineHeight: 1 }}>
-            <Text strong style={{ fontSize: 18, color: BRAND.violet }}>
+            <Text strong style={{ fontSize: 18, color: BRAND.primary, fontWeight: 600 }}>
               VAWCare
             </Text>
             <div style={{ fontSize: 11, color: "#8A8A8A" }}>Support & Safety</div>
@@ -227,29 +262,19 @@ export default function VictimNavbar() {
                 }}
               >
                 <Badge>
-                  <Avatar style={{ background: BRAND.violet, fontWeight: 700 }} size={28}>
+                  <Avatar style={{ background: BRAND.primary, fontWeight: 600 }} size={28}>
                     {initials}
                   </Avatar>
                 </Badge>
                 <div style={{ lineHeight: 1, textAlign: "left" }}>
-                  <Text strong style={{ fontSize: 12 }}>
+                  <Text strong style={{ fontSize: 12, fontWeight: 600 }}>
                     {currentUser.firstName
                       ? `${currentUser.firstName} ${currentUser.lastName || ""}`
                       : "Anonymous"}
                   </Text>
-                  <div style={{ fontSize: 11, color: "#888" }}>Victim</div>
                 </div>
               </Button>
             </Dropdown>
-          )}
-          {!screens.md && (
-            <Button
-              type="text"
-              icon={<MenuOutlined />}
-              aria-label="Open menu"
-              onClick={() => setOpen(true)}
-              style={{ fontSize: 18, color: BRAND.violet, borderRadius: 10 }}
-            />
           )}
         </Space>
       </Header>
@@ -270,172 +295,272 @@ export default function VictimNavbar() {
         <div
           style={{
             padding: 14,
-            background:
-              "linear-gradient(180deg, rgba(255,255,255,0.9), rgba(246,243,255,0.8))",
-            borderBottom: `1px solid ${BRAND.soft}`,
-            backdropFilter: "blur(6px) saturate(140%)",
+            height: 70,
+            background: BRAND.panel,
+            borderBottom: `1px solid ${BRAND.border}`,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
           }}
         >
-          <Space align="center" size={12}>
-            <Avatar src={logo} size={36} />
-            <div style={{ lineHeight: 1 }}>
-              <Text strong style={{ color: BRAND.violet }}>VAWCare</Text>
-              <div style={{ fontSize: 11, color: "#8A8A8A" }}>Support & Safety</div>
+          <Avatar src={logo} size={40} style={{ background: "#efeafd" }} />
+          <div style={{ lineHeight: 1.1 }}>
+            <Text style={{ color: BRAND.primary, fontWeight: 800, fontSize: 16 }}>VAWCare</Text>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <Badge color={BRAND.primary} dot />
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {currentUser.firstName ? `Hi, ${currentUser.firstName}` : "Welcome"}
+              </Text>
             </div>
-          </Space>
+          </div>
         </div>
 
-        {/* Scrollable nav */}
-        <div style={{ padding: 12, overflowY: "auto", flex: 1 }}>
-          <Menu
-            mode="inline"
-            selectedKeys={[location.pathname]}
-            onClick={({ key }) => onNav(key)}
-            items={drawerItems}
-            className="victim-drawer-glass"
-            style={{ border: "none", background: "transparent" }}
-          />
+        {/* Scrollable nav with rail */}
+        <div
+          style={{
+            flex: "1 1 0",
+            minHeight: 0,
+            display: "flex",
+            flexDirection: "column",
+            padding: 10,
+            overflowY: "auto",
+            overflowX: "hidden",
+          }}
+        >
+          <div
+            style={{
+              background: "linear-gradient(180deg, #f6f0ff 0%, #ffe9f3 100%)",
+              border: `1px solid ${BRAND.border}`,
+              borderRadius: 18,
+              padding: 12,
+              display: "grid",
+              gap: 10,
+              boxShadow: "0 18px 48px rgba(122,90,248,0.08)",
+              width: "92%",
+              margin: "8px auto",
+            }}
+          >
+            {desktopLinks.map(({ key, icon, text }) => {
+              const active = location.pathname === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => onNav(key)}
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    height: 52,
+                    padding: "0 16px",
+                    fontSize: 15,
+                    fontWeight: 700,
+                    color: active ? BRAND.primary : "#5a4eb1",
+                    borderRadius: 16,
+                    background: active ? "#fff" : "#ffffff",
+                    boxShadow: active
+                      ? "0 18px 40px rgba(122,90,248,0.14)"
+                      : "0 8px 22px rgba(0,0,0,0.06)",
+                    border: active
+                      ? `1px solid rgba(122,90,248,0.12)`
+                      : "1px solid rgba(0,0,0,0.04)",
+                    cursor: "pointer",
+                    transition: "transform .15s ease, box-shadow .18s ease, background .15s ease, color .15s ease",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 18,
+                      width: 36,
+                      height: 36,
+                      display: "grid",
+                      placeItems: "center",
+                      color: BRAND.primary,
+                      borderRadius: 10,
+                      background: "#fff",
+                    }}
+                  >
+                    {icon}
+                  </span>
+                  <span>{text}</span>
+                </button>
+              );
+            })}
+
+            {/* Divider */}
+            <div
+              style={{
+                height: 1,
+                background: "linear-gradient(90deg, transparent, rgba(122,90,248,0.2), transparent)",
+                margin: "4px 0",
+              }}
+            />
+
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                height: 52,
+                padding: "0 16px",
+                fontSize: 15,
+                fontWeight: 700,
+                color: BRAND.primaryAlt,
+                borderRadius: 16,
+                background: "#ffffff",
+                boxShadow: "0 8px 22px rgba(0,0,0,0.06)",
+                border: "1px solid rgba(233,30,99,0.12)",
+                cursor: "pointer",
+                transition: "transform .15s ease, box-shadow .18s ease, background .15s ease, color .15s ease",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 18,
+                  width: 36,
+                  height: 36,
+                  display: "grid",
+                  placeItems: "center",
+                  color: BRAND.primaryAlt,
+                  borderRadius: 10,
+                  background: "#fff",
+                }}
+              >
+                <LogoutOutlined />
+              </span>
+              <span>Logout</span>
+            </button>
+          </div>
         </div>
 
-        {/* Footer: profile (opens dropdown on click) */}
+        {/* Footer: User Profile Card */}
         <div
           style={{
             padding: 12,
-            borderTop: `1px solid ${BRAND.soft}`,
-            background: "linear-gradient(180deg, rgba(255,255,255,.9), rgba(246,243,255,.9))",
-            backdropFilter: "blur(8px) saturate(140%)",
+            borderTop: `1px solid ${BRAND.border}`,
+            background: BRAND.panel,
           }}
         >
           <div
             style={{
               borderRadius: 16,
-              padding: 10,
+              padding: 14,
               background: "rgba(255,255,255,0.95)",
-              border: `1px solid ${BRAND.soft}`,
+              border: `1px solid ${BRAND.border}`,
+              boxShadow: "0 4px 12px rgba(122,90,248,0.08)",
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
             }}
           >
-            <Dropdown menu={userMenu} trigger={["click"]} placement="topLeft">
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  cursor: "pointer",
-                  height: 40,
-                }}
-              >
-                <Space align="center" size={10}>
-                  <Badge dot color={BRAND.violet}>
-                    <Avatar style={{ background: BRAND.violet, fontWeight: 700 }} size={34}>
-                      {initials}
-                    </Avatar>
-                  </Badge>
-                  <div style={{ lineHeight: 1 }}>
-                    <Text strong style={{ fontSize: 13 }}>
-                      {currentUser.firstName
-                        ? `${currentUser.firstName} ${currentUser.lastName || ""}`
-                        : "Anonymous"}
-                    </Text>
-                    <div style={{ fontSize: 11, color: "#888" }}>Victim</div>
-                  </div>
-                </Space>
-                <Button type="text" size="small" style={{ color: "#666" }}>
-                  Account & Help
-                </Button>
-              </div>
-            </Dropdown>
-
-            <Divider style={{ margin: "10px 0" }} />
-            <Button
-              icon={<LogoutOutlined />}
-              onClick={handleLogout}
-              block
-              style={{
-                borderRadius: 12,
-                height: 40,
-                border: `1px solid ${BRAND.soft}`,
-              }}
-            >
-              Logout
-            </Button>
+            <Badge dot color={BRAND.primary}>
+              <Avatar style={{ background: BRAND.primary, fontWeight: 700 }} size={40}>
+                {initials}
+              </Avatar>
+            </Badge>
+            <div style={{ flex: 1, lineHeight: 1.3 }}>
+              <Text strong style={{ fontSize: 14, fontWeight: 700, display: "block" }}>
+                {currentUser.firstName
+                  ? `${currentUser.firstName} ${currentUser.lastName || ""}`
+                  : "Anonymous"}
+              </Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Victim Portal
+              </Text>
+            </div>
           </div>
         </div>
       </Drawer>
 
       {/* Styles */}
       <style>{`
-        /* === Desktop glassy pill menu (no hard box) === */
+        /* Reset AntD item box so the pill inside controls the shape */
+        .victim-glass-pills .ant-menu,
+        .victim-glass-pills { background: transparent !important; border-bottom: 0 !important; }
+
         .victim-glass-pills .ant-menu-overflow-item { padding-inline: 0 !important; }
+
         .victim-glass-pills .ant-menu-item {
-          margin: 0 6px;
-          height: 40px;
-          line-height: 40px;
-          padding: 0 16px !important;
-          border-radius: 999px;
-          background: transparent;
-          color: #5248b8;
-          font-weight: 600;
-          position: relative;
-          overflow: hidden;
-          transition: color .15s ease;
-          border: none !important;
-          outline: none !important;
-        }
-        /* overlay used for hover/selected glow */
-        .victim-glass-pills .ant-menu-item::before {
-          content: "";
-          position: absolute;
-          inset: 0;
-          border-radius: 999px;
-          background: transparent;
-          transition: background .15s ease, box-shadow .15s ease;
-          pointer-events: none;
-        }
-        .victim-glass-pills .ant-menu-item:hover { color: ${BRAND.violet}; }
-        .victim-glass-pills .ant-menu-item:hover::before {
-          background: rgba(255,255,255,0.40);
-          box-shadow: 0 10px 22px rgba(122,90,248,0.10);
-        }
-        .victim-glass-pills .ant-menu-item-selected {
-          color: ${BRAND.violet};
-        }
-        .victim-glass-pills .ant-menu-item-selected::before {
-          background: rgba(255,255,255,0.55);
-          box-shadow: 0 14px 28px rgba(122,90,248,0.14);
+          padding: 0 !important;
+          margin: 0 8px;
+          background: transparent !important;
+          border: 0 !important;
+          box-shadow: none !important;
+          line-height: 1;          /* let the inner pill define height */
         }
         .victim-glass-pills .ant-menu-item::after { display: none !important; }
+
+        /* The actual rounded pill */
+        .victim-glass-pills .ant-menu-item .nav-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          height: 40px;
+          padding: 0 18px;
+          border-radius: 999px; /* <- TRUE pill */
+          background: #fff;
+          color: #5a4eb1;
+          font-weight: 600;
+          font-size: 14px;
+          border: 1px solid rgba(0,0,0,0.04);
+          box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+          transition: transform .15s ease, box-shadow .15s ease, background .15s ease, color .15s ease;
+        }
+
+        /* Hover state */
+        .victim-glass-pills .ant-menu-item:hover .nav-pill {
+          color: ${BRAND.primary};
+          background: #fff;
+          box-shadow: 0 10px 20px rgba(122,90,248,0.14);
+          transform: translateY(-1px);
+        }
+
+        /* Selected/active item */
+        .victim-glass-pills .ant-menu-item.is-active .nav-pill,
+        .victim-glass-pills .ant-menu-item-selected .nav-pill {
+          color: ${BRAND.primary};
+          background: #f2edff;
+          border-color: rgba(122,90,248,0.12);
+          box-shadow: 0 14px 28px rgba(122,90,248,0.18);
+        }
+
         .victim-glass-pills .ant-menu-item a,
         .victim-glass-pills .ant-menu-item a:focus,
         .victim-glass-pills .ant-menu-item:focus,
         .victim-glass-pills .ant-menu-item-selected:focus {
           outline: none !important;
           box-shadow: none !important;
+          
         }
 
         /* === Drawer (mobile) glass menu === */
         .victim-drawer-glass .ant-menu-item {
-          margin: 8px 0;
-          height: 48px;
-          line-height: 48px;
-          border-radius: 16px;
-          font-weight: 600;
-          color: #4a4a4a;
-          background: rgba(255,255,255,0.55);
-          border: 1px solid ${BRAND.soft};
-          backdrop-filter: blur(8px) saturate(140%);
-          transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+          margin: 10px 0;
+          height: 52px;
+          line-height: 52px;
+          border-radius: 26px;
+          font-weight: 700;
+          font-size: 15px;
+          color: #5a4eb1;
+          background: #ffffff;
+          border: 1px solid rgba(0,0,0,0.04);
+          box-shadow: 0 8px 22px rgba(0,0,0,0.06);
+          transition: transform .15s ease, box-shadow .18s ease, background .15s ease, color .15s ease;
         }
         .victim-drawer-glass .ant-menu-item:hover {
           transform: translateY(-1px);
-          color: ${BRAND.violet};
-          background: rgba(255,255,255,0.7);
-          box-shadow: 0 10px 20px rgba(122,90,248,0.10);
+          color: ${BRAND.primary};
+          background: #fff;
+          box-shadow: 0 10px 24px rgba(122,90,248,0.14);
         }
         .victim-drawer-glass .ant-menu-item-selected {
-          color: ${BRAND.violet};
-          background: rgba(255,255,255,0.85);
-          box-shadow: 0 12px 24px rgba(122,90,248,0.12);
-          border-color: ${BRAND.soft};
+          color: ${BRAND.primary};
+          background: #fff;
+          box-shadow: 0 18px 40px rgba(122,90,248,0.14);
+          border-color: rgba(122,90,248,0.12);
         }
         .victim-drawer-glass .ant-menu-item::after { display: none; }
 
@@ -443,11 +568,11 @@ export default function VictimNavbar() {
         .drawer-pill {
           display: flex;
           align-items: center;
-          gap: 10px;
-          height: 48px;
+          gap: 12px;
+          height: 52px;
         }
         .drawer-pill.emergency-pill {
-          color: ${BRAND.pink};
+          color: ${BRAND.primaryAlt};
           font-weight: 700;
         }
         .drawer-pill.emergency-pill .anticon { font-size: 18px; }

@@ -223,32 +223,38 @@ export default function AdminDashboard() {
             />
           ) : (
             <>
-              {/* Responsive grid: 3 cols by default, drop to 2 cols on very small screens */}
-              <div className="mobile-tabs-grid" style={{ marginBottom: 12 }}>
-                {tabs.map((t) => (
-                  <Button
-                    key={t.key}
-                    onClick={() => setActiveTab(t.key)}
-                    type={activeTab === t.key ? "primary" : "default"}
-                    ghost={activeTab !== t.key}
-                    style={{
-                      width: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      padding: "10px 12px",
-                      borderRadius: 12,
-                      justifyContent: "flex-start",
-                      fontWeight: 500,
-                      whiteSpace: "nowrap",
-                      textOverflow: "ellipsis",
-                      overflow: "hidden",
-                    }}
-                    icon={t.icon}
-                  >
-                    <span style={{ fontSize: 14 }}>{t.label}</span>
-                  </Button>
-                ))}
+              {/* Single row horizontal scrollable tabs */}
+              <div className="mobile-tabs-horizontal" style={{ marginBottom: 12 }}>
+                <div className="tabs-scroll-container">
+                  {tabs.map((t) => (
+                    <Button
+                      key={t.key}
+                      onClick={() => setActiveTab(t.key)}
+                      type={activeTab === t.key ? "primary" : "default"}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "12px 20px",
+                        borderRadius: 12,
+                        fontWeight: 600,
+                        fontSize: 14,
+                        whiteSpace: "nowrap",
+                        flexShrink: 0,
+                        background: activeTab === t.key ? BRAND.violet : "#fff",
+                        color: activeTab === t.key ? "#fff" : "rgba(0,0,0,0.75)",
+                        border: activeTab === t.key ? "none" : `1px solid ${BRAND.soft}`,
+                        boxShadow: activeTab === t.key 
+                          ? "0 4px 12px rgba(122,90,248,0.25)" 
+                          : "0 2px 6px rgba(0,0,0,0.04)",
+                        transition: "all .2s ease",
+                      }}
+                      icon={t.icon}
+                    >
+                      {t.label}
+                    </Button>
+                  ))}
+                </div>
               </div>
 
               <div className="mobile-tab-content" style={{ background: "#F8F4FF", minHeight: "52vh", borderRadius: 12, padding: 10 }}>
@@ -268,89 +274,57 @@ export default function AdminDashboard() {
         /* prevent accidental horizontal overflow from tabs area */
         .custom-tabs { overflow-x: hidden; box-sizing: border-box; }
 
-        /* Mobile tabs grid: 3 columns on typical phones, 2 columns on very small screens */
-        .mobile-tabs-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 8px;
+        /* Horizontal scrollable tabs - single row, centered */
+        .mobile-tabs-horizontal {
+          width: 100%;
+          overflow-x: auto;
+          overflow-y: hidden;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none; /* Firefox */
+          -ms-overflow-style: none; /* IE/Edge */
         }
-        @media (max-width: 420px) {
-          .mobile-tabs-grid { grid-template-columns: repeat(2, 1fr); }
+        
+        .mobile-tabs-horizontal::-webkit-scrollbar {
+          display: none; /* Chrome/Safari */
         }
 
-        /* Buttons full-width and consistent */
-        .mobile-tabs-grid .ant-btn {
-          width: 100% !important;
-          box-sizing: border-box;
+        .tabs-scroll-container {
           display: flex;
-          align-items: center;
-          gap: 8px;
+          gap: 10px;
+          padding: 8px 4px;
           justify-content: flex-start;
-          padding: 10px 12px !important;
-          border-radius: 12px !important;
-          border: 1px solid rgba(122,90,248,0.06) !important;
-          background: #fff !important;
-          color: rgba(0,0,0,0.85) !important;
-          font-weight: 600;
-          transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
+          min-width: min-content;
         }
 
-        /* default icon color */
-        .mobile-tabs-grid .ant-btn .anticon { color: rgba(0,0,0,0.56); font-size: 16px; }
+        /* Center tabs if they fit in viewport */
+        @media (min-width: 576px) {
+          .tabs-scroll-container {
+            justify-content: center;
+          }
+        }
 
-        /* Active/selected tab: high contrast, white text/icons and soft glow */
-        .mobile-tabs-grid .ant-btn-primary {
-          background: linear-gradient(90deg, ${BRAND.violet}, ${BRAND.violet}cc) !important;
-          color: #fff !important;
-          border: none !important;
-          box-shadow: 0 10px 30px rgba(122,90,248,0.18) !important;
+        /* Button hover effects */
+        .mobile-tabs-horizontal .ant-btn:hover {
           transform: translateY(-2px);
-        }
-        .mobile-tabs-grid .ant-btn-primary .anticon { color: #fff !important; }
-
-        /* Hover effect for non-active */
-        .mobile-tabs-grid .ant-btn:not(.ant-btn-primary):hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+          box-shadow: 0 6px 16px rgba(122,90,248,0.2) !important;
         }
 
-        /* Make sure the pill has clear spacing from header/content */
-        .mobile-tabs-grid { margin-top: 6px; margin-bottom: 12px; }
+        .mobile-tabs-horizontal .ant-btn:active {
+          transform: translateY(0);
+        }
+
+        /* Smooth scroll behavior */
+        .mobile-tabs-horizontal {
+          scroll-behavior: smooth;
+        }
+
+        /* Active tab animation */
+        .mobile-tabs-horizontal .ant-btn {
+          transition: all .25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
 
         /* ensure mobile content area doesn't get overlapped */
         .mobile-tab-content { z-index: 0; }
-
-        /* ----------------------------------------------------------
-           When the same navbar selection is shown inside a Modal,
-           force a single-line horizontal layout so items appear neat
-           and don't wrap. This converts the grid into a horizontal
-           scroller and makes each button inline and truncated.
-           ---------------------------------------------------------- */
-        .ant-modal .mobile-tabs-grid {
-          display: flex;
-          flex-direction: row;
-          gap: 8px;
-          overflow-x: auto;
-          padding: 8px 4px;
-          -webkit-overflow-scrolling: touch;
-          margin-top: 0; /* keep it tight in modal */
-        }
-        .ant-modal .mobile-tabs-grid .ant-btn {
-          width: auto !important;
-          flex: 0 0 auto;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        .ant-modal .mobile-tabs-grid .ant-btn .anticon {
-          margin-right: 8px;
-        }
-        .ant-modal .mobile-tabs-grid .ant-btn-primary {
-          transform: none; /* avoid translateY inside modal for alignment */
-        }
       `}</style>
     </Layout>
   );

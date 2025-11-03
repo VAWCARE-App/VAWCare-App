@@ -36,6 +36,7 @@ import { api } from "../../lib/api";
 const { Header, Content } = Layout;
 const { Search } = Input;
 const { RangePicker } = DatePicker;
+const { Title, Text } = Typography;
 
 export default function UserManagement() {
   const { message } = AntApp.useApp();
@@ -448,10 +449,12 @@ export default function UserManagement() {
   return (
     <Layout
       style={{
-        minHeight: "100vh",
+        height: "100vh",
         width: "100%",
         background: BRAND.pageBg,
         overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
       {/* Sticky responsive header */}
@@ -459,49 +462,54 @@ export default function UserManagement() {
         style={{
           position: "sticky",
           top: 0,
-          zIndex: 10,
-          background: BRAND.pageBg,
+          zIndex: 100,
+          background: "rgba(250, 249, 255, 0.95)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
           borderBottom: `1px solid ${BRAND.softBorder}`,
+          boxShadow: "0 2px 12px rgba(16,24,40,0.06)",
           display: "flex",
           alignItems: "center",
-          paddingInline: screens.md ? 20 : 12,
-          height: screens.xs && !screens.sm ? 64 : 72,
+          paddingInline: isXs ? 10 : isSm ? 12 : isMdUp ? 20 : 12,
+          height: HEADER_H,
+          flexShrink: 0,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: isXs ? 8 : 12, flex: 1 }}>
           {/* Sidebar toggle only on phones & small screens (dispatches existing toggle event Sidebar listens for) */}
-          {!screens.md && (
+          {!isMdUp && (
             <Button
               type="text"
               icon={<MenuOutlined />}
               onClick={() => window.dispatchEvent(new Event("toggle-sider"))}
               aria-label="Toggle sidebar"
               style={{
-                width: screens.md ? 40 : 36,
-                height: screens.md ? 40 : 36,
-                display: "grid",
-                placeItems: "center",
+                width: isXs ? 34 : 38,
+                height: isXs ? 34 : 38,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 borderRadius: 10,
-                background: "#ffffffcc",
-                boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
+                background: "rgba(255, 255, 255, 0.9)",
+                border: `1px solid ${BRAND.softBorder}`,
+                boxShadow: "0 4px 12px rgba(122,90,248,0.08)",
               }}
             />
           )}
 
-          <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-            <Typography.Title
-              level={4}
-              style={{
-                margin: 0,
-                color: BRAND.violet,
-              }}
-            >
+          <div style={{ 
+            display: "flex", 
+            flexDirection: "column", 
+            minWidth: 0,
+            flex: 1,
+          }}>
+            <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
               User Management
-            </Typography.Title>
-            {screens.md && (
-              <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+            </Title>
+            {isMdUp && (
+              <Text type="secondary" style={{ fontSize: 13 }}>
                 Review, filter, and manage all users across roles and accounts.
-              </Typography.Text>
+              </Text>
             )}
           </div>
         </div>
@@ -510,46 +518,60 @@ export default function UserManagement() {
       <Content
         ref={pageRef}
         style={{
-          padding: 12,
           width: "100%",
           minWidth: 0,
-          marginLeft: 0,
-          overflow: "hidden",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
+          overflow: "auto",
           boxSizing: "border-box",
+          flex: 1,
         }}
       >
         <div
           style={{
+            padding: isXs ? 8 : isSm ? 10 : 12,
             width: "100%",
             maxWidth: "100%",
             margin: 0,
             display: "flex",
             flexDirection: "column",
-            gap: 10,
-            paddingInline: screens.xs ? 6 : 12,
+            gap: isXs ? 8 : 10,
+            paddingInline: isXs ? 4 : isSm ? 8 : 12,
             transition: "width .25s ease",
             boxSizing: "border-box",
+            minHeight: "100%",
           }}
         >
           {/* KPIs */}
-          <Row gutter={[10, 10]}>
+          <Row gutter={[isXs ? 8 : 10, isXs ? 8 : 10]}>
             {[
               ["Total Users", userCounts.total, BRAND.violet],
               ["Administrators", userCounts.admins, BRAND.blue],
               ["Officials", userCounts.officials, BRAND.green],
               ["Victims", userCounts.victims, BRAND.pink],
             ].map(([label, value, color], i) => (
-              <Col xs={12} md={6} key={i}>
-                <Card style={{ ...glassCard, padding: 10 }}>
-                  <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-                    {label}
+              <Col xs={12} sm={12} md={6} key={i}>
+                <Card style={{ 
+                  ...glassCard, 
+                  padding: isXs ? "8px 10px" : "10px 12px",
+                  textAlign: isXs ? "center" : "left",
+                }}>
+                  <Typography.Text 
+                    type="secondary" 
+                    style={{ 
+                      fontSize: isXs ? 11 : 13,
+                      display: "block",
+                      marginBottom: 4,
+                    }}
+                  >
+                    {isXs && label.includes("Administrators") ? "Admins" : label}
                   </Typography.Text>
                   <Typography.Title
-                    level={3}
-                    style={{ margin: 0, color, fontSize: 24 }}
+                    level={isXs ? 4 : 3}
+                    style={{ 
+                      margin: 0, 
+                      color, 
+                      fontSize: isXs ? 20 : isSm ? 22 : 24,
+                      fontWeight: 700,
+                    }}
                   >
                     {value}
                   </Typography.Title>
@@ -558,28 +580,74 @@ export default function UserManagement() {
             ))}
           </Row>
 
-          {/* Toolbar */}
-          <Card style={{ ...glassCard, padding: 10 }}>
-            <Space wrap style={{ width: "100%", justifyContent: "space-between" }}>
-              <Space wrap size={8}>
+          {/* Toolbar - Sticky */}
+          <Card 
+            style={{ 
+              ...glassCard, 
+              padding: isXs ? "12px 8px" : isSm ? "12px 10px" : "14px 16px",
+            
+              top: 0,
+              zIndex: 99,
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              background: "rgba(250, 249, 255, 0.98)",
+              boxShadow: "0 4px 20px rgba(16,24,40,0.12)",
+              marginBottom: 2,
+            }}
+          >
+            <div style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: isXs ? 10 : 12,
+              width: "100%",
+            }}>
+              {/* Search Bar and Filters Row */}
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: isXs 
+                  ? "1fr" 
+                  : isSm 
+                  ? "1fr 1fr" 
+                  : isMdUp 
+                  ? "minmax(240px, 320px) repeat(auto-fit, minmax(140px, 1fr))" 
+                  : "1fr 1fr",
+                gap: isXs ? 8 : 10,
+                width: "100%",
+                alignItems: "center",
+              }}>
                 <Search
-                  placeholder="Search name, email, username…"
+                  placeholder={isXs ? "Search users..." : "Search name, email, username…"}
                   allowClear
-                  enterButton={<SearchOutlined />}
-                  size="middle"
-                  style={{ width: screens.xs ? "100%" : screens.sm ? 200 : 220, minWidth: screens.xs ? 200 : undefined }}
+                  enterButton={
+                    <Button 
+                      type="primary" 
+                      icon={<SearchOutlined />}
+                      style={{
+                        background: BRAND.violet,
+                        borderColor: BRAND.violet,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
+                    >
+                      {!isXs && "Search"}
+                    </Button>
+                  }
+                  size={isXs ? "middle" : "large"}
+                  style={{ width: "100%" }}
                   value={searchText}
                   onSearch={setSearchText}
                   onChange={(e) => setSearchText(e.target.value)}
                 />
+
                 <Select
                   value={filterType}
                   onChange={setFilterType}
-                  size="middle"
-                  style={{ width: screens.xs ? 150 : 170 }}
+                  size={isXs ? "middle" : "large"}
+                  style={{ width: "100%" }}
                   options={[
                     { value: "all", label: "All Types" },
-                    { value: "admin", label: "Administrators" },
+                    { value: "admin", label: isXs ? "Admins" : "Administrators" },
                     { value: "official", label: "Officials" },
                     { value: "victim", label: "Victims" },
                   ]}
@@ -587,14 +655,14 @@ export default function UserManagement() {
                 <Select
                   value={filterStatus}
                   onChange={setFilterStatus}
-                  size="middle"
-                  style={{ width: screens.xs ? 150 : 170 }}
+                  size={isXs ? "middle" : "large"}
+                  style={{ width: "100%" }}
                   options={[
                     { value: "all", label: "All Status" },
                     { value: "approved", label: "Approved" },
                     { value: "pending", label: "Pending" },
                     { value: "rejected", label: "Rejected" },
-                    { value: "anonymous", label: "Anonymous" },
+                    { value: "anonymous", label: isXs ? "Anon" : "Anonymous" },
                     { value: "regular", label: "Regular" },
                   ]}
                 />
@@ -603,17 +671,54 @@ export default function UserManagement() {
                   allowEmpty={[true, true]}
                   placeholder={["Start", "End"]}
                   suffixIcon={<CalendarOutlined />}
-                  size="middle"
-                  style={{ width: screens.xs ? 220 : 260 }}
+                  size={isXs ? "middle" : "large"}
+                  style={{ 
+                    width: "100%",
+                    gridColumn: isXs ? "span 1" : "auto",
+                  }}
                 />
-              </Space>
-              <Space size={8}>
-                <Button icon={<ReloadOutlined />} onClick={fetchAllUsers} size="middle" />
-                <Button icon={<DownloadOutlined />} onClick={exportCsv} size="middle">
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{
+                display: "flex",
+                gap: 8,
+                justifyContent: isXs ? "stretch" : "flex-end",
+                width: "100%",
+              }}>
+                <Button 
+                  icon={<ReloadOutlined />} 
+                  onClick={fetchAllUsers} 
+                  size={isXs ? "middle" : "large"}
+                  style={{ 
+                    flex: isXs ? 1 : "0 0 auto",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                  }}
+                >
+                  {!isXs && "Refresh"}
+                </Button>
+                <Button 
+                  icon={<DownloadOutlined />} 
+                  onClick={exportCsv} 
+                  size={isXs ? "middle" : "large"}
+                  type="primary"
+                  style={{ 
+                    flex: isXs ? 1 : "0 0 auto",
+                    background: BRAND.violet,
+                    borderColor: BRAND.violet,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                  }}
+                >
                   Export
                 </Button>
-              </Space>
-            </Space>
+              </div>
+            </div>
           </Card>
 
           {/* Table */}
@@ -821,6 +926,35 @@ export default function UserManagement() {
         .ant-card { transition: transform .18s ease, box-shadow .18s ease; }
         .ant-card:hover { transform: translateY(-1px); box-shadow: 0 16px 36px rgba(16,24,40,0.08); }
         .ant-table-thead > tr > th { background: #fff !important; }
+
+        /* Smooth sticky transitions */
+        .ant-layout-header {
+          transition: box-shadow 0.3s ease, background 0.3s ease;
+        }
+
+        /* Better mobile input sizing */
+        @media (max-width: 576px) {
+          .ant-input-search .ant-input-group .ant-input {
+            font-size: 14px !important;
+          }
+          .ant-select-selector {
+            font-size: 14px !important;
+          }
+          .ant-picker {
+            font-size: 14px !important;
+          }
+          .ant-btn {
+            font-size: 14px !important;
+          }
+        }
+
+        /* Improve mobile date picker */
+        @media (max-width: 576px) {
+          .ant-picker-dropdown {
+            width: 100vw !important;
+            max-width: 320px !important;
+          }
+        }
 
         .ant-table .ant-table-tbody > tr:hover > td {
           background: ${BRAND.rowHover} !important;

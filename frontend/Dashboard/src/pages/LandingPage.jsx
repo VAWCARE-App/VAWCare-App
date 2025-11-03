@@ -157,7 +157,7 @@ export default function LandingPage() {
         },
       }}
     >
-      <Layout style={{ minHeight: "100vh", background: "transparent" }}>
+      <Layout style={{ minHeight: "100vh", background: "transparent", position: "relative", overflow: "hidden" }}>
         {/* Page variables + subtle base gradient (under shader) */}
         <style>{`
           :root {
@@ -191,15 +191,50 @@ export default function LandingPage() {
             border-color: var(--brand) !important;
             box-shadow: 0 10px 20px rgba(233,30,99,.15);
             color: #fff;
+            transition: all 0.15s ease;
           }
-          .btn-dark { background:#111; border-color:#111; color:#fff; }
-          .btn-dark:hover { filter: brightness(1.05); }
+          .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(233,30,99,.25) !important;
+          }
+          .btn-dark { 
+            background:#111; 
+            border-color:#111; 
+            color:#fff;
+            transition: all 0.15s ease;
+          }
+          .btn-dark:hover { 
+            filter: brightness(1.15);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,.3);
+          }
 
-          .hero-title { line-height: 1.08; font-weight: 900; letter-spacing: -0.02em; font-size: clamp(28px, 6vw, 44px); }
+          .hero-title { 
+            line-height: 1.08; 
+            font-weight: 900; 
+            letter-spacing: -0.02em; 
+            font-size: clamp(24px, 5vw, 44px);
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+          }
           .muted { color: var(--text-muted); }
 
-          .bits-grid { display: grid; gap: 16px; }
-          @media (min-width: 768px) { .bits-grid.cols-3 { grid-template-columns: repeat(3, 1fr); } }
+          .bits-grid { 
+            display: grid; 
+            gap: 16px; 
+            grid-template-columns: 1fr;
+            width: 100%;
+          }
+          @media (min-width: 768px) { 
+            .bits-grid.cols-3 { 
+              grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+            } 
+          }
+          @media (min-width: 1024px) { 
+            .bits-grid.cols-3 { 
+              grid-template-columns: repeat(3, 1fr); 
+            } 
+          }
 
           /* Drawer mask + content: translucent + blurred for both themes */
           .ant-drawer-mask {
@@ -252,30 +287,32 @@ export default function LandingPage() {
           }
         `}</style>
 
-        {/* Base gradient and animated shader background */}
+        {/* Base gradient and animated shader background - only for hero section */}
         <div className="page-bg" />
-        <ColorBends
-          rotation={dark ? 25 : 35}
-          autoRotate={prefersReduced ? 0 : (dark ? 2.4 : 1.8)}
-          speed={dark ? 0.28 : 0.22}
-          scale={dark ? 1.1 : 1.2}
-          frequency={dark ? 1.25 : 1.1}
-          warpStrength={dark ? 1.25 : 1.1}
-          mouseInfluence={prefersReduced ? 0 : 0.85}
-          parallax={0.35}
-          noise={dark ? 0.08 : 0.05}
-          transparent
-          colors={dark ? shaderColorsDark : shaderColorsLight}
-          style={{ position: "absolute", inset: "-10% 0 0 -10%", width: "120%", height: "120%" }}
-        />
-
-        <div className={`shell`} style={{ position: "relative", zIndex: 1 }}>
+        
+        <div className={`shell`} style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: "100vw", overflowX: "hidden" }}>
+          {/* ColorBends background covering top half including navbar */}
+          <ColorBends
+            rotation={dark ? 25 : 35}
+            autoRotate={prefersReduced ? 0 : (dark ? 2.4 : 1.8)}
+            speed={dark ? 0.28 : 0.22}
+            scale={dark ? 1.1 : 1.2}
+            frequency={dark ? 1.25 : 1.1}
+            warpStrength={dark ? 1.25 : 1.1}
+            mouseInfluence={prefersReduced ? 0 : 0.85}
+            parallax={0.35}
+            noise={dark ? 0.08 : 0.05}
+            transparent
+            colors={dark ? shaderColorsDark : shaderColorsLight}
+            style={{ position: "absolute", top: 0, left: 0, right: 0, height: "118vh", pointerEvents: "none", zIndex: 0 }}
+          />
+          
           <Navbar dark={dark} onToggleTheme={() => setDark((v) => !v)} />
 
           <Content>
-            {/* HERO */}
-            <Section style={{ minHeight: screens.md ? "72vh" : "64vh", display: "grid", placeItems: "center", textAlign: "center" }}>
-              <Container>
+            {/* HERO - with animated background */}
+            <Section style={{ minHeight: screens.md ? "72vh" : "64vh", display: "grid", placeItems: "center", textAlign: "center", position: "relative" }}>
+              <Container style={{ position: "relative", zIndex: 1 }}>
                 <motion.div variants={prefersReduced ? undefined : fadeUp} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.5 }}>
                   <BrandPill />
 
@@ -339,21 +376,19 @@ export default function LandingPage() {
             <Section style={{ paddingTop: 0 }}>
               <Container>
                 <div className="bits-grid cols-3">
-                  <GlassCard>
-                    <HeartOutlined style={{ fontSize: 32, color: BRAND.pink }} />
-                    <Title level={4} style={{ margin: 0, color: "var(--ink)" }}>VAWCare Privacy</Title>
-                    <Text className="muted">End-to-end safe reporting, visible only to authorized officials.</Text>
-                  </GlassCard>
-                  <GlassCard>
-                    <SafetyCertificateOutlined style={{ fontSize: 32, color: "#2196f3" }} />
-                    <Title level={4} style={{ margin: 0, color: "var(--ink)" }}>VAWCare Alerts</Title>
-                    <Text className="muted">One-tap emergency notifications to your barangay and contacts.</Text>
-                  </GlassCard>
-                  <GlassCard>
-                    <TeamOutlined style={{ fontSize: 32, color: "#4caf50" }} />
-                    <Title level={4} style={{ margin: 0, color: "var(--ink)" }}>VAWCare Support</Title>
-                    <Text className="muted">Helplines, chatbot, resources—organized in one trusted place.</Text>
-                  </GlassCard>
+                  {[
+                    { icon: <HeartOutlined style={{ fontSize: 32, color: BRAND.pink }} />, title: "VAWCare Privacy", desc: "End-to-end safe reporting, visible only to authorized officials." },
+                    { icon: <SafetyCertificateOutlined style={{ fontSize: 32, color: "#2196f3" }} />, title: "VAWCare Alerts", desc: "One-tap emergency notifications to your barangay and contacts." },
+                    { icon: <TeamOutlined style={{ fontSize: 32, color: "#4caf50" }} />, title: "VAWCare Support", desc: "Helplines, chatbot, resources—organized in one trusted place." }
+                  ].map((item, idx) => (
+                    <div key={item.title}>
+                      <GlassCard hoverable={false}>
+                        {item.icon}
+                        <Title level={4} style={{ margin: 0, color: "var(--ink)" }}>{item.title}</Title>
+                        <Text className="muted">{item.desc}</Text>
+                      </GlassCard>
+                    </div>
+                  ))}
                 </div>
               </Container>
             </Section>
@@ -406,31 +441,57 @@ export default function LandingPage() {
                 <Title level={3} style={{ textAlign: "center", marginBottom: 24, color: "var(--ink)" }}>
                   How VAWCare Works
                 </Title>
-                <div className="bits-grid cols-3" style={{ maxWidth: 1100, margin: "0 auto" }}>
+                <motion.div 
+                  className="bits-grid cols-3" 
+                  style={{ maxWidth: 1100, margin: "0 auto" }}
+                  initial="hidden"
+                  whileInView="show"
+                  viewport={{ once: true, amount: 0.2 }}
+                  variants={{
+                    hidden: {},
+                    show: {
+                      transition: {
+                        staggerChildren: 0.05
+                      }
+                    }
+                  }}
+                >
                   {[
                     { t: "Report in VAWCare", d: "Create a secure report with optional evidence—only authorized officials can view." },
                     { t: "Coordinate via VAWCare", d: "Barangay officials triage and update case status with audit trails." },
                     { t: "Track with VAWCare", d: "Receive notifications, access resources, and view your case timeline." },
                   ].map((s, i) => (
-                    <GlassCard key={s.t}>
-                      <Space align="start" size={12}>
-                        <div
-                          style={{
-                            width: 36, height: 36, borderRadius: 999,
-                            display: "grid", placeItems: "center",
-                            fontWeight: 700, background: "var(--brand)", color: "#fff",
-                          }}
-                        >
-                          {i + 1}
-                        </div>
-                        <div>
-                          <Title level={4} style={{ margin: 0, color: "var(--ink)" }}>{s.t}</Title>
-                          <Text className="muted">{s.d}</Text>
-                        </div>
-                      </Space>
-                    </GlassCard>
+                    <motion.div
+                      key={s.t}
+                      variants={{
+                        hidden: { opacity: 0, x: -20 },
+                        show: { opacity: 1, x: 0, transition: { duration: 0.2, ease: "easeOut" } }
+                      }}
+                      style={{ height: "100%" }}
+                    >
+                      <GlassCard style={{ minHeight: "180px", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Space align="start" size={12} style={{ width: "100%" }}>
+                          <motion.div
+                            style={{
+                              width: 36, height: 36, borderRadius: 999,
+                              display: "grid", placeItems: "center",
+                              fontWeight: 700, background: "var(--brand)", color: "#fff",
+                              flexShrink: 0,
+                            }}
+                            whileHover={{ scale: 1.15, rotate: 5 }}
+                            transition={{ type: "spring", stiffness: 300 }}
+                          >
+                            {i + 1}
+                          </motion.div>
+                          <div style={{ flex: 1 }}>
+                            <Title level={4} style={{ margin: 0, color: "var(--ink)" }}>{s.t}</Title>
+                            <Text className="muted">{s.d}</Text>
+                          </div>
+                        </Space>
+                      </GlassCard>
+                    </motion.div>
                   ))}
-                </div>
+                </motion.div>
               </Container>
             </Section>
 

@@ -282,10 +282,12 @@ export default function LogManagement() {
   return (
     <Layout
       style={{
-        minHeight: "100vh",
+        height: "100vh",
         width: "100%",
         background: BRAND.pageBg,
         overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
       {contextHolder}
@@ -295,19 +297,20 @@ export default function LogManagement() {
         style={{
           position: "sticky",
           top: 0,
-          zIndex: 5,
-          background: BRAND.pageBg,
+          zIndex: 100,
+          background: "rgba(250, 249, 255, 0.95)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
           borderBottom: `1px solid ${BRAND.soft}`,
+          boxShadow: "0 2px 12px rgba(16,24,40,0.06)",
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
-          paddingInline: 16,
-          paddingBlock: isXs ? 8 : 12,
-          height: "auto",
-          lineHeight: 1.2,
+          paddingInline: isXs ? 10 : screens.sm && !screens.md ? 12 : isMdUp ? 20 : 12,
+          height: isXs ? 56 : isMdUp ? 72 : 64,
+          flexShrink: 0,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: isXs ? 8 : 12, flex: 1 }}>
           {!isMdUp && (
             <Button
               type="text"
@@ -315,43 +318,67 @@ export default function LogManagement() {
               onClick={() => window.dispatchEvent(new Event("toggle-sider"))}
               aria-label="Toggle sidebar"
               style={{
-                width: isXs ? 36 : 40,
-                height: isXs ? 36 : 40,
-                display: "grid",
-                placeItems: "center",
+                width: isXs ? 34 : 38,
+                height: isXs ? 34 : 38,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 borderRadius: 10,
-                background: "#ffffffcc",
-                boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
+                background: "rgba(255, 255, 255, 0.9)",
+                border: `1px solid ${BRAND.soft}`,
+                boxShadow: "0 4px 12px rgba(122,90,248,0.08)",
               }}
             />
           )}
 
-          <Space direction="vertical" size={0}>
+          <div style={{ 
+            display: "flex", 
+            flexDirection: "column", 
+            minWidth: 0,
+            flex: 1,
+          }}>
             <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
               Log Management
             </Title>
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              Audit trail of actions across the system. Filter, review, and export logs.
-            </Text>
-          </Space>
+            {isMdUp && (
+              <Text type="secondary" style={{ fontSize: 13 }}>
+                Audit trail of actions across the system. Filter, review, and export logs.
+              </Text>
+            )}
+          </div>
         </div>
 
-        <Space wrap>
+        <div style={{ display: "flex", gap: 8 }}>
           <Button
             icon={<ReloadOutlined />}
             onClick={fetchLogs}
             style={{ borderColor: BRAND.violet, color: BRAND.violet }}
-            title="Refresh"
           >
             {isMdUp ? "Refresh" : null}
           </Button>
-          <Button icon={<DownloadOutlined />} onClick={exportCsv} title="Export">
+          <Button 
+            icon={<DownloadOutlined />} 
+            onClick={exportCsv}
+            type="primary"
+            style={{ background: BRAND.violet, borderColor: BRAND.violet }}
+          >
             {isMdUp ? "Export" : null}
           </Button>
-        </Space>
+        </div>
       </Header>
 
-      <Content style={{ padding: screens.md ? 20 : 12 }}>
+      <Content style={{ 
+        width: "100%",
+        minWidth: 0,
+        overflow: "auto",
+        boxSizing: "border-box",
+        flex: 1,
+      }}>
+        <div style={{
+          padding: isMdUp ? 20 : 12,
+          width: "100%",
+          minHeight: "100%",
+        }}>
         {/* Filters */}
         <Card
           className="hover-lift"
@@ -361,107 +388,133 @@ export default function LogManagement() {
             background:
               "linear-gradient(145deg, rgba(255,255,255,.96), rgba(255,255,255,.90))",
             marginBottom: 12,
+            padding: isXs ? "12px 8px" : "14px 16px",
           }}
-          bodyStyle={{ padding: 12 }}
+          bodyStyle={{ padding: 0 }}
         >
-          <Row gutter={[12, 12]} align="middle">
-            <Col xs={24} md={6}>
-              <Input
-                allowClear
-                placeholder="Search action/details…"
-                prefix={<SearchOutlined />}
-                value={filters.q}
-                onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
-              />
-            </Col>
+          {/* First Row: Main Search and Actor Filters */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: isXs 
+              ? "1fr 1fr" 
+              : screens.sm && !screens.md
+              ? "1fr 1fr" 
+              : isMdUp 
+              ? "minmax(240px, 320px) 1fr 1fr" 
+              : "1fr 1fr",
+            gap: isXs ? 8 : 10,
+            width: "100%",
+            alignItems: "center",
+            marginBottom: isXs ? 8 : 12,
+          }}>
+            <Input
+              allowClear
+              placeholder={isXs ? "Search..." : "Search action/details…"}
+              prefix={<SearchOutlined />}
+              value={filters.q}
+              onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
+              size={isXs ? "middle" : "large"}
+              style={{ width: "100%", gridColumn: isXs ? "span 2" : "auto" }}
+            />
 
-            <Col xs={12} md={4}>
-              <Select
-                allowClear
-                placeholder="Actor Type"
-                value={filters.actorType}
-                onChange={(v) => setFilters((f) => ({ ...f, actorType: v }))}
-                style={{ width: "100%" }}
-                options={[
-                  { value: "victim", label: "Victim" },
-                  { value: "official", label: "Official" },
-                  { value: "admin", label: "Admin" },
-                ]}
-              />
-            </Col>
+            <Select
+              allowClear
+              placeholder="Actor Type"
+              value={filters.actorType}
+              onChange={(v) => setFilters((f) => ({ ...f, actorType: v }))}
+              style={{ width: "100%" }}
+              size={isXs ? "middle" : "large"}
+              options={[
+                { value: "victim", label: "Victim" },
+                { value: "official", label: "Official" },
+                { value: "admin", label: "Admin" },
+              ]}
+            />
 
-            <Col xs={12} md={5}>
-              <Input
-                allowClear
-                placeholder={
-                  filters.actorType === "official"
-                    ? "Official ID (e.g. 0FB000)"
-                    : filters.actorType === "admin"
-                    ? "Admin ID (e.g. ADM000)"
-                    : "Victim ID (e.g. VIC000)"
-                }
-                value={filters.actorId}
-                onChange={(e) => setFilters((f) => ({ ...f, actorId: e.target.value }))}
-              />
-            </Col>
+            <Input
+              allowClear
+              placeholder={
+                filters.actorType === "official"
+                  ? (isXs ? "Official ID" : "Official ID")
+                  : filters.actorType === "admin"
+                  ? (isXs ? "Admin ID" : "Admin ID")
+                  : (isXs ? "Actor ID" : "Actor ID")
+              }
+              value={filters.actorId}
+              onChange={(e) => setFilters((f) => ({ ...f, actorId: e.target.value }))}
+              size={isXs ? "middle" : "large"}
+              style={{ width: "100%" }}
+            />
+          </div>
 
-            <Col xs={12} md={4}>
-              <Input
-                allowClear
-                placeholder="IP Address"
-                value={filters.ipAddress}
-                onChange={(e) => setFilters((f) => ({ ...f, ipAddress: e.target.value }))}
-              />
-            </Col>
+          {/* Second Row: IP, Date, Action, and Clear */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: isXs 
+              ? "1fr 1fr" 
+              : screens.sm && !screens.md
+              ? "1fr 1fr" 
+              : isMdUp 
+              ? "1fr 1fr 1fr auto" 
+              : "1fr 1fr",
+            gap: isXs ? 8 : 10,
+            width: "100%",
+            alignItems: "center",
+          }}>
+            <Input
+              allowClear
+              placeholder={isXs ? "IP" : "IP Address"}
+              value={filters.ipAddress}
+              onChange={(e) => setFilters((f) => ({ ...f, ipAddress: e.target.value }))}
+              size={isXs ? "middle" : "large"}
+              style={{ width: "100%" }}
+            />
 
-            <Col xs={12} md={5}>
-              <RangePicker
-                style={{ width: "100%" }}
-                onChange={(v) => setFilters((f) => ({ ...f, dateRange: v }))}
-                allowEmpty={[true, true]}
-              />
-            </Col>
+            <RangePicker
+              style={{ width: "100%" }}
+              onChange={(v) => setFilters((f) => ({ ...f, dateRange: v }))}
+              allowEmpty={[true, true]}
+              size={isXs ? "middle" : "large"}
+              placeholder={isXs ? ["Start", "End"] : ["Start Date", "End Date"]}
+            />
 
-            <Col xs={24} md={24}>
-              <Space size={8} wrap>
-                <Select
-                  allowClear
-                  style={{ minWidth: 180 }}
-                  placeholder={
-                    <span>
-                      <FilterOutlined /> Filter Action
-                    </span>
-                  }
-                  value={filters.action}
-                  onChange={(v) => setFilters((f) => ({ ...f, action: v }))}
-                  options={[
-                    { value: "Login", label: "Login" },
-                    { value: "Logout", label: "Logout" },
-                    { value: "Create", label: "Create" },
-                    { value: "Update", label: "Update" },
-                    { value: "Delete", label: "Delete" },
-                    { value: "Assign", label: "Assign" },
-                    { value: "Status Change", label: "Status Change" },
-                    { value: "Export", label: "Export" },
-                  ]}
-                />
-                <Button
-                  onClick={() => {
-                    setFilters({
-                      action: "",
-                      actorType: "",
-                      actorId: "",
-                      ipAddress: "",
-                      dateRange: null,
-                      q: "",
-                    });
-                  }}
-                >
-                  Clear Filters
-                </Button>
-              </Space>
-            </Col>
-          </Row>
+            <Select
+              allowClear
+              style={{ width: "100%" }}
+              placeholder={isXs ? "Action" : "Filter Action"}
+              suffixIcon={<FilterOutlined />}
+              value={filters.action}
+              onChange={(v) => setFilters((f) => ({ ...f, action: v }))}
+              size={isXs ? "middle" : "large"}
+              options={[
+                { value: "Login", label: "Login" },
+                { value: "Logout", label: "Logout" },
+                { value: "Create", label: "Create" },
+                { value: "Update", label: "Update" },
+                { value: "Delete", label: "Delete" },
+                { value: "Assign", label: "Assign" },
+                { value: "Status Change", label: "Status Change" },
+                { value: "Export", label: "Export" },
+              ]}
+            />
+            
+            <Button
+              onClick={() => {
+                setFilters({
+                  action: "",
+                  actorType: "",
+                  actorId: "",
+                  ipAddress: "",
+                  dateRange: null,
+                  q: "",
+                });
+              }}
+              size={isXs ? "middle" : "large"}
+              style={{ width: "100%" }}
+            >
+              Clear Filters
+            </Button>
+          </div>
         </Card>
 
         {/* Table */}
@@ -537,6 +590,7 @@ export default function LogManagement() {
             }}
           />
         </Card>
+        </div>
       </Content>
 
       {/* Styles */}

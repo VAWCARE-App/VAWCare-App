@@ -1,3 +1,4 @@
+// src/components/Sidebar.jsx
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import {
   Layout,
@@ -5,7 +6,6 @@ import {
   Typography,
   Avatar,
   Badge,
-  Divider,
   Grid,
   Popover,
 } from "antd";
@@ -31,7 +31,6 @@ import {
   FolderOpenOutlined,
   BankOutlined,
   IdcardOutlined,
-  MenuOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { clearAllStorage, api, getUserData } from "../lib/api";
@@ -39,9 +38,6 @@ import logo from "../assets/logo1.png";
 
 const { Sider } = Layout;
 const { Text } = Typography;
-
-/** Keep in sync with header height */
-const HEADER_HEIGHT = 64;
 
 export default function Sidebar({ collapsed, setCollapsed }) {
   const navigate = useNavigate();
@@ -57,14 +53,14 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     border: "rgba(122,90,248,0.18)",
   };
 
-  // ---- Global toggle hook (called from AdminDashboard header) ----
+  // Toggle via global event from header
   useEffect(() => {
     const handler = () => setCollapsed((c) => !c);
     window.addEventListener("toggle-sider", handler);
     return () => window.removeEventListener("toggle-sider", handler);
   }, [setCollapsed]);
 
-  // ---- Logout ----
+  // Logout
   const handleLogout = async () => {
     try {
       await Promise.race([
@@ -76,7 +72,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     navigate("/");
   };
 
-  // ---- User ----
+  // User
   const [currentUser, setCurrentUser] = useState({});
   useEffect(() => {
     (async () => {
@@ -96,7 +92,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     return (a + b || "U").toUpperCase();
   }, [currentUser]);
 
-  // ---- Menus ----
+  // Menus
   const adminMenu = [
     { type: "item", key: "/admin", icon: <DashboardOutlined />, label: "Dashboard" },
     {
@@ -167,7 +163,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   if (userType === "official") menu = officialMenu;
   else if (userType === "victim") menu = victimMenu;
 
-  // ---- Default open groups ----
+  // Default open groups
   const defaultOpen = (pathname) => {
     const open = [];
     if (
@@ -195,20 +191,82 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     }
   }, [location.pathname, collapsed]);
 
-  const toggleGroup = (key) => {
-    setOpenGroups((prev) => {
-      // If already open, close it. If opening, make it the only open group
-      // to avoid multiple expanded groups that can change sidebar length
-      // and cause overlapping selection areas.
-      if (prev.includes(key)) return prev.filter((k) => k !== key);
-      return [key];
+  // Scroll indicator for nav-wrap
+  const navWrapRef = useRef(null);
+  const [showScrollHint, setShowScrollHint] = useState(false);
+  const [hiddenItems, setHiddenItems] = useState([]);
+
+  useEffect(() => {
+    const el = navWrapRef.current;
+    if (!el) return;
+
+    const checkScroll = () => {
+      const hasScroll = el.scrollHeight > el.clientHeight;
+      const isAtBottom = el.scrollHeight - el.scrollTop <= el.clientHeight + 10;
+      const shouldShow = hasScroll && !isAtBottom;
+      setShowScrollHint(shouldShow);
+
+      // Detect which items are cut off (not fully visible)
+      // Check whenever there's scroll, not just when shouldShow is true
+      if (hasScroll) {
+        const railEl = el.querySelector('.rail');
+        if (railEl) {
+          const containerRect = el.getBoundingClientRect();
+          const buttons = Array.from(railEl.querySelectorAll('.rail-btn, .sub-btn'));
+          const hidden = [];
+
+          buttons.forEach((btn) => {
+            const rect = btn.getBoundingClientRect();
+            const itemKey = btn.getAttribute('data-key');
+            const itemLabel = btn.getAttribute('data-label');
+            const itemType = btn.getAttribute('data-type');
+            
+            // Check if button is partially or fully below the visible area
+            // Account for footer height (86px) + logout section (~60px) + buffer (20px)
+            const footerAndLogoutHeight = 166;
+            if (rect.bottom > containerRect.bottom - footerAndLogoutHeight || rect.top > containerRect.bottom) {
+              if (itemKey && itemLabel) {
+                hidden.push({ key: itemKey, label: itemLabel, type: itemType });
+              }
+            }
+          });
+
+          setHiddenItems(hidden);
+        }
+      } else {
+        setHiddenItems([]);
+      }
+    };
+
+    // Add a small delay to ensure DOM is fully rendered
+    const timeoutId = setTimeout(checkScroll, 100);
+    checkScroll();
+    
+    el.addEventListener("scroll", checkScroll);
+    window.addEventListener("resize", checkScroll);
+
+    const observer = new MutationObserver(() => {
+      // Delay the check to ensure DOM updates are complete
+      setTimeout(checkScroll, 100);
     });
+    observer.observe(el, { childList: true, subtree: true, attributes: true });
+
+    return () => {
+      clearTimeout(timeoutId);
+      el.removeEventListener("scroll", checkScroll);
+      window.removeEventListener("resize", checkScroll);
+      observer.disconnect();
+    };
+  }, [collapsed, openGroups]);
+
+  const toggleGroup = (key) => {
+    setOpenGroups((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [key]));
   };
 
   const isActive = (key) =>
     location.pathname === key || location.pathname.startsWith(key + "/");
 
-  // ---- Mobile behavior ----
+  // Mobile behavior
   useEffect(() => {
     if (isMobile && !collapsed) setCollapsed(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -219,7 +277,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
-  // ---- Collapsed-mode flyout ----
+  // Collapsed-mode flyout
   const SubmenuFlyout = ({ node }) => (
     <div className="flyout">
       <div className="flyout-title">
@@ -241,7 +299,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     </div>
   );
 
-  // ---- Truncated label with explicit 'more' control ----
+  // Truncated label with explicit 'more' control
   const TruncatedLabel = ({ text, popContent, onMoreClick, className, style }) => {
     const ref = useRef(null);
     const [overflow, setOverflow] = useState(false);
@@ -251,13 +309,11 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       if (!el) return;
       const check = () => setOverflow(el.scrollWidth > el.clientWidth + 1);
       check();
-      // keep responsive
       let ro;
       try {
         ro = new ResizeObserver(check);
         ro.observe(el);
-      } catch (e) {
-        // ResizeObserver may not exist in some envs — fallback to window resize
+      } catch {
         window.addEventListener("resize", check);
       }
       return () => {
@@ -283,7 +339,6 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         >
           {text}
         </span>
-
         {overflow && (
           <Popover
             placement="right"
@@ -302,7 +357,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               aria-label={`More for ${text}`}
               type="button"
             >
-              ...
+              …
             </button>
           </Popover>
         )}
@@ -310,10 +365,9 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     );
   };
 
-  // ---- Render ----
   return (
     <>
-      {/* Backdrop (mobile) – cover ENTIRE screen incl. header */}
+      {/* Backdrop (mobile) */}
       {isMobile && !collapsed && (
         <div
           className="sider-backdrop"
@@ -329,13 +383,10 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         />
       )}
 
-      {/* Mobile opener removed — header menu icon should toggle the sidebar (use window event 'toggle-sider' or setCollapsed from parent) */}
-
       <Sider
         trigger={null}
         collapsible
         collapsed={collapsed}
-        /* Mobile: left overlay covering header */
         width={isMobile ? "70%" : 240}
         collapsedWidth={isMobile ? 0 : 80}
         style={{
@@ -343,11 +394,10 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           borderRight: `1px solid ${BRAND.border}`,
           display: "flex",
           flexDirection: "column",
-          minHeight: "100vh",
+          height: "100vh",
           overflow: "hidden",
           position: isMobile ? "fixed" : "sticky",
-          /* On mobile render as inset rounded card starting at the top (no spacing) */
-          top: isMobile ? 0 : 0,
+          top: 0,
           left: isMobile ? 12 : 0,
           right: isMobile ? 12 : undefined,
           zIndex: isMobile ? 1101 : 2,
@@ -358,7 +408,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         }}
         className={`sider-modern ${isMobile ? "sider-mobile-card" : ""}`}
       >
-        {/* BRAND */}
+        {/* Brand header */}
         <div
           className="brand"
           style={{
@@ -378,7 +428,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           <Avatar
             src={!collapsed ? logo : undefined}
             size={40}
-              style={{ background: "#efeafd", color: BRAND.primary, fontWeight: 700 }}
+            style={{ background: "#efeafd", color: BRAND.primary, fontWeight: 700 }}
           >
             <img alt="VAWCare" src={logo} style={{ width: 22, height: 22 }} />
           </Avatar>
@@ -386,7 +436,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           {!collapsed && (
             <div className="brand-text" style={{ lineHeight: 1.1 }}>
               <Text style={{ color: BRAND.primary, fontWeight: 800 }}>VAWCare</Text>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <Badge color={BRAND.primary} dot />
                 <Text type="secondary" style={{ fontSize: 12 }}>
                   {currentUser.firstName ? `Hi, ${currentUser.firstName}` : "Welcome"}
@@ -406,43 +456,50 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         </div>
 
         {/* NAV */}
+        <div
+          ref={navWrapRef}
+          className="nav-wrap"
+          style={{
+            flex: "1 1 0",
+            minHeight: 0,
+            maxHeight: "calc(100vh - 240px)", // Limit height to force overflow when needed
+            display: "flex",
+            flexDirection: "column",
+            padding: 10,
+            overflowY: "auto",
+            overflowX: "hidden",
+            position: "relative",
+          }}
+        >
           <div
-            className="nav-wrap"
+            className={`rail ${collapsed ? "collapsed" : ""}`}
             style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-                padding: 10,
-              overflowY: "auto",
-              overflowX: "hidden",
+              background: BRAND.rail,
+              border: `1px solid ${BRAND.border}`,
+              borderRadius: 18,
+              padding: isMobile ? "12px" : "8px 6px",
+              display: "grid",
+              gap: isMobile ? 10 : 6,
+              boxShadow: isMobile ? "0 18px 48px rgba(122,90,248,0.08)" : "0 10px 26px rgba(122,90,248,0.08)",
+              width: isMobile ? "92%" : "auto",
+              margin: isMobile ? "8px auto" : undefined,
             }}
           >
-            <div
-              className={`rail ${collapsed ? "collapsed" : ""}`}
-                style={{
-                background: BRAND.rail,
-                border: `1px solid ${BRAND.border}`,
-                borderRadius: 18,
-                padding: isMobile ? "12px" : "8px 6px",
-                display: "grid",
-                gap: isMobile ? 10 : 6,
-                boxShadow: isMobile ? "0 18px 48px rgba(122,90,248,0.08)" : "0 10px 26px rgba(122,90,248,0.08)",
-                /* on mobile keep the inner rail narrow and centered like a card */
-                width: isMobile ? "92%" : "auto",
-                margin: isMobile ? "8px auto" : undefined,
-              }}
-            >
-              {menu.map((node) => {
-                if (node.type === "item") {
-                  return (
-                    <button
-                      key={node.key}
-                      className={`rail-btn ${isActive(node.key) ? "active" : ""}`}
-                      onClick={() => navigate(node.key)}
-                      title={collapsed ? node.label : undefined}
-                      style={railBtnStyle(BRAND, isActive(node.key), isMobile)}
-                    >
-                    <span className="rail-icon" style={railIconStyle(BRAND)}>
+            {menu.map((node) => {
+              if (node.type === "item") {
+                const active = isActive(node.key);
+                return (
+                  <button
+                    key={node.key}
+                    className={`rail-btn ${active ? "active" : ""}`}
+                    onClick={() => navigate(node.key)}
+                    title={collapsed ? node.label : undefined}
+                    style={railBtnStyle(BRAND, active, isMobile)}
+                    data-key={node.key}
+                    data-label={node.label}
+                    data-type="item"
+                  >
+                    <span className="rail-icon" style={railIconStyle(BRAND, isMobile)}>
                       {node.icon}
                     </span>
                     {!collapsed && (
@@ -456,21 +513,24 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                     )}
                   </button>
                 );
-                }
+              }
 
-                const isOpen = openGroups.includes(node.key);
-                const parentActive =
-                  (node.base && location.pathname.startsWith(node.base)) ||
-                  node.children?.some((c) => isActive(c.key));
+              const isOpen = openGroups.includes(node.key);
+              const parentActive =
+                (node.base && location.pathname.startsWith(node.base)) ||
+                node.children?.some((c) => isActive(c.key));
 
-                const GroupButton = (
-                  <button
-                    className={`rail-btn ${parentActive ? "active" : ""}`}
-                    onClick={() => (collapsed ? null : toggleGroup(node.key))}
-                    title={collapsed ? node.label : undefined}
-                    style={railBtnStyle(BRAND, parentActive, isMobile)}
-                  >
-                  <span className="rail-icon" style={railIconStyle(BRAND)}>
+              const GroupButton = (
+                <button
+                  className={`rail-btn ${parentActive ? "active" : ""}`}
+                  onClick={() => (collapsed ? null : toggleGroup(node.key))}
+                  title={collapsed ? node.label : undefined}
+                  style={railBtnStyle(BRAND, parentActive, isMobile)}
+                  data-key={node.key}
+                  data-label={node.label}
+                  data-type="group"
+                >
+                  <span className="rail-icon" style={railIconStyle(BRAND, isMobile)}>
                     {node.icon}
                   </span>
                   {!collapsed && (
@@ -520,48 +580,76 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
                   {!collapsed && isOpen && (
                     <div className="sub-flat" style={{ display: "grid", gap: 8, marginTop: 6 }}>
-                      {node.children?.map((child) => (
-                        <button
-                          key={child.key}
-                          className={`sub-btn ${isActive(child.key) ? "active" : ""}`}
-                          onClick={() => navigate(child.key)}
-                          style={subBtnStyle(BRAND, isActive(child.key), isMobile)}
-                        >
-                          <span
-                            className="sub-icon"
-                            style={{
-                              width: 20,
-                              display: "grid",
-                              placeItems: "center",
-                              color: BRAND.primary,
-                              fontSize: 16,
-                            }}
+                      {node.children?.map((child) => {
+                        const active = isActive(child.key);
+                        return (
+                          <button
+                            key={child.key}
+                            className={`sub-btn ${active ? "active" : ""}`}
+                            onClick={() => navigate(child.key)}
+                            style={subBtnStyle(BRAND, active, isMobile)}
+                            data-key={child.key}
+                            data-label={child.label}
+                            data-type="subitem"
+                            data-parent={node.key}
                           >
-                            {child.icon}
-                          </span>
-                          <TruncatedLabel
-                            text={child.label}
-                            className="sub-label"
-                            popContent={<div style={{ padding: 8 }}>{child.label}</div>}
-                            onMoreClick={() => navigate(child.key)}
-                          />
-                        </button>
-                      ))}
+                            <span
+                              className="sub-icon"
+                              style={{
+                                width: 20,
+                                display: "grid",
+                                placeItems: "center",
+                                color: BRAND.primary,
+                                fontSize: 16,
+                              }}
+                            >
+                              {child.icon}
+                            </span>
+                            <TruncatedLabel
+                              text={child.label}
+                              className="sub-label"
+                              popContent={<div style={{ padding: 8 }}>{child.label}</div>}
+                              onMoreClick={() => navigate(child.key)}
+                            />
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
               );
             })}
+          </div>
 
-            <Divider style={{ margin: 10 }} />
+        </div>
 
+        {/* Logout */}
+        <div style={{ 
+          padding: "8px 10px", 
+          background: BRAND.panel,
+          position: "sticky",
+          bottom: 86,
+          zIndex: 1,
+          marginTop: "auto"
+        }}>
+          <div
+            style={{
+              background: BRAND.rail,
+              border: `1px solid ${BRAND.border}`,
+              borderRadius: 18,
+              padding: isMobile ? "12px" : "8px 6px",
+              boxShadow: isMobile ? "0 18px 48px rgba(122,90,248,0.08)" : "0 10px 26px rgba(122,90,248,0.08)",
+              width: isMobile ? "92%" : "auto",
+              margin: isMobile ? "0 auto" : undefined,
+            }}
+          >
             <button
               className="rail-btn danger"
               onClick={handleLogout}
               title={collapsed ? "Logout" : undefined}
-              style={{ ...railBtnStyle(BRAND, false), color: BRAND.primaryAlt }}
+              style={{ ...railBtnStyle(BRAND, false, isMobile), color: BRAND.primaryAlt }}
             >
-              <span className="rail-icon" style={{ ...railIconStyle(BRAND), color: BRAND.primaryAlt }}>
+              <span className="rail-icon" style={{ ...railIconStyle(BRAND, isMobile), color: BRAND.primaryAlt }}>
                 <LogoutOutlined />
               </span>
               {!collapsed && <span className="rail-label">Logout</span>}
@@ -569,7 +657,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           </div>
         </div>
 
-        {/* FOOTER */}
+        {/* Footer user chip */}
         <div
           className="footer"
           style={{
@@ -616,7 +704,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         </div>
       </Sider>
 
-      {/* --- FLYOUT STYLE FIXES --- */}
+      {/* Popover & effects CSS */}
       <style>{`
         .sider-flyout .ant-popover-inner {
           padding: 10px !important;
@@ -625,80 +713,85 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           border-radius: 14px !important;
           box-shadow: 0 18px 48px rgba(16,24,40,0.18) !important;
         }
-        .sider-flyout .ant-popover-inner-content {
-          padding: 0 !important;
-        }
-        .sider-flyout .flyout {
-          min-width: 200px;
-          max-width: 260px;
-          display: grid;
-          gap: 8px;
-        }
+        .sider-flyout .ant-popover-inner-content { padding: 0 !important; }
+        .sider-flyout .flyout { min-width: 200px; max-width: 260px; display: grid; gap: 8px; }
         .sider-flyout .flyout-title {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 8px 10px;
-          border-radius: 10px;
-          background: #f7f4ff;
-          color: #7A5AF8;
-          font-weight: 700;
+          display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+          border-radius: 10px; background: #f7f4ff; color: #7A5AF8; font-weight: 700;
         }
-        .sider-flyout .flyout-list {
-          display: flex !important;
-          flex-direction: column !important;
-          gap: 6px !important;
-        }
+        .sider-flyout .flyout-list { display: flex; flex-direction: column; gap: 6px; }
         .sider-flyout .flyout-item {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          height: 40px;
-          padding: 0 10px;
-          border: 1px solid rgba(122,90,248,0.15);
-          border-radius: 10px;
-          background: #fff !important;
-          color: #5a4eb1 !important;
-          font-weight: 600;
-          text-align: left;
-          cursor: pointer;
+          display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 10px;
+          border: 1px solid rgba(122,90,248,0.15); border-radius: 10px; background: #fff;
+          color: #5a4eb1; font-weight: 600; text-align: left; cursor: pointer;
           box-shadow: 0 4px 12px rgba(0,0,0,0.06);
           transition: background .15s ease, box-shadow .15s ease, transform .15s ease, color .15s ease;
         }
         .sider-flyout .flyout-item:hover {
-          background: #f7f4ff !important;
-          box-shadow: 0 10px 20px rgba(122,90,248,0.14);
-          transform: translateY(-1px);
+          background: #f7f4ff; box-shadow: 0 10px 20px rgba(122,90,248,0.14); transform: translateY(-1px);
         }
         .sider-flyout .flyout-item.active {
-          background: #f2edff !important;
-          color: #7A5AF8 !important;
-          border-color: rgba(122,90,248,0.35);
+          background: #f2edff; color: #7A5AF8; border-color: rgba(122,90,248,0.35);
         }
-        .sider-flyout .flyout-icon {
-          width: 18px;
-          display: grid;
-          place-items: center;
-          font-size: 16px;
-          color: #7A5AF8 !important;
+        .sider-flyout .flyout-icon { width: 18px; display: grid; place-items: center; font-size: 16px; color: #7A5AF8; }
+        .sider-backdrop { position: fixed; inset: 0; background: rgba(17,17,26,0.44); z-index: 1090; backdrop-filter: blur(2px); }
+
+        /* Profile popover with hidden items */
+        .sider-profile-more .ant-popover-inner {
+          background: #ffffff !important;
+          border: 1px solid rgba(122,90,248,0.22) !important;
+          border-radius: 16px !important;
+          box-shadow: 0 20px 60px rgba(16,24,40,0.22) !important;
+          padding: 0 !important;
         }
-        .sider-flyout .flyout-item *,
-        .sider-flyout .flyout-title * {
-          filter: none !important;
+        .sider-profile-more .ant-popover-arrow {
+          display: block !important;
         }
-        .sider-backdrop {
-          position: fixed;
-          inset: 0;
-          background: rgba(17,17,26,0.44);
-          z-index: 1090;
-          backdrop-filter: blur(2px);
+
+        /* Custom scrollbar for profile popover */
+        .sider-profile-more .ant-popover-inner-content::-webkit-scrollbar {
+          width: 5px;
+        }
+        .sider-profile-more .ant-popover-inner-content::-webkit-scrollbar-track {
+          background: rgba(122, 90, 248, 0.08);
+          border-radius: 5px;
+        }
+        .sider-profile-more .ant-popover-inner-content::-webkit-scrollbar-thumb {
+          background: rgba(122, 90, 248, 0.3);
+          border-radius: 5px;
+        }
+
+        /* Custom scrollbar for nav-wrap */
+        .nav-wrap::-webkit-scrollbar {
+          width: 6px;
+        }
+        .nav-wrap::-webkit-scrollbar-track {
+          background: rgba(122, 90, 248, 0.08);
+          border-radius: 10px;
+        }
+        .nav-wrap::-webkit-scrollbar-thumb {
+          background: rgba(122, 90, 248, 0.3);
+          border-radius: 10px;
+        }
+        .nav-wrap::-webkit-scrollbar-thumb:hover {
+          background: rgba(122, 90, 248, 0.5);
+        }
+
+        /* Smooth transitions for buttons */
+        .rail-btn, .sub-btn {
+          transition: all .15s ease !important;
+        }
+
+        /* User chip hover animation */
+        .user-chip {
+          transition: all .2s ease !important;
         }
       `}</style>
     </>
   );
 }
 
-/* helpers for button styles */
+/* helpers */
 function railBtnStyle(BRAND, active, isMobile) {
   if (isMobile) {
     return {
@@ -713,17 +806,12 @@ function railBtnStyle(BRAND, active, isMobile) {
       color: active ? BRAND.primary : "#5a4eb1",
       borderRadius: 16,
       background: active ? "#fff" : "#ffffff",
-      /* active uses stronger shadow and subtle violet border */
-      boxShadow: active
-        ? "0 18px 40px rgba(122,90,248,0.14)"
-        : "0 8px 22px rgba(0,0,0,0.06)",
+      boxShadow: active ? "0 18px 40px rgba(122,90,248,0.14)" : "0 8px 22px rgba(0,0,0,0.06)",
       border: active ? `1px solid rgba(122,90,248,0.12)` : "1px solid rgba(0,0,0,0.04)",
       cursor: "pointer",
-      transition:
-        "transform .15s ease, box-shadow .18s ease, background .15s ease, color .15s ease",
+      transition: "transform .15s ease, box-shadow .18s ease, background .15s ease, color .15s ease",
     };
   }
-
   return {
     width: "100%",
     display: "flex",
@@ -737,12 +825,9 @@ function railBtnStyle(BRAND, active, isMobile) {
     border: "none",
     borderRadius: 12,
     background: active ? "#f2edff" : "#fff",
-    boxShadow: active
-      ? "0 14px 28px rgba(122,90,248,0.18)"
-      : "0 6px 18px rgba(0,0,0,0.06)",
+    boxShadow: active ? "0 14px 28px rgba(122,90,248,0.18)" : "0 6px 18px rgba(0,0,0,0.06)",
     cursor: "pointer",
-    transition:
-      "transform .15s ease, box-shadow .15s ease, background .15s ease, color .15s ease",
+    transition: "transform .15s ease, box-shadow .15s ease, background .15s ease, color .15s ease",
   };
 }
 function railIconStyle(BRAND, isMobile) {
@@ -771,12 +856,9 @@ function subBtnStyle(BRAND, active, isMobile) {
       fontWeight: 700,
       padding: "0 14px",
       textAlign: "left",
-      boxShadow: active
-        ? "0 14px 30px rgba(122,90,248,0.14)"
-        : "0 6px 16px rgba(0,0,0,0.04)",
+      boxShadow: active ? "0 14px 30px rgba(122,90,248,0.14)" : "0 6px 16px rgba(0,0,0,0.04)",
     };
   }
-
   return {
     height: 44,
     display: "flex",
@@ -789,8 +871,21 @@ function subBtnStyle(BRAND, active, isMobile) {
     fontWeight: 600,
     padding: "0 14px",
     textAlign: "left",
-    boxShadow: active
-      ? "0 12px 24px rgba(122,90,248,0.16)"
-      : "0 4px 10px rgba(0,0,0,0.04)",
+    boxShadow: active ? "0 12px 24px rgba(122,90,248,0.16)" : "0 4px 10px rgba(0,0,0,0.04)",
+  };
+}
+function flyItemStyle(active, BRAND, isChild = false) {
+  return {
+    width: "100%",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    padding: isChild ? "6px 12px 6px 24px" : "8px 12px",
+    border: "none",
+    background: active ? "#f7f4ff" : "transparent",
+    color: active ? BRAND.primary : "#666",
+    cursor: "pointer",
+    fontSize: 12,
+    textAlign: "left",
   };
 }

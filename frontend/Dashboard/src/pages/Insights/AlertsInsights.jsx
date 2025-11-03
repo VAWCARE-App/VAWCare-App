@@ -313,10 +313,29 @@ export default function AlertsInsights() {
     );
 
     return (
-        <Layout style={{ background: "#fff", minHeight: "100vh", padding: 16 }}>
-            <Content>
-                <Row gutter={[16, 16]}>
-                    <Col xs={24} style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, alignItems: 'center' }}>
+        <>
+            <style>{`
+                /* Force all Leaflet map panes to stay below navbar (zIndex: 100) */
+                .leaflet-pane,
+                .leaflet-top,
+                .leaflet-bottom,
+                .leaflet-control,
+                .leaflet-popup-pane,
+                .leaflet-tooltip-pane,
+                .leaflet-shadow-pane,
+                .leaflet-marker-pane,
+                .leaflet-overlay-pane,
+                .leaflet-tile-pane {
+                    z-index: 50 !important;
+                }
+                .leaflet-container {
+                    z-index: 1 !important;
+                }
+            `}</style>
+            <Layout style={{ background: "#fff", minHeight: "100vh", padding: 16 }}>
+                <Content>
+                    <Row gutter={[16, 16]}>
+                        <Col xs={24} style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, alignItems: 'center' }}>
                         <Space>
                             <div style={{ textAlign: 'right', marginRight: 8 }}>
                                 <Text type="secondary" style={{ display: 'block', fontSize: 11 }}>Based on </Text>
@@ -373,11 +392,11 @@ export default function AlertsInsights() {
                             ) : filteredAlerts.length === 0 ? (
                                 <Empty description="No alerts data" />
                             ) : (
-                                <div style={{ height: 450, width: "100%", borderRadius: 12 }}>
+                                <div style={{ height: 450, width: "100%", borderRadius: 12, position: 'relative', zIndex: 1 }}>
                                     <MapContainer
                                         center={[16.4829176, 121.1501679]} // Bayombong, Nueva Vizcaya center
                                         zoom={13}
-                                        style={{ height: "100%", width: "100%" }}
+                                        style={{ height: "100%", width: "100%", zIndex: 1 }}
                                     >
                                         <TileLayer
                                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -414,12 +433,12 @@ export default function AlertsInsights() {
                                             })();
 
                                             // Calculate zIndex based on status and date
-                                            const baseZIndex = 1000; // base z-index
+                                            // Keep zIndex low to avoid overlapping the navbar (which has zIndex: 100)
+                                            const baseZIndex = 10; // base z-index
                                             const alertDate = new Date(a.createdAt).getTime();
-                                            // Use the timestamp directly for date-based z-index
-                                            // This ensures newer dates always get higher values
-                                            const dateBonus = Math.floor(alertDate / 1000); // Convert to seconds for smaller numbers
-                                            const statusBonus = a.status === 'Active' ? 10000 : 0; // Active alerts get much higher priority
+                                            // Use relative index instead of timestamp
+                                            const dateBonus = i; // Simple incremental bonus
+                                            const statusBonus = a.status === 'Active' ? 50 : 0; // Active alerts get higher priority
                                             const zIndex = baseZIndex + statusBonus + dateBonus;
 
                                             return (
@@ -600,5 +619,6 @@ export default function AlertsInsights() {
                 </Row>
             </Content>
         </Layout>
+        </>
     );
 }

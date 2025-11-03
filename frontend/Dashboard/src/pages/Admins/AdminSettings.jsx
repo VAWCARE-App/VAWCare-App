@@ -59,6 +59,8 @@ export default function AdminSettings() {
   // photo data
   const [photoData, setPhotoData] = useState(null);
   const [photoMimeType, setPhotoMimeType] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewObjectUrl, setPreviewObjectUrl] = useState(null);
 
   const [form] = Form.useForm();
 
@@ -76,34 +78,6 @@ export default function AdminSettings() {
       if (data?.success && data?.data) {
         const profile = { ...data.data };
 
-        if (profile.photoData) {
-          let displayUrl = profile.photoData;
-          let storeBase64 = profile.photoData;
-
-          if (!profile.photoData.startsWith("data:image")) {
-            const mimeType = profile.photoMimeType || "image/jpeg";
-            displayUrl = `data:${mimeType};base64,${profile.photoData}`;
-            storeBase64 = profile.photoData;
-          } else {
-            const m = profile.photoData.match(/^data:image\/[a-zA-Z0-9+/.-]+;base64,(.+)$/);
-            if (m) {
-              storeBase64 = m[1];
-              displayUrl = profile.photoData;
-            }
-          }
-
-          setAvatarUrl(displayUrl);
-          setPhotoData(storeBase64);
-          setPhotoMimeType(profile.photoMimeType || "image/jpeg");
-        } else if (profile.photoURL) {
-          setAvatarUrl(profile.photoURL);
-          setPhotoData(null);
-          setPhotoMimeType(null);
-        } else {
-          setPhotoData(null);
-          setPhotoMimeType(null);
-        }
-
         if (profile.adminEmail && !profile.email) profile.email = profile.adminEmail;
 
         setUser(profile);
@@ -114,6 +88,25 @@ export default function AdminSettings() {
       console.debug("loadProfile failed", err?.message);
     }
     return null;
+  };
+
+  const loadAvatar = async () => {
+    try {
+      const { data } = await api.get('/api/admin/profile/photo');
+      if (data?.success && data?.data && data.data.photoData) {
+        const mime = data.data.photoMimeType || 'image/jpeg';
+        const full = data.data.photoData.startsWith('data:') 
+          ? data.data.photoData 
+          : `data:${mime};base64,${data.data.photoData}`;
+        setAvatarUrl(full);
+        setPhotoData(data.data.photoData.startsWith('data:') 
+          ? data.data.photoData.split(',')[1] 
+          : data.data.photoData);
+        setPhotoMimeType(data.data.photoMimeType || 'image/jpeg');
+      }
+    } catch (err) {
+      console.debug('[AdminSettings] loadAvatar failed', err?.message);
+    }
   };
 
   useEffect(() => {
@@ -138,15 +131,27 @@ export default function AdminSettings() {
       }
     } catch {}
 
+    // Refresh profile from server
     (async () => {
-      const fresh = await loadProfile();
-      if (fresh) {
-        if (fresh.adminEmail && !fresh.email) fresh.email = fresh.adminEmail;
-        setUser(fresh);
-        form.setFieldsValue(fresh);
-        setIsFormDirty(false);
+      try {
+        const fresh = await loadProfile();
+        if (fresh) {
+          if (fresh.adminEmail && !fresh.email) fresh.email = fresh.adminEmail;
+          setUser(fresh);
+          form.setFieldsValue(fresh);
+          // try to load avatar
+          try { await loadAvatar(); } catch (e) { /* ignore avatar load errors */ }
+        }
+      } catch (err) {
+        console.debug('[AdminSettings] profile refresh failed', err?.message);
       }
     })();
+    setIsFormDirty(false);
+    
+    return () => {
+      // cleanup any object URL created for preview
+      try { if (previewObjectUrl) { URL.revokeObjectURL(previewObjectUrl); } } catch (_) {}
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -158,14 +163,39 @@ export default function AdminSettings() {
       const payload = { ...values };
       if (payload.email && !payload.adminEmail) payload.adminEmail = payload.email;
 
-      if (photoData) {
+      // include photo data if present (VictimSettings-style save)
+      // If user selected a file but base64 hasn't been computed yet, compute it now
+      if (!photoData && selectedFile) {
+        try {
+          const b64data = await toBase64(selectedFile);
+          let mime = selectedFile.type || 'image/jpeg';
+          let cleanBase64 = b64data;
+          if (cleanBase64.includes('data:image')) {
+            const matches = cleanBase64.match(/^data:image\/[a-zA-Z0-9+/.-]+;base64,(.+)$/);
+            if (matches) cleanBase64 = matches[1];
+          }
+          payload.photoData = cleanBase64;
+          payload.photoMimeType = mime;
+          console.log("[AdminSettings] Computed photo base64 on save - size:", cleanBase64.length);
+        } catch (e) {
+          console.debug('Failed to compute photo base64 on save', e && e.message);
+        }
+      } else if (photoData) {
+        // Make sure we're sending just the base64 string, not the data URL
         let cleanBase64 = photoData;
-        const m = cleanBase64.match(/^data:image\/[a-zA-Z0-9+/.-]+;base64,(.+)$/);
-        if (m) cleanBase64 = m[1];
+        if (cleanBase64.includes('data:image')) {
+          const matches = cleanBase64.match(/^data:image\/[a-zA-Z0-9+/.-]+;base64,(.+)$/);
+          if (matches) {
+            cleanBase64 = matches[1];
+          }
+        }
         payload.photoData = cleanBase64;
         payload.photoMimeType = photoMimeType || "image/jpeg";
+        
+        console.log("[AdminSettings] Saving profile with photo - size:", cleanBase64.length);
       }
 
+      console.log("[AdminSettings] Saving profile with photoData:", !!payload.photoData);
       await api.put("/api/admin/profile", payload);
       message.success("Profile updated successfully!");
 
@@ -190,24 +220,37 @@ export default function AdminSettings() {
 
   const onAvatarChange = async ({ file }) => {
     try {
-      const b64 = await toBase64(file);
-      setAvatarUrl(String(b64));
-
-      let mimeType = "image/jpeg";
-      let base64String = b64;
-      const m = b64.match(/^data:(image\/[a-zA-Z0-9+/.-]+);base64,(.+)$/);
-      if (m) {
-        mimeType = m[1];
-        base64String = m[2];
+      // Fast preview using object URL (instant), compute base64 in background
+      if (previewObjectUrl) {
+        try { URL.revokeObjectURL(previewObjectUrl); } catch (_) {}
       }
-
-      setPhotoData(base64String);
-      setPhotoMimeType(mimeType);
+      const objUrl = URL.createObjectURL(file);
+      setPreviewObjectUrl(objUrl);
+      setAvatarUrl(objUrl);
+      setSelectedFile(file);
       setIsFormDirty(true);
-      message.info("Photo selected. Click 'Save changes' to apply.");
-    } catch (e) {
-      console.error("Photo selection error:", e);
-      message.error("Failed to select photo");
+      message.info('Photo selected. Click "Save changes" to save to profile.');
+
+      // compute base64 asynchronously and store for eventual save
+      try {
+        const b64 = await toBase64(file);
+        let mimeType = file.type || "image/jpeg";
+        let base64String = b64;
+        if (b64.includes(";base64,")) {
+          const matches = b64.match(/^data:(image\/[a-zA-Z0-9+/.-]+);base64,(.+)$/);
+          if (matches) {
+            mimeType = matches[1];
+            base64String = matches[2];
+          }
+        }
+        setPhotoData(base64String);
+        setPhotoMimeType(mimeType);
+      } catch (err) {
+        console.debug('Failed to compute base64 preview in background', err && err.message);
+      }
+    } catch (err) {
+      console.error('Avatar selection error', err);
+      message.error('Failed to select photo');
     }
   };
 
@@ -257,9 +300,16 @@ export default function AdminSettings() {
             />
           )}
 
-          <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
-            Account Settings
-          </Title>
+          <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+            <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
+              Account Settings
+            </Title>
+            {screens.md && (
+              <Text type="secondary" style={{ fontSize: 13 }}>
+                Manage your profile information and account preferences.
+              </Text>
+            )}
+          </div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <Button
@@ -273,7 +323,7 @@ export default function AdminSettings() {
               } catch {}
             }}
           >
-            Cancel
+            {screens.md ? "Cancel" : null}
           </Button>
           <Button
             type="primary"
@@ -281,9 +331,9 @@ export default function AdminSettings() {
             onClick={() => form.submit()}
             loading={loading}
             disabled={!isFormDirty}
-            style={{ background: BRAND.violet, borderColor: BRAND.violet }}
+            style={{ background: BRAND.violet, borderColor: BRAND.violet, color: "#fff" }}
           >
-            Save Changes
+            {screens.md ? "Save Changes" : "Save"}
           </Button>
         </div>
       </Header>

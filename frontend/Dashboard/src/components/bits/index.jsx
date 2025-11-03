@@ -3,6 +3,7 @@
 
 import React from "react";
 import { Card, Button, Statistic } from "antd";
+import { motion } from "framer-motion";
 
 /** Layout helpers */
 export const Container = ({ children, style }) => (
@@ -11,7 +12,8 @@ export const Container = ({ children, style }) => (
       width: "100%",
       maxWidth: 1200,
       margin: "0 auto",
-      padding: "0 16px",
+      padding: "0 clamp(16px, 4vw, 24px)",
+      boxSizing: "border-box",
       ...style,
     }}
   >
@@ -20,38 +22,86 @@ export const Container = ({ children, style }) => (
 );
 
 export const Section = ({ id, children, style }) => (
-  <section id={id} style={{ padding: "56px 0", ...style }}>{children}</section>
+  <section id={id} style={{ padding: "clamp(32px, 8vw, 56px) 0", width: "100%", overflow: "hidden", ...style }}>{children}</section>
 );
 
 /** Visual primitives */
 export const GlassCard = ({ children, hoverable = true, style, bodyStyle }) => (
-  <Card
-    hoverable={hoverable}
-    bordered
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true, amount: 0.3 }}
+    transition={{ duration: 0.15, ease: "easeOut" }}
+    whileHover={hoverable ? { 
+      y: -8, 
+      scale: 1.02,
+      boxShadow: "0 20px 40px rgba(16,16,16,.12), 0 0 0 1px rgba(122,90,248,.15)"
+    } : {}}
     style={{
       borderRadius: 16,
-      borderColor: "var(--border)",
-      background: "var(--card)",
-      backdropFilter: "saturate(160%) blur(8px)",
-      boxShadow: "0 10px 30px rgba(16,16,16,.06)",
-      ...style,
-    }}
-    bodyStyle={{
-      padding: 20,
-      display: "flex",
-      flexDirection: "column",
-      gap: 8,
-      ...bodyStyle,
+      transition: "all 0.15s ease",
     }}
   >
-    {children}
-  </Card>
+    <Card
+      hoverable={false}
+      bordered
+      style={{
+        borderRadius: 16,
+        borderColor: "var(--border)",
+        background: "var(--card)",
+        backdropFilter: "saturate(160%) blur(8px)",
+        boxShadow: "0 10px 30px rgba(16,16,16,.06)",
+        width: "100%",
+        maxWidth: "100%",
+        overflow: "hidden",
+        height: "100%",
+        ...style,
+      }}
+      bodyStyle={{
+        padding: "clamp(16px, 4vw, 20px)",
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        boxSizing: "border-box",
+        ...bodyStyle,
+      }}
+    >
+      {children}
+    </Card>
+  </motion.div>
 );
 
 export const KPI = ({ title, value }) => (
-  <GlassCard hoverable={false} bodyStyle={{ padding: 16 }}>
-    <Statistic title={title} value={value} />
-  </GlassCard>
+  <motion.div
+    initial={{ opacity: 0, scale: 0.9 }}
+    whileInView={{ opacity: 1, scale: 1 }}
+    viewport={{ once: true }}
+    transition={{ duration: 0.15, ease: "easeOut" }}
+    whileHover={{ 
+      scale: 1.05,
+      boxShadow: "0 15px 35px rgba(233,30,99,.15)"
+    }}
+    style={{
+      borderRadius: 16,
+      transition: "all 0.15s ease",
+    }}
+  >
+    <Card
+      bordered
+      style={{
+        borderRadius: 16,
+        borderColor: "var(--border)",
+        background: "var(--card)",
+        backdropFilter: "saturate(160%) blur(8px)",
+        boxShadow: "0 10px 30px rgba(16,16,16,.06)",
+        width: "100%",
+        height: "100%",
+      }}
+      bodyStyle={{ padding: 16 }}
+    >
+      <Statistic title={title} value={value} />
+    </Card>
+  </motion.div>
 );
 
 /** Buttons (styled to blend with AntD) */
@@ -78,10 +128,13 @@ export const BrandPill = ({ color = "var(--brand)" }) => (
       border: "1px solid var(--border)",
       background: "var(--card)",
       lineHeight: 1,
+      maxWidth: "100%",
+      flexWrap: "wrap",
+      justifyContent: "center",
     }}
   >
-    <span style={{ width: 10, height: 10, borderRadius: 999, background: color }} />
+    <span style={{ width: 10, height: 10, borderRadius: 999, background: color, flexShrink: 0 }} />
     <strong>VAWCare</strong>
-    <span style={{ color: "var(--text-muted)" }}>Community Safety Platform</span>
+    <span style={{ color: "var(--text-muted)", fontSize: "clamp(12px, 3vw, 14px)" }}>Community Safety Platform</span>
   </span>
 );

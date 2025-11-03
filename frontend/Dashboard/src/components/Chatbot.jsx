@@ -192,7 +192,7 @@ export default function Chatbot() {
     { key: "desk", icon: <InfoCircleOutlined />, label: "Barangay VAW Desk", onClick: () => send("Where is the Barangay VAW Desk?") },
     { key: "hotlines", icon: <PhoneOutlined />, label: "Hotlines", onClick: () => send("Emergency hotlines in the Philippines") },
     { key: "legal", icon: <BookOutlined />, label: "Legal resources (RA 9262)", onClick: () => send("Show resources for RA 9262") },
-    { key: "create", icon: <FileTextOutlined />, label: "Create report", onClick: () => send("Help me create a report") },
+  
   ];
 
   const copyText = async (txt) => {

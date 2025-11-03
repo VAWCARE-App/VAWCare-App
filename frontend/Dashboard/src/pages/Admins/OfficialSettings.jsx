@@ -12,11 +12,11 @@
     message,
     Grid,
     Avatar,
-    Statistic,
     Divider,
     Tag,
     Upload,
     Tooltip,
+    Layout,
   } from "antd";
   import {
     SafetyCertificateOutlined,
@@ -24,11 +24,14 @@
     PhoneOutlined,
     UserOutlined,
     CameraOutlined,
-    CheckCircleTwoTone,
-    CloseCircleTwoTone,
+    DownloadOutlined,
+    MenuOutlined,
+    SaveOutlined,
+    CloseOutlined,
   } from "@ant-design/icons";
   import { api, getUserData } from "../../lib/api";
 
+  const { Header, Content } = Layout;
   const { Title, Text } = Typography;
 
   const BRAND = {
@@ -39,6 +42,8 @@
     soft: "#fff5f8",
     muted: "#6b7280",
     card: "rgba(255,255,255,0.85)",
+    pageBg: "linear-gradient(180deg, #faf9ff 0%, #f6f3ff 60%, #ffffff 100%)",
+    softBorder: "rgba(122,90,248,0.18)",
   };
 
   export default function OfficialSettings() {
@@ -54,6 +59,8 @@
     // Store photo data in state
     const [photoData, setPhotoData] = useState(null);
     const [photoMimeType, setPhotoMimeType] = useState(null);
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [previewObjectUrl, setPreviewObjectUrl] = useState(null);
 
     const [form] = Form.useForm();
 
@@ -164,53 +171,59 @@
           const parsed = JSON.parse(cached);
           setUser(parsed);
           form.setFieldsValue(parsed);
-          if (parsed.photoURL) setAvatarUrl(parsed.photoURL);
+          
+          // Handle cached photo data
           if (parsed.photoData) {
             const mime = parsed.photoMimeType || "image/jpeg";
-            setAvatarUrl(parsed.photoData.startsWith('data:') ? parsed.photoData : `data:${mime};base64,${parsed.photoData}`);
-            setPhotoData(parsed.photoData.startsWith('data:') ? parsed.photoData.split(',')[1] : parsed.photoData);
-            setPhotoMimeType(parsed.photoMimeType || "image/jpeg");
+            const displayUrl = parsed.photoData.startsWith('data:') 
+              ? parsed.photoData 
+              : `data:${mime};base64,${parsed.photoData}`;
+            setAvatarUrl(displayUrl);
+            
+            const base64Only = parsed.photoData.startsWith('data:') 
+              ? parsed.photoData.split(',')[1] 
+              : parsed.photoData;
+            setPhotoData(base64Only);
+            setPhotoMimeType(mime);
+          } else if (parsed.photoURL) {
+            setAvatarUrl(parsed.photoURL);
           }
+          
           setVerified(determineVerified(parsed));
           setIsFormDirty(false);
         }
       } catch (e) {
-        /* ignore parse errors */
+        console.warn('[OfficialSettings] Failed to parse cached user:', e);
       }
 
+      // Fetch fresh data from backend
       (async () => {
         try {
-          const [fresh, avatarResp] = await Promise.all([
-            loadProfile(),
-            api.get('/api/officials/profile/photo').catch(() => null),
-          ]);
-
+          const fresh = await loadProfile();
           if (fresh) {
             if (fresh.officialEmail && !fresh.email) fresh.email = fresh.officialEmail;
-
-            let avatarUrlToSet = null;
-            let photoBase64 = null;
-            let photoMime = null;
-            if (avatarResp?.data?.success && avatarResp.data.data && avatarResp.data.data.photoData) {
-              photoBase64 = avatarResp.data.data.photoData;
-              photoMime = avatarResp.data.data.photoMimeType || 'image/jpeg';
-              avatarUrlToSet = photoBase64.startsWith('data:') ? photoBase64 : `data:${photoMime};base64,${photoBase64}`;
-            } else if (fresh.photoURL) {
-              avatarUrlToSet = fresh.photoURL;
-            }
-
             setUser(fresh);
-            if (avatarUrlToSet) setAvatarUrl(avatarUrlToSet);
-            setPhotoData(photoBase64 || null);
-            setPhotoMimeType(photoMime || null);
             setVerified(determineVerified(fresh));
             form.setFieldsValue(fresh);
             setIsFormDirty(false);
+            
+            // try to load avatar
+            try { await loadAvatar(); } catch (e) { /* ignore avatar load errors */ }
+            
+            // Update sessionStorage with fresh data
+            try {
+              sessionStorage.setItem("user", JSON.stringify(fresh));
+            } catch (_) {}
           }
         } catch (err) {
-          console.warn('Failed to fetch profile:', err);
+          console.warn('[OfficialSettings] Failed to fetch profile:', err);
         }
       })();
+      
+      return () => {
+        // cleanup any object URL created for preview
+        try { if (previewObjectUrl) { URL.revokeObjectURL(previewObjectUrl); } } catch (_) {}
+      };
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -229,8 +242,24 @@
         // Don't send position - it should not be editable
         delete payload.position;
         
-        // Include photoData in payload if it exists
-        if (photoData) {
+        // include photo data if present (VictimSettings-style save)
+        // If user selected a file but base64 hasn't been computed yet, compute it now
+        if (!photoData && selectedFile) {
+          try {
+            const b64data = await toBase64(selectedFile);
+            let mime = selectedFile.type || 'image/jpeg';
+            let cleanBase64 = b64data;
+            if (cleanBase64.includes('data:image')) {
+              const matches = cleanBase64.match(/^data:image\/[a-zA-Z0-9+/.-]+;base64,(.+)$/);
+              if (matches) cleanBase64 = matches[1];
+            }
+            payload.photoData = cleanBase64;
+            payload.photoMimeType = mime;
+            console.log("[OfficialSettings] Computed photo base64 on save - size:", cleanBase64.length);
+          } catch (e) {
+            console.debug('Failed to compute photo base64 on save', e && e.message);
+          }
+        } else if (photoData) {
           // Make sure we're sending just the base64 string, not the data URL
           let cleanBase64 = photoData;
           if (cleanBase64.includes('data:image')) {
@@ -249,33 +278,23 @@
         await api.put("/api/officials/profile", payload);
         message.success("Profile updated successfully!");
 
-        const [refreshed, avatarResp] = await Promise.all([
-          loadProfile(),
-          api.get('/api/officials/profile/photo').catch(() => null),
-        ]);
+        // Reload the profile to get the saved data including photo
+        const refreshed = await loadProfile();
         if (refreshed) {
           if (refreshed.officialEmail && !refreshed.email) refreshed.email = refreshed.officialEmail;
-          let avatarUrlToSet = null;
-          if (avatarResp?.data?.success && avatarResp.data.data && avatarResp.data.data.photoData) {
-            const mime = avatarResp.data.data.photoMimeType || 'image/jpeg';
-            avatarUrlToSet = avatarResp.data.data.photoData.startsWith('data:') ? avatarResp.data.data.photoData : `data:${mime};base64,${avatarResp.data.data.photoData}`;
-            setPhotoData(avatarResp.data.data.photoData.startsWith('data:') ? avatarResp.data.data.photoData.split(',')[1] : avatarResp.data.data.photoData);
-            setPhotoMimeType(avatarResp.data.data.photoMimeType || 'image/jpeg');
-          } else if (refreshed.photoURL) {
-            avatarUrlToSet = refreshed.photoURL;
-          }
           setUser(refreshed);
-          if (avatarUrlToSet) setAvatarUrl(avatarUrlToSet);
           setVerified(determineVerified(refreshed));
           form.setFieldsValue(refreshed);
+          
+          // Update sessionStorage with the refreshed data
+          try {
+            sessionStorage.setItem("user", JSON.stringify(refreshed));
+          } catch (_) {}
         }
-
-        try {
-          sessionStorage.setItem("user", JSON.stringify(refreshed || payload));
-        } catch (_) {}
         
         setIsFormDirty(false);
-      } catch {
+      } catch (err) {
+        console.error("[OfficialSettings] Save failed:", err);
         message.error("Unable to update profile");
       } finally {
         setLoading(false);
@@ -285,31 +304,37 @@
     /** Upload avatar */
     const onAvatarChange = async ({ file }) => {
       try {
-        const b64 = await toBase64(file);
-        setAvatarUrl(String(b64)); // instant preview
-
-        // Extract MIME type from data URL
-        let mimeType = "image/jpeg";
-        let base64String = b64;
-        
-        if (b64.includes(";base64,")) {
-          const matches = b64.match(/^data:(image\/[a-zA-Z0-9+/.-]+);base64,(.+)$/);
-          if (matches) {
-            mimeType = matches[1];
-            base64String = matches[2];
-          }
+        // Fast preview using object URL (instant), compute base64 in background
+        if (previewObjectUrl) {
+          try { URL.revokeObjectURL(previewObjectUrl); } catch (_) {}
         }
+        const objUrl = URL.createObjectURL(file);
+        setPreviewObjectUrl(objUrl);
+        setAvatarUrl(objUrl);
+        setSelectedFile(file);
+        setIsFormDirty(true);
+        message.info('Photo selected. Click "Save changes" to save to profile.');
 
-        // Store in state for saving later
-        setPhotoData(base64String);
-        setPhotoMimeType(mimeType);
-        setIsFormDirty(true); // Mark form as dirty when photo changes
-
-        console.log("[OfficialSettings] Photo selected - MIME type:", mimeType, "Will save on 'Save changes' click");
-        message.info("Photo selected. Click 'Save changes' to save to profile.");
-      } catch (error) {
-        console.error("Photo selection error:", error);
-        message.error("Failed to select photo");
+        // compute base64 asynchronously and store for eventual save
+        try {
+          const b64 = await toBase64(file);
+          let mimeType = file.type || "image/jpeg";
+          let base64String = b64;
+          if (b64.includes(";base64,")) {
+            const matches = b64.match(/^data:(image\/[a-zA-Z0-9+/.-]+);base64,(.+)$/);
+            if (matches) {
+              mimeType = matches[1];
+              base64String = matches[2];
+            }
+          }
+          setPhotoData(base64String);
+          setPhotoMimeType(mimeType);
+        } catch (err) {
+          console.debug('Failed to compute base64 preview in background', err && err.message);
+        }
+      } catch (err) {
+        console.error('Avatar selection error', err);
+        message.error('Failed to select photo');
       }
     };
 
@@ -324,156 +349,215 @@
       return combo || "Official";
     }, [user, form]);
 
-    const verColor = verified ? BRAND.green : BRAND.red;
-
     return (
-      <div style={{ display: "flex", justifyContent: "center" }}>
+      <Layout style={{ minHeight: "100vh", background: BRAND.pageBg }}>
+        {/* Header */}
+        <Header
+          style={{
+            position: "sticky",
+            top: 0,
+            zIndex: 10,
+            background: BRAND.pageBg,
+            borderBottom: `1px solid ${BRAND.softBorder}`,
+            display: "flex",
+            alignItems: "center",
+            paddingInline: screens.md ? 20 : 12,
+            height: screens.xs && !screens.sm ? 64 : 72,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
+            {/* Sidebar toggle visible on small devices */}
+            {!screens.md && (
+              <Button
+                type="text"
+                icon={<MenuOutlined />}
+                onClick={() => window.dispatchEvent(new Event("toggle-sider"))}
+                aria-label="Toggle sidebar"
+                style={{
+                  width: screens.md ? 40 : 36,
+                  height: screens.md ? 40 : 36,
+                  display: "grid",
+                  placeItems: "center",
+                  borderRadius: 10,
+                  background: "#ffffffcc",
+                  boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
+                }}
+              />
+            )}
+
+            <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+              <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
+                Official Settings
+              </Title>
+              {screens.md && (
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  Manage your official profile and contact information.
+                </Text>
+              )}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Button
+              icon={<CloseOutlined />}
+              onClick={async () => {
+                form.resetFields();
+                setIsFormDirty(false);
+                try {
+                  const userData = await getUserData();
+                  if (userData) setUser(userData);
+                } catch {}
+              }}
+            >
+              {screens.md ? "Cancel" : null}
+            </Button>
+            <Button
+              type="primary"
+              icon={<SaveOutlined />}
+              onClick={() => form.submit()}
+              loading={loading}
+              disabled={!isFormDirty}
+              style={{ background: BRAND.violet, borderColor: BRAND.violet, color: "#fff" }}
+            >
+              {screens.md ? "Save Changes" : "Save"}
+            </Button>
+          </div>
+        </Header>
+
+        <Content>
+          <div style={{ display: "flex", justifyContent: "center" }}>
         <style>{`
-          .page-wrap {
-            width: 100%;
-            max-width: 1120px;
-            padding: ${screens.xs ? "12px" : "24px"};
+          :root {
+            /* Light theme matching AdminDashboard overview cards */
+            --panel-bg: #ffffff;
+            --panel-ink: #333333;
+            --muted-ink: ${BRAND.muted};
+            --chip-bg: #F8F4FF;
+            --chip-ink: #333333;
+            --soft-border: rgba(122,90,248,0.12);
           }
 
-          /* HERO (same styling as VictimSettings) */
-          .hero {
-            position: relative;
-            border-radius: 24px;
-            overflow: visible;
-            min-height: ${screens.md ? "220px" : "190px"};
-            padding-bottom: 72px;
-            box-shadow: 0 18px 40px rgba(16,24,40,0.14);
-            background: linear-gradient(135deg, ${BRAND.violet}, ${BRAND.pink});
-            animation: fadeUp 400ms ease-out;
-          }
-          .hero-inner {
-            padding: ${screens.xs ? "22px" : "32px"};
-            color: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-          }
-          .hero-title { margin: 0; color: #fff; }
-          .hero-sub { margin: 6px 0 0; opacity: .95; }
+          .page-wrap{ width:100%; max-width:1120px; padding:${screens.xs ? "12px" : "24px"}; }
 
-          /* Avatar Overlay (centered circle with ring) */
-          .avatar-wrap {
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-            bottom: -40px;
-            width: 130px;
-            height: 130px;
-            border-radius: 50%;
-            background: #fff;
-            display: grid;
-            place-items: center;
-            box-shadow: 0 18px 36px rgba(16,24,40,0.22);
-            border: 8px solid #fff;
-            z-index: 3;
-            transition: transform 250ms ease;
-          }
-          .avatar-wrap:hover { transform: translateX(-50%) scale(1.02); }
-
-          .avatar-ring {
-            width: 115px; height: 115px; border-radius: 50%;
-            padding: 3px; display: grid; place-items: center;
-            animation: slowspin 20s linear infinite;
-          }
-          .avatar-inner {
-            width: 105px; height: 105px; border-radius: 50%;
-            overflow: hidden; background: ${BRAND.soft};
-            display: grid; place-items: center;
-          }
-          .change-avatar {
-            position: absolute; right: -4px; bottom: -4px;
-            border-radius: 50%; padding: 0; width: 32px; height: 32px;
-            font-size: 14px; color: #fff; box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+          .profile-panel{
+            position:relative; background:var(--panel-bg); color:var(--panel-ink);
+            border:1px solid var(--soft-border); border-radius:22px;
+            padding:${screens.sm ? "26px" : "20px"};
+            box-shadow: 0 2px 12px rgba(122,90,248,0.08);
           }
 
-          /* Stats (same visual as VictimSettings) */
-          .stats {
-            margin-top: 88px;
-            display: flex; flex-wrap: wrap; justify-content: center; gap: 16px;
-          }
-          .stat-card {
-            flex: 1; min-width: 260px;
-            border-radius: 20px;
-            background: ${BRAND.card};
-            text-align: center;
-            box-shadow: 0 10px 25px rgba(16,24,40,0.08);
-            border: 1px solid rgba(233,30,99,0.06);
-            transition: transform 200ms ease;
-          }
-          .stat-card:hover { transform: translateY(-4px); }
+          .panel-top{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+          .panel-left{ display:flex; align-items:center; gap:16px; min-width:260px; }
 
-          /* Main settings card */
-          .main-card {
-            margin-top: 20px;
-            border-radius: 20px;
-            box-shadow: 0 12px 30px rgba(16,24,40,0.08);
-            border: 1px solid rgba(233,30,99,0.06);
-            animation: fadeUp 400ms ease-out;
-            background: ${BRAND.card};
+          .avatar-shell{
+            position:relative; width:72px; height:72px; border-radius:50%;
+            display:grid; place-items:center;
+            background:linear-gradient(135deg, ${BRAND.violet}, ${BRAND.pink});
+            padding:2px; box-shadow: 0 4px 12px rgba(122,90,248,0.15);
+          }
+          .avatar-shell .inner{
+            width:100%; height:100%; border-radius:50%; overflow:hidden; background:#f8f9fa; display:grid; place-items:center;
           }
 
-          .section-head { display: flex; align-items: center; gap: 10px; }
-          .brand-dot { width: 10px; height: 10px; border-radius: 50%; background: ${BRAND.pink}; }
+          .name-role{ display:flex; flex-direction:column; }
+          .name-role .name{ margin:0; color:var(--panel-ink); font-weight:800; letter-spacing:.2px; }
+          .name-role .role{ margin-top:2px; color:var(--muted-ink); font-size:13px; }
 
-          .btn-primary {
-            background: ${BRAND.pink};
-            border-color: ${BRAND.pink};
-            border-radius: 12px;
-            min-width: 170px;
-            height: 40px;
-            transition: transform 150ms ease;
-            color: #fff;
-            font-weight: 700;
+          .panel-actions{ display:flex; align-items:center; gap:10px; }
+          .soft-btn{
+            height:36px; border-radius:10px; padding:0 12px;
+            background:var(--chip-bg); color:var(--chip-ink); border:1px solid var(--soft-border);
           }
-          .btn-primary:hover { transform: scale(1.02); }
+          .download-btn{
+            height:36px; border-radius:12px; padding:0 14px;
+            background:${BRAND.green}; color:#fff; font-weight:700; border:1px solid rgba(76,175,80,0.3);
+            box-shadow:0 2px 8px rgba(76,175,80,0.2);
+          }
 
-          @keyframes slowspin { to { transform: rotate(360deg); } }
-          @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(10px); }
-            to   { opacity: 1; transform: translateY(0); }
+          .meta-grid{
+            margin-top:18px; display:grid;
+            grid-template-columns:repeat(${screens.lg ? 4 : screens.md ? 2 : 1}, 1fr);
+            gap:12px;
           }
+          .meta-chip{
+            display:flex; gap:12px; align-items:center;
+            background:var(--chip-bg); border:1px solid var(--soft-border);
+            border-radius:14px; padding:14px 16px; color:var(--chip-ink);
+            box-shadow: 0 1px 4px rgba(122,90,248,0.05);
+          }
+          .meta-chip .label{ font-size:12px; color:var(--muted-ink); text-transform: uppercase; font-weight: 600; }
+          .meta-chip .value{ font-weight:700; color:var(--panel-ink); font-size: 14px; }
+
+          .main-card{
+            margin-top:18px; border-radius:18px; background:rgba(255,255,255,0.95);
+            color:#333; border:1px solid rgba(122,90,248,0.15);
+            box-shadow:0 8px 24px rgba(122,90,248,0.12), 0 2px 8px rgba(233,30,99,0.08);
+          }
+
+          .section-head{ display:flex; align-items:center; gap:10px; }
+          .brand-dot{ width:10px; height:10px; border-radius:50%; background:${BRAND.pink}; }
+
+          .btn-primary{
+            background:${BRAND.violet}; border-color:${BRAND.violet};
+            border-radius:12px; min-width:170px; height:40px; color:#fff; font-weight:700;
+          }
+
+          .ant-input, .ant-input-affix-wrapper{
+            background:#fff !important; color:#333 !important;
+            border-color: rgba(122,90,248,0.2) !important;
+          }
+          .ant-input::placeholder{ color:#94a3b8 !important; }
+          
+          /* Typography colors - scoped to page-wrap to not affect header */
+          .page-wrap .ant-typography, 
+          .page-wrap .ant-form-item-label > label { color:#333 !important; }
+          
+          .ant-card { background: transparent; }
+          .section-head .ant-typography { color:${BRAND.violet} !important; }
         `}</style>
 
         <div className="page-wrap">
-          {/* HERO */}
-          <div className="hero">
-            <div className="hero-inner">
-              <div>
-                <Title level={2} className="hero-title" style={{ color: "#fff" }}>
-                  {displayName}
-                </Title>
-                <Text className="hero-sub" style={{ color: "#fff" }}>
-                  Manage your official profile and contact information.
-                </Text>
+          {/* ===== PROFILE PANEL ===== */}
+          <div className="profile-panel">
+            <div className="panel-top">
+              {/* Left: avatar + name/role */}
+              <div className="panel-left">
+                <div className="avatar-shell">
+                  <div className="inner">
+                    <Avatar
+                      size={68}
+                      src={avatarUrl}
+                      icon={<UserOutlined />}
+                      style={{ background: "#f3f4f6", color: BRAND.violet }}
+                    />
+                  </div>
+                </div>
+
+                <div className="name-role">
+                  <Title level={4} className="name">
+                    {displayName}
+                  </Title>
+                  <Text className="role">
+                    {form.getFieldValue("position") || user?.position || "Barangay Official"}
+                  </Text>
+                </div>
               </div>
 
-              <Space>
-                <Tag
-                  style={{
-                    background: verColor,
-                    color: "#fff",
-                    borderRadius: "999px",
-                    padding: "6px 14px",
-                    fontWeight: 600,
-                    border: `1px solid ${verColor}`,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                  }}
+              {/* Right: actions (upload moved here) */}
+              <div className="panel-actions">
+                <Upload
+                  showUploadList={false}
+                  accept="image/*"
+                  beforeUpload={() => false}
+                  onChange={({ file }) => file && onAvatarChange({ file })}
                 >
-                  {verified ? (
-                    <CheckCircleTwoTone twoToneColor="#fff" />
-                  ) : (
-                    <CloseCircleTwoTone twoToneColor="#fff" />
-                  )}{" "}
-                  {verified ? "Verified" : "Not Verified"}
-                </Tag>
+                  <Button className="soft-btn" icon={<CameraOutlined />}>
+                    Change Photo
+                  </Button>
+                </Upload>
+
+                <Button className="download-btn" icon={<DownloadOutlined />}>
+                  Download Info
+                </Button>
 
                 <Button
                   icon={<SafetyCertificateOutlined />}
@@ -484,80 +568,64 @@
                       if (fresh) setUser(fresh);
                     })();
                   }}
-                  style={{
-                    background: BRAND.pink,
-                    borderColor: BRAND.pink,
-                    color: "#fff",
-                    borderRadius: 10,
-                    fontWeight: 600,
-                  }}
+                  className="soft-btn"
                 >
                   Reset
                 </Button>
-              </Space>
+              </div>
             </div>
 
-            {/* Avatar */}
-            <div className="avatar-wrap">
-              <div
-                className="avatar-ring"
-                style={{
-                  background: `conic-gradient(from 220deg, ${verColor}, ${BRAND.pink}, ${verColor})`,
-                  border: `3px solid ${verColor}25`,
-                }}
-              >
-                <div className="avatar-inner">
-                  <Avatar
-                    size={96}
-                    src={avatarUrl || undefined}
-                    icon={<UserOutlined />}
-                    style={{ background: BRAND.soft, color: verColor }}
-                  />
+            {/* Meta chips */}
+            <div className="meta-grid">
+              <div className="meta-chip">
+                <div>
+                  <div className="label">Email Address</div>
+                  <div className="value">
+                    {form.getFieldValue("email") || user?.email || user?.officialEmail || "—"}
+                  </div>
                 </div>
               </div>
-              <Upload
-                showUploadList={false}
-                accept="image/*"
-                beforeUpload={() => false}
-                onChange={({ file }) => file && onAvatarChange({ file })}
-              >
-                <Tooltip title="Change photo">
-                  <Button
-                    className="change-avatar"
-                    icon={<CameraOutlined />}
-                    style={{ background: verColor }}
-                  />
-                </Tooltip>
-              </Upload>
+
+              <div className="meta-chip">
+                <div>
+                  <div className="label">Contact Number</div>
+                  <div className="value">{user?.contactNumber || user?.phone || "(—)"}</div>
+                </div>
+              </div>
+
+              <div className="meta-chip">
+                <div>
+                  <div className="label">Official ID</div>
+                  <div className="value">{form.getFieldValue("officialID") || user?.officialID || "—"}</div>
+                </div>
+              </div>
+
+              <div className="meta-chip">
+                <div>
+                  <div className="label">Position</div>
+                  <div className="value">
+                    {form.getFieldValue("position") || user?.position || "—"}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Stats */}
-          <div className="stats">
-            <Card className="stat-card">
-              <Statistic title="Profile Completeness" value={92} suffix="%" />
-            </Card>
-            <Card className="stat-card">
-              <Statistic title="Role" value={form.getFieldValue("position") || "—"} />
-            </Card>
-            <Card className="stat-card">
-              <Statistic title="Last Updated" value="Just now" />
-            </Card>
-          </div>
-
-          {/* SETTINGS */}
-          <Card className="main-card" styles={{ body: { padding: screens.xs ? 16 : 24 } }}>
+          {/* ===== SETTINGS ===== */}
+          <Card className="main-card" bodyStyle={{ padding: screens.xs ? 16 : 24 }}>
             <div className="section-head">
               <span className="brand-dot" />
               <div>
-                <Title level={4} style={{ margin: 0 }}>
+                <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
                   Account Settings
                 </Title>
-                <Text type="secondary">Update your official details and contact information.</Text>
+                <Text style={{ color: BRAND.muted }}>
+                  Update your official details and contact information.
+                </Text>
               </div>
             </div>
 
-            <Divider />
+            <Divider style={{ borderColor: "rgba(122,90,248,0.15)" }} />
 
             <Form layout="vertical" form={form} onFinish={onSave} onValuesChange={handleFormValuesChange}>
               <Row gutter={[16, 12]}>
@@ -568,7 +636,7 @@
                 </Col>
                 <Col xs={24} md={12}>
                   <Form.Item name="position" label="Position">
-                    <Input placeholder="e.g. Barangay Captain" disabled />
+                    <Input disabled prefix={<UserOutlined />} />
                   </Form.Item>
                 </Col>
 
@@ -589,46 +657,22 @@
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
-                  <Form.Item name="contactNumber" label="Contact Number">
-                    <Input prefix={<PhoneOutlined />} placeholder="+639123456789" />
-                  </Form.Item>
-                </Col>
-
-                <Col xs={24}>
                   <Form.Item name="email" label="Email">
                     <Input prefix={<MailOutlined />} placeholder="you@example.com" />
                   </Form.Item>
                 </Col>
 
-                <Col xs={24} style={{ textAlign: "center", marginTop: 4 }}>
-                  <Space>
-                    <Button
-                      type="primary"
-                      htmlType="submit"
-                      loading={loading}
-                      disabled={!isFormDirty}
-                      className="btn-primary"
-                    >
-                      Save changes
-                    </Button>
-                    <Button
-                      onClick={async () => {
-                        form.resetFields();
-                        setIsFormDirty(false);
-                        try {
-                          const userData = await getUserData();
-                          if (userData) setUser(userData);
-                        } catch (_) {}
-                      }}
-                    >
-                      Discard
-                    </Button>
-                  </Space>
+                <Col xs={24} md={12}>
+                  <Form.Item name="contactNumber" label="Contact Number">
+                    <Input prefix={<PhoneOutlined />} placeholder="+639123456789" />
+                  </Form.Item>
                 </Col>
               </Row>
             </Form>
           </Card>
         </div>
-      </div>
+          </div>
+        </Content>
+      </Layout>
     );
   }

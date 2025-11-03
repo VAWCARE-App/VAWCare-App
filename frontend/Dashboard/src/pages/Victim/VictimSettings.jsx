@@ -198,7 +198,6 @@ export default function VictimSettings() {
   // Simple function to check if form has changes
   const handleFormValuesChange = () => {
     setIsFormDirty(true);
-    updateDisplayName(); // Update display name when any field changes
   };
 
   // Save profile
@@ -267,21 +266,11 @@ export default function VictimSettings() {
 
   // Photo upload removed
 
-  const [displayName, setDisplayName] = useState("Anonymous User");
-
-  // Update display name whenever form values change
-  useEffect(() => {
+  const displayName = useMemo(() => {
     const v = form.getFieldsValue();
     const combo = [v.firstName, v.lastName].filter(Boolean).join(" ");
-    setDisplayName(combo || "Anonymous User");
+    return combo || "Anonymous User";
   }, [form]);
-
-  // Also update when form changes via onValuesChange
-  const updateDisplayName = () => {
-    const v = form.getFieldsValue();
-    const combo = [v.firstName, v.lastName].filter(Boolean).join(" ");
-    setDisplayName(combo || "Anonymous User");
-  };
 
   // --- verification color (green when verified, red when not) ---
   const verColor = verified ? BRAND.green : BRAND.red;

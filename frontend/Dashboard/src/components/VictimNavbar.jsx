@@ -44,6 +44,7 @@ export default function VictimNavbar() {
     violet: "#7A5AF8",
     pink: "#e91e63",
     border: "rgba(122,90,248,0.18)",
+    soft: "rgba(122,90,248,0.08)",
     panel: "linear-gradient(180deg, #ffffff 0%, #faf7ff 60%, #f6f3ff 100%)",
     rail: "linear-gradient(180deg, #f6f0ff 0%, #ffe9f3 100%)",
     headerBg: "linear-gradient(180deg, #ffffff 0%, #faf7ff 60%, #f6f3ff 100%)",
@@ -113,15 +114,27 @@ export default function VictimNavbar() {
     ],
   };
 
-  // Desktop nav items
-  const desktopItems = [
-    { key: "/victim/dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
-    { key: "/victim/report", icon: <FileAddOutlined />, label: "Report Case" },
-    { key: "/victim/victim-cases", icon: <UserSwitchOutlined />, label: "My Cases" },
-    { key: "/victim/victim-barangay", icon: <InfoCircleOutlined />, label: "Barangay" },
-    { key: "/victim/victim-settings", icon: <SettingOutlined />, label: "Settings" },
-    
+  // Desktop nav items → render a custom "pill" inside each item
+  const desktopLinks = [
+    { key: "/victim/dashboard", icon: <DashboardOutlined />, text: "Dashboard" },
+    { key: "/victim/report", icon: <FileAddOutlined />, text: "Report Case" },
+    { key: "/victim/victim-cases", icon: <UserSwitchOutlined />, text: "My Cases" },
+    { key: "/victim/victim-barangay", icon: <InfoCircleOutlined />, text: "Barangay" },
+    { key: "/victim/victim-settings", icon: <SettingOutlined />, text: "Settings" },
   ];
+
+  const desktopItems = desktopLinks.map(({ key, icon, text }) => ({
+    key,
+    // put the rounded visual on an inner span we fully control
+    label: (
+      <span className="nav-pill">
+        {icon}
+        <span>{text}</span>
+      </span>
+    ),
+    // mark active item for CSS
+    className: location.pathname === key ? "is-active" : "",
+  }));
 
   // Mobile drawer items (Emergency first)
   const drawerItems = [
@@ -147,7 +160,7 @@ export default function VictimNavbar() {
     {
       key: "/victim/victim-cases",
       icon: <UserSwitchOutlined />,
-      label: <span className="drawer-pill">Cases & Reports</span>,
+      label: <span className="drawer-pill">My Cases</span>,
     },
     {
       key: "/victim/victim-barangay",

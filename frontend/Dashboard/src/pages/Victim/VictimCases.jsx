@@ -27,6 +27,7 @@ import {
   ExportOutlined,
   InfoCircleOutlined,
 } from "@ant-design/icons";
+import { motion, AnimatePresence } from "framer-motion";
 import { api } from "../../lib/api";
 
 const { Content } = Layout;
@@ -71,63 +72,9 @@ export default function VictimCases() {
     setLoading(true);
     setError("");
     try {
-      // Fetch victim profile (to identify the current victim)
-      const profileResp = await api.get('/api/victims/profile').catch(() => null);
-      const victim = profileResp?.data?.data || null;
-
-      // Fetch victim reports
-      const reportsResp = await api.get('/api/victims/reports').catch(() => ({ data: { data: [] } }));
-      const reportsRaw = Array.isArray(reportsResp?.data?.data) ? reportsResp.data.data : [];
-
-      // Fetch all cases and then filter those that belong to this victim
-      const casesResp = await api.get('/api/cases').catch(() => ({ data: { data: [] } }));
-      const casesRaw = Array.isArray(casesResp?.data?.data) ? casesResp.data.data : [];
-
-      // Build set of victim identifiers we can match against case.victimID
-      const victimIds = new Set();
-      if (victim) {
-        if (victim.id) victimIds.add(String(victim.id));
-        if (victim._id) victimIds.add(String(victim._id));
-        if (victim.victimID) victimIds.add(String(victim.victimID));
-      }
-
-      const mappedReports = (reportsRaw || []).map((r) => ({
-        key: r.reportID || r._id || Math.random().toString(36).slice(2),
-        reportID: r.reportID || r._id,
-        incidentType: r.incidentType,
-        description: r.description,
-        status: r.status,
-        dateReported: r.dateReported || r.createdAt,
-        raw: r,
-        _source: 'report',
-      }));
-
-      const mappedCases = (casesRaw || [])
-        .filter((c) => {
-          if (!victimIds.size) return false;
-          const vid = c.victimID || c.victimId || c.victim || null;
-          if (!vid) return false;
-          return victimIds.has(String(vid));
-        })
-        .map((c) => ({
-          key: c.caseID || c._id || Math.random().toString(36).slice(2),
-          reportID: c.reportID || null,
-          caseID: c.caseID,
-          incidentType: c.incidentType,
-          description: c.description,
-          status: c.status,
-          dateReported: c.dateReported || c.createdAt,
-          raw: c,
-          _source: 'case',
-        }));
-
-      const combined = [...mappedReports, ...mappedCases].sort((a, b) => {
-        const ta = a.dateReported ? new Date(a.dateReported).getTime() : 0;
-        const tb = b.dateReported ? new Date(b.dateReported).getTime() : 0;
-        return tb - ta;
-      });
-
-      setCases(combined);
+      const { data } = await api.get("/api/victims/reports");
+      const list = Array.isArray(data?.data) ? data.data : [];
+      setCases(list);
     } catch (e) {
       setError("Unable to load cases.");
       message.error("Unable to load cases. Please try again.");
@@ -139,19 +86,10 @@ export default function VictimCases() {
   useEffect(() => { load(); }, []);
 
   const counts = useMemo(() => {
-    const openish = (s) => {
-      if (!s) return false;
-      const ss = String(s).toLowerCase();
-      return ss.includes('open') || ss.includes('investigat') || ss.includes('under investigation') || ss.includes('pending') || ss.includes('in progress');
-    };
-    const closedish = (s) => {
-      if (!s) return false;
-      const ss = String(s).toLowerCase();
-      return ss.includes('closed') || ss.includes('resolved') || ss.includes('completed') || ss.includes('done') || ss.includes('dismiss');
-    };
+    const openish = (s) => s === "Open" || s === "Under Investigation";
     const all = cases.length;
     const open = cases.filter((c) => openish(c.status)).length;
-    const closed = cases.filter((c) => closedish(c.status)).length;
+    const closed = cases.filter((c) => c.status && !openish(c.status)).length;
     return { all, open, closed };
   }, [cases]);
 
@@ -164,45 +102,24 @@ export default function VictimCases() {
   };
 
   const filtered = useMemo(() => {
-    const openish = (s) => {
-      if (!s) return false;
-      const ss = String(s).toLowerCase();
-      return ss.includes('open') || ss.includes('investigat') || ss.includes('under investigation') || ss.includes('pending') || ss.includes('in progress');
-    };
-    const closedish = (s) => {
-      if (!s) return false;
-      const ss = String(s).toLowerCase();
-      return ss.includes('closed') || ss.includes('resolved') || ss.includes('completed') || ss.includes('done') || ss.includes('dismiss');
-    };
+    const openish = (s) => s === "Open" || s === "Under Investigation";
     const byFilter = (c) =>
       filter === "All" ? true :
       filter === "Open" ? openish(c.status) :
-      filter === "Closed" ? closedish(c.status) :
-      true;
+      c.status && !openish(c.status);
 
     const byQ = (c) => {
       if (!qDebounced) return true;
-      const text = `${c.reportID || ''} ${c.caseID || ''} ${c._source || ''} ${c.incidentType || ''} ${c.status || ''} ${c.description || ""}`.toLowerCase();
+      const text = `${c.reportID} ${c.incidentType} ${c.status} ${c.description || ""}`.toLowerCase();
       return text.includes(qDebounced);
     };
 
     const arr = cases.filter((c) => byFilter(c) && byQ(c));
     const getDate = (c) => (c.dateReported ? new Date(c.dateReported).getTime() : 0);
-
-    const list = [...arr];
-    list.sort((a, b) => {
-      const src = (it) => (it && it._source === 'case' ? 0 : 1);
-      const sa = src(a);
-      const sb = src(b);
-      if (sa !== sb) return sa - sb; 
-
-      if (sort === "Newest") return getDate(b) - getDate(a);
-      if (sort === "Oldest") return getDate(a) - getDate(b);
-      if (sort === "Status") return (a.status || "").localeCompare(b.status || "");
-      return 0;
-    });
-
-    return list;
+    if (sort === "Newest") return arr.sort((a, b) => getDate(b) - getDate(a));
+    if (sort === "Oldest") return arr.sort((a, b) => getDate(a) - getDate(b));
+    if (sort === "Status") return arr.sort((a, b) => (a.status || "").localeCompare(b.status || ""));
+    return arr;
   }, [cases, filter, qDebounced, sort]);
 
   const copy = async (text) => {
@@ -212,11 +129,9 @@ export default function VictimCases() {
 
   const exportCsv = () => {
     const rows = [
-      ["Source", "Report ID", "Case ID", "Incident Type", "Status", "Date Reported"],
+      ["Report ID", "Incident Type", "Status", "Date Reported"],
       ...filtered.map((c) => [
-        c._source || "",
         c.reportID || "",
-        c.caseID || "",
         c.incidentType || "",
         c.status || "",
         c.dateReported ? new Date(c.dateReported).toLocaleString() : "",
@@ -238,12 +153,12 @@ export default function VictimCases() {
         <div style={{ width: "100%", maxWidth: 1100 }}>
           <style>{`
             .page-header {
-              background: linear-gradient(180deg, #fff1f7 0%, #ffe5f1 40%, #f4eaff 100%);
+              background: ${BRAND.cardBg};
               border: 1px solid rgba(122,90,248,0.12);
               border-radius: 20px;
               padding: ${isMobile ? "20px" : "28px"};
               margin-bottom: 20px;
-              box-shadow: 0 20px 40px rgba(122,90,248,0.25);
+              box-shadow: 0 2px 12px rgba(122,90,248,0.08);
             }
             
             .toolbar {
@@ -327,18 +242,33 @@ export default function VictimCases() {
             }
           `}</style>
 
-          {/* Header + Counts */}
-          <div className="toolbar">
-            <div className="toolbar-col" style={{ gap: 6 }}>
-              <Title level={screens.md ? 4 : 5} style={{ margin: 0, color: BRAND.violet }}>
-                My Cases
-              </Title>
-              <Text type="secondary">Track status and updates</Text>
-            </div>
-            <div className="counts">
-              <span className="count-pill">All <Tag style={{ marginInlineStart: 4 }}>{counts.all}</Tag></span>
-              <span className="count-pill">Open <Tag color="orange" style={{ marginInlineStart: 4 }}>{counts.open}</Tag></span>
-              <span className="count-pill">Closed <Tag color="green" style={{ marginInlineStart: 4 }}>{counts.closed}</Tag></span>
+          {/* Header */}
+          <div className="page-header">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+              <div>
+                <Title level={isMobile ? 4 : 3} style={{ margin: 0, color: BRAND.violet, marginBottom: 4 }}>
+                  My Cases
+                </Title>
+                <Text type="secondary" style={{ fontSize: isMobile ? 13 : 14 }}>
+                  Track your incident reports and their status
+                </Text>
+              </div>
+              
+              {/* Count Pills */}
+              <div className="counts">
+                <div className="count-pill">
+                  <span className="label">All</span>
+                  <Tag style={{ margin: 0, borderRadius: 8 }}>{counts.all}</Tag>
+                </div>
+                <div className="count-pill">
+                  <span className="label">Open</span>
+                  <Tag color="orange" style={{ margin: 0, borderRadius: 8 }}>{counts.open}</Tag>
+                </div>
+                <div className="count-pill">
+                  <span className="label">Closed</span>
+                  <Tag color="green" style={{ margin: 0, borderRadius: 8 }}>{counts.closed}</Tag>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -347,7 +277,7 @@ export default function VictimCases() {
             <div className={isMobile ? "filters-stack" : "toolbar-col"} style={{ marginBottom: isMobile ? 12 : 0 }}>
               <Input
                 allowClear
-                placeholder="Search cases…"
+                placeholder="Search cases by ID, type, or status..."
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 suffix={<SearchOutlined style={{ color: BRAND.violet }} />}
@@ -419,8 +349,6 @@ export default function VictimCases() {
                 }}
                 renderItem={(r) => {
                   const when = r.dateReported ? new Date(r.dateReported).toLocaleString() : "—";
-                  const idDisplay = r._source === 'case' ? (r.caseID || r._id || r.reportID || "—") : (r.reportID || r._id || r.caseID || "—");
-                  const sourceTag = r._source === 'case' ? <Tag color="blue">Case</Tag> : <Tag color="purple">Report</Tag>;
                   return (
                     <List.Item
                       className="list-item"
@@ -434,13 +362,16 @@ export default function VictimCases() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 8 }}>
                           <Space size={8} wrap>
-                            <Text strong style={{ fontSize: isMobile ? 14 : 16 }}>{r.reportID || "—"}</Text>
+                            <Text strong style={{ fontSize: isMobile ? 15 : 16, color: BRAND.violet }}>
+                              {r.reportID || "—"}
+                            </Text>
                             <Tooltip title="Copy Report ID">
                               <Button
                                 size="small"
                                 type="text"
                                 icon={<CopyOutlined />}
                                 onClick={(e) => { e.stopPropagation(); copy(r.reportID || ""); }}
+                                style={{ color: BRAND.violet }}
                               />
                             </Tooltip>
                           </Space>
@@ -459,58 +390,198 @@ export default function VictimCases() {
                 }}
               />
             ) : (
-              <Empty description={error || "No cases or reports match your filters"} style={{ margin: "24px 0" }} />
+              <Empty description={error || "No cases match your filters"} style={{ margin: "24px 0" }} />
             )}
           </Card>
 
           {/* Drawer: Case details (fullscreen on mobile) */}
           <Drawer
-            title="Case Details"
-            width={isMobile ? "100%" : 520}
+            title={
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 12,
+                padding: '8px 0'
+              }}>
+                <div style={{
+                  width: 4,
+                  height: 32,
+                  background: `linear-gradient(180deg, ${BRAND.violet}, ${BRAND.pink})`,
+                  borderRadius: 2
+                }} />
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 600, color: BRAND.violet }}>
+                    Case Details
+                  </div>
+                  <div style={{ fontSize: 12, color: '#999', fontWeight: 400 }}>
+                    Complete case information
+                  </div>
+                </div>
+              </div>
+            }
+            width={isMobile ? "100%" : 580}
             open={drawer.open}
             onClose={() => setDrawer({ open: false, item: null })}
             destroyOnClose
             styles={{
-              body: { padding: isMobile ? 12 : 24 },
-              header: { padding: isMobile ? "8px 12px" : "16px 24px" },
+              body: { 
+                padding: isMobile ? 16 : 24,
+                background: '#fafafa'
+              },
+              header: { 
+                padding: isMobile ? "12px 16px" : "20px 24px",
+                borderBottom: '2px solid rgba(122,90,248,0.1)',
+                background: 'white'
+              },
             }}
           >
             {drawer.item ? (
-              <>
-                <Descriptions
-                  column={1}
-                  size={isMobile ? "small" : "middle"}
-                  labelStyle={{ fontWeight: 600 }}
-                  colon={false}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {/* Report ID Card */}
+                <Card 
+                  size="small"
+                  style={{ 
+                    borderRadius: 12,
+                    border: '1px solid rgba(122,90,248,0.15)',
+                    background: 'linear-gradient(135deg, rgba(122,90,248,0.05), rgba(233,30,99,0.05))',
+                    boxShadow: '0 2px 8px rgba(122,90,248,0.08)'
+                  }}
+                  bodyStyle={{ padding: isMobile ? 12 : 16 }}
                 >
-                  <Descriptions.Item label={drawer.item._source === 'case' ? 'Case ID' : 'Report ID'}>
-                    <Space wrap>
-                      {drawer.item._source === 'case' ? (drawer.item.caseID || drawer.item._id || drawer.item.reportID) : (drawer.item.reportID || drawer.item._id || drawer.item.caseID) || "—"}
-                      <Tooltip title={drawer.item._source === 'case' ? (drawer.item.caseID ? "Copy Case ID" : drawer.item._id ? "Copy ID" : "Copy ID") : (drawer.item.reportID ? "Copy Report ID" : drawer.item._id ? "Copy ID" : "Copy ID")}>
+                  <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                    <Text type="secondary" style={{ fontSize: 12, fontWeight: 500 }}>
+                      REPORT ID
+                    </Text>
+                    <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}>
+                      <Text 
+                        strong 
+                        style={{ 
+                          fontSize: 16, 
+                          fontFamily: 'monospace',
+                          color: BRAND.violet
+                        }}
+                      >
+                        {drawer.item.reportID || "—"}
+                      </Text>
+                      <Tooltip title="Copy Report ID">
                         <Button
                           size="small"
                           icon={<CopyOutlined />}
-                          onClick={() => copy(drawer.item._source === 'case' ? (drawer.item.caseID || drawer.item._id || drawer.item.reportID || "") : (drawer.item.reportID || drawer.item._id || drawer.item.caseID || ""))}
+                          onClick={() => copy(drawer.item.reportID || "")}
+                          style={{ 
+                            borderRadius: 8,
+                            borderColor: BRAND.violet,
+                            color: BRAND.violet
+                          }}
                         />
                       </Tooltip>
                     </Space>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Status">{statusTag(drawer.item.status)}</Descriptions.Item>
-                  <Descriptions.Item label="Incident Type">{drawer.item.incidentType || "—"}</Descriptions.Item>
-                  <Descriptions.Item label="Date Reported">
-                    {drawer.item.dateReported ? new Date(drawer.item.dateReported).toLocaleString() : "—"}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Location">{drawer.item.location || "—"}</Descriptions.Item>
-                  <Descriptions.Item label="Perpetrator">{drawer.item.perpetrator || "—"}</Descriptions.Item>
-                </Descriptions>
-                <Divider />
-                <Typography>
-                  <Text strong>Description</Text>
-                  <Card size="small" style={{ marginTop: 8 }}>
-                    <div style={{ whiteSpace: "pre-wrap" }}>{drawer.item.description || "—"}</div>
-                  </Card>
-                </Typography>
-              </>
+                  </Space>
+                </Card>
+
+                {/* Status and Type */}
+                <Card 
+                  size="small"
+                  style={{ 
+                    borderRadius: 12,
+                    border: '1px solid #f0f0f0',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                  }}
+                  bodyStyle={{ padding: isMobile ? 12 : 16 }}
+                >
+                  <Space direction="vertical" size={16} style={{ width: '100%' }}>
+                    <div>
+                      <Text type="secondary" style={{ fontSize: 12, fontWeight: 500, display: 'block', marginBottom: 8 }}>
+                        STATUS
+                      </Text>
+                      {statusTag(drawer.item.status)}
+                    </div>
+                    <Divider style={{ margin: 0 }} />
+                    <div>
+                      <Text type="secondary" style={{ fontSize: 12, fontWeight: 500, display: 'block', marginBottom: 8 }}>
+                        INCIDENT TYPE
+                      </Text>
+                      <Text strong style={{ fontSize: 14 }}>
+                        {drawer.item.incidentType || "—"}
+                      </Text>
+                    </div>
+                  </Space>
+                </Card>
+
+                {/* Details Grid */}
+                <Card 
+                  size="small"
+                  title={
+                    <span style={{ fontSize: 14, fontWeight: 600, color: BRAND.violet }}>
+                      📋 Case Information
+                    </span>
+                  }
+                  style={{ 
+                    borderRadius: 12,
+                    border: '1px solid #f0f0f0',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                  }}
+                  bodyStyle={{ padding: isMobile ? 12 : 16 }}
+                >
+                  <Space direction="vertical" size={16} style={{ width: '100%' }}>
+                    <div>
+                      <Text type="secondary" style={{ fontSize: 12, fontWeight: 500, display: 'block', marginBottom: 6 }}>
+                        📅 DATE REPORTED
+                      </Text>
+                      <Text strong style={{ fontSize: 14 }}>
+                        {drawer.item.dateReported ? new Date(drawer.item.dateReported).toLocaleString() : "—"}
+                      </Text>
+                    </div>
+                    <Divider style={{ margin: 0 }} />
+                    <div>
+                      <Text type="secondary" style={{ fontSize: 12, fontWeight: 500, display: 'block', marginBottom: 6 }}>
+                        📍 LOCATION
+                      </Text>
+                      <Text strong style={{ fontSize: 14 }}>
+                        {drawer.item.location || "—"}
+                      </Text>
+                    </div>
+                    <Divider style={{ margin: 0 }} />
+                    <div>
+                      <Text type="secondary" style={{ fontSize: 12, fontWeight: 500, display: 'block', marginBottom: 6 }}>
+                        👤 PERPETRATOR
+                      </Text>
+                      <Text strong style={{ fontSize: 14 }}>
+                        {drawer.item.perpetrator || "—"}
+                      </Text>
+                    </div>
+                  </Space>
+                </Card>
+
+                {/* Description */}
+                <Card 
+                  size="small"
+                  title={
+                    <span style={{ fontSize: 14, fontWeight: 600, color: BRAND.violet }}>
+                      📝 Incident Description
+                    </span>
+                  }
+                  style={{ 
+                    borderRadius: 12,
+                    border: '1px solid #f0f0f0',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                  }}
+                  bodyStyle={{ 
+                    padding: isMobile ? 12 : 16,
+                    background: '#fafafa',
+                    minHeight: 120
+                  }}
+                >
+                  <div style={{ 
+                    whiteSpace: "pre-wrap", 
+                    fontSize: 14, 
+                    lineHeight: 1.8,
+                    color: '#333'
+                  }}>
+                    {drawer.item.description || "—"}
+                  </div>
+                </Card>
+              </div>
             ) : (
               <Skeleton active />
             )}

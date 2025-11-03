@@ -113,7 +113,7 @@ export default function VictimNavbar() {
   const desktopItems = [
     { key: "/victim/dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
     { key: "/victim/report", icon: <FileAddOutlined />, label: "Report Case" },
-    { key: "/victim/victim-cases", icon: <UserSwitchOutlined />, label: "Cases & Reports" },
+    { key: "/victim/victim-cases", icon: <UserSwitchOutlined />, label: " My Cases" },
     { key: "/victim/victim-barangay", icon: <InfoCircleOutlined />, label: "Barangay" },
     { key: "/victim/victim-settings", icon: <SettingOutlined />, label: "Settings" },
     

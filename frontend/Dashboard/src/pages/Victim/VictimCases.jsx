@@ -134,7 +134,7 @@ export default function VictimCases() {
     const openish = (s) => s === "Open" || s === "Under Investigation";
     const all = cases.length;
     const open = cases.filter((c) => openish(c.status)).length;
-    const closed = cases.filter((c) => c.status && !openish(c.status)).length;
+    const closed = cases.filter((c) => c.status && !openish(c.status) && c.status !== "Pending").length;
     return { all, open, closed };
   }, [cases]);
 
@@ -151,7 +151,7 @@ export default function VictimCases() {
     const byFilter = (c) =>
       filter === "All" ? true :
       filter === "Open" ? openish(c.status) :
-      c.status && !openish(c.status);
+      c.status && !openish(c.status) && c.status !== "Pending";
 
     const byQ = (c) => {
       if (!qDebounced) return true;

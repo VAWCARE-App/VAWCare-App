@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { App as AntApp, ConfigProvider, Spin } from "antd";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 
 import Login from "./pages/Login";
 import LandingPage from "./pages/LandingPage";
@@ -40,6 +40,28 @@ import ColorBends from "./components/ColorBends";
 
 
 import { isAuthed, getUserType, getUserData } from "./lib/api";
+
+function UnauthorizedHandler() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    const handler = (e) => {
+      try {
+        // Ensure session / storages are cleared (safe fallback)
+        try { sessionStorage.clear(); localStorage.clear(); } catch (_) { }
+        const redirectToAdmin = window.location.pathname.startsWith('/admin');
+        const target = redirectToAdmin ? '/admin/login' : '/login';
+        navigate(target, { replace: true });
+      } catch (err) {
+        // As a last resort, do a full reload redirect
+        const redirectToAdmin = window.location.pathname.startsWith('/admin');
+        window.location.href = redirectToAdmin ? '/admin/login' : '/login';
+      }
+    };
+    window.addEventListener('api:unauthorized', handler);
+    return () => window.removeEventListener('api:unauthorized', handler);
+  }, [navigate]);
+  return null;
+}
 
 function Protected({ children, roles }) {
   const [loading, setLoading] = useState(true);
@@ -132,6 +154,7 @@ export default function App() {
     <ConfigProvider theme={{ token: { borderRadius: 12 } }}>
       <AntApp>
         <BrowserRouter>
+          <UnauthorizedHandler />
           <Routes>
             <Route path="/landing" element={<LandingPage />} />
             {/* Root is landing page */}

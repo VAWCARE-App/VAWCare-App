@@ -23,6 +23,8 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [searchVisible, setSearchVisible] = useState(false);
+  const [searchText, setSearchText] = useState("");
   const screens = Grid.useBreakpoint();
 
   const isXs = !screens.sm;           // < 576px
@@ -71,17 +73,13 @@ export default function AdminDashboard() {
         style={{
           position: "sticky",
           top: 0,
-          zIndex: 60,
+          zIndex: 10,
           background: BRAND.bg,
           borderBottom: `1px solid ${BRAND.soft}`,
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
-          paddingInline: isMdUp ? 20 : 12,
-          paddingBlock: isMdUp ? 12 : 8,
-          height: HEADER_H,
-          lineHeight: 1.2,
-          boxSizing: "border-box",
+          paddingInline: screens.md ? 20 : 12,
+          height: screens.xs && !screens.sm ? 64 : 72,
         }}
       >
         {/* LEFT – sidebar button (only on small screens) + title */}
@@ -89,88 +87,65 @@ export default function AdminDashboard() {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: isMdUp ? 12 : 8,
-            minWidth: 0,
+            gap: 12,
+            flex: 1,
           }}
         >
           {/* Sidebar icon: show only on devices smaller than md */}
-          {!isMdUp && (
+          {!screens.md && (
             <Button
               type="text"
               aria-label="Toggle sidebar"
               icon={<MenuOutlined />}
               onClick={handleToggleSidebar}
               style={{
-                width: isMdUp ? 40 : 36,
-                height: isMdUp ? 40 : 36,
-                borderRadius: 10,
+                width: screens.md ? 40 : 36,
+                height: screens.md ? 40 : 36,
                 display: "grid",
                 placeItems: "center",
+                borderRadius: 10,
                 background: "#ffffffaa",
                 boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
               }}
             />
           )}
 
-          <Space direction="vertical" size={0} style={{ minWidth: 0 }}>
-            <Title
-              level={isMdUp ? 4 : 5}
-              style={{
-                margin: 0,
-                color: BRAND.violet,
-                fontSize: isMdUp ? "clamp(18px,2.2vw,22px)" : "18px",
-                fontWeight: 700,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
+          <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+            <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
               Admin Dashboard
             </Title>
-            {/* subtitle hidden on the smallest screens */}
-            {!isXs && (
-              <Text type="secondary" style={{ fontSize: 12, overflow: "hidden", textOverflow: "ellipsis" }}>
-                Overview • Users • Reports • Cases • Alerts
+            {screens.md && (
+              <Text type="secondary" style={{ fontSize: 13 }}>
+                Monitor system insights, users, reports, cases, and alerts.
               </Text>
             )}
-          </Space>
+          </div>
         </div>
 
-        {/* RIGHT – search + refresh + (optional) bell */}
-        <Space size={isMdUp ? 12 : 8} wrap={false} style={{ alignItems: "center" }}>
-          {/* show full input on sm+; on xs show compact icon button */}
-          {screens.sm ? (
+        {/* RIGHT – search + refresh buttons */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {searchVisible ? (
             <Input
-              allowClear
-              placeholder="Search…"
-              suffix={<SearchOutlined />}
-              style={{
-                borderRadius: 999,
-                width: isMdUp ? 240 : 180,
-                minWidth: 120,
+              placeholder="Search..."
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              onBlur={() => {
+                if (!searchText) setSearchVisible(false);
               }}
-              size={isMdUp ? "middle" : "small"}
+              onPressEnter={() => {
+                console.log("Search for:", searchText);
+                // Add your search logic here
+              }}
+              autoFocus
+              style={{ width: screens.md ? 200 : 150 }}
             />
           ) : (
             <Button
-              type="text"
               icon={<SearchOutlined />}
-              aria-label="Search"
-              onClick={() => {
-                // optionally open a search modal/drawer
-                console.log("open search");
-              }}
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 10,
-                display: "grid",
-                placeItems: "center",
-                background: "#ffffffaa",
-                boxShadow: "0 6px 18px rgba(0,0,0,0.04)",
-              }}
-              size="small"
-            />
+              onClick={() => setSearchVisible(true)}
+            >
+              {screens.md ? "Search" : null}
+            </Button>
           )}
 
           <Button
@@ -180,25 +155,11 @@ export default function AdminDashboard() {
             style={{
               borderColor: BRAND.violet,
               color: BRAND.violet,
-              borderRadius: 999,
-              paddingInline: isMdUp ? 12 : 8,
             }}
-            size={isMdUp ? "middle" : "small"}
           >
-            {/* only show text on md+ */}
-            {isMdUp ? "Refresh" : null}
+            {screens.md ? "Refresh" : null}
           </Button>
-
-          {!isXs && (
-            <Badge overflowCount={99}>
-              <Avatar
-                shape="square"
-                style={{ background: BRAND.light, color: BRAND.violet }}
-                icon={<BellOutlined />}
-              />
-            </Badge>
-          )}
-        </Space>
+        </div>
       </Header>
 
       {/* Tabs + Content */}

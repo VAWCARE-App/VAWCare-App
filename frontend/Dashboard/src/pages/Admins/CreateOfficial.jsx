@@ -173,9 +173,16 @@ export default function CreateOfficial() {
             />
           )}
 
-          <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
-            Create Barangay Official
-          </Title>
+          <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+            <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
+              Create Barangay Official
+            </Title>
+            {screens.md && (
+              <Text type="secondary" style={{ fontSize: 13 }}>
+                Register new barangay officials with their account details and credentials.
+              </Text>
+            )}
+          </div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <Button
@@ -186,7 +193,7 @@ export default function CreateOfficial() {
               setPhotoMimeType(null);
             }}
           >
-            Cancel
+            {screens.md ? "Cancel" : null}
           </Button>
           <Button
             type="primary"
@@ -194,7 +201,7 @@ export default function CreateOfficial() {
             onClick={() => form.submit()}
             style={{ background: BRAND.violet, borderColor: BRAND.violet }}
           >
-            Save Changes
+            {screens.md ? "Save Changes" : null}
           </Button>
         </div>
       </Header>

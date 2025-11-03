@@ -336,7 +336,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         collapsible
         collapsed={collapsed}
         /* Mobile: left overlay covering header */
-        width={isMobile ? "50%" : 240}
+        width={isMobile ? "70%" : 240}
         collapsedWidth={isMobile ? 0 : 80}
         style={{
           background: BRAND.panel,

@@ -459,32 +459,26 @@ export default function UserManagement() {
         style={{
           position: "sticky",
           top: 0,
-          zIndex: 80,
+          zIndex: 10,
           background: BRAND.pageBg,
           borderBottom: `1px solid ${BRAND.softBorder}`,
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
-          paddingInline: isMdUp ? 20 : isSm ? 16 : 12,
-          paddingBlock: isXs ? 8 : 10,
-          height: HEADER_H,
-          lineHeight: 1.2,
-          backdropFilter: "blur(6px)",
-          WebkitBackdropFilter: "blur(6px)",
-          boxShadow: isXs ? "0 6px 18px rgba(0,0,0,0.04)" : "none",
+          paddingInline: screens.md ? 20 : 12,
+          height: screens.xs && !screens.sm ? 64 : 72,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: isXs ? 8 : 12, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
           {/* Sidebar toggle only on phones & small screens (dispatches existing toggle event Sidebar listens for) */}
-          {!isMdUp && (
+          {!screens.md && (
             <Button
               type="text"
               icon={<MenuOutlined />}
               onClick={() => window.dispatchEvent(new Event("toggle-sider"))}
               aria-label="Toggle sidebar"
               style={{
-                width: isXs ? 36 : 40,
-                height: isXs ? 36 : 40,
+                width: screens.md ? 40 : 36,
+                height: screens.md ? 40 : 36,
                 display: "grid",
                 placeItems: "center",
                 borderRadius: 10,
@@ -496,56 +490,21 @@ export default function UserManagement() {
 
           <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
             <Typography.Title
-              level={isMdUp ? 4 : 5}
+              level={4}
               style={{
                 margin: 0,
                 color: BRAND.violet,
-                fontSize: isXs ? 18 : undefined,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
               }}
             >
               User Management
             </Typography.Title>
-            {/* subtitle hidden on the smallest screens */}
-            {!isXs && (
-              <Typography.Text type="secondary" style={{ fontSize: isSm ? 12 : 13, overflow: "hidden", textOverflow: "ellipsis" }}>
+            {screens.md && (
+              <Typography.Text type="secondary" style={{ fontSize: 13 }}>
                 Review, filter, and manage all users across roles and accounts.
               </Typography.Text>
             )}
           </div>
         </div>
-
-        <Space wrap align="center" size={12}>
-          {/* compact icon-only on xs, text on md+ */}
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={fetchAllUsers}
-            style={{
-              borderColor: BRAND.violet,
-              color: BRAND.violet,
-              borderRadius: 999,
-              paddingInline: isMdUp ? 12 : 8,
-            }}
-            size={isXs ? "small" : "middle"}
-            title="Refresh"
-            aria-label="Refresh"
-          >
-            {isMdUp ? "Refresh" : null}
-          </Button>
-
-          <Button
-            onClick={exportCsv}
-            style={{ borderRadius: 999, paddingInline: isMdUp ? 12 : 8 }}
-            size={isXs ? "small" : "middle"}
-            title="Export"
-            aria-label="Export"
-            icon={!isMdUp ? <DownloadOutlined /> : undefined}
-          >
-            {isMdUp ? "Export" : null}
-          </Button>
-        </Space>
       </Header>
 
       <Content
@@ -602,12 +561,13 @@ export default function UserManagement() {
           {/* Toolbar */}
           <Card style={{ ...glassCard, padding: 10 }}>
             <Space wrap style={{ width: "100%", justifyContent: "space-between" }}>
-              <Space wrap>
+              <Space wrap size={8}>
                 <Search
                   placeholder="Search name, email, username…"
                   allowClear
                   enterButton={<SearchOutlined />}
-                  style={{ width: 220 }}
+                  size="middle"
+                  style={{ width: screens.xs ? "100%" : screens.sm ? 200 : 220, minWidth: screens.xs ? 200 : undefined }}
                   value={searchText}
                   onSearch={setSearchText}
                   onChange={(e) => setSearchText(e.target.value)}
@@ -615,7 +575,8 @@ export default function UserManagement() {
                 <Select
                   value={filterType}
                   onChange={setFilterType}
-                  style={{ width: 170 }}
+                  size="middle"
+                  style={{ width: screens.xs ? 150 : 170 }}
                   options={[
                     { value: "all", label: "All Types" },
                     { value: "admin", label: "Administrators" },
@@ -626,7 +587,8 @@ export default function UserManagement() {
                 <Select
                   value={filterStatus}
                   onChange={setFilterStatus}
-                  style={{ width: 170 }}
+                  size="middle"
+                  style={{ width: screens.xs ? 150 : 170 }}
                   options={[
                     { value: "all", label: "All Status" },
                     { value: "approved", label: "Approved" },
@@ -641,12 +603,13 @@ export default function UserManagement() {
                   allowEmpty={[true, true]}
                   placeholder={["Start", "End"]}
                   suffixIcon={<CalendarOutlined />}
+                  size="middle"
                   style={{ width: screens.xs ? 220 : 260 }}
                 />
               </Space>
-              <Space>
-                <Button icon={<ReloadOutlined />} onClick={fetchAllUsers} />
-                <Button icon={<DownloadOutlined />} onClick={exportCsv}>
+              <Space size={8}>
+                <Button icon={<ReloadOutlined />} onClick={fetchAllUsers} size="middle" />
+                <Button icon={<DownloadOutlined />} onClick={exportCsv} size="middle">
                   Export
                 </Button>
               </Space>

@@ -265,44 +265,42 @@ export default function CaseDetail() {
         style={{
           position: "sticky",
           top: 0,
-          zIndex: 5,
+          zIndex: 10,
           background: BRAND.pageBg,
           borderBottom: `1px solid ${BRAND.soft}`,
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
-          paddingInline: 16,
-          paddingBlock: 10,
-          height: "auto",
-          lineHeight: 1.2,
-          backdropFilter: "blur(6px)",
+          paddingInline: screens.md ? 20 : 12,
+          height: screens.xs && !screens.sm ? 64 : 72,
         }}
       >
-        <Space align="center" size={12}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
           <Button
             icon={<ArrowLeftOutlined />}
             onClick={() => navigate(-1)}
-            shape="round"
             style={{ borderColor: BRAND.violet, color: BRAND.violet }}
           >
-            Back
+            {screens.md ? "Back" : null}
           </Button>
-          <div>
+          <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
             <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
               Case Details
             </Title>
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              View, edit, and print case information.
-            </Text>
+            {screens.md && (
+              <Text type="secondary" style={{ fontSize: 13 }}>
+                View, edit, and print case information.
+              </Text>
+            )}
           </div>
-        </Space>
+        </div>
 
-        <Space wrap>
-          <Tooltip title="Print this case">
-            <Button icon={<PrinterOutlined />} onClick={onPrintClick}>
-              Print
-            </Button>
-          </Tooltip>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button 
+            icon={<PrinterOutlined />} 
+            onClick={onPrintClick}
+          >
+            {screens.md ? "Print" : null}
+          </Button>
           {(userType === "admin" || userType === "official") && (
             <Button
               type="primary"
@@ -311,13 +309,12 @@ export default function CaseDetail() {
                 form.setFieldsValue(caseData);
                 setEditOpen(true);
               }}
-              style={{ background: BRAND.pink, borderColor: BRAND.pink }}
-              shape="round"
+              style={{ background: BRAND.violet, borderColor: BRAND.violet }}
             >
-              Edit
+              {screens.md ? "Edit" : null}
             </Button>
           )}
-        </Space>
+        </div>
       </Header>
 
       <Content
@@ -494,6 +491,9 @@ export default function CaseDetail() {
         destroyOnClose
         maskStyle={{ backdropFilter: "blur(2px)" }}
         wrapClassName="case-edit-modal"
+        styles={{
+          body: { maxHeight: "70vh", overflowY: "auto", padding: "16px 24px" }
+        }}
         title={
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <SafetyCertificateTwoTone

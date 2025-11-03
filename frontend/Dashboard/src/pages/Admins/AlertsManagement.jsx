@@ -337,7 +337,7 @@ export default function AlertsManagement() {
           </Space>
         </div>
 
-        <Space wrap>
+        {/* <Space wrap>
           <Button
             icon={<ReloadOutlined />}
             onClick={load}
@@ -346,7 +346,7 @@ export default function AlertsManagement() {
           >
             {isMdUp ? "Refresh" : null}
           </Button>
-        </Space>
+        </Space> */}
       </Header>
 
       <Content

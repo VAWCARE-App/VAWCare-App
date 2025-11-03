@@ -465,19 +465,16 @@ export default function ReportManagement() {
          style={{
            position: "sticky",
            top: 0,
-           zIndex: 5,
+           zIndex: 10,
            background: BRAND.pageBg,
            borderBottom: `1px solid ${BRAND.softBorder}`,
            display: "flex",
            alignItems: "center",
-           justifyContent: "space-between",
-           paddingInline: 16,
-           paddingBlock: 12,
-           height: "auto",
-           lineHeight: 1.2,
+           paddingInline: screens.md ? 20 : 12,
+           height: screens.xs && !screens.sm ? 64 : 72,
          }}
        >
-         <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+         <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
           {/* sidebar toggle only on small screens */}
           {!screens.md && (
             <Button
@@ -486,8 +483,8 @@ export default function ReportManagement() {
               onClick={() => window.dispatchEvent(new Event("toggle-sider"))}
               aria-label="Toggle sidebar"
               style={{
-                width: 36,
-                height: 36,
+                width: screens.md ? 40 : 36,
+                height: screens.md ? 40 : 36,
                 display: "grid",
                 placeItems: "center",
                 borderRadius: 10,
@@ -497,33 +494,17 @@ export default function ReportManagement() {
             />
           )}
 
-          <Space direction="vertical" size={0}>
+          <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
             <Typography.Title level={4} style={{ margin: 0, color: BRAND.violet }}>
               Report Management
             </Typography.Title>
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              Review, manage, and monitor reports submitted by victims.
-            </Typography.Text>
-          </Space>
+            {screens.md && (
+              <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+                Review, manage, and monitor reports submitted by victims.
+              </Typography.Text>
+            )}
+          </div>
         </div>
-
-        <Space wrap>
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={fetchAllReports}
-            style={{ borderColor: BRAND.violet, color: BRAND.violet }}
-            title="Refresh"
-          >
-            {screens.md ? "Refresh" : null}
-          </Button>
-          <Button
-            icon={<DownloadOutlined />}
-            onClick={exportCsv}
-            title="Export"
-          >
-            {screens.md ? "Export" : null}
-          </Button>
-        </Space>
       </Header>
 
       <Content

@@ -434,29 +434,26 @@ export default function BPOManagement() {
         style={{
           position: "sticky",
           top: 0,
-          zIndex: 5,
+          zIndex: 10,
           background: BRAND.pageBg,
           borderBottom: `1px solid ${BRAND.softBorder}`,
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
-          paddingInline: isMdUp ? 16 : 12,
-          paddingBlock: isXs ? 8 : 12,
-          height: "auto",
-          lineHeight: 1.2,
+          paddingInline: screens.md ? 20 : 12,
+          height: screens.xs && !screens.sm ? 64 : 72,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
           {/* sidebar toggle (visible only on small screens) */}
-          {!isMdUp && (
+          {!screens.md && (
             <Button
               type="text"
               icon={<MenuOutlined />}
               onClick={() => window.dispatchEvent(new Event("toggle-sider"))}
               aria-label="Toggle sidebar"
               style={{
-                width: isXs ? 36 : 40,
-                height: isXs ? 36 : 40,
+                width: screens.md ? 40 : 36,
+                height: screens.md ? 40 : 36,
                 display: "grid",
                 placeItems: "center",
                 borderRadius: 10,
@@ -466,36 +463,36 @@ export default function BPOManagement() {
             />
           )}
 
-          <Space direction="vertical" size={0}>
+          <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
             <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
               BPO Management
             </Title>
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              Track and manage Barangay Protection Orders efficiently.
-            </Text>
-          </Space>
+            {screens.md && (
+              <Text type="secondary" style={{ fontSize: 13 }}>
+                Track and manage Barangay Protection Orders efficiently.
+              </Text>
+            )}
+          </div>
         </div>
 
-        <Space wrap>
+        <div style={{ display: "flex", gap: 8 }}>
           <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={() => navigate("/admin/bpo")}
             style={{ background: BRAND.violet, borderColor: BRAND.violet }}
-            title="Add BPO"
           >
-            {isMdUp ? "Add BPO" : null}
+            {screens.md ? "Add BPO" : null}
           </Button>
           <Button
             icon={<ReloadOutlined />}
             onClick={fetchBPOs}
             style={{ borderColor: BRAND.violet, color: BRAND.violet }}
             loading={loading}
-            title="Refresh"
           >
-            {isMdUp ? "Refresh" : null}
+            {screens.md ? "Refresh" : null}
           </Button>
-        </Space>
+        </div>
       </Header>
 
       <Content

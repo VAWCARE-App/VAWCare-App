@@ -15,6 +15,9 @@ import {
   Modal,
   Form,
   Grid,
+  Row,
+  Col,
+  Divider,
 } from "antd";
 import {
   SearchOutlined,
@@ -641,103 +644,223 @@ export default function CaseManagement() {
 
           {/* Add Case Modal */}
           <Modal
-            title="Create Case"
+            title={
+              <div style={{ 
+                padding: "8px 0", 
+                borderBottom: `1px solid ${BRAND.soft}`,
+                marginBottom: 16
+              }}>
+                <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
+                  Create New Case
+                </Title>
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  Add a new case by selecting a report or entering details manually
+                </Text>
+              </div>
+            }
             open={addModalVisible}
             onCancel={() => {
               setAddModalVisible(false);
               setSelectedReport(null);
+              addForm.resetFields();
             }}
-            okText="Create"
-            onOk={() => {
-              addForm.validateFields().then((v) => handleCreateCase(v));
+            footer={[
+              <Button
+                key="cancel"
+                onClick={() => {
+                  setAddModalVisible(false);
+                  setSelectedReport(null);
+                  addForm.resetFields();
+                }}
+              >
+                Cancel
+              </Button>,
+              <Button
+                key="submit"
+                type="primary"
+                onClick={() => {
+                  addForm.validateFields().then((v) => handleCreateCase(v));
+                }}
+                style={{ background: BRAND.violet, borderColor: BRAND.violet }}
+              >
+                Create Case
+              </Button>,
+            ]}
+            width={screens.md ? 800 : "95%"}
+            centered
+            styles={{
+              body: { maxHeight: "70vh", overflowY: "auto", padding: "16px 24px" }
             }}
           >
             <Form form={addForm} layout="vertical">
-              <Form.Item
-                name="reportID"
-                label="Select Report (optional)"
-                help="Pick a report to prefill fields, or leave blank to add a manual/walk-in case"
+              {/* Report Selection Section */}
+              <Card 
+                size="small" 
+                style={{ 
+                  background: "#f9f7ff", 
+                  border: `1px solid ${BRAND.soft}`,
+                  marginBottom: 16,
+                  borderRadius: 8
+                }}
               >
-                <Select
-                  showSearch
-                  placeholder="Optional: select a report to base case on"
-                  onChange={handleReportSelect}
-                  optionFilterProp="children"
-                  allowClear
+                <Form.Item
+                  name="reportID"
+                  label={<Text strong>Link to Existing Report (Optional)</Text>}
+                  help={<Text type="secondary" style={{ fontSize: 12 }}>Select a report to auto-fill case details, or leave blank for manual entry</Text>}
                 >
-                  {reportsList.map((r) => (
-                    <Option key={r.reportID} value={r.reportID}>
-                      {r.reportID} — {r.incidentType} — {r.victim?.firstName || ""}{" "}
-                      {r.victim?.lastName || ""}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
+                  <Select
+                    showSearch
+                    placeholder="Search and select a report..."
+                    onChange={handleReportSelect}
+                    optionFilterProp="children"
+                    allowClear
+                    size="large"
+                  >
+                    {reportsList.map((r) => (
+                      <Option key={r.reportID} value={r.reportID}>
+                        <Space direction="vertical" size={0}>
+                          <Text strong>{r.reportID}</Text>
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            {r.incidentType} • {r.victim?.firstName || ""}{" "}
+                            {r.victim?.lastName || ""}
+                          </Text>
+                        </Space>
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Card>
 
-              <Form.Item
-                name="victimName"
-                label="Victim Name"
-                rules={[{ required: true, message: "Victim Name is required" }]}
-              >
-                <Input />
-              </Form.Item>
+              <Divider orientation="left" style={{ color: BRAND.violet }}>
+                Case Information
+              </Divider>
 
-              <Form.Item name="victimType" label="Victim Type">
-                <Select placeholder="" allowClear>
-                  <Option value="child">Child</Option>
-                  <Option value="woman">Woman</Option>
-                  <Option value="anonymous">Anonymous</Option>
-                </Select>
-              </Form.Item>
+              {/* Case ID and Status Row */}
+              <Row gutter={16}>
+                <Col xs={24} md={12}>
+                  <Form.Item 
+                    name="caseID" 
+                    label={<Text strong>Case ID</Text>}
+                    rules={[{ required: true, message: "Case ID is required" }]}
+                  >
+                    <Input 
+                      placeholder="e.g., CASE001" 
+                      size="large"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item 
+                    name="riskLevel" 
+                    label={<Text strong>Risk Level</Text>}
+                  >
+                    <Select placeholder="Select risk level" size="large">
+                      <Option value="Low">
+                        <Tag color="green">Low</Tag>
+                      </Option>
+                      <Option value="Medium">
+                        <Tag color="orange">Medium</Tag>
+                      </Option>
+                      <Option value="High">
+                        <Tag color="red">High</Tag>
+                      </Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
 
-              <Form.Item
-                name="incidentType"
-                label="Incident Type"
-                rules={[{ required: true, message: "Incident Type is required" }]}
-              >
-                <Select>
-                  <Option value="Economic">Economic</Option>
-                  <Option value="Psychological">Psychological</Option>
-                  <Option value="Physical">Physical</Option>
-                  <Option value="Sexual">Sexual</Option>
-                </Select>
-              </Form.Item>
+              <Divider orientation="left" style={{ color: BRAND.violet }}>
+                Victim Details
+              </Divider>
 
-              <Form.Item name="location" label="Location">
-                <Input />
-              </Form.Item>
+              {/* Victim Information Row */}
+              <Row gutter={16}>
+                <Col xs={24} md={16}>
+                  <Form.Item
+                    name="victimName"
+                    label={<Text strong>Victim Name</Text>}
+                    rules={[{ required: true, message: "Victim name is required" }]}
+                  >
+                    <Input placeholder="Enter victim's full name" size="large" />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={8}>
+                  <Form.Item 
+                    name="victimType" 
+                    label={<Text strong>Victim Type</Text>}
+                  >
+                    <Select placeholder="Select type" size="large" allowClear>
+                      <Option value="child">Child</Option>
+                      <Option value="woman">Woman</Option>
+                      <Option value="anonymous">Anonymous</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
 
+              <Divider orientation="left" style={{ color: BRAND.violet }}>
+                Incident Details
+              </Divider>
+
+              {/* Incident Type and Location Row */}
+              <Row gutter={16}>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    name="incidentType"
+                    label={<Text strong>Incident Type</Text>}
+                    rules={[{ required: true, message: "Incident type is required" }]}
+                  >
+                    <Select placeholder="Select incident type" size="large">
+                      <Option value="Economic">Economic Abuse</Option>
+                      <Option value="Psychological">Psychological Abuse</Option>
+                      <Option value="Physical">Physical Abuse</Option>
+                      <Option value="Sexual">Sexual Abuse</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item 
+                    name="location" 
+                    label={<Text strong>Location</Text>}
+                  >
+                    <Input placeholder="Enter incident location" size="large" />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* Description */}
               <Form.Item
                 name="description"
-                label="Description"
+                label={<Text strong>Description</Text>}
                 rules={[{ required: true, message: "Description is required" }]}
               >
-                <Input.TextArea rows={3} />
+                <Input.TextArea 
+                  rows={4} 
+                  placeholder="Provide detailed description of the incident..."
+                  style={{ borderRadius: 8 }}
+                />
               </Form.Item>
 
-              <Form.Item name="perpetrator" label="Perpetrator">
-                <Input />
-              </Form.Item>
-
-              <Form.Item name="caseID" label="Case ID" rules={[{ required: true }]}>
-                <Input placeholder="Enter Case ID (e.g. CASE001)" />
-              </Form.Item>
-
-              <Form.Item
-                name="assignedOfficer"
-                label="Assigned Officer"
-                rules={[{ required: true }]}
-              >
-                <Input placeholder="Officer assigned to this case" />
-              </Form.Item>
-
-              <Form.Item name="riskLevel" label="Risk Level">
-                <Select>
-                  <Option value="Low">Low</Option>
-                  <Option value="Medium">Medium</Option>
-                  <Option value="High">High</Option>
-                </Select>
-              </Form.Item>
+              {/* Perpetrator and Assigned Officer Row */}
+              <Row gutter={16}>
+                <Col xs={24} md={12}>
+                  <Form.Item 
+                    name="perpetrator" 
+                    label={<Text strong>Perpetrator</Text>}
+                  >
+                    <Input placeholder="Enter perpetrator's name (if known)" size="large" />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    name="assignedOfficer"
+                    label={<Text strong>Assigned Officer</Text>}
+                    rules={[{ required: true, message: "Assigned officer is required" }]}
+                  >
+                    <Input placeholder="Enter officer's name" size="large" />
+                  </Form.Item>
+                </Col>
+              </Row>
 
               <Form.Item name="status" hidden>
                 <Input type="hidden" />

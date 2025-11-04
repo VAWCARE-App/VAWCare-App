@@ -6,13 +6,14 @@ const cookieParser = require('cookie-parser');
 
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpecs = require('./swagger/swagger');
-
+console.time('Server Load Time');
 // Load environment variables silently
 dotenv.config({ silent: true });
 
+console.time('DB Connection Time');
 // Connect to MongoDB
 connectDB();
-
+console.timeEnd('DB Connection Time');
 const app = express();
 
 // CORS configuration to allow credentials (cookies)
@@ -46,6 +47,10 @@ const chatbotRoutes = require('./routes/chatbotRoutes');
 const resourceRoutes = require('./routes/resourceRoutes');
 const authRoutes = require('./routes/authRoutes');
 const alertRoutes = require('./routes/alertRoutes');
+const sseRoutes = require('./routes/sseRoutes');
+
+// SSE route
+app.use('/api/sse', sseRoutes);
 
 // Use routes
 app.use('/api/victims', victimRoutes);
@@ -104,6 +109,7 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
+    console.timeEnd('Server Load Time');
     console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
     console.log('\x1b[36m%s\x1b[0m', `Swagger documentation available at: http://localhost:${PORT}/api-docs`);
     console.log('\x1b[36m%s\x1b[0m', '-----------------------------------------------------------');

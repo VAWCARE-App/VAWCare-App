@@ -97,7 +97,7 @@ async function sendEmailsForAlert(alert, req) {
     }
 
     // record that SOS processing started
-    try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: req.user?.role || 'victim', actorId: req.user?._id || a.victimID || null, action: 'send_sos', details: `SOS send initiated for alert ${a.alertID || a._id}` }); } catch(e) { console.warn('Failed to record send_sos log', e && e.message); }
+    try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: req.user?.role || 'victim', actorId: req.user?._id || a.victimID || null, action: 'send_sos', details: `SOS send initiated for alert ${a.alertID || a._id}` }); } catch (e) { console.warn('Failed to record send_sos log', e && e.message); }
 
     for (const recipient of Array.from(recipients)) {
       try {
@@ -111,11 +111,11 @@ async function sendEmailsForAlert(alert, req) {
             notificationStatus: 'Sent'
           });
         } catch (e) { console.warn('Failed to record notified contact', e && e.message); }
-        try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: req.user?.role || 'victim', actorId: a.victimID || null, action: 'sos_email_sent', details: `SOS email sent to ${recipient} for alert ${a.alertID || a._id}` }); } catch(e) { /* ignore */ }
+        try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: req.user?.role || 'victim', actorId: a.victimID || null, action: 'sos_email_sent', details: `SOS email sent to ${recipient} for alert ${a.alertID || a._id}` }); } catch (e) { /* ignore */ }
       } catch (err) {
         console.error('Failed to send SOS email to', recipient, err && err.message);
-        try { await a.addNotifiedContact({ contactID: `email-${recipient}`, name: recipient, contactNumber: '', notificationTime: new Date(), notificationStatus: 'Failed' }); } catch(e) { /* ignore */ }
-        try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: req.user?.role || 'victim', actorId: a.victimID || null, action: 'sos_email_failed', details: `SOS email failed to ${recipient} for alert ${a.alertID || a._id}` }); } catch(e) { /* ignore */ }
+        try { await a.addNotifiedContact({ contactID: `email-${recipient}`, name: recipient, contactNumber: '', notificationTime: new Date(), notificationStatus: 'Failed' }); } catch (e) { /* ignore */ }
+        try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: req.user?.role || 'victim', actorId: a.victimID || null, action: 'sos_email_failed', details: `SOS email failed to ${recipient} for alert ${a.alertID || a._id}` }); } catch (e) { /* ignore */ }
       }
     }
   } catch (e) {
@@ -296,7 +296,7 @@ const sendSOSEmail = asyncHandler(async (req, res) => {
 
   const results = [];
   // record that SOS processing started
-  try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: req.user?.role || 'victim', actorId: req.user?._id || alert.victimID || null, action: 'send_sos', details: `SOS processing started for alert ${alert.alertID || alert._id}` }); } catch(e) { console.warn('Failed to record send_sos log', e && e.message); }
+  try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: req.user?.role || 'victim', actorId: req.user?._id || alert.victimID || null, action: 'send_sos', details: `SOS processing started for alert ${alert.alertID || alert._id}` }); } catch (e) { console.warn('Failed to record send_sos log', e && e.message); }
   for (const recipient of Array.from(recipients)) {
     try {
       await sendMail(recipient, subject, html);
@@ -332,9 +332,9 @@ const sendSOSEmail = asyncHandler(async (req, res) => {
     const { recordLog } = require('../middleware/logger');
     for (const r of results) {
       const act = r.status === 'Sent' ? 'sos_email_sent' : 'sos_email_failed';
-      try { await recordLog({ req, actorType: req.user?.role || 'victim', actorId: alert.victimID || null, action: act, details: `SOS email ${r.status} to ${r.recipient} for alert ${alert.alertID || alert._id}` }); } catch(e) { /* ignore */ }
+      try { await recordLog({ req, actorType: req.user?.role || 'victim', actorId: alert.victimID || null, action: act, details: `SOS email ${r.status} to ${r.recipient} for alert ${alert.alertID || alert._id}` }); } catch (e) { /* ignore */ }
     }
-  } catch(e) { console.warn('Failed to record per-recipient SOS logs', e && e.message); }
+  } catch (e) { console.warn('Failed to record per-recipient SOS logs', e && e.message); }
 
   // If any recipient succeeded, return success
   if (results.some(r => r.status === 'Sent')) {

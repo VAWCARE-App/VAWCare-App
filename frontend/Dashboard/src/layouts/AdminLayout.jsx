@@ -4,6 +4,7 @@ import { Outlet } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { useLocation } from 'react-router-dom';
 import { api, isAuthed } from '../lib/api';
+import NotificationButton from "../components/NotificationButton";
 
 const { Content } = Layout;
 
@@ -28,6 +29,7 @@ export default function AdminLayout() {
       }}
       hasSider
     >
+      <NotificationButton />
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
       <Layout style={{ minWidth: 0, display: "flex", flexDirection: "column" }}>
         <Content

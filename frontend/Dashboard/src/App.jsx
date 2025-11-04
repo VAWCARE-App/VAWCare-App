@@ -130,7 +130,10 @@ function Protected({ children, roles }) {
   if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>;
 
   // Not logged in -> go to login
-  if (!authed) return <Navigate to="/login" replace />;
+  if (!authed) {
+    const redirectToAdmin = window.location.pathname.startsWith('/admin');
+    return <Navigate to={redirectToAdmin ? "/admin/login" : "/login"} replace />;
+  }
 
   // Logged in but not authorized -> send to role home (or show 403)
   if (!authorized) {

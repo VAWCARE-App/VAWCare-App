@@ -7,6 +7,7 @@ const Chatbot = require('../models/Chatbot');
 const admin = require('../config/firebase-config');
 const { sendMail } = require('../utils/sendmail');
 const { setAuthCookie } = require('../utils/cookieUtils');
+const { broadcast } = require('../utils/sse');
 
 // @desc    Register victim
 // @route   POST /api/victims/register  
@@ -109,7 +110,7 @@ const registerVictim = asyncHandler(async (req, res) => {
         }
 
         console.log('Creating victim document with the following data:');
-        console.log(JSON.stringify({...victimData, victimPassword: '***HIDDEN***'}, null, 2));
+        console.log(JSON.stringify({ ...victimData, victimPassword: '***HIDDEN***' }, null, 2));
 
         console.log(`Creating new ${victimAccount} victim record...`);
         // If ticket was generated, ensure it doesn't collide with existing records
@@ -190,21 +191,21 @@ const registerVictim = asyncHandler(async (req, res) => {
             firebaseUid: victim.firebaseUid || 'Not created'
         });
 
-            res.status(201).json({
-                success: true,
-                message: 'Victim registered successfully',
-                data: {
-                    token: customToken,
-                    victim: {
-                        id: victim._id,
-                        victimID: victim.victimID,
-                        victimAccount: victim.victimAccount,
-                        victimUsername: victim.victimUsername,
-                        firebaseUid: victim.firebaseUid,
-                        firstName: victim.firstName
-                    }
+        res.status(201).json({
+            success: true,
+            message: 'Victim registered successfully',
+            data: {
+                token: customToken,
+                victim: {
+                    id: victim._id,
+                    victimID: victim.victimID,
+                    victimAccount: victim.victimAccount,
+                    victimUsername: victim.victimUsername,
+                    firebaseUid: victim.firebaseUid,
+                    firstName: victim.firstName
                 }
-            });
+            }
+        });
     } catch (error) {
         console.log('\n=== Registration Error ===');
         console.log('Error Code:', error.code || 'No error code');
@@ -226,8 +227,8 @@ const loginVictim = asyncHandler(async (req, res) => {
 
     try {
         // 1. Find user
-        let victim = await Victim.findOne({ victimUsername: identifier }) 
-                  || await Victim.findOne({ victimEmail: identifier });
+        let victim = await Victim.findOne({ victimUsername: identifier })
+            || await Victim.findOne({ victimEmail: identifier });
 
         if (!victim) {
             return res.status(401).json({ success: false, message: "Invalid credentials" });
@@ -268,7 +269,7 @@ const loginVictim = asyncHandler(async (req, res) => {
             isAnonymous: victim.victimAccount === "anonymous",
             victimUsername: victim.victimUsername
         });
-        
+
         // 5. Respond with custom token - frontend will exchange it for ID token
         res.status(200).json({
             success: true,
@@ -351,7 +352,7 @@ const getProfile = asyncHandler(async (req, res) => {
 // @access  Private
 const updateProfile = asyncHandler(async (req, res) => {
     console.log("[updateProfile] Request body keys:", Object.keys(req.body));
-    
+
     const victim = await Victim.findOne({ firebaseUid: req.user.uid });
 
     if (!victim) {
@@ -360,74 +361,74 @@ const updateProfile = asyncHandler(async (req, res) => {
     }
 
     // Detect emergencyContacts changes so we can emit specific log actions
-    const beforeEC = Array.isArray(victim.emergencyContacts) ? victim.emergencyContacts.map(ec => ({ name: ec.name || '', email: (ec.email||'').toLowerCase(), contactNumber: ec.contactNumber || '' })) : [];
+    const beforeEC = Array.isArray(victim.emergencyContacts) ? victim.emergencyContacts.map(ec => ({ name: ec.name || '', email: (ec.email || '').toLowerCase(), contactNumber: ec.contactNumber || '' })) : [];
 
     // Photo upload/processing removed: photo fields are no longer accepted
     let updateData = { ...req.body };
 
-    
-        // If client included photoData in the payload (admin-style save), persist it to Photos
-        if (req.body.photoData && req.body.photoMimeType) {
+
+    // If client included photoData in the payload (admin-style save), persist it to Photos
+    if (req.body.photoData && req.body.photoMimeType) {
+        try {
+            const rawBase64 = req.body.photoData;
+            const mime = req.body.photoMimeType || 'image/jpeg';
+            const photo = new Photos({
+                owner: victim._id,
+                ownerModel: 'Victim',
+                mimeType: mime,
+                image: rawBase64,
+            });
+
+            // Optional thumbnail generation (if sharp available)
             try {
-                const rawBase64 = req.body.photoData;
-                const mime = req.body.photoMimeType || 'image/jpeg';
-                const photo = new Photos({
-                    owner: victim._id,
-                    ownerModel: 'Victim',
-                    mimeType: mime,
-                    image: rawBase64,
-                });
-
-                // Optional thumbnail generation (if sharp available)
-                try {
-                  const sharp = require('sharp');
-                  const imgBuf = Buffer.from(rawBase64, 'base64');
-                  const thumbBuf = await sharp(imgBuf).resize({ width: 300 }).jpeg({ quality: 70 }).toBuffer();
-                  photo.thumbnail = thumbBuf.toString('base64');
-                } catch (e) {
-                  if (e && e.code !== 'MODULE_NOT_FOUND') console.warn('[updateProfile] thumbnail generation failed:', e && e.message);
-                }
-
-                await photo.save();
-                delete updateData.photoData;
-                delete updateData.photoMimeType;
+                const sharp = require('sharp');
+                const imgBuf = Buffer.from(rawBase64, 'base64');
+                const thumbBuf = await sharp(imgBuf).resize({ width: 300 }).jpeg({ quality: 70 }).toBuffer();
+                photo.thumbnail = thumbBuf.toString('base64');
             } catch (e) {
-                console.warn('Failed to save photo from profile update:', e && e.message);
-                delete updateData.photoData;
-                delete updateData.photoMimeType;
+                if (e && e.code !== 'MODULE_NOT_FOUND') console.warn('[updateProfile] thumbnail generation failed:', e && e.message);
             }
 
+            await photo.save();
+            delete updateData.photoData;
+            delete updateData.photoMimeType;
+        } catch (e) {
+            console.warn('Failed to save photo from profile update:', e && e.message);
+            delete updateData.photoData;
+            delete updateData.photoMimeType;
         }
+
+    }
 
     const updatedVictim = await Victim.findByIdAndUpdate(
         victim._id,
         updateData,
         { new: true, runValidators: true }
     );
-    
+
 
     // Compare after update and emit logs for added/removed/updated emergency contacts
     try {
-        const afterEC = Array.isArray(updatedVictim.emergencyContacts) ? updatedVictim.emergencyContacts.map(ec => ({ name: ec.name || '', email: (ec.email||'').toLowerCase(), contactNumber: ec.contactNumber || '' })) : [];
+        const afterEC = Array.isArray(updatedVictim.emergencyContacts) ? updatedVictim.emergencyContacts.map(ec => ({ name: ec.name || '', email: (ec.email || '').toLowerCase(), contactNumber: ec.contactNumber || '' })) : [];
         const added = afterEC.filter(a => !beforeEC.some(b => b.email && b.email === a.email));
         const removed = beforeEC.filter(b => !afterEC.some(a => a.email && a.email === b.email));
         const possiblyUpdated = afterEC.filter(a => beforeEC.some(b => b.email && b.email === a.email));
 
         const { recordLog } = require('../middleware/logger');
         // Record general profile update
-        try { await recordLog({ req, actorType: 'victim', actorId: updatedVictim._id, action: 'victim_profile_updated', details: `Victim profile updated ${updatedVictim.victimID || updatedVictim._id}` }); } catch(e) { console.warn('Failed to record victim profile update log', e && e.message); }
+        try { await recordLog({ req, actorType: 'victim', actorId: updatedVictim._id, action: 'victim_profile_updated', details: `Victim profile updated ${updatedVictim.victimID || updatedVictim._id}` }); } catch (e) { console.warn('Failed to record victim profile update log', e && e.message); }
 
         for (const a of added) {
-            try { await recordLog({ req, actorType: 'victim', actorId: updatedVictim._id, action: 'emergency_contact_added', details: `Emergency contact added: ${a.email || a.name}` }); } catch(e) { /* ignore */ }
+            try { await recordLog({ req, actorType: 'victim', actorId: updatedVictim._id, action: 'emergency_contact_added', details: `Emergency contact added: ${a.email || a.name}` }); } catch (e) { /* ignore */ }
         }
         for (const r of removed) {
-            try { await recordLog({ req, actorType: 'victim', actorId: updatedVictim._id, action: 'emergency_contact_removed', details: `Emergency contact removed: ${r.email || r.name}` }); } catch(e) { /* ignore */ }
+            try { await recordLog({ req, actorType: 'victim', actorId: updatedVictim._id, action: 'emergency_contact_removed', details: `Emergency contact removed: ${r.email || r.name}` }); } catch (e) { /* ignore */ }
         }
         for (const p of possiblyUpdated) {
             // naive diff: if contactNumber or name differ
             const before = beforeEC.find(b => b.email === p.email) || {};
             if ((before.contactNumber || '') !== (p.contactNumber || '') || (before.name || '') !== (p.name || '')) {
-                try { await recordLog({ req, actorType: 'victim', actorId: updatedVictim._id, action: 'emergency_contact_updated', details: `Emergency contact updated: ${p.email || p.name}` }); } catch(e) { /* ignore */ }
+                try { await recordLog({ req, actorType: 'victim', actorId: updatedVictim._id, action: 'emergency_contact_updated', details: `Emergency contact updated: ${p.email || p.name}` }); } catch (e) { /* ignore */ }
             }
         }
     } catch (e) {
@@ -559,9 +560,9 @@ const uploadPhoto = asyncHandler(async (req, res) => {
 
     // Try to generate a small thumbnail if 'sharp' is available
     try {
-    const sharp = require('sharp');
-    const thumbBuf = await sharp(finalBuffer).resize({ width: 300 }).jpeg({ quality: 70 }).toBuffer();
-    photo.thumbnail = thumbBuf.toString('base64');
+        const sharp = require('sharp');
+        const thumbBuf = await sharp(finalBuffer).resize({ width: 300 }).jpeg({ quality: 70 }).toBuffer();
+        photo.thumbnail = thumbBuf.toString('base64');
     } catch (e) {
         if (e && e.code !== 'MODULE_NOT_FOUND') console.warn('[uploadPhoto] thumbnail generation failed:', e && e.message);
     }
@@ -586,94 +587,94 @@ const getPhoto = asyncHandler(async (req, res) => {
         return res.status(200).json({ success: true, data: null });
     }
 
-        // Prefer returning a small thumbnail if available (faster for UI), otherwise return the main image
-        let base64 = null;
-        let mime = photo.mimeType || 'image/jpeg';
-        try {
-            if (photo.thumbnail && typeof photo.thumbnail === 'string') {
-                base64 = photo.thumbnail;
-                mime = 'image/jpeg'; // thumbnails are generated as JPEG
-            } else if (typeof photo.image === 'string') {
-                base64 = photo.image;
-                mime = photo.mimeType || mime;
-            } else if (photo.image && photo.image.buffer) {
-                base64 = Buffer.from(photo.image.buffer).toString('base64');
-            }
-        } catch (e) {
-            console.warn('[getPhoto] failed to normalize photo to base64:', e && e.message);
+    // Prefer returning a small thumbnail if available (faster for UI), otherwise return the main image
+    let base64 = null;
+    let mime = photo.mimeType || 'image/jpeg';
+    try {
+        if (photo.thumbnail && typeof photo.thumbnail === 'string') {
+            base64 = photo.thumbnail;
+            mime = 'image/jpeg'; // thumbnails are generated as JPEG
+        } else if (typeof photo.image === 'string') {
+            base64 = photo.image;
+            mime = photo.mimeType || mime;
+        } else if (photo.image && photo.image.buffer) {
+            base64 = Buffer.from(photo.image.buffer).toString('base64');
         }
+    } catch (e) {
+        console.warn('[getPhoto] failed to normalize photo to base64:', e && e.message);
+    }
 
-        res.status(200).json({ success: true, data: { photoData: base64, photoMimeType: mime, photoId: photo._id } });
+    res.status(200).json({ success: true, data: { photoData: base64, photoMimeType: mime, photoId: photo._id } });
 });
 
-    // @desc    Get raw photo bytes (suitable for <img src="/api/..../raw")
-    // @route   GET /api/victims/profile/photo/raw
-    // @access  Private
-    const getPhotoRaw = asyncHandler(async (req, res) => {
-        const victim = await Victim.findOne({ firebaseUid: req.user.uid });
-        if (!victim) {
-            res.status(404);
-            throw new Error('Victim not found');
-        }
+// @desc    Get raw photo bytes (suitable for <img src="/api/..../raw")
+// @route   GET /api/victims/profile/photo/raw
+// @access  Private
+const getPhotoRaw = asyncHandler(async (req, res) => {
+    const victim = await Victim.findOne({ firebaseUid: req.user.uid });
+    if (!victim) {
+        res.status(404);
+        throw new Error('Victim not found');
+    }
 
-        const photo = await Photos.findOne({ owner: victim._id }).sort({ createdAt: -1 }).lean();
-        if (!photo) return res.status(404).json({ success: false, message: 'Photo not found' });
+    const photo = await Photos.findOne({ owner: victim._id }).sort({ createdAt: -1 }).lean();
+    if (!photo) return res.status(404).json({ success: false, message: 'Photo not found' });
 
     let buf = null;
     if (typeof photo.image === 'string') buf = Buffer.from(photo.image, 'base64');
     else if (Buffer.isBuffer(photo.image)) buf = photo.image;
     else if (photo.image && photo.image.buffer) buf = Buffer.from(photo.image.buffer);
 
-        if (!buf) {
-            return res.status(500).json({ success: false, message: 'Invalid photo data' });
-        }
+    if (!buf) {
+        return res.status(500).json({ success: false, message: 'Invalid photo data' });
+    }
 
-        // Compute ETag for conditional GETs
+    // Compute ETag for conditional GETs
+    try {
+        const crypto = require('crypto');
+        const etag = crypto.createHash('md5').update(buf).digest('hex');
+        res.setHeader('ETag', etag);
+        const ifNoneMatch = req.headers['if-none-match'];
+        if (ifNoneMatch && ifNoneMatch === etag) {
+            return res.status(304).end();
+        }
+    } catch (e) {
+        // ignore etag failures
+    }
+
+    res.setHeader('Content-Type', photo.mimeType || 'image/jpeg');
+    // cache for 1 week by default; clients/edge caches can cache in front of server
+    res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+    res.send(buf);
+});
+
+// @desc    Get thumbnail image bytes (if available), otherwise try to generate if 'sharp' present
+// @route   GET /api/victims/profile/photo/thumbnail
+// @access  Private
+const getPhotoThumbnail = asyncHandler(async (req, res) => {
+    const victim = await Victim.findOne({ firebaseUid: req.user.uid });
+    if (!victim) {
+        res.status(404);
+        throw new Error('Victim not found');
+    }
+
+    const photo = await Photos.findOne({ owner: victim._id }).sort({ createdAt: -1 }).lean();
+    if (!photo) return res.status(404).json({ success: false, message: 'Photo not found' });
+
+    // If thumbnail stored, return it
+    if (photo.thumbnail && typeof photo.thumbnail === 'string') {
+        const buf = Buffer.from(photo.thumbnail, 'base64');
         try {
             const crypto = require('crypto');
             const etag = crypto.createHash('md5').update(buf).digest('hex');
             res.setHeader('ETag', etag);
             const ifNoneMatch = req.headers['if-none-match'];
-            if (ifNoneMatch && ifNoneMatch === etag) {
-                return res.status(304).end();
-            }
-        } catch (e) {
-            // ignore etag failures
-        }
-
-    res.setHeader('Content-Type', photo.mimeType || 'image/jpeg');
-        // cache for 1 week by default; clients/edge caches can cache in front of server
+            if (ifNoneMatch && ifNoneMatch === etag) return res.status(304).end();
+        } catch (e) { }
+        res.setHeader('Content-Type', 'image/jpeg');
         res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
-        res.send(buf);
-    });
-
-    // @desc    Get thumbnail image bytes (if available), otherwise try to generate if 'sharp' present
-    // @route   GET /api/victims/profile/photo/thumbnail
-    // @access  Private
-    const getPhotoThumbnail = asyncHandler(async (req, res) => {
-        const victim = await Victim.findOne({ firebaseUid: req.user.uid });
-        if (!victim) {
-            res.status(404);
-            throw new Error('Victim not found');
-        }
-
-        const photo = await Photos.findOne({ owner: victim._id }).sort({ createdAt: -1 }).lean();
-        if (!photo) return res.status(404).json({ success: false, message: 'Photo not found' });
-
-        // If thumbnail stored, return it
-        if (photo.thumbnail && typeof photo.thumbnail === 'string') {
-            const buf = Buffer.from(photo.thumbnail, 'base64');
-            try {
-                const crypto = require('crypto');
-                const etag = crypto.createHash('md5').update(buf).digest('hex');
-                res.setHeader('ETag', etag);
-                const ifNoneMatch = req.headers['if-none-match'];
-                if (ifNoneMatch && ifNoneMatch === etag) return res.status(304).end();
-            } catch (e) {}
-            res.setHeader('Content-Type', 'image/jpeg');
-            res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
-            return res.send(buf);
-        }
+        return res.send(buf);
+    }
 
     // Otherwise, attempt to generate on-the-fly if sharp is available
     let originalBuf = null;
@@ -681,22 +682,22 @@ const getPhoto = asyncHandler(async (req, res) => {
     else if (Buffer.isBuffer(photo.image)) originalBuf = photo.image;
     else if (photo.image && photo.image.buffer) originalBuf = Buffer.from(photo.image.buffer);
 
-        if (!originalBuf) return res.status(500).json({ success: false, message: 'Invalid photo data' });
+    if (!originalBuf) return res.status(500).json({ success: false, message: 'Invalid photo data' });
 
-        try {
-            const sharp = require('sharp');
-            const thumb = await sharp(originalBuf).resize({ width: 300 }).jpeg({ quality: 70 }).toBuffer();
-            res.setHeader('Content-Type', 'image/jpeg');
-            res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
-            return res.send(thumb);
-        } catch (e) {
-            // sharp not available or generation failed — fallback to original image
-            console.warn('[getPhotoThumbnail] sharp unavailable or failed, returning original image:', e && e.message);
-            res.setHeader('Content-Type', photo.mimeType || 'image/jpeg');
-            res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
-            return res.send(originalBuf);
-        }
-    });
+    try {
+        const sharp = require('sharp');
+        const thumb = await sharp(originalBuf).resize({ width: 300 }).jpeg({ quality: 70 }).toBuffer();
+        res.setHeader('Content-Type', 'image/jpeg');
+        res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+        return res.send(thumb);
+    } catch (e) {
+        // sharp not available or generation failed — fallback to original image
+        console.warn('[getPhotoThumbnail] sharp unavailable or failed, returning original image:', e && e.message);
+        res.setHeader('Content-Type', photo.mimeType || 'image/jpeg');
+        res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+        return res.send(originalBuf);
+    }
+});
 
 // @desc    Submit anonymous report
 // @route   POST /api/victims/anonymous/report
@@ -757,7 +758,7 @@ const submitAnonymousReport = asyncHandler(async (req, res) => {
                 token: anonymousCustomToken
             }
         });
-        try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: 'victim', actorId: victim._id, action: 'report_submission', details: `Anonymous report submitted id=${report._id}` }); } catch(e) { console.warn('Failed to record anonymous report log', e && e.message); }
+        try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: 'victim', actorId: victim._id, action: 'report_submission', details: `Anonymous report submitted id=${report._id}` }); } catch (e) { console.warn('Failed to record anonymous report log', e && e.message); }
     } catch (error) {
         res.status(500);
         throw new Error('Error submitting anonymous report');
@@ -812,6 +813,23 @@ const sendAnonymousAlert = asyncHandler(async (req, res) => {
             });
 
             await alertDoc.save();
+
+            try {
+                broadcast({
+                    type: 'alert-active',
+                    data: {
+                        id: alertDoc._id,
+                        alertID: alertDoc.alertID,
+                        status: alertDoc.status,
+                        resolvedAt: alertDoc.resolvedAt,
+                        durationMs: alertDoc.durationMs,
+                        durationStr: alertDoc.durationStr
+                    }
+                });
+                console.log('SSE broadcasted alert-active for alert', alertDoc._id);
+            } catch (e) {
+                console.warn('SSE broadcast failed', e?.message);
+            }
         }
 
         // Debug: log the saved document so we can verify the alert was persisted
@@ -830,7 +848,7 @@ const sendAnonymousAlert = asyncHandler(async (req, res) => {
         try {
             const { recordLog } = require('../middleware/logger');
             await recordLog({ req, actorType: 'victim', actorId: victimID, action: 'emergency_button', details: `Anonymous emergency alert sent type=${alertType}` });
-        } catch(e) { console.warn('Failed to record anonymous alert log', e && e.message); }
+        } catch (e) { console.warn('Failed to record anonymous alert log', e && e.message); }
 
         // Background SOS sending removed: emails will be sent when the alert is resolved
 
@@ -979,7 +997,7 @@ module.exports = {
     loginVictim,
     getProfile,
     getMetrics,
-    verifyEmail,    
+    verifyEmail,
     verifyPhone,
     updateProfile,
     submitAnonymousReport,

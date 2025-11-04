@@ -172,24 +172,16 @@ api.interceptors.response.use(
     const requestUrl = error.config?.url || "";
 
     if (status === 401) {
-      // Only force logout for critical auth verification endpoints
-      if (requestUrl.includes('/token/refresh') || requestUrl.includes('/auth/me')) {
-        console.log('[api] auth failure on critical endpoint — clearing session and redirecting to login');
+      const authCheck =
+        requestUrl.includes('api/auth/me') ||
+        requestUrl.includes('api/token/refresh');
 
-        // Clear local session info
+      if (authCheck) {
+        console.warn('[api] 401 on auth check → logout triggered:', requestUrl);
         clearToken();
-
-        // Prefer in-app navigation via an event so React Router can handle redirect without page reloads
-        try {
-          window.dispatchEvent(new CustomEvent('api:unauthorized', { detail: { requestUrl } }));
-        } catch (e) {
-          // Fallback to full reload redirect if CustomEvent dispatch is not available
-          const redirectToAdmin = window.location.pathname.startsWith('/admin');
-          window.location.href = redirectToAdmin ? '/admin/login' : '/login';
-        }
+        window.dispatchEvent(new CustomEvent('api:unauthorized'));
       } else {
-        // Let the caller handle failed login attempts and other 401s
-        console.warn('[api] 401 received for', requestUrl, '- delegating to caller (no auto-logout).');
+        console.warn('[api] 401 for non-auth endpoint → no forced logout:', requestUrl);
       }
     }
 

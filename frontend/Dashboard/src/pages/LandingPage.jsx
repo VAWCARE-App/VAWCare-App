@@ -51,7 +51,7 @@ export default function LandingPage() {
         const caseList = casesRes?.data?.data || [];
         setReportCount(reportList.length);
         setCaseCount(caseList.filter((c) => c.status === "Open").length);
-      } catch {/* keep zeros */}
+      } catch {/* keep zeros */ }
     })();
   }, []);
 
@@ -66,6 +66,12 @@ export default function LandingPage() {
   useEffect(() => {
     let mounted = true;
     (async () => {
+      const token = sessionStorage.getItem("authToken"); // or whatever you use
+      if (!token) {
+        setHasSession(false);
+        return; // don’t call getUserData()
+      }
+
       try {
         const userData = await getUserData();
         if (!mounted) return;
@@ -289,7 +295,7 @@ export default function LandingPage() {
 
         {/* Base gradient and animated shader background - only for hero section */}
         <div className="page-bg" />
-        
+
         <div className={`shell`} style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: "100vw", overflowX: "hidden" }}>
           {/* ColorBends background covering top half including navbar */}
           <ColorBends
@@ -306,7 +312,7 @@ export default function LandingPage() {
             colors={dark ? shaderColorsDark : shaderColorsLight}
             style={{ position: "absolute", top: 0, left: 0, right: 0, height: "118vh", pointerEvents: "none", zIndex: 0 }}
           />
-          
+
           <Navbar dark={dark} onToggleTheme={() => setDark((v) => !v)} />
 
           <Content>
@@ -441,8 +447,8 @@ export default function LandingPage() {
                 <Title level={3} style={{ textAlign: "center", marginBottom: 24, color: "var(--ink)" }}>
                   How VAWCare Works
                 </Title>
-                <motion.div 
-                  className="bits-grid cols-3" 
+                <motion.div
+                  className="bits-grid cols-3"
                   style={{ maxWidth: 1100, margin: "0 auto" }}
                   initial="hidden"
                   whileInView="show"

@@ -22,6 +22,25 @@ const createReport = asyncHandler(async (req, res) => {
     console.warn('Failed to record report submission log', e && e.message);
   }
 
+  try {
+    const Notification = require('../models/Notification');
+    const { broadcast } = require('../utils/sse');
+
+    const notif = await Notification.create({
+      type: "new-report",
+      refId: report._id,
+      typeRef: "Report",
+      message: `New report submitted: ${report.reportID || report._id}`,
+      isRead: false
+    });
+
+    // Broadcast to all SSE clients
+    broadcast("new-notif", notif);
+    console.log('Broadcasted new report notification via SSE');
+  } catch (e) {
+    console.warn('Failed to create/broadcast notification', e?.message);
+  }
+
   res.status(201).json({
     success: true,
     message: 'Report created',

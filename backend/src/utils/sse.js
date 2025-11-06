@@ -1,33 +1,29 @@
 // sse.js
 const clients = [];
 
-/**
- * Add a new SSE client (response object) to the list
- * @param {Response} res - Express response object
- */
 function addClient(res) {
+  // Don't call writeHead here; headers already set in route
   clients.push(res);
 
-  // Remove the client when the connection closes
-  reqCloseListener(res);
-}
+  res.write(`: connected\n\n`); // initial comment to open connection
 
-/**
- * Send an event to all connected clients
- * @param {Object} message - { type: string, data: any }
- */
-function broadcast(message) {
-  const payload = `event: ${message.type}\ndata: ${JSON.stringify(message.data)}\n\n`;
-  clients.forEach(res => res.write(payload));
-}
-
-/**
- * Handle client disconnects
- */
-function reqCloseListener(res) {
-  res.on('close', () => {
+  res.on("close", () => {
     const index = clients.indexOf(res);
     if (index !== -1) clients.splice(index, 1);
+  });
+}
+
+function broadcast(eventName, notification) {
+  const payload = `event: ${eventName}\ndata: ${JSON.stringify(notification)}\n\n`;
+
+  clients.forEach((res) => {
+    if (!res.finished) {
+      try {
+        res.write(payload);
+      } catch (err) {
+        console.error("[SSE] Failed to write to client:", err);
+      }
+    }
   });
 }
 

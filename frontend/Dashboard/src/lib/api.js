@@ -179,7 +179,8 @@ api.interceptors.response.use(
       if (authCheck) {
         console.warn('[api] 401 on auth check → logout triggered:', requestUrl);
         clearToken();
-        window.dispatchEvent(new CustomEvent('api:unauthorized'));
+        // Dispatch session expiration event 
+        window.dispatchEvent(new CustomEvent('session:expired'));
       } else {
         console.warn('[api] 401 for non-auth endpoint → no forced logout:', requestUrl);
       }

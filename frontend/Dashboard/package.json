@@ -12,6 +12,7 @@
   "dependencies": {
     "antd": "^5.27.2",
     "axios": "^1.11.0",
+    "event-source-polyfill": "^1.0.31",
     "firebase": "^12.2.1",
     "framer-motion": "^12.23.22",
     "html2canvas": "^1.4.1",

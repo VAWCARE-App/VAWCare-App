@@ -1,51 +1,136 @@
-// src/pages/Test.jsx
-import { useEffect, useState } from "react";
-import { Button, Drawer, List, Typography, Badge, Popconfirm } from "antd";
+// src/pages/NotificationButton.jsx
+import { useEffect, useState, useRef } from "react";
+import {
+  Button,
+  Drawer,
+  List,
+  Typography,
+  Badge,
+  Popconfirm,
+  notification as antdNotification,
+} from "antd";
 import { BellOutlined, DeleteOutlined } from "@ant-design/icons";
+import { EventSourcePolyfill } from "event-source-polyfill";
 
 export default function NotificationButton() {
-  const [alerts, setAlerts] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState("Connecting...");
   const [drawerVisible, setDrawerVisible] = useState(false);
+  const [unread, setUnread] = useState(0);
+
+  const drawerVisibleRef = useRef(drawerVisible);
+  drawerVisibleRef.current = drawerVisible;
 
   const api = import.meta.env.VITE_API_URL || "";
 
+  // --- AntD notification hook ---
+  const [notifApi, contextHolder] = antdNotification.useNotification();
+
+  const showToast = (notif) => {
+    notifApi.open({
+      message: notif.title || `${notif.type} received`,
+      description: notif.message || "",
+      placement: "topRight",
+      duration: 5,
+      icon: <BellOutlined style={{ color: "#108ee9" }} />,
+    });
+  };
+
+  // --- SSE listener ---
   useEffect(() => {
     const url = `${api}/api/sse/stream`;
-    const eventSource = new EventSource(url, { withCredentials: true });
+    const es = new EventSourcePolyfill(url, { withCredentials: true });
 
-    eventSource.onopen = () => setConnectionStatus("Connected");
-    eventSource.onerror = (err) => {
-      console.error("SSE error:", err);
+    es.onopen = () => setConnectionStatus("Connected");
+    es.onerror = (err) => {
+      console.error("[SSE] error", err);
       setConnectionStatus("Disconnected");
-      eventSource.close();
+      try { es.close(); } catch (_) { }
     };
 
-    eventSource.addEventListener("alert-active", (event) => {
+    const handleEvent = (event) => {
+      let payload;
+
       try {
-        const data = JSON.parse(event.data);
-        setAlerts((prev) => [data, ...prev]);
-      } catch (e) {
-        console.error("Failed to parse SSE data", e);
+        payload = JSON.parse(event.data); // parse JSON payload
+      } catch {
+        // fallback for string messages
+        payload = {
+          _id: `temp-${Date.now()}`,
+          type: "Notification",
+          title: event.data,
+          message: "",
+        };
       }
-    });
 
-    return () => eventSource.close();
-  }, []);
+      // ensure required fields exist
+      if (!payload._id) payload._id = payload.notificationID || payload.alertID || `temp-${Date.now()}`;
+      if (!payload.type) payload.type = "Notification";
 
-  const openDrawer = () => setDrawerVisible(true);
+      // prepend notification if not a duplicate
+      setNotifications((prev) => {
+        if (prev.some((n) => (n._id || n.notificationID || n.alertID) === payload._id)) return prev;
+        return [payload, ...prev];
+      });
+
+      // show toast if drawer is closed
+      if (!drawerVisibleRef.current) {
+        setUnread((u) => u + 1);
+        showToast(payload);
+      }
+    };
+
+    // register events from backend
+    ["new-notif", "alert-active", "report-created", "message"].forEach((evt) =>
+      es.addEventListener(evt, handleEvent)
+    );
+    es.onmessage = handleEvent;
+
+    return () => {
+      ["new-notif", "alert-active", "report-created", "message"].forEach((evt) =>
+        es.removeEventListener(evt, handleEvent)
+      );
+      try { es.close(); } catch (_) { }
+    };
+  }, [api]);
+
+  // --- Drawer functions ---
+  const openDrawer = async () => {
+    setDrawerVisible(true);
+    setUnread(0);
+
+    try {
+      const res = await fetch(`${api}/api/notifications`, { credentials: "include" });
+      const data = await res.json();
+      if (data.success) {
+        setNotifications((prev) => {
+          const existingIds = new Set(prev.map((n) => n._id || n.notificationID || n.alertID));
+          const newNotifs = data.data.filter((n) => !existingIds.has(n._id || n.notificationID || n.alertID));
+          return [...prev, ...newNotifs];
+        });
+      }
+    } catch (err) {
+      console.error("Failed to fetch notifications:", err);
+    }
+  };
+
   const closeDrawer = () => setDrawerVisible(false);
 
-  const deleteAlert = (id) => {
-    setAlerts((prev) => prev.filter((a) => (a.alertID || a._id) !== id));
+  const deleteNotification = async (id) => {
+    try {
+      await fetch(`${api}/api/notifications/${id}`, { method: "DELETE", credentials: "include" });
+      setNotifications((prev) => prev.filter((n) => (n._id || n.notificationID) !== id));
+    } catch (err) {
+      console.error("Failed to delete notification:", err);
+    }
   };
 
   return (
     <>
-      {/* Floating button only shows when drawer is closed */}
+      {contextHolder} {/* must include hook's context holder */}
       {!drawerVisible && (
         <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 9999 }}>
-          <Badge count={alerts.length} overflowCount={99} showZero={false} offset={[0, 0]}>
+          <Badge count={unread} overflowCount={99} showZero={false}>
             <Button
               type="primary"
               shape="circle"
@@ -58,7 +143,7 @@ export default function NotificationButton() {
       )}
 
       <Drawer
-        title={`Active Alerts (${alerts.length})`}
+        title={`Notifications (${notifications.length})`}
         placement="right"
         width={360}
         onClose={closeDrawer}
@@ -66,20 +151,43 @@ export default function NotificationButton() {
       >
         <p>Status: <b>{connectionStatus}</b></p>
 
-        {alerts.length === 0 ? (
-          <Typography.Text>No active alerts.</Typography.Text>
+        {notifications.length === 0 ? (
+          <Typography.Text>No notifications.</Typography.Text>
         ) : (
           <List
-            dataSource={alerts}
-            renderItem={(alert) => {
-              const id = alert.alertID || alert._id;
+            dataSource={notifications}
+            renderItem={(notif) => {
+              const id = notif._id || notif.notificationID || notif.alertID;
+
+              // Determine link based on typeRef or type
+              let link = "/";
+              switch (notif.typeRef) {
+                case "Report":
+                  link = `/admin/reports`;
+                  break;
+                case "Alert":
+                  link = `/admin/alerts`;
+                  break;
+                // add more types here
+                default:
+                  link = `/admin`;
+                  break;
+              }
+
               return (
                 <List.Item
                   key={id}
+                  style={{ cursor: "pointer" }}
+                  onClick={() => {
+                    window.location.href = link; // or use react-router navigate(link)
+                  }}
                   actions={[
                     <Popconfirm
-                      title="Delete this alert?"
-                      onConfirm={() => deleteAlert(id)}
+                      title="Delete this notification?"
+                      onConfirm={(e) => {
+                        e.stopPropagation(); // prevent navigation
+                        deleteNotification(id);
+                      }}
                       okText="Yes"
                       cancelText="No"
                     >
@@ -88,8 +196,8 @@ export default function NotificationButton() {
                   ]}
                 >
                   <List.Item.Meta
-                    title={<b>{id}</b>}
-                    description={`Type: ${alert.type || "Unknown"} — Status: ${alert.status}`}
+                    title={<b>New {notif.typeRef || id}</b>}
+                    description={`${notif.message || ""} — Type: ${notif.type}`}
                   />
                 </List.Item>
               );

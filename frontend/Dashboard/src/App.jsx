@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { App as AntApp, ConfigProvider, Spin } from "antd";
+import { App as AntApp, ConfigProvider, Spin, Modal } from "antd";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 
 import Login from "./pages/Login";
@@ -39,7 +39,7 @@ import VictimSettings from "./pages/Victim/VictimSettings";
 import ColorBends from "./components/ColorBends";
 
 
-import { isAuthed, getUserType, getUserData } from "./lib/api";
+import { isAuthed, getUserType, getUserData, clearAllStorage } from "./lib/api";
 
 function UnauthorizedHandler() {
   const navigate = useNavigate();
@@ -61,6 +61,38 @@ function UnauthorizedHandler() {
     return () => window.removeEventListener('api:unauthorized', handler);
   }, [navigate]);
   return null;
+}
+
+function SessionExpirationHandler() {
+  const [sessionExpiredModal, setSessionExpiredModal] = useState(false);
+
+  useEffect(() => {
+    const handler = (e) => {
+      setSessionExpiredModal(true);
+    };
+    window.addEventListener('session:expired', handler);
+    return () => window.removeEventListener('session:expired', handler);
+  }, []);
+
+  const handleClose = async () => {
+    setSessionExpiredModal(false);
+    await clearAllStorage();
+    window.location.href = '/landing';
+  };
+
+  return (
+    <Modal
+      title="Session Expired"
+      open={sessionExpiredModal}
+      onOk={handleClose}
+      okText="OK"
+      cancelButtonProps={{ style: { display: 'none' } }}
+      closable={false}
+      centered
+    >
+      <p>Session Expired. Please login again</p>
+    </Modal>
+  );
 }
 
 function Protected({ children, roles }) {
@@ -158,6 +190,7 @@ export default function App() {
       <AntApp>
         <BrowserRouter>
           <UnauthorizedHandler />
+          <SessionExpirationHandler />
           <Routes>
             <Route path="/landing" element={<LandingPage />} />
             {/* Root is landing page */}

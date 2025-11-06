@@ -48,6 +48,10 @@ const resourceRoutes = require('./routes/resourceRoutes');
 const authRoutes = require('./routes/authRoutes');
 const alertRoutes = require('./routes/alertRoutes');
 const sseRoutes = require('./routes/sseRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+
+// Notification routes
+app.use('/api/notifications', notificationRoutes);
 
 // SSE route
 app.use('/api/sse', sseRoutes);

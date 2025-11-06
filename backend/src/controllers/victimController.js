@@ -8,6 +8,7 @@ const admin = require('../config/firebase-config');
 const { sendMail } = require('../utils/sendmail');
 const { setAuthCookie } = require('../utils/cookieUtils');
 const { broadcast } = require('../utils/sse');
+const Notification = require('../models/Notification');
 
 // @desc    Register victim
 // @route   POST /api/victims/register  
@@ -814,22 +815,14 @@ const sendAnonymousAlert = asyncHandler(async (req, res) => {
 
             await alertDoc.save();
 
-            try {
-                broadcast({
-                    type: 'alert-active',
-                    data: {
-                        id: alertDoc._id,
-                        alertID: alertDoc.alertID,
-                        status: alertDoc.status,
-                        resolvedAt: alertDoc.resolvedAt,
-                        durationMs: alertDoc.durationMs,
-                        durationStr: alertDoc.durationStr
-                    }
-                });
-                console.log('SSE broadcasted alert-active for alert', alertDoc._id);
-            } catch (e) {
-                console.warn('SSE broadcast failed', e?.message);
-            }
+            const notif = await Notification.create({
+                type: "new-alert",
+                refId: alertDoc._id,
+                typeRef: "Alert",
+                message: `New alert triggered: ${alertDoc.alertID || alertDoc._id}`,
+            });
+
+            broadcast("new-notif", notif);
         }
 
         // Debug: log the saved document so we can verify the alert was persisted

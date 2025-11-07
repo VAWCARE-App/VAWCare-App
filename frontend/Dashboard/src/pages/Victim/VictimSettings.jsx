@@ -31,6 +31,8 @@ import {
   CloseOutlined,
 } from "@ant-design/icons";
 import { api, getUserData } from "../../lib/api";
+import { setDisguiseMode, loadDisguiseMode } from "../../hooks/useDisguise";
+import InstallButton from "../../components/InstallButton";
 
 const { Title, Text } = Typography;
 
@@ -57,6 +59,8 @@ export default function VictimSettings() {
   const [previewObjectUrl, setPreviewObjectUrl] = useState(null);
   const [isFormDirty, setIsFormDirty] = useState(false);
   const [form] = Form.useForm();
+  const [disguised, setDisguised] = useState(localStorage.getItem("disguise") === "1");
+
 
   const toBase64 = (file) =>
     new Promise((resolve, reject) => {
@@ -70,7 +74,7 @@ export default function VictimSettings() {
     try {
       // Fast preview using object URL (instant), compute base64 in background
       if (previewObjectUrl) {
-        try { URL.revokeObjectURL(previewObjectUrl); } catch (_) {}
+        try { URL.revokeObjectURL(previewObjectUrl); } catch (_) { }
       }
       const objUrl = URL.createObjectURL(file);
       setPreviewObjectUrl(objUrl);
@@ -124,7 +128,7 @@ export default function VictimSettings() {
       const { data } = await api.get("/api/victims/profile");
       if (data?.success && data?.data) {
         const profile = { ...data.data };
-        
+
         setVerified(determineVerified(profile));
 
         if (profile.emergencyContacts?.length) {
@@ -161,6 +165,9 @@ export default function VictimSettings() {
   };
 
   useEffect(() => {
+    const enabled = localStorage.getItem("disguise") === "1";
+    setDisguiseMode(enabled);
+    setDisguised(enabled); // update state
     try {
       const cached = sessionStorage.getItem("user");
       if (cached) {
@@ -190,7 +197,7 @@ export default function VictimSettings() {
     setIsFormDirty(false);
     return () => {
       // cleanup any object URL created for preview
-      try { if (previewObjectUrl) { URL.revokeObjectURL(previewObjectUrl); } } catch (_) {}
+      try { if (previewObjectUrl) { URL.revokeObjectURL(previewObjectUrl); } } catch (_) { }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form]);
@@ -223,7 +230,7 @@ export default function VictimSettings() {
           },
         ];
       }
-      
+
       // include photo data if present (admin-style save)
       // If user selected a file but base64 hasn't been computed yet, compute it now
       if (!photoData && selectedFile) {
@@ -254,8 +261,8 @@ export default function VictimSettings() {
       message.success("Profile updated successfully!");
       // refresh profile from backend to pick up any verification changes
       const refreshed = await loadProfile();
-    if (refreshed && determineVerified(refreshed)) setVerified(true);
-      
+      if (refreshed && determineVerified(refreshed)) setVerified(true);
+
       setIsFormDirty(false);
     } catch {
       message.error("Unable to update profile");
@@ -278,7 +285,7 @@ export default function VictimSettings() {
   return (
     <div style={{ minHeight: "100vh", background: BRAND.pageBg, position: "relative", paddingBottom: 80 }}>
       <div style={{ display: "flex", justifyContent: "center" }}>
-      <style>{`
+        <style>{`
         :root {
           /* Light theme matching AdminDashboard overview cards */
           --panel-bg: #ffffff;
@@ -368,245 +375,247 @@ export default function VictimSettings() {
         .section-head .ant-typography { color:${BRAND.violet} !important; }
       `}</style>
 
-      <div className="page-wrap">
-        {/* ===== PROFILE PANEL ===== */}
-        <div className="profile-panel">
-          <div className="panel-top">
-            {/* Left: avatar + name/role */}
-            <div className="panel-left">
-              <div className="avatar-shell">
-                <div className="inner">
-                  <Avatar
-                    size={68}
-                    src={avatarUrl}
-                    icon={<UserOutlined />}
-                    style={{ background: "#f3f4f6", color: verColor }}
-                  />
+        <div className="page-wrap">
+          {/* ===== PROFILE PANEL ===== */}
+          <div className="profile-panel">
+            <div className="panel-top">
+              {/* Left: avatar + name/role */}
+              <div className="panel-left">
+                <div className="avatar-shell">
+                  <div className="inner">
+                    <Avatar
+                      size={68}
+                      src={avatarUrl}
+                      icon={<UserOutlined />}
+                      style={{ background: "#f3f4f6", color: verColor }}
+                    />
+                  </div>
+                </div>
+
+                <div className="name-role">
+                  <Title level={4} className="name">
+                    {displayName}
+                  </Title>
+                  <Tag
+                    style={{
+                      background: verColor,
+                      color: "#fff",
+                      borderRadius: "999px",
+                      padding: "2px 10px",
+                      fontWeight: 600,
+                      border: `1px solid ${verColor}`,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 12,
+                    }}
+                  >
+                    {verified ? <CheckCircleTwoTone twoToneColor="#fff" /> : <CloseCircleTwoTone twoToneColor="#fff" />}
+                    {verified ? "Verified" : "Not Verified"}
+                  </Tag>
                 </div>
               </div>
 
-              <div className="name-role">
-                <Title level={4} className="name">
-                  {displayName}
-                </Title>
-                <Tag
-                  style={{
-                    background: verColor,
-                    color: "#fff",
-                    borderRadius: "999px",
-                    padding: "2px 10px",
-                    fontWeight: 600,
-                    border: `1px solid ${verColor}`,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                    fontSize: 12,
-                  }}
+              {/* Right: actions (upload moved here) */}
+              <div className="panel-actions">
+                <Upload
+                  showUploadList={false}
+                  accept="image/*"
+                  beforeUpload={() => false}
+                  onChange={({ file }) => file && onAvatarChange({ file })}
                 >
-                  {verified ? <CheckCircleTwoTone twoToneColor="#fff" /> : <CloseCircleTwoTone twoToneColor="#fff" />}
-                  {verified ? "Verified" : "Not Verified"}
-                </Tag>
-              </div>
-            </div>
+                  <Button className="soft-btn" icon={<CameraOutlined />}>
+                    Change Photo
+                  </Button>
+                </Upload>
 
-            {/* Right: actions (upload moved here) */}
-            <div className="panel-actions">
-              <Upload
-                showUploadList={false}
-                accept="image/*"
-                beforeUpload={() => false}
-                onChange={({ file }) => file && onAvatarChange({ file })}
-              >
-                <Button className="soft-btn" icon={<CameraOutlined />}>
-                  Change Photo
+                <Button className="download-btn" icon={<DownloadOutlined />}>
+                  Download Info
                 </Button>
-              </Upload>
 
-              <Button className="download-btn" icon={<DownloadOutlined />}>
-                Download Info
-              </Button>
-
-              <Button
-                icon={<SafetyCertificateOutlined />}
-                onClick={() => {
-                  form.resetFields();
-                  (async () => {
-                    await loadProfile();
-                  })();
-                }}
-                className="soft-btn"
-              >
-                Reset
-              </Button>
+                <Button
+                  icon={<SafetyCertificateOutlined />}
+                  onClick={() => {
+                    form.resetFields();
+                    (async () => {
+                      await loadProfile();
+                    })();
+                  }}
+                  className="soft-btn"
+                >
+                  Reset
+                </Button>
+              </div>
             </div>
-          </div>
 
-          {/* Meta chips */}
-          <div className="meta-grid">
-            <div className="meta-chip">
-              <div>
-                <div className="label">Email Address</div>
-                <div className="value">
-                  {form.getFieldValue("victimEmail") || "—"}
+            {/* Meta chips */}
+            <div className="meta-grid">
+              <div className="meta-chip">
+                <div>
+                  <div className="label">Email Address</div>
+                  <div className="value">
+                    {form.getFieldValue("victimEmail") || "—"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="meta-chip">
+                <div>
+                  <div className="label">Phone Number</div>
+                  <div className="value">{form.getFieldValue("contactNumber") || "(—)"}</div>
+                </div>
+              </div>
+
+              <div className="meta-chip">
+                <div>
+                  <div className="label">Role</div>
+                  <div className="value">Victim</div>
+                </div>
+              </div>
+
+              <div className="meta-chip">
+                <div>
+                  <div className="label">Trusted Contacts</div>
+                  <div className="value">
+                    {form.getFieldValue("emergencyContactName") ? "1/1" : "0/1"}
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="meta-chip">
-              <div>
-                <div className="label">Phone Number</div>
-                <div className="value">{form.getFieldValue("contactNumber") || "(—)"}</div>
-              </div>
-            </div>
-
-            <div className="meta-chip">
-              <div>
-                <div className="label">Role</div>
-                <div className="value">Victim</div>
-              </div>
-            </div>
-
-            <div className="meta-chip">
-              <div>
-                <div className="label">Trusted Contacts</div>
-                <div className="value">
-                  {form.getFieldValue("emergencyContactName") ? "1/1" : "0/1"}
-                </div>
-              </div>
-            </div>
+            {/* Stats Cards - Removed Profile Completeness and Last Updated */}
           </div>
 
-          {/* Stats Cards - Removed Profile Completeness and Last Updated */}
-        </div>
-
-        {/* ===== SETTINGS ===== */}
-        <Card className="main-card" bodyStyle={{ padding: screens.xs ? 16 : 24 }}>
-          <div className="section-head">
-            <span className="brand-dot" />
-            <div>
-              <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
-                Account Settings
-              </Title>
-              <Text style={{ color: BRAND.muted }}>
-                Update your contact details and emergency contact information.
-              </Text>
+          {/* ===== SETTINGS ===== */}
+          <Card className="main-card" bodyStyle={{ padding: screens.xs ? 16 : 24 }}>
+            <div className="section-head">
+              <span className="brand-dot" />
+              <div>
+                <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
+                  Account Settings
+                </Title>
+                <Text style={{ color: BRAND.muted }}>
+                  Update your contact details and emergency contact information.
+                </Text>
+              </div>
             </div>
+
+            <Divider style={{ borderColor: "rgba(122,90,248,0.15)" }} />
+
+            <Form layout="vertical" form={form} onFinish={onSave} onValuesChange={handleFormValuesChange}>
+              <Row gutter={[16, 12]}>
+                <Col xs={24} md={12}>
+                  <Form.Item name="firstName" label="First Name">
+                    <Input prefix={<UserOutlined />} placeholder="First name" />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item name="lastName" label="Last Name">
+                    <Input prefix={<UserOutlined />} placeholder="Last name" />
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} md={12}>
+                  <Form.Item name="contactNumber" label="Contact Number">
+                    <Input prefix={<PhoneOutlined />} placeholder="+639123456789" />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item name="victimEmail" label="Email">
+                    <Input prefix={<MailOutlined />} placeholder="you@example.com" />
+                  </Form.Item>
+                </Col>
+
+                <Col span={24}>
+                  <Divider plain orientation="left" style={{ color: BRAND.violet, fontWeight: 600 }}>
+                    Emergency Contact
+                  </Divider>
+                </Col>
+
+                <Col xs={24} md={12}>
+                  <Form.Item label="Name" name="emergencyContactName">
+                    <Input prefix={<UserOutlined />} placeholder="Full name" />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item label="Relationship" name="emergencyContactRelationship">
+                    <Input placeholder="e.g. Mother, Friend" />
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} md={12}>
+                  <Form.Item label="Contact Number" name="emergencyContactNumber">
+                    <Input prefix={<PhoneOutlined />} placeholder="09123456789" />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item label="Email" name="emergencyContactEmail">
+                    <Input prefix={<MailOutlined />} placeholder="contact@example.com" />
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24}>
+                  <Form.Item label="Address" name="emergencyContactAddress">
+                    <Input.TextArea rows={2} placeholder="Address (optional)" />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </Form>
+
+            <InstallButton />
+          </Card>
+        </div>
+
+        {/* Fixed Bottom Action Bar */}
+        <div
+          style={{
+            position: "fixed",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(255,255,255,0.98)",
+            borderTop: `1px solid ${BRAND.softBorder}`,
+            padding: "12px 24px",
+            boxShadow: "0 -4px 16px rgba(0,0,0,0.08)",
+            zIndex: 100,
+            backdropFilter: "blur(10px)",
+          }}
+        >
+          <div style={{ maxWidth: 1120, margin: "0 auto", display: "flex", justifyContent: "flex-end", gap: 12 }}>
+            <Button
+              icon={<CloseOutlined />}
+              onClick={async () => {
+                form.resetFields();
+                setIsFormDirty(false);
+                try {
+                  await loadProfile();
+                } catch { }
+              }}
+              size="large"
+              style={{ borderRadius: 10 }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="primary"
+              icon={<SaveOutlined />}
+              onClick={() => form.submit()}
+              loading={loading}
+              disabled={!isFormDirty}
+              size="large"
+              style={{
+                background: BRAND.violet,
+                borderColor: BRAND.violet,
+                borderRadius: 10,
+                fontWeight: 600,
+                color: "#fff",
+              }}
+            >
+              Save Changes
+            </Button>
           </div>
-
-          <Divider style={{ borderColor: "rgba(122,90,248,0.15)" }} />
-
-          <Form layout="vertical" form={form} onFinish={onSave} onValuesChange={handleFormValuesChange}>
-            <Row gutter={[16, 12]}>
-              <Col xs={24} md={12}>
-                <Form.Item name="firstName" label="First Name">
-                  <Input prefix={<UserOutlined />} placeholder="First name" />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={12}>
-                <Form.Item name="lastName" label="Last Name">
-                  <Input prefix={<UserOutlined />} placeholder="Last name" />
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} md={12}>
-                <Form.Item name="contactNumber" label="Contact Number">
-                  <Input prefix={<PhoneOutlined />} placeholder="+639123456789" />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={12}>
-                <Form.Item name="victimEmail" label="Email">
-                  <Input prefix={<MailOutlined />} placeholder="you@example.com" />
-                </Form.Item>
-              </Col>
-
-              <Col span={24}>
-                <Divider plain orientation="left" style={{ color: BRAND.violet, fontWeight: 600 }}>
-                  Emergency Contact
-                </Divider>
-              </Col>
-
-              <Col xs={24} md={12}>
-                <Form.Item label="Name" name="emergencyContactName">
-                  <Input prefix={<UserOutlined />} placeholder="Full name" />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={12}>
-                <Form.Item label="Relationship" name="emergencyContactRelationship">
-                  <Input placeholder="e.g. Mother, Friend" />
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} md={12}>
-                <Form.Item label="Contact Number" name="emergencyContactNumber">
-                  <Input prefix={<PhoneOutlined />} placeholder="09123456789" />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={12}>
-                <Form.Item label="Email" name="emergencyContactEmail">
-                  <Input prefix={<MailOutlined />} placeholder="contact@example.com" />
-                </Form.Item>
-              </Col>
-
-              <Col xs={24}>
-                <Form.Item label="Address" name="emergencyContactAddress">
-                  <Input.TextArea rows={2} placeholder="Address (optional)" />
-                </Form.Item>
-              </Col>
-            </Row>
-          </Form>
-        </Card>
-      </div>
-
-      {/* Fixed Bottom Action Bar */}
-      <div
-        style={{
-          position: "fixed",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: "rgba(255,255,255,0.98)",
-          borderTop: `1px solid ${BRAND.softBorder}`,
-          padding: "12px 24px",
-          boxShadow: "0 -4px 16px rgba(0,0,0,0.08)",
-          zIndex: 100,
-          backdropFilter: "blur(10px)",
-        }}
-      >
-        <div style={{ maxWidth: 1120, margin: "0 auto", display: "flex", justifyContent: "flex-end", gap: 12 }}>
-          <Button
-            icon={<CloseOutlined />}
-            onClick={async () => {
-              form.resetFields();
-              setIsFormDirty(false);
-              try {
-                await loadProfile();
-              } catch {}
-            }}
-            size="large"
-            style={{ borderRadius: 10 }}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="primary"
-            icon={<SaveOutlined />}
-            onClick={() => form.submit()}
-            loading={loading}
-            disabled={!isFormDirty}
-            size="large"
-            style={{ 
-              background: BRAND.violet, 
-              borderColor: BRAND.violet, 
-              borderRadius: 10,
-              fontWeight: 600,
-              color: "#fff",
-            }}
-          >
-            Save Changes
-          </Button>
         </div>
       </div>
-        </div>
     </div>
   );
 }

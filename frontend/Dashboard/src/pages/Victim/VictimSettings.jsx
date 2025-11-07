@@ -7,21 +7,17 @@ import {
   Typography,
   Row,
   Col,
-  Space,
   message,
   Grid,
   Avatar,
   Upload,
-  Statistic,
   Divider,
   Tag,
-  Tooltip,
 } from "antd";
 import {
   SafetyCertificateOutlined,
   MailOutlined,
   PhoneOutlined,
-  HomeOutlined,
   UserOutlined,
   CheckCircleTwoTone,
   CloseCircleTwoTone,
@@ -30,8 +26,7 @@ import {
   SaveOutlined,
   CloseOutlined,
 } from "@ant-design/icons";
-import { api, getUserData } from "../../lib/api";
-import { setDisguiseMode, loadDisguiseMode } from "../../hooks/useDisguise";
+import { api } from "../../lib/api";
 import InstallButton from "../../components/InstallButton";
 
 const { Title, Text } = Typography;
@@ -59,7 +54,6 @@ export default function VictimSettings() {
   const [previewObjectUrl, setPreviewObjectUrl] = useState(null);
   const [isFormDirty, setIsFormDirty] = useState(false);
   const [form] = Form.useForm();
-  const [disguised, setDisguised] = useState(localStorage.getItem("disguise") === "1");
 
 
   const toBase64 = (file) =>
@@ -165,9 +159,6 @@ export default function VictimSettings() {
   };
 
   useEffect(() => {
-    const enabled = localStorage.getItem("disguise") === "1";
-    setDisguiseMode(enabled);
-    setDisguised(enabled); // update state
     try {
       const cached = sessionStorage.getItem("user");
       if (cached) {

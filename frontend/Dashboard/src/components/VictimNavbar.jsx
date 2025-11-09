@@ -74,6 +74,9 @@ export default function VictimNavbar() {
     () => currentUser,
     [currentUser]
   );
+  
+  const isAnonymousUser = currentUserMemo.victimID && currentUserMemo.victimID.startsWith('ANONYMOUS');
+  
   const initials =
     (currentUserMemo.firstName || "U").charAt(0) +
     (currentUserMemo.lastName || "").charAt(0);
@@ -116,11 +119,11 @@ export default function VictimNavbar() {
 
   // Desktop nav items → render a custom "pill" inside each item
   const desktopLinks = [
-    { key: "/victim/dashboard", icon: <DashboardOutlined />, text: "Dashboard" },
+    ...(isAnonymousUser ? [] : [{ key: "/victim/dashboard", icon: <DashboardOutlined />, text: "Dashboard" }]),
     { key: "/victim/report", icon: <FileAddOutlined />, text: "Report Case" },
-    { key: "/victim/victim-cases", icon: <UserSwitchOutlined />, text: "My Cases" },
+    ...(isAnonymousUser ? [] : [{ key: "/victim/victim-cases", icon: <UserSwitchOutlined />, text: "My Cases" }]),
     { key: "/victim/victim-barangay", icon: <InfoCircleOutlined />, text: "Barangay" },
-    { key: "/victim/victim-settings", icon: <SettingOutlined />, text: "Settings" },
+    ...(isAnonymousUser ? [] : [{ key: "/victim/victim-settings", icon: <SettingOutlined />, text: "Settings" }]),
   ];
 
   const desktopItems = desktopLinks.map(({ key, icon, text }) => ({
@@ -147,31 +150,31 @@ export default function VictimNavbar() {
         </div>
       ),
     },
-    {
+    ...(isAnonymousUser ? [] : [{
       key: "/victim/dashboard",
       icon: <DashboardOutlined />,
       label: <span className="drawer-pill">Dashboard</span>,
-    },
+    }]),
     {
       key: "/victim/report",
       icon: <FileAddOutlined />,
       label: <span className="drawer-pill">Report Case</span>,
     },
-    {
+    ...(isAnonymousUser ? [] : [{
       key: "/victim/victim-cases",
       icon: <UserSwitchOutlined />,
       label: <span className="drawer-pill">My Cases</span>,
-    },
+    }]),
     {
       key: "/victim/victim-barangay",
       icon: <InfoCircleOutlined />,
       label: <span className="drawer-pill">Barangay</span>,
     },
-    {
+    ...(isAnonymousUser ? [] : [{
       key: "/victim/victim-settings",
       icon: <SettingOutlined />,
       label: <span className="drawer-pill">Settings</span>,
-    },
+    }]),
    
   ];
 

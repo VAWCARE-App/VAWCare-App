@@ -61,6 +61,30 @@ incidentReportSchema.add({
     createdAt: { type: Date, default: Date.now }
 });
 
+// Soft-delete fields
+incidentReportSchema.add({
+    deleted: { type: Boolean, default: false },
+    deletedAt: { type: Date, default: null }
+});
+
+// Add query middleware to hide soft-deleted documents by default
+function addNotDeletedConstraint() {
+    // 'this' is a Query
+    const q = this.getQuery();
+    // If caller explicitly queries for deleted (e.g., { deleted: true }) leave it alone
+    if (q && Object.prototype.hasOwnProperty.call(q, 'deleted')) return;
+    this.where({ deleted: { $ne: true } });
+}
+
+incidentReportSchema.pre(/^find/, addNotDeletedConstraint);
+incidentReportSchema.pre('countDocuments', addNotDeletedConstraint);
+incidentReportSchema.pre('findOneAndUpdate', function(next) {
+    // ensure findOneAndUpdate also doesn't accidentally act on deleted docs when caller didn't intend to
+    const q = this.getQuery();
+    if (!Object.prototype.hasOwnProperty.call(q, 'deleted')) this.where({ deleted: { $ne: true } });
+    next();
+});
+
 // Create indexes for faster querying
 // reportID already has `unique: true` on the field definition; avoid duplicate index declaration
 incidentReportSchema.index({ victimID: 1 });

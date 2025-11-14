@@ -94,9 +94,25 @@ const updateReport = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: 'Report updated', data: updated });
 });
 
+// Soft-delete a report
+const deleteReport = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const deleted = await ReportService.softDeleteReport(id);
+  if (!deleted) {
+    res.status(404);
+    throw new Error('Report not found');
+  }
+  try {
+    await recordLog({ req, actorType: req.user?.role || 'official', actorId: req.user?.officialID || req.user?.adminID, action: 'delete_report', details: `Soft-deleted report ${deleted.reportID || deleted._id}` });
+  } catch (e) { console.warn('Failed to record report delete log', e && e.message); }
+
+  res.status(200).json({ success: true, message: 'Report soft-deleted', data: deleted });
+});
+
 module.exports = {
   createReport,
   getReport,
   listReports,
   updateReport
+  , deleteReport
 };

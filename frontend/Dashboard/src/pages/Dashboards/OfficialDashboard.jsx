@@ -160,6 +160,21 @@ export default function OfficialDashboard() {
       {/* Inline Style Overrides for Tab Look */}
       <style>
         {`
+          /* Remove button and icon outlines */
+          .ant-btn:focus,
+          .ant-btn:active,
+          .ant-btn-text:focus,
+          .ant-btn-text:active,
+          .ant-btn-icon-only:focus,
+          .ant-btn-icon-only:active,
+          button:focus,
+          button:active,
+          .anticon:focus,
+          .anticon:active {
+            outline: none !important;
+            box-shadow: none !important;
+          }
+
           .ant-tabs-nav-list {
             display: flex;
             gap: 8px;

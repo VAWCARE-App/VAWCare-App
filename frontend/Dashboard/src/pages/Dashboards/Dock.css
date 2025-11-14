@@ -1,3 +1,12 @@
+/* Remove outlines from dock items */
+.dock-item:focus,
+.dock-item:active,
+.dock-item button:focus,
+.dock-item button:active {
+  outline: none !important;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08) !important;
+}
+
 .dock-outer { display: flex; align-items: flex-start; justify-content: center; pointer-events: none; }
 .dock-panel {
   pointer-events: auto;

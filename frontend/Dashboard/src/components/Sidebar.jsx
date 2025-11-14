@@ -372,13 +372,16 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         <div
           className="sider-backdrop"
           onClick={() => setCollapsed(true)}
+          onTouchStart={() => setCollapsed(true)}
           aria-hidden="true"
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(17,17,26,0.44)",
-            zIndex: 1090,
-            backdropFilter: "blur(2px)",
+            background: "rgba(17,17,26,0.6)",
+            zIndex: 1100,
+            backdropFilter: "blur(4px)",
+            WebkitBackdropFilter: "blur(4px)",
+            animation: "fadeIn 0.3s ease",
           }}
         />
       )}
@@ -387,24 +390,25 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         trigger={null}
         collapsible
         collapsed={collapsed}
-        width={isMobile ? "70%" : 240}
+        width={isMobile ? Math.min(280, window.innerWidth - 40) : 240}
         collapsedWidth={isMobile ? 0 : 80}
         style={{
           background: BRAND.panel,
           borderRight: `1px solid ${BRAND.border}`,
           display: "flex",
           flexDirection: "column",
-          height: "100vh",
+          height: isMobile ? "calc(100vh - 24px)" : "100vh",
+          maxHeight: isMobile ? "calc(100vh - 24px)" : "100vh",
           overflow: "hidden",
           position: isMobile ? "fixed" : "sticky",
-          top: 0,
-          left: isMobile ? 12 : 0,
-          right: isMobile ? 12 : undefined,
+          top: isMobile ? 12 : 0,
+          left: isMobile ? (collapsed ? -320 : 12) : 0,
           zIndex: isMobile ? 1101 : 2,
-          transform: isMobile ? (collapsed ? "translateX(-110%)" : "translateX(0)") : "translateX(0)",
-          transition: "transform .26s ease, top .18s ease",
-          boxShadow: isMobile && !collapsed ? "0 30px 80px rgba(16,24,40,0.28)" : undefined,
+          transition: "left .3s cubic-bezier(0.4, 0, 0.2, 1), opacity .3s ease",
+          opacity: isMobile ? (collapsed ? 0 : 1) : 1,
+          boxShadow: isMobile && !collapsed ? "0 30px 80px rgba(16,24,40,0.35)" : undefined,
           borderRadius: isMobile ? 18 : undefined,
+          pointerEvents: isMobile && collapsed ? "none" : "auto",
         }}
         className={`sider-modern ${isMobile ? "sider-mobile-card" : ""}`}
       >
@@ -462,7 +466,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           style={{
             flex: "1 1 0",
             minHeight: 0,
-            maxHeight: "calc(100vh - 240px)", // Limit height to force overflow when needed
+            maxHeight: isMobile ? "calc(100vh - 300px)" : "calc(100vh - 240px)",
             display: "flex",
             flexDirection: "column",
             padding: 10,
@@ -706,6 +710,40 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
       {/* Popover & effects CSS */}
       <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        
+        @keyframes slideIn {
+          from { 
+            opacity: 0;
+            transform: translateX(-20px);
+          }
+          to { 
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 767px) {
+          .sider-mobile-card {
+            max-width: calc(100vw - 24px) !important;
+            touch-action: pan-y;
+          }
+          
+          .sider-mobile-card .rail-btn,
+          .sider-mobile-card .sub-btn {
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+          }
+          
+          .sider-mobile-card .nav-wrap {
+            -webkit-overflow-scrolling: touch;
+          }
+        }
+
         .sider-flyout .ant-popover-inner {
           padding: 10px !important;
           background: #ffffff !important;
@@ -734,7 +772,14 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           background: #f2edff; color: #7A5AF8; border-color: rgba(122,90,248,0.35);
         }
         .sider-flyout .flyout-icon { width: 18px; display: grid; place-items: center; font-size: 16px; color: #7A5AF8; }
-        .sider-backdrop { position: fixed; inset: 0; background: rgba(17,17,26,0.44); z-index: 1090; backdrop-filter: blur(2px); }
+        .sider-backdrop { 
+          position: fixed; 
+          inset: 0; 
+          background: rgba(17,17,26,0.6); 
+          z-index: 1100; 
+          backdrop-filter: blur(4px);
+          -webkit-backdrop-filter: blur(4px);
+        }
 
         /* Profile popover with hidden items */
         .sider-profile-more .ant-popover-inner {

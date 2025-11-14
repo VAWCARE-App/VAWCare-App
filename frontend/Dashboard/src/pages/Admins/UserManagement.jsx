@@ -7,7 +7,7 @@ import {
   Typography,
   Tag,
   Layout,
-  Button,
+  Button, 
   Input,
   Select,
   Space,
@@ -30,6 +30,8 @@ import {
   MailOutlined,
   IdcardOutlined,
   MenuOutlined,
+  ExclamationCircleOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 
@@ -111,6 +113,9 @@ export default function UserManagement() {
   const [mode, setMode] = useState("view"); // view | edit
   const [activeUser, setActiveUser] = useState(null);
   const [form] = Form.useForm();
+  
+  // Delete confirmation modal
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   // Fetch users
   const fetchAllUsers = async () => {
@@ -286,7 +291,8 @@ export default function UserManagement() {
           : "victims";
       const res = await api.put(`/api/admin/${path}/soft-delete/${activeUser.id}`);
       if (res?.data?.success) {
-        message.success("User soft-deleted");
+        message.success("User soft-deleted successfully");
+        setDeleteModalOpen(false);
         setModalOpen(false);
         fetchAllUsers();
       } else {
@@ -299,6 +305,10 @@ export default function UserManagement() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const showDeleteConfirm = () => {
+    setDeleteModalOpen(true);
   };
 
   // Filtering
@@ -486,6 +496,7 @@ export default function UserManagement() {
               style={{
                 width: isXs ? 34 : 38,
                 height: isXs ? 34 : 38,
+                minWidth: isXs ? 34 : 38,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -493,6 +504,8 @@ export default function UserManagement() {
                 background: "rgba(255, 255, 255, 0.9)",
                 border: `1px solid ${BRAND.softBorder}`,
                 boxShadow: "0 4px 12px rgba(122,90,248,0.08)",
+                padding: 0,
+                fontSize: 18,
               }}
             />
           )}
@@ -795,7 +808,7 @@ export default function UserManagement() {
                   ) : (
                     <Button onClick={() => setMode("view")}>Cancel</Button>
                   )}
-                  <Button danger onClick={handleDeleteUser}>Delete</Button>
+                  <Button danger onClick={showDeleteConfirm}>Delete</Button>
                 </Space>
               </div>
             ) : (
@@ -918,10 +931,63 @@ export default function UserManagement() {
             </div>
           )}
         </Modal>
+
+        {/* Delete Confirmation Modal */}
+        <Modal
+          title={
+            <Space>
+              <ExclamationCircleOutlined style={{ color: '#ff4d4f', fontSize: 20 }} />
+              <span>Confirm Delete</span>
+            </Space>
+          }
+          open={deleteModalOpen}
+          onCancel={() => setDeleteModalOpen(false)}
+          onOk={handleDeleteUser}
+          okText="Yes, Delete"
+          cancelText="Cancel"
+          okButtonProps={{ danger: true, loading }}
+          centered
+        >
+          <div style={{ padding: '12px 0' }}>
+            <p style={{ fontSize: 15, marginBottom: 8 }}>
+              Are you sure you want to delete this user?
+            </p>
+            {activeUser && (
+              <div style={{ 
+                background: '#f5f5f5', 
+                padding: 12, 
+                borderRadius: 8,
+                marginTop: 12 
+              }}>
+                <Space direction="vertical" size={4}>
+                  <Text strong>{activeUser.name}</Text>
+                  <Text type="secondary" style={{ fontSize: 13 }}>
+                    @{activeUser.username} • {activeUser.email}
+                  </Text>
+                  <Tag style={{ marginTop: 4 }}>{activeUser.userType}</Tag>
+                </Space>
+              </div>
+            )}
+            <p style={{ marginTop: 16, marginBottom: 0, color: '#666', fontSize: 13 }}>
+              This action will soft-delete the user.
+            </p>
+          </div>
+        </Modal>
       </Content>
 
       {/* Styles */}
       <style>{`
+        /* Remove button outlines */
+        .ant-btn:focus,
+        .ant-btn:active,
+        .ant-btn-text:focus,
+        .ant-btn-text:active,
+        button:focus,
+        button:active {
+          outline: none !important;
+          box-shadow: none !important;
+        }
+
         html, body, #root { height: 100%; }
         .ant-card { transition: transform .18s ease, box-shadow .18s ease; }
         .ant-card:hover { transform: translateY(-1px); box-shadow: 0 16px 36px rgba(16,24,40,0.08); }

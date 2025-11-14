@@ -29,6 +29,8 @@ import {
   EnvironmentOutlined,
   AlertOutlined,
   MenuOutlined,
+  ExclamationCircleOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 
@@ -106,6 +108,9 @@ export default function ReportManagement() {
   const [mode, setMode] = useState("view"); // view | edit
   const [activeReport, setActiveReport] = useState(null);
   const [form] = Form.useForm();
+
+  // Delete confirmation modal
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   // quick status editor state
   const [quickStatus, setQuickStatus] = useState(null);
@@ -271,6 +276,7 @@ export default function ReportManagement() {
       const res = await api.delete(`/api/reports/${activeReport.reportID}`);
       if (res?.data?.success) {
         message.success("Report deleted");
+        setDeleteModalOpen(false);
         setModalOpen(false);
         fetchAllReports();
       } else {
@@ -283,6 +289,10 @@ export default function ReportManagement() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const showDeleteConfirm = () => {
+    setDeleteModalOpen(true);
   };
 
   // === Filtering ===
@@ -495,6 +505,7 @@ export default function ReportManagement() {
               style={{
                 width: isXs ? 34 : 38,
                 height: isXs ? 34 : 38,
+                minWidth: isXs ? 34 : 38,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -502,6 +513,8 @@ export default function ReportManagement() {
                 background: "rgba(255, 255, 255, 0.9)",
                 border: `1px solid ${BRAND.softBorder}`,
                 boxShadow: "0 4px 12px rgba(122,90,248,0.08)",
+                padding: 0,
+                fontSize: 18,
               }}
             />
           )}
@@ -799,7 +812,7 @@ export default function ReportManagement() {
                   ) : (
                     <Button onClick={() => setMode("view")}>Cancel</Button>
                   )}
-                  <Button danger onClick={handleDeleteReport}>
+                  <Button danger onClick={showDeleteConfirm} icon={<DeleteOutlined />}>
                     Delete
                   </Button>
                 </Space>
@@ -989,10 +1002,80 @@ export default function ReportManagement() {
             </div>
           )}
         </Modal>
+
+        {/* Delete Confirmation Modal */}
+        <Modal
+          title={
+            <Space>
+              <ExclamationCircleOutlined style={{ color: '#ff4d4f', fontSize: 20 }} />
+              <span>Confirm Delete</span>
+            </Space>
+          }
+          open={deleteModalOpen}
+          onCancel={() => setDeleteModalOpen(false)}
+          onOk={handleDeleteReport}
+          okText="Yes, Delete"
+          cancelText="Cancel"
+          okButtonProps={{ danger: true, loading }}
+          centered
+        >
+          <div style={{ padding: '12px 0' }}>
+            <p style={{ fontSize: 15, marginBottom: 8 }}>
+              Are you sure you want to delete this report?
+            </p>
+            {activeReport && (
+              <div style={{ 
+                background: '#f5f5f5', 
+                padding: 12, 
+                borderRadius: 8,
+                marginTop: 12 
+              }}>
+                <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text strong>Report ID: {activeReport.reportID}</Text>
+                    <Tag color={
+                      activeReport.status === 'Closed' ? 'green' :
+                      activeReport.status === 'Open' ? 'blue' :
+                      activeReport.status === 'Under Investigation' ? 'orange' :
+                      'default'
+                    }>
+                      {activeReport.status}
+                    </Tag>
+                  </div>
+                  <Text type="secondary" style={{ fontSize: 13 }}>
+                    <AlertOutlined /> {activeReport.incidentType}
+                  </Text>
+                  <Text type="secondary" style={{ fontSize: 13 }}>
+                    <EnvironmentOutlined /> {activeReport.location}
+                  </Text>
+                  {activeReport.victimID && (
+                    <Text type="secondary" style={{ fontSize: 13 }}>
+                      Victim: {activeReport.victimID.firstName} {activeReport.victimID.lastName}
+                    </Text>
+                  )}
+                </Space>
+              </div>
+            )}
+            <p style={{ marginTop: 16, marginBottom: 0, color: '#666', fontSize: 13 }}>
+              This action cannot be undone. The report will be permanently removed from the system.
+            </p>
+          </div>
+        </Modal>
       </Content>
 
       {/* === Styles === */}
       <style>{`
+        /* Remove button outlines */
+        .ant-btn:focus,
+        .ant-btn:active,
+        .ant-btn-text:focus,
+        .ant-btn-text:active,
+        button:focus,
+        button:active {
+          outline: none !important;
+          box-shadow: none !important;
+        }
+
         html, body, #root { height: 100%; }
         .ant-card { transition: transform .18s ease, box-shadow .18s ease; }
         .ant-card:hover { transform: translateY(-1px); box-shadow: 0 16px 36px rgba(16,24,40,0.08); }

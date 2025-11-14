@@ -164,11 +164,15 @@ export default function CreateOfficial() {
               style={{
                 width: screens.md ? 40 : 36,
                 height: screens.md ? 40 : 36,
-                display: "grid",
-                placeItems: "center",
+                minWidth: screens.md ? 40 : 36,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 borderRadius: 10,
                 background: "#ffffffcc",
                 boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
+                padding: 0,
+                fontSize: 18,
               }}
             />
           )}
@@ -429,6 +433,24 @@ export default function CreateOfficial() {
           </Card>
         </div>
       </Content>
+
+      {/* Styles */}
+      <style>{`
+        /* Remove button and icon outlines */
+        .ant-btn:focus,
+        .ant-btn:active,
+        .ant-btn-text:focus,
+        .ant-btn-text:active,
+        .ant-btn-icon-only:focus,
+        .ant-btn-icon-only:active,
+        button:focus,
+        button:active,
+        .anticon:focus,
+        .anticon:active {
+          outline: none !important;
+          box-shadow: none !important;
+        }
+      `}</style>
     </Layout>
   );
 }

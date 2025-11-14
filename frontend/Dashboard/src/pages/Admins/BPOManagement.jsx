@@ -40,6 +40,8 @@ import {
   SafetyOutlined,
   ExclamationCircleOutlined,
   MenuOutlined,
+  FormOutlined,
+  CloseCircleOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { api, getUserType } from "../../lib/api";
@@ -356,13 +358,14 @@ export default function BPOManagement() {
                 <Button
                   size="small"
                   type="text"
-                  icon={<EditOutlined />}
+                  icon={<FormOutlined />}
                   onClick={(e) => {
                     e.stopPropagation();
                     setStatusEditing(r);
                     setStatusNew(r.status || "Active");
                     setStatusCardVisible(true);
                   }}
+                  style={{ color: '#52c41a' }}
                 />
               </Tooltip>
             )}
@@ -458,11 +461,15 @@ export default function BPOManagement() {
               style={{
                 width: screens.md ? 40 : 36,
                 height: screens.md ? 40 : 36,
-                display: "grid",
-                placeItems: "center",
+                minWidth: screens.md ? 40 : 36,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 borderRadius: 10,
                 background: "#ffffffcc",
                 boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
+                padding: 0,
+                fontSize: 18,
               }}
             />
           )}
@@ -654,7 +661,7 @@ export default function BPOManagement() {
               >
                 <Button
                   danger
-                  icon={<DeleteOutlined />}
+                  icon={<CloseCircleOutlined />}
                   disabled={!selectedRowKeys.length}
                 >
                   Bulk Delete
@@ -807,6 +814,17 @@ export default function BPOManagement() {
 
       {/* Styles */}
       <style>{`
+        /* Remove button outlines */
+        .ant-btn:focus,
+        .ant-btn:active,
+        .ant-btn-text:focus,
+        .ant-btn-text:active,
+        button:focus,
+        button:active {
+          outline: none !important;
+          box-shadow: none !important;
+        }
+
         .ant-card { transition: transform .18s ease, box-shadow .18s ease; }
         .ant-card:hover { transform: translateY(-1px); box-shadow: 0 16px 36px rgba(16,24,40,0.08); }
         .ant-table-thead > tr > th { background: #fff !important; }

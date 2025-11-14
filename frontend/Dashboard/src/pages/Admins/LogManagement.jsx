@@ -16,6 +16,8 @@ import {
   Tooltip,
   Grid,
   Empty,
+  Modal,
+  Descriptions,
 } from "antd";
 import {
   ReloadOutlined,
@@ -24,6 +26,10 @@ import {
   FilterOutlined,
   DownloadOutlined,
   MenuOutlined,
+  FileTextOutlined,
+  ClockCircleOutlined,
+  UserOutlined,
+  GlobalOutlined,
 } from "@ant-design/icons";
 import { api, isAuthed, getUserType } from "../../lib/api";
 import { message } from "antd";
@@ -48,6 +54,10 @@ export default function LogManagement() {
 
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Modal for showing log details
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedLog, setSelectedLog] = useState(null);
 
   // server-side paging (adjust if your API returns `total`)
   const [page, setPage] = useState(1);
@@ -158,6 +168,11 @@ export default function LogManagement() {
       return;
     }
     messageApi.success("Copied to clipboard");
+  };
+
+  const handleRowClick = (record) => {
+    setSelectedLog(record);
+    setDetailModalOpen(true);
   };
 
   const columns = useMemo(
@@ -318,15 +333,18 @@ export default function LogManagement() {
               onClick={() => window.dispatchEvent(new Event("toggle-sider"))}
               aria-label="Toggle sidebar"
               style={{
-                width: isXs ? 34 : 38,
-                height: isXs ? 34 : 38,
+                width: 38,
+                height: 38,
+                minWidth: 38,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 borderRadius: 10,
                 background: "rgba(255, 255, 255, 0.9)",
-                border: `1px solid ${BRAND.soft}`,
+                border: `1px solid ${BRAND.softBorder}`,
                 boxShadow: "0 4px 12px rgba(122,90,248,0.08)",
+                padding: 0,
+                fontSize: 18,
               }}
             />
           )}
@@ -541,6 +559,10 @@ export default function LogManagement() {
                 <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No logs found" />
               ),
             }}
+            onRow={(record) => ({
+              onClick: () => handleRowClick(record),
+              style: { cursor: 'pointer' },
+            })}
             expandable={{
               expandedRowRender: (record) => (
                 <div style={{ padding: 12 }}>
@@ -590,11 +612,138 @@ export default function LogManagement() {
             }}
           />
         </Card>
+
+        {/* Log Details Modal */}
+        <Modal
+          title={
+            <Space>
+              <FileTextOutlined style={{ color: BRAND.violet }} />
+              <span>Log Details</span>
+            </Space>
+          }
+          open={detailModalOpen}
+          onCancel={() => {
+            setDetailModalOpen(false);
+            setSelectedLog(null);
+          }}
+          footer={[
+            <Button key="close" onClick={() => setDetailModalOpen(false)}>
+              Close
+            </Button>,
+          ]}
+          width={screens.lg ? 800 : screens.md ? 700 : '95vw'}
+          centered
+        >
+          {selectedLog && (
+            <div style={{ padding: '12px 0' }}>
+              <Descriptions
+                bordered
+                size="small"
+                column={1}
+                labelStyle={{ width: 160, background: '#fafafa', fontWeight: 600 }}
+                style={{ marginBottom: 16 }}
+              >
+                <Descriptions.Item label={<Space><FileTextOutlined /> Log ID</Space>}>
+                  <Text code>{selectedLog.logID || selectedLog._id || selectedLog.id || '—'}</Text>
+                </Descriptions.Item>
+                
+                <Descriptions.Item label={<Space><ClockCircleOutlined /> Timestamp</Space>}>
+                  <Space direction="vertical" size={2}>
+                    <Text>{selectedLog.timestamp ? new Date(selectedLog.timestamp).toLocaleString() : '—'}</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      {selectedLog.timestamp ? new Date(selectedLog.timestamp).toISOString() : ''}
+                    </Text>
+                  </Space>
+                </Descriptions.Item>
+
+                <Descriptions.Item label="Action">
+                  <Tag color={actionColor(selectedLog.action)} style={{ borderRadius: 999, paddingInline: 10 }}>
+                    {selectedLog.action || '—'}
+                  </Tag>
+                </Descriptions.Item>
+
+                <Descriptions.Item label={<Space><UserOutlined /> Actor</Space>}>
+                  {actorBadge(selectedLog)}
+                </Descriptions.Item>
+
+                <Descriptions.Item label={<Space><GlobalOutlined /> IP Address</Space>}>
+                  <Space>
+                    <Text code>{selectedLog.ipAddress || '—'}</Text>
+                    {selectedLog.ipAddress && (
+                      <Button
+                        size="small"
+                        type="text"
+                        icon={<CopyOutlined />}
+                        onClick={() => copy(selectedLog.ipAddress)}
+                        style={{ color: BRAND.violet }}
+                      />
+                    )}
+                  </Space>
+                </Descriptions.Item>
+
+                {selectedLog.actorType && (
+                  <Descriptions.Item label="Actor Type">
+                    <Tag>{selectedLog.actorType}</Tag>
+                  </Descriptions.Item>
+                )}
+
+                {selectedLog.targetResourceType && (
+                  <Descriptions.Item label="Resource Type">
+                    <Tag color="cyan">{selectedLog.targetResourceType}</Tag>
+                  </Descriptions.Item>
+                )}
+
+                {selectedLog.targetResourceID && (
+                  <Descriptions.Item label="Resource ID">
+                    <Text code>{selectedLog.targetResourceID}</Text>
+                  </Descriptions.Item>
+                )}
+              </Descriptions>
+
+              {/* Full Details Section */}
+              <Card 
+                size="small" 
+                title={<Text strong>Full Details</Text>}
+                style={{ 
+                  borderRadius: 8,
+                  background: '#fafafa'
+                }}
+              >
+                <pre
+                  style={{
+                    margin: 0,
+                    background: "rgba(0,0,0,.03)",
+                    border: "1px solid #e0e0e0",
+                    borderRadius: 6,
+                    padding: 12,
+                    maxHeight: 300,
+                    overflow: "auto",
+                    fontSize: 12.5,
+                    fontFamily: 'Monaco, Consolas, "Courier New", monospace',
+                  }}
+                >
+                  {JSON.stringify(selectedLog.details ?? selectedLog, null, 2)}
+                </pre>
+              </Card>
+            </div>
+          )}
+        </Modal>
         </div>
       </Content>
 
       {/* Styles */}
       <style>{`
+        /* Remove button outlines */
+        .ant-btn:focus,
+        .ant-btn:active,
+        .ant-btn-text:focus,
+        .ant-btn-text:active,
+        button:focus,
+        button:active {
+          outline: none !important;
+          box-shadow: none !important;
+        }
+
         .hover-lift { transition: transform .18s ease, box-shadow .18s ease; }
         .hover-lift:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(16,24,40,.12); }
 

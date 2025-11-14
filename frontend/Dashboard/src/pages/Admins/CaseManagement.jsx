@@ -26,6 +26,10 @@ import {
   EditOutlined,
   DeleteOutlined,
   MenuOutlined,
+  ExclamationCircleOutlined,
+  FileTextOutlined,
+  FormOutlined,
+  CloseCircleOutlined,
 } from "@ant-design/icons";
 import { api, getUserType } from "../../lib/api";
 import { useNavigate } from "react-router-dom";
@@ -51,6 +55,11 @@ export default function CaseManagement() {
   const [reportsList, setReportsList] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
   const [userType, setUserType] = useState(null);
+  
+  // Delete confirmation modal
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [caseToDelete, setCaseToDelete] = useState(null);
+  
   const [form] = Form.useForm();
   const [addForm] = Form.useForm();
   const navigate = useNavigate();
@@ -283,12 +292,15 @@ export default function CaseManagement() {
   };
 
   const handleDeleteCase = async (rec) => {
+    if (!rec) return;
     try {
       setLoading(true);
       const id = rec.caseID || rec._id;
       const res = await api.delete(`/api/cases/${id}`);
       if (res?.data?.success) {
         message.success("Case deleted");
+        setDeleteModalOpen(false);
+        setCaseToDelete(null);
       } else {
         message.error(res?.data?.message || "Delete failed");
       }
@@ -299,6 +311,11 @@ export default function CaseManagement() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const showDeleteConfirm = (rec) => {
+    setCaseToDelete(rec);
+    setDeleteModalOpen(true);
   };
 
   const handleUpdateCase = async (vals) => {
@@ -414,28 +431,30 @@ export default function CaseManagement() {
       fixed: "right",
       render: (_, rec) => (
         <Space size={4}>
-          <Tooltip title="View">
+          <Tooltip title="View Details">
             <Button
               type="text"
-              icon={<EyeOutlined />}
+              icon={<FileTextOutlined />}
               onClick={() => handleViewCase(rec)}
               className="row-action"
+              style={{ color: '#1890ff' }}
             />
           </Tooltip>
-          <Tooltip title="Edit">
+          <Tooltip title="Edit Case">
             <Button
               type="text"
-              icon={<EditOutlined />}
+              icon={<FormOutlined />}
               onClick={() => handleEditCase(rec)}
               className="row-action"
+              style={{ color: '#52c41a' }}
             />
           </Tooltip>
-          <Tooltip title="Delete">
+          <Tooltip title="Delete Case">
             <Button
               type="text"
               danger
-              icon={<DeleteOutlined />}
-              onClick={() => handleDeleteCase(rec)}
+              icon={<CloseCircleOutlined />}
+              onClick={() => showDeleteConfirm(rec)}
               className="row-action"
             />
           </Tooltip>
@@ -475,11 +494,15 @@ export default function CaseManagement() {
               style={{
                 width: isXs ? 36 : 40,
                 height: isXs ? 36 : 40,
-                display: "grid",
-                placeItems: "center",
+                minWidth: isXs ? 36 : 40,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 borderRadius: 10,
                 background: "#ffffffcc",
                 boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
+                padding: 0,
+                fontSize: 18,
               }}
             />
           )}
@@ -880,6 +903,81 @@ export default function CaseManagement() {
               </Form.Item>
             </Form>
           </Modal>
+
+        {/* Delete Confirmation Modal */}
+        <Modal
+          title={
+            <Space>
+              <ExclamationCircleOutlined style={{ color: '#ff4d4f', fontSize: 20 }} />
+              <span>Confirm Delete</span>
+            </Space>
+          }
+          open={deleteModalOpen}
+          onCancel={() => {
+            setDeleteModalOpen(false);
+            setCaseToDelete(null);
+          }}
+          onOk={() => handleDeleteCase(caseToDelete)}
+          okText="Yes, Delete"
+          cancelText="Cancel"
+          okButtonProps={{ danger: true, loading }}
+          centered
+        >
+          <div style={{ padding: '12px 0' }}>
+            <p style={{ fontSize: 15, marginBottom: 8 }}>
+              Are you sure you want to delete this case?
+            </p>
+            {caseToDelete && (
+              <div style={{ 
+                background: '#f5f5f5', 
+                padding: 12, 
+                borderRadius: 8,
+                marginTop: 12 
+              }}>
+                <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text strong>Case ID: {caseToDelete.caseID}</Text>
+                    <Tag color={
+                      caseToDelete.status === 'Closed' ? 'green' :
+                      caseToDelete.status === 'In Progress' ? 'blue' :
+                      caseToDelete.status === 'Under Investigation' ? 'orange' :
+                      'default'
+                    }>
+                      {caseToDelete.status}
+                    </Tag>
+                  </div>
+                  <Text type="secondary" style={{ fontSize: 13 }}>
+                    Type: {caseToDelete.incidentType}
+                  </Text>
+                  {caseToDelete.location && (
+                    <Text type="secondary" style={{ fontSize: 13 }}>
+                      Location: {caseToDelete.location}
+                    </Text>
+                  )}
+                  {caseToDelete.assignedOfficer && (
+                    <Text type="secondary" style={{ fontSize: 13 }}>
+                      Assigned Officer: {caseToDelete.assignedOfficer}
+                    </Text>
+                  )}
+                  {caseToDelete.riskLevel && (
+                    <div style={{ marginTop: 4 }}>
+                      <Tag color={
+                        caseToDelete.riskLevel === 'High' ? 'red' :
+                        caseToDelete.riskLevel === 'Medium' ? 'orange' :
+                        'green'
+                      }>
+                        Risk: {caseToDelete.riskLevel}
+                      </Tag>
+                    </div>
+                  )}
+                </Space>
+              </div>
+            )}
+            <p style={{ marginTop: 16, marginBottom: 0, color: '#666', fontSize: 13 }}>
+              This action cannot be undone. The case will be permanently removed from the system.
+            </p>
+          </div>
+        </Modal>
         </Card>
       </Content>
 
@@ -911,10 +1009,18 @@ export default function CaseManagement() {
         .ant-input:focus,
         .ant-input-affix-wrapper-focused,
         .ant-select-focused .ant-select-selector,
+        .ant-btn:focus,
+        .ant-btn:active,
+        .ant-btn-text:focus,
+        .ant-btn-text:active,
+        .ant-btn:focus-visible,
+        button:focus,
+        button:active {
+          outline: none !important;
+        }
         .ant-btn:focus-visible {
           border-color: ${BRAND.violet} !important;
           box-shadow: 0 0 0 2px rgba(122,90,248,0.15) !important;
-          outline: none !important;
         }
       `}</style>
     </Layout>

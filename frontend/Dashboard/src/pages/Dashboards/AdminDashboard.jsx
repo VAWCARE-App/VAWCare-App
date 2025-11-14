@@ -271,6 +271,21 @@ export default function AdminDashboard() {
 
       {/* Inline CSS overrides for mobile responsiveness */}
       <style>{`
+        /* Remove button and icon outlines */
+        .ant-btn:focus,
+        .ant-btn:active,
+        .ant-btn-text:focus,
+        .ant-btn-text:active,
+        .ant-btn-icon-only:focus,
+        .ant-btn-icon-only:active,
+        button:focus,
+        button:active,
+        .anticon:focus,
+        .anticon:active {
+          outline: none !important;
+          box-shadow: none !important;
+        }
+
         /* prevent accidental horizontal overflow from tabs area */
         .custom-tabs { overflow-x: hidden; box-sizing: border-box; }
 

@@ -53,6 +53,7 @@ export default function VictimSettings() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewObjectUrl, setPreviewObjectUrl] = useState(null);
   const [isFormDirty, setIsFormDirty] = useState(false);
+  const [profileData, setProfileData] = useState(null); // Add state to track profile data
   const [form] = Form.useForm();
 
 
@@ -120,8 +121,11 @@ export default function VictimSettings() {
   const loadProfile = async () => {
     try {
       const { data } = await api.get("/api/victims/profile");
+      console.log("[VictimSettings] API response:", data);
+      
       if (data?.success && data?.data) {
         const profile = { ...data.data };
+        console.log("[VictimSettings] Profile data:", profile);
 
         setVerified(determineVerified(profile));
 
@@ -134,10 +138,15 @@ export default function VictimSettings() {
           profile.emergencyContactAddress = ec.address;
         }
 
+        console.log("[VictimSettings] Setting form values:", profile);
         form.setFieldsValue(profile);
+        setProfileData(profile); // Update state to trigger displayName recalculation
         return profile;
+      } else {
+        console.warn("[VictimSettings] No data in response:", data);
       }
     } catch (err) {
+      console.error("[VictimSettings] Failed to load profile:", err);
       message.error("Failed to load profile");
     }
     return null;
@@ -159,39 +168,40 @@ export default function VictimSettings() {
   };
 
   useEffect(() => {
-    try {
-      const cached = sessionStorage.getItem("user");
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        form.setFieldsValue(parsed);
-        setVerified(determineVerified(parsed));
-        setIsFormDirty(false);
-      }
-    } catch (e) {
-      /* ignore parse errors */
-    }
-
-    // Refresh profile from server
+    console.log("[VictimSettings] useEffect - Component mounted");
+    
+    // Immediately load profile from server (don't rely on sessionStorage)
     (async () => {
       try {
+        console.log("[VictimSettings] Fetching profile from server...");
         const fresh = await loadProfile();
         if (fresh) {
+          console.log("[VictimSettings] Profile loaded successfully:", fresh);
           form.setFieldsValue(fresh);
           setVerified(determineVerified(fresh));
           // try to load avatar for this victim
-          try { await loadAvatar(); } catch (e) { /* ignore avatar load errors */ }
+          try { 
+            await loadAvatar(); 
+          } catch (e) { 
+            console.debug('[VictimSettings] Avatar load failed:', e?.message);
+          }
+        } else {
+          console.warn("[VictimSettings] No profile data returned");
         }
       } catch (err) {
-        console.debug('[VictimSettings] profile refresh failed', err?.message);
+        console.error('[VictimSettings] Profile refresh failed:', err);
+        message.error("Failed to load profile. Please try refreshing the page.");
       }
     })();
+    
     setIsFormDirty(false);
+    
     return () => {
       // cleanup any object URL created for preview
       try { if (previewObjectUrl) { URL.revokeObjectURL(previewObjectUrl); } } catch (_) { }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form]);
+  }, []);
 
   // Simple function to check if form has changes
   const handleFormValuesChange = () => {
@@ -265,10 +275,12 @@ export default function VictimSettings() {
   // Photo upload removed
 
   const displayName = useMemo(() => {
-    const v = form.getFieldsValue();
-    const combo = [v.firstName, v.lastName].filter(Boolean).join(" ");
-    return combo || "Anonymous User";
-  }, [form]);
+    if (profileData) {
+      const combo = [profileData.firstName, profileData.lastName].filter(Boolean).join(" ");
+      return combo || "Anonymous User";
+    }
+    return "Anonymous User";
+  }, [profileData]);
 
   // --- verification color (green when verified, red when not) ---
   const verColor = verified ? BRAND.green : BRAND.red;
@@ -445,7 +457,7 @@ export default function VictimSettings() {
                 <div>
                   <div className="label">Email Address</div>
                   <div className="value">
-                    {form.getFieldValue("victimEmail") || "—"}
+                    {profileData?.victimEmail || "—"}
                   </div>
                 </div>
               </div>
@@ -453,7 +465,7 @@ export default function VictimSettings() {
               <div className="meta-chip">
                 <div>
                   <div className="label">Phone Number</div>
-                  <div className="value">{form.getFieldValue("contactNumber") || "(—)"}</div>
+                  <div className="value">{profileData?.contactNumber || "(—)"}</div>
                 </div>
               </div>
 
@@ -468,7 +480,7 @@ export default function VictimSettings() {
                 <div>
                   <div className="label">Trusted Contacts</div>
                   <div className="value">
-                    {form.getFieldValue("emergencyContactName") ? "1/1" : "0/1"}
+                    {profileData?.emergencyContacts?.length ? "1/1" : "0/1"}
                   </div>
                 </div>
               </div>

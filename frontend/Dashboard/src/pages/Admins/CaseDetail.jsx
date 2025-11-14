@@ -605,6 +605,17 @@ export default function CaseDetail() {
 
       {/* Styles */}
       <style>{`
+        /* Remove button outlines */
+        .ant-btn:focus,
+        .ant-btn:active,
+        .ant-btn-text:focus,
+        .ant-btn-text:active,
+        button:focus,
+        button:active {
+          outline: none !important;
+          box-shadow: none !important;
+        }
+
         .hover-lift { transition: transform .18s ease, box-shadow .18s ease; }
         .hover-lift:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(16,24,40,.12); }
 

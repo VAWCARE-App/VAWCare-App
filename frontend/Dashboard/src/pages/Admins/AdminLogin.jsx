@@ -11,8 +11,20 @@ import {
     Select,
     Divider,
     Modal,
+    notification,
+    Space,
 } from "antd";
-import { UserOutlined, SafetyOutlined, TeamOutlined, CloseOutlined } from "@ant-design/icons";
+import { 
+    UserOutlined, 
+    SafetyOutlined, 
+    TeamOutlined, 
+    CloseOutlined,
+    ExclamationCircleOutlined,
+    LockOutlined,
+    CheckCircleOutlined,
+    InfoCircleOutlined,
+    CloseCircleFilled,
+} from "@ant-design/icons";
 import { api, saveToken } from "../../lib/api";
 import { useNavigate, Link } from "react-router-dom";
 import { isAuthed, getUserType, getUserData } from "../../lib/api";
@@ -98,6 +110,17 @@ function MultiBackgroundCarousel({ userType }) {
             </div>
 
             <style>{`
+        /* Remove button outlines */
+        .ant-btn:focus,
+        .ant-btn:active,
+        .ant-btn-text:focus,
+        .ant-btn-text:active,
+        button:focus,
+        button:active {
+          outline: none !important;
+          box-shadow: none !important;
+        }
+
         .bg-carousel {
           position: fixed;
           inset: 0;
@@ -188,6 +211,10 @@ function MultiBackgroundCarousel({ userType }) {
 export default function AdminLogin() {
     const { message } = AntApp.useApp();
     const navigate = useNavigate();
+    
+    // Configure notification API at component level
+    const [notificationApi, contextHolder] = notification.useNotification();
+    
     // Redirect away if already authed
     React.useEffect(() => {
         let mounted = true;
@@ -314,7 +341,30 @@ export default function AdminLogin() {
 
                 const userName =
                     userInfo.firstName || userInfo.victimUsername || userInfo.adminEmail || userInfo.officialEmail || "User";
-                message.success(`Welcome back, ${userName}!`);
+                
+                notificationApi.success({
+                    message: (
+                        <span style={{ fontSize: 16, fontWeight: 600, color: '#52c41a' }}>
+                            Welcome back, {userName}!
+                        </span>
+                    ),
+                    description: (
+                        <span style={{ fontSize: 13, color: '#666' }}>
+                            You've successfully logged in. Redirecting to your dashboard...
+                        </span>
+                    ),
+                    icon: <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 24 }} />,
+                    placement: 'top',
+                    duration: 3,
+                    style: {
+                        borderRadius: 16,
+                        padding: '16px 20px',
+                        boxShadow: '0 12px 32px rgba(82, 196, 26, 0.2), 0 4px 12px rgba(82, 196, 26, 0.12)',
+                        background: 'linear-gradient(135deg, #ffffff 0%, #f6ffed 100%)',
+                        border: '1px solid rgba(82, 196, 26, 0.15)',
+                    },
+                    className: 'custom-notification-success',
+                });
 
                 if (userType === "official") navigate("/admin/official-dashboard");
                 else navigate("/admin");
@@ -322,10 +372,49 @@ export default function AdminLogin() {
                 throw new Error(data.message || "Login failed");
             }
         } catch (err) {
-            const msg = err?.response?.data?.message || "Invalid username or password";
-            message.error(msg);
+            const msg = err?.response?.data?.message || "Invalid credentials";
+            
+            // Determine if it's a credential error
+            const isCredentialError = 
+                String(msg).toLowerCase().includes('password') || 
+                String(msg).toLowerCase().includes('invalid') ||
+                String(msg).toLowerCase().includes('credential') ||
+                String(msg).toLowerCase().includes('incorrect');
+            
+            notificationApi.error({
+                message: (
+                    <span style={{ fontSize: 16, fontWeight: 600, color: '#ff4d4f' }}>
+                        {isCredentialError ? '🔒 Authentication Failed' : '⚠️ Login Error'}
+                    </span>
+                ),
+                description: (
+                    <div style={{ fontSize: 13, color: '#666' }}>
+                        <p style={{ margin: '4px 0', fontWeight: 500, color: '#ff4d4f' }}>{msg}</p>
+                        {isCredentialError && (
+                            <div style={{ marginTop: 12, padding: 10, background: '#fff1f0', borderRadius: 8, border: '1px solid #ffccc7' }}>
+                                <div style={{ fontSize: 12, color: '#666', lineHeight: '1.6' }}>
+                                    <strong>Tip:</strong> Make sure you're using the correct email and password.
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ),
+                icon: <CloseCircleFilled style={{ color: '#ff4d4f', fontSize: 24 }} />,
+                placement: 'top',
+                duration: 6,
+                style: {
+                    borderRadius: 16,
+                    padding: '16px 20px',
+                    boxShadow: '0 12px 32px rgba(255, 77, 79, 0.25), 0 4px 12px rgba(255, 77, 79, 0.15)',
+                    background: 'linear-gradient(135deg, #ffffff 0%, #fff1f0 100%)',
+                    border: '1px solid rgba(255, 77, 79, 0.2)',
+                    backdropFilter: 'blur(10px)',
+                },
+                className: 'custom-notification-error',
+            });
+            
+            // Update modal state but don't show it
             setErrorModalMessage(msg);
-            setErrorModalVisible(true);
         } finally {
             setLoading(false);
         }
@@ -343,6 +432,7 @@ export default function AdminLogin() {
                 transition: "background 0.5s ease",
             }}
         >
+            {contextHolder}
             <MultiBackgroundCarousel userType={userType} />
 
             <Flex align="center" justify="center" style={{ minHeight: "100vh", position: "relative", zIndex: 1 }}>
@@ -475,6 +565,75 @@ export default function AdminLogin() {
 
                 </Card>
             </Flex>
+
+            {/* Custom Notification Styles */}
+            <style>{`
+                @keyframes slideInDown {
+                    from {
+                        transform: translate3d(0, -100%, 0);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translate3d(0, 0, 0);
+                        opacity: 1;
+                    }
+                }
+
+                @keyframes shake {
+                    0%, 100% { transform: translateX(0); }
+                    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+                    20%, 40%, 60%, 80% { transform: translateX(4px); }
+                }
+
+                .custom-notification-error,
+                .custom-notification-success,
+                .custom-notification-info {
+                    animation: slideInDown 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards !important;
+                }
+
+                .custom-notification-error {
+                    animation: slideInDown 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards,
+                               shake 0.5s ease 0.3s !important;
+                }
+
+                .custom-notification-error .ant-notification-notice-message,
+                .custom-notification-success .ant-notification-notice-message,
+                .custom-notification-info .ant-notification-notice-message {
+                    margin-bottom: 8px !important;
+                }
+
+                .custom-notification-error .ant-notification-notice-description,
+                .custom-notification-success .ant-notification-notice-description,
+                .custom-notification-info .ant-notification-notice-description {
+                    margin-left: 0 !important;
+                }
+
+                .custom-notification-error .ant-notification-notice-icon,
+                .custom-notification-success .ant-notification-notice-icon,
+                .custom-notification-info .ant-notification-notice-icon {
+                    margin-top: 2px !important;
+                }
+
+                /* Hover effect */
+                .custom-notification-error:hover,
+                .custom-notification-success:hover,
+                .custom-notification-info:hover {
+                    transform: translateY(-2px);
+                    transition: transform 0.2s ease;
+                }
+
+                .custom-notification-error:hover {
+                    box-shadow: 0 16px 40px rgba(255, 77, 79, 0.3), 0 6px 16px rgba(255, 77, 79, 0.2) !important;
+                }
+
+                .custom-notification-success:hover {
+                    box-shadow: 0 16px 40px rgba(82, 196, 26, 0.25), 0 6px 16px rgba(82, 196, 26, 0.15) !important;
+                }
+
+                .custom-notification-info:hover {
+                    box-shadow: 0 16px 40px rgba(24, 144, 255, 0.25), 0 6px 16px rgba(24, 144, 255, 0.15) !important;
+                }
+            `}</style>
         </div>
     );
 }

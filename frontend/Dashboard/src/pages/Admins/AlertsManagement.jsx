@@ -319,15 +319,18 @@ export default function AlertsManagement() {
               onClick={() => window.dispatchEvent(new Event("toggle-sider"))}
               aria-label="Toggle sidebar"
               style={{
-                width: isXs ? 34 : 38,
-                height: isXs ? 34 : 38,
+                width: 38,
+                height: 38,
+                minWidth: 38,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 borderRadius: 10,
                 background: "rgba(255, 255, 255, 0.9)",
-                border: `1px solid ${BRAND.soft}`,
+                border: `1px solid ${BRAND.softBorder}`,
                 boxShadow: "0 4px 12px rgba(122,90,248,0.08)",
+                padding: 0,
+                fontSize: 18,
               }}
             />
           )}
@@ -597,6 +600,17 @@ export default function AlertsManagement() {
       </Content>
 
       <style>{`
+         /* Remove button outlines */
+         .ant-btn:focus,
+         .ant-btn:active,
+         .ant-btn-text:focus,
+         .ant-btn-text:active,
+         button:focus,
+         button:active {
+           outline: none !important;
+           box-shadow: none !important;
+         }
+
          html, body, #root { height: 100%; overflow-x: hidden; }
          .ant-layout, .ant-layout-content { overflow-x: hidden; }
          .ant-card { transition: transform .18s ease, box-shadow .18s ease; }

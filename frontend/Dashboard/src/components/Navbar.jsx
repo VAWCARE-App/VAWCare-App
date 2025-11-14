@@ -151,6 +151,35 @@ export default function Navbar({
           border-radius: 999px;
           background: var(--brand) !important;
           border-color: var(--brand) !important;
+          padding: 0 20px !important;
+          min-width: auto !important;
+          white-space: nowrap !important;
+        }
+        .btn-outline {
+          padding: 0 16px !important;
+        }
+        /* Remove focus/active outline from all buttons */
+        .btn-primary:focus,
+        .btn-primary:active,
+        .btn-outline:focus,
+        .btn-outline:active,
+        .ant-btn:focus,
+        .ant-btn:active,
+        .ant-btn-text:focus,
+        .ant-btn-text:active,
+        .ant-btn-icon-only:focus,
+        .ant-btn-icon-only:active,
+        button:focus,
+        button:active {
+          outline: none !important;
+          box-shadow: none !important;
+          border-color: inherit !important;
+        }
+        .btn-primary:hover {
+          opacity: 0.9;
+        }
+        .btn-outline:hover {
+          background: color-mix(in oklab, var(--ink) 5%, transparent) !important;
         }
       `}</style>
 

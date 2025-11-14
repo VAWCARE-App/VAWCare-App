@@ -214,6 +214,8 @@ export default function VictimNavbar() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                outline: "none",
+                border: "none",
               }}
             />
           )}
@@ -481,6 +483,15 @@ export default function VictimNavbar() {
 
       {/* Styles */}
       <style>{`
+        /* Remove focus outline from buttons */
+        .ant-btn:focus,
+        .ant-btn:active,
+        .ant-btn-text:focus,
+        .ant-btn-text:active {
+          outline: none !important;
+          box-shadow: none !important;
+        }
+
         /* Reset AntD item box so the pill inside controls the shape */
         .victim-glass-pills .ant-menu,
         .victim-glass-pills { background: transparent !important; border-bottom: 0 !important; }

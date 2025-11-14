@@ -109,4 +109,18 @@ async function updateReport(id, updates) {
   return report.populate("victimID", "-location");
 }
 
-module.exports = { createReport, getReportById, listReports, updateReport };
+async function softDeleteReport(id) {
+  const findQuery = mongoose.Types.ObjectId.isValid(id)
+    ? { $or: [{ reportID: id }, { _id: id }] }
+    : { reportID: id };
+
+  const report = await IncidentReport.findOne(findQuery);
+  if (!report) return null;
+
+  report.deleted = true;
+  report.deletedAt = new Date();
+  await report.save();
+  return report.populate('victimID', '-location');
+}
+
+module.exports = { createReport, getReportById, listReports, updateReport, softDeleteReport };

@@ -191,15 +191,30 @@ export default function EmergencyButton() {
           ...(victimID ? { victimID } : {})
         };
 
-        const { data } = await api.post("/api/victims/anonymous/alert", payload); // No change here
-  // backend returns created alert id and createdAt in data.data
-  const alertId = data?.data?.alertId || data?.alertId || (data && data._id);
-  const createdAt = data?.data?.createdAt || data?.createdAt || null;
-  if (alertId) setActiveAlertId(alertId);
-  if (createdAt) setActiveAlertStart(new Date(createdAt));
-  // Start pulsing only after backend confirms the alert was saved
-  // Do NOT start a client-side auto-resolve timer — server should be authoritative so alerts remain active
-        messageApi.success("🚨 Emergency alert sent!");
+              const { data } = await api.post("/api/victims/anonymous/alert", payload); 
+              const alertId = data?.data?.alertId || data?.alertId || (data && data._id);
+              const createdAt = data?.data?.createdAt || data?.createdAt || null;
+              if (alertId) setActiveAlertId(alertId);
+              if (createdAt) setActiveAlertStart(new Date(createdAt));
+              // Start pulsing only after backend confirms the alert was saved
+              // Wait for server-side SOS confirmation (send emails) before showing success popup
+              try {
+                if (alertId) {
+                  const sosResp = await api.post(`/api/alerts/${alertId}/sos`);
+                  if (sosResp && sosResp.data && sosResp.data.success) {
+                    messageApi.success('🚨 Emergency alert sent!');
+                  } else {
+                    // If server returned non-success, treat as failure
+                    throw new Error((sosResp && sosResp.data && sosResp.data.message) || 'Failed to send SOS emails');
+                  }
+                } else {
+                  throw new Error('Missing alert id after creation');
+                }
+              } catch (sosErr) {
+                console.error('Failed to send SOS emails', sosErr);
+                setPulsing(false);
+                messageApi.error(sosErr?.response?.data?.message || sosErr?.message || 'Failed to deliver emergency email.');
+              }
       } catch (err) {
         console.error(err);
         const errMsg = err?.response?.data?.message || err?.message || "Emergency report failed. Try again.";

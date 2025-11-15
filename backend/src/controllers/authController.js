@@ -37,7 +37,8 @@ const logout = asyncHandler(async (req, res) => {
 
 // Password Reset Functionality
 const sendOTP = async (req, res) => {
-  const { email } = req.body;
+  let { email } = req.body;
+  if (typeof email === 'string') email = email.trim().toLowerCase();
 
   try {
     const user = await User.findOne({ victimEmail: email });
@@ -73,7 +74,8 @@ const sendOTP = async (req, res) => {
 
 // Verify OTP
 const verifyOTP = async (req, res) => {
-  const { email, otp } = req.body;
+  let { email, otp } = req.body;
+  if (typeof email === 'string') email = email.trim().toLowerCase();
 
   try {
     const user = await User.findOne({ victimEmail: email });
@@ -99,7 +101,8 @@ const verifyOTP = async (req, res) => {
 
 // Reset Password
 const resetPassword = async (req, res) => {
-  const { email, password } = req.body;
+  let { email, password } = req.body;
+  if (typeof email === 'string') email = email.trim().toLowerCase();
 
   try {
     const user = await User.findOne({ victimEmail: email });

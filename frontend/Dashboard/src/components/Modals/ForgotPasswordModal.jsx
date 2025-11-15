@@ -98,7 +98,7 @@ export default function ForgotPasswordModal({ open, onClose }) {
         switch (currentStep) {
             case 0:
                 return (
-                    <Form layout="vertical" onFinish={handleSendOTP}>
+                        <Form layout="vertical" form={form} onFinish={handleSendOTP}>
                         <Title
                             level={4}
                             style={{ textAlign: "center", color: BRAND_COLOR, marginBottom: 8 }}
@@ -116,13 +116,17 @@ export default function ForgotPasswordModal({ open, onClose }) {
                             name="email"
                             label={<span style={{ fontWeight: 500 }}>Email Address</span>}
                             rules={[
-                                { required: true, type: "email", message: "Enter a valid email" },
+                                { required: true, type: "email", message: "Enter a valid email", transform: (value) => (typeof value === 'string' ? value.trim() : value) },
                             ]}
                         >
                             <Input
                                 placeholder="example@gmail.com"
                                 value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                onChange={(e) => {
+                                    const v = e.target.value;
+                                    setEmail(v);
+                                    try { form.setFieldsValue({ email: v }); } catch (e) { /* ignore if form unmounted */ }
+                                }}
                                 style={{ borderRadius: 8 }}
                             />
                             {emailError && (

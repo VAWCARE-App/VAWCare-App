@@ -17,7 +17,7 @@ import {
 } from "antd";
 import { api } from "../lib/api";
 import { exchangeCustomTokenForIdToken } from "../lib/firebase";
-import { AimOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import {  SafetyCertificateOutlined } from '@ant-design/icons';
 import { useNavigate, Link } from "react-router-dom";
 import Stepper, { Step } from "../components/Stepper";
 
@@ -156,8 +156,6 @@ export default function Signup() {
   const [agreedToPrivacy, setAgreedToPrivacy] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const screens = Grid.useBreakpoint();
-  const [showAimCard, setShowAimCard] = useState(false);
-  const [iframeCoords, setIframeCoords] = useState({ lat: 16.4991166, lng: 121.1800792 });
 
   const maxWidth = screens.xl ? 520 : screens.lg ? 480 : screens.md ? 420 : 360;
 
@@ -637,7 +635,6 @@ export default function Signup() {
                       <Input
                         placeholder="Your address"
                         size="large"
-                        suffix={<AimOutlined onClick={() => setShowAimCard(true)} style={{ cursor: 'pointer', color: '#e91e63', fontSize: 16 }} />}
                       />
                     </Form.Item>
                     
@@ -828,80 +825,6 @@ export default function Signup() {
           </div>
         </Card>
       </Flex>
-
-      <Modal
-        title="Select location"
-        open={showAimCard}
-        onCancel={() => setShowAimCard(false)}
-        footer={null}
-        width={820}
-      >
-        <Card bodyStyle={{ padding: 8 }}>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-            <Input value={iframeCoords.lat?.toFixed(6)} readOnly style={{ textAlign: 'center' }} />
-            <Input value={iframeCoords.lng?.toFixed(6)} readOnly style={{ textAlign: 'center' }} />
-          </div>
-          <div style={{ width: '100%', height: 360, borderRadius: 8, overflow: 'hidden' }}>
-            <iframe
-              title="Selected location"
-              width="100%"
-              height="100%"
-              style={{ border: 0 }}
-              loading="lazy"
-              src={`https://www.google.com/maps?q=${iframeCoords.lat},${iframeCoords.lng}&z=15&output=embed`}
-              allowFullScreen
-            />
-          </div>
-                  <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <Button
-                type="primary"
-                onClick={() => {
-                  if (!navigator.geolocation) {
-                    message.error('Geolocation is not supported by your browser');
-                    return;
-                  }
-                  message.loading({ content: 'Locating…', key: 'locate' });
-                  navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                      const lat = pos.coords.latitude;
-                      const lng = pos.coords.longitude;
-                      setIframeCoords({ lat, lng });
-                              // DO NOT populate address; users should enter address manually.
-                      message.success({ content: 'Location found', key: 'locate', duration: 2 });
-                    },
-                    (err) => {
-                      message.error({ content: err.message || 'Unable to retrieve location', key: 'locate' });
-                    },
-                    { enableHighAccuracy: true, timeout: 10000 }
-                  );
-                }}
-              >
-                Use my current location
-              </Button>
-            </div>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <Button
-                        onClick={() => {
-                          // copy the iframe coords into the hidden form fields and close modal
-                          try {
-                            form.setFieldsValue({ latitude: iframeCoords.lat, longitude: iframeCoords.lng });
-                            message.success('Coordinates applied to form');
-                            setShowAimCard(false);
-                          } catch (e) {
-                            message.error('Unable to apply coordinates');
-                          }
-                        }}
-                      >
-                        Use this location
-                      </Button>
-                      <Button type="link" onClick={() => window.open(`https://www.google.com/maps/@${iframeCoords.lat},${iframeCoords.lng},15.64z?entry=ttu`, '_blank', 'noopener')}>Open in Google Maps</Button>
-                    </div>
-          </div>
-        </Card>
-      </Modal>
-
-      {/* Ticket modal removed: anonymous creation now auto-logs-in and redirects */}
     </div>
   );
 }

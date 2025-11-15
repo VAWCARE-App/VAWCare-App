@@ -6,6 +6,7 @@ import Login from "./pages/Login";
 import LandingPage from "./pages/LandingPage";
 import AdminLogin from "./pages/Admins/AdminLogin";
 import Sidebar from "./components/Sidebar";
+import WaveLoader from "./components/WaveLoader";
 
 import Signup from "./pages/Signup";
 import TwoFactor from "./pages/2FA";
@@ -159,7 +160,7 @@ function Protected({ children, roles }) {
     };
   }, [roles]);
 
-  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>;
+  if (loading) return <WaveLoader />;
 
   // Not logged in -> go to login
   if (!authed) {

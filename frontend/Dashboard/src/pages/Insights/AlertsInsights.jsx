@@ -13,6 +13,7 @@ import {
     Progress,
     Badge,
     Button,
+    Grid,
 } from "antd";
 import {
     BellOutlined,
@@ -94,6 +95,7 @@ const alertIcons = {
 
 export default function AlertsInsights() {
     const loggedRef = React.useRef(false);
+    const screens = Grid.useBreakpoint();
     const [alerts, setAlerts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -335,18 +337,20 @@ export default function AlertsInsights() {
             <Layout style={{ background: "#fff", minHeight: "100vh", padding: 16 }}>
                 <Content>
                     <Row gutter={[16, 16]}>
-                        <Col xs={24} style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, alignItems: 'center' }}>
-                        <Space>
-                            <div style={{ textAlign: 'right', marginRight: 8 }}>
-                                <Text type="secondary" style={{ display: 'block', fontSize: 11 }}>Based on </Text>
-                                <Text type="secondary" style={{ display: 'block', fontSize: 12 }}>{formatRangeLabel(range)}</Text>
-                            </div>
-                            <Button.Group>
+                        <Col xs={24} style={{ display: 'flex', justifyContent: screens.md ? 'flex-end' : 'center', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <Space wrap size={screens.xs ? 4 : 8}>
+                            {screens.md && (
+                                <div style={{ textAlign: 'right', marginRight: 8 }}>
+                                    <Text type="secondary" style={{ display: 'block', fontSize: 11 }}>Based on </Text>
+                                    <Text type="secondary" style={{ display: 'block', fontSize: 12 }}>{formatRangeLabel(range)}</Text>
+                                </div>
+                            )}
+                            <Button.Group size={screens.xs ? 'small' : 'middle'}>
                                 <Button type={range === 'current' ? 'primary' : 'default'} onClick={() => { setRange('current'); }}>Current</Button>
                                 <Button type={range === 'previous' ? 'primary' : 'default'} onClick={() => { setRange('previous'); }}>Previous</Button>
                                 <Button type={range === 'all' ? 'primary' : 'default'} onClick={() => { setRange('all'); }}>All</Button>
                             </Button.Group>
-                             <Button icon={<ReloadOutlined spin={refreshing} />} onClick={handleRefresh}>Refresh</Button>
+                             <Button size={screens.xs ? 'small' : 'middle'} icon={<ReloadOutlined spin={refreshing} />} onClick={handleRefresh}>{screens.md && 'Refresh'}</Button>
                         </Space>
                     </Col>
                     <Col xs={24} md={8}>
@@ -392,7 +396,7 @@ export default function AlertsInsights() {
                             ) : filteredAlerts.length === 0 ? (
                                 <Empty description="No alerts data" />
                             ) : (
-                                <div style={{ height: 450, width: "100%", borderRadius: 12, position: 'relative', zIndex: 1 }}>
+                                <div style={{ height: screens.xs ? 280 : screens.md ? 450 : 350, width: "100%", borderRadius: 12, position: 'relative', zIndex: 1 }}>
                                     <MapContainer
                                         center={[16.4829176, 121.1501679]} // Bayombong, Nueva Vizcaya center
                                         zoom={13}
@@ -485,7 +489,7 @@ export default function AlertsInsights() {
                             {loading ? (
                                 <Skeleton active />
                             ) : (
-                                <ResponsiveContainer width="100%" height={300}>
+                                <ResponsiveContainer width="100%" height={screens.xs ? 220 : 300}>
                                     <PieChart>
                                         <Pie
                                             data={statusData}
@@ -520,7 +524,7 @@ export default function AlertsInsights() {
                             ) : durationData.length === 0 ? (
                                 <Empty description="No resolved alerts" />
                             ) : (
-                                <ResponsiveContainer width="100%" height={300}>
+                                <ResponsiveContainer width="100%" height={screens.xs ? 220 : 300}>
                                     <BarChart data={durationData}>
                                         <XAxis dataKey="name" />
                                         <YAxis />
@@ -543,7 +547,7 @@ export default function AlertsInsights() {
                             ) : trendData.length === 0 ? (
                                 <Empty description="No data" />
                             ) : (
-                                <ResponsiveContainer width="100%" height={280}>
+                                <ResponsiveContainer width="100%" height={screens.xs ? 220 : 280}>
                                     <LineChart data={trendData}>
                                         <CartesianGrid strokeDasharray="3 3" />
                                         <XAxis dataKey="date" />

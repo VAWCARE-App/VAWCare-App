@@ -843,7 +843,15 @@ const sendAnonymousAlert = asyncHandler(async (req, res) => {
             await recordLog({ req, actorType: 'victim', actorId: victimID, action: 'emergency_button', details: `Anonymous emergency alert sent type=${alertType}` });
         } catch (e) { console.warn('Failed to record anonymous alert log', e && e.message); }
 
-        // Background SOS sending removed: emails will be sent when the alert is resolved
+        // Send SOS emails immediately when alert is created
+        try {
+            const { sendEmailsForAlert } = require('./alertController');
+            // Create a pseudo-req object with user info for logging
+            const emailReq = { ...req, user: { _id: victimID, role: 'victim' } };
+            sendEmailsForAlert(alertDoc, emailReq).catch((e) => console.warn('sendEmailsForAlert failed on alert creation', e && e.message));
+        } catch (e) {
+            console.warn('Failed to send SOS emails on alert creation', e && e.message);
+        }
 
     } catch (error) {
         console.error('Error saving anonymous alert:', error && error.message, error && error.errors);

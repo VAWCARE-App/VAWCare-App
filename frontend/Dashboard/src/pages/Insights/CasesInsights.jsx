@@ -14,6 +14,7 @@ import {
     Tag,
     Empty,
     Button,
+    Grid,
 } from "antd";
 import {
     FileTextOutlined,
@@ -46,6 +47,7 @@ const { Text } = Typography;
 export default function CasesInsights() {
     const { message } = AntApp.useApp();
     const loggedRef = React.useRef(false);
+    const screens = Grid.useBreakpoint();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [cases, setCases] = useState([]);
@@ -234,21 +236,23 @@ export default function CasesInsights() {
     );
 
 return (
-    <Layout style={{ minHeight: "100vh", background: "#fff" }}>
+    <Layout style={{ background: "#fff", minHeight: "100vh", padding: 16 }}>
         <Content>
             <Row gutter={[16, 16]}>
-                <Col xs={24} style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, alignItems: 'center' }}>
-                    <Space>
-                        <div style={{ textAlign: 'right', marginRight: 8 }}>
-                            <Text type="secondary" style={{ display: 'block', fontSize: 11 }}>Based on</Text>
-                            <Text type="secondary" style={{ display: 'block', fontSize: 12 }}>{formatRangeLabel(range)}</Text>
-                        </div>
-                        <Button.Group>
+                <Col xs={24} style={{ display: 'flex', justifyContent: screens.md ? 'flex-end' : 'center', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Space wrap size={screens.xs ? 4 : 8}>
+                        {screens.md && (
+                            <div style={{ textAlign: 'right', marginRight: 8 }}>
+                                <Text type="secondary" style={{ display: 'block', fontSize: 11 }}>Based on</Text>
+                                <Text type="secondary" style={{ display: 'block', fontSize: 12 }}>{formatRangeLabel(range)}</Text>
+                            </div>
+                        )}
+                        <Button.Group size={screens.xs ? 'small' : 'middle'}>
                             <Button type={range === 'current' ? 'primary' : 'default'} onClick={() => { setRange('current'); setDssLoading(true); }}>Current</Button>
                             <Button type={range === 'previous' ? 'primary' : 'default'} onClick={() => { setRange('previous'); setDssLoading(true); }}>Previous</Button>
                             <Button type={range === 'all' ? 'primary' : 'default'} onClick={() => { setRange('all'); setDssLoading(true); }}>All</Button>
                         </Button.Group>
-                        <Button icon={<ReloadOutlined spin={refreshing} />} onClick={handleRefresh}>Refresh</Button>
+                        <Button size={screens.xs ? 'small' : 'middle'} icon={<ReloadOutlined spin={refreshing} />} onClick={handleRefresh}>{screens.md && 'Refresh'}</Button>
                     </Space>
                 </Col>
                 {/* KPIs */}
@@ -294,7 +298,7 @@ return (
                         {loading ? (
                             <Skeleton active />
                         ) : (
-                            <ResponsiveContainer width="100%" height={260}>
+                            <ResponsiveContainer width="100%" height={screens.xs ? 200 : 260}>
                                 <PieChart>
                                     <Pie
                                         data={incidentDistribution}
@@ -329,7 +333,7 @@ return (
                         {loading ? (
                             <Skeleton active />
                         ) : (
-                            <ResponsiveContainer width="100%" height={260}>
+                            <ResponsiveContainer width="100%" height={screens.xs ? 200 : 260}>
                                 <BarChart data={victimDistribution}>
                                     <XAxis dataKey="name" />
                                     <YAxis />
@@ -357,7 +361,7 @@ return (
                         ) : caseTrend.length === 0 ? (
                             <Empty description="No case data" />
                         ) : (
-                            <ResponsiveContainer width="100%" height={280}>
+                            <ResponsiveContainer width="100%" height={screens.xs ? 220 : 280}>
                                 <LineChart data={caseTrend}>
                                     <CartesianGrid strokeDasharray="3 3" />
                                     <XAxis dataKey="date" />

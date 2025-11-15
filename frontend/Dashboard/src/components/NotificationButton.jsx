@@ -40,6 +40,14 @@ export default function NotificationButton() {
   // --- AntD notification hook ---
   const [notifApi, contextHolder] = antdNotification.useNotification();
 
+  // Calculate unread count whenever notifications change
+  useEffect(() => {
+    if (!drawerVisible) {
+      const unreadCount = notifications.filter(n => n.read === false).length;
+      setUnread(unreadCount);
+    }
+  }, [notifications, drawerVisible]);
+
   const getNotificationIcon = (type, typeRef) => {
     if (typeRef === 'Alert' || type === 'alert') return <AlertOutlined />;
     if (typeRef === 'Report') return <FileTextOutlined />;
@@ -101,6 +109,7 @@ export default function NotificationButton() {
       // ensure required fields exist
       if (!payload._id) payload._id = payload.notificationID || payload.alertID || `temp-${Date.now()}`;
       if (!payload.type) payload.type = "Notification";
+      if (payload.read === undefined) payload.read = false; // New SSE notifications are unread
 
       // prepend notification if not a duplicate
       setNotifications((prev) => {
@@ -132,7 +141,6 @@ export default function NotificationButton() {
   // --- Drawer functions ---
   const openDrawer = async () => {
     setDrawerVisible(true);
-    setUnread(0);
 
     try {
       const res = await fetch(`${api}/api/notifications`, { credentials: "include" });
@@ -140,10 +148,25 @@ export default function NotificationButton() {
       if (data.success) {
         setNotifications((prev) => {
           const existingIds = new Set(prev.map((n) => n._id || n.notificationID || n.alertID));
-          const newNotifs = data.data.filter((n) => !existingIds.has(n._id || n.notificationID || n.alertID));
+          const newNotifs = data.data
+            .filter((n) => !existingIds.has(n._id || n.notificationID || n.alertID))
+            .map(n => ({
+              ...n,
+              read: n.read !== undefined ? n.read : false // Preserve read status from API
+            }));
           return [...prev, ...newNotifs];
         });
       }
+      
+      // Mark all as read when opening drawer
+      await fetch(`${api}/api/notifications/mark-all-read`, { 
+        method: "PUT", 
+        credentials: "include" 
+      });
+      
+      // Update local state to mark all as read
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      setUnread(0);
     } catch (err) {
       console.error("Failed to fetch notifications:", err);
     }
@@ -223,6 +246,12 @@ export default function NotificationButton() {
             style={{
               animation: unread > 0 ? 'pulse 2s infinite' : 'none',
             }}
+            styles={{
+              indicator: {
+                zIndex: 10,
+                boxShadow: '0 0 0 2px #fff, 0 2px 8px rgba(255, 77, 79, 0.4)',
+              }
+            }}
           >
             <div style={{
               position: 'relative',
@@ -239,7 +268,7 @@ export default function NotificationButton() {
                     right: -4,
                     bottom: -4,
                     borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    background: '#7A5AF8',
                     opacity: 0.3,
                     animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite',
                   }} />
@@ -250,7 +279,7 @@ export default function NotificationButton() {
                     right: -2,
                     bottom: -2,
                     borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    background: '#7A5AF8',
                     opacity: 0.5,
                     animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite 0.5s',
                   }} />
@@ -285,20 +314,20 @@ export default function NotificationButton() {
                 style={{
                   width: 64,
                   height: 64,
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  background: '#7A5AF8',
                   border: 'none',
-                  boxShadow: '0 8px 24px rgba(102, 126, 234, 0.4), 0 4px 12px rgba(118, 75, 162, 0.3)',
+                  boxShadow: '0 8px 24px rgba(122, 90, 248, 0.4), 0 4px 12px rgba(122, 90, 248, 0.3)',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   position: 'relative',
                   zIndex: 1,
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'scale(1.1) rotate(15deg)';
-                  e.currentTarget.style.boxShadow = '0 12px 32px rgba(102, 126, 234, 0.5), 0 6px 16px rgba(118, 75, 162, 0.4)';
+                  e.currentTarget.style.boxShadow = '0 12px 32px rgba(122, 90, 248, 0.5), 0 6px 16px rgba(122, 90, 248, 0.4)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
-                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(102, 126, 234, 0.4), 0 4px 12px rgba(118, 75, 162, 0.3)';
+                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(122, 90, 248, 0.4), 0 4px 12px rgba(122, 90, 248, 0.3)';
                 }}
               />
             </div>
@@ -570,15 +599,26 @@ export default function NotificationButton() {
                           {notif.message || `Type: ${notif.type}`}
                         </Typography.Paragraph>
                         <Typography.Text style={{ fontSize: 11, color: '#bfbfbf' }}>
-                          {notif.timestamp 
-                            ? new Date(notif.timestamp).toLocaleString('en-US', {
-                                  month: 'short',
-                                  day: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })
-                              : 'Just now'
-                            }
+                          {notif.timestamp || notif.createdAt
+                            ? new Date(notif.timestamp || notif.createdAt).toLocaleString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                hour12: true
+                              })
+                            : new Date().toLocaleString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                hour12: true
+                              })
+                          }
                         </Typography.Text>
                       </div>
                     }

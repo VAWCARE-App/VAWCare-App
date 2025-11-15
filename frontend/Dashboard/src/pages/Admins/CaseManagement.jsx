@@ -511,9 +511,11 @@ export default function CaseManagement() {
             <Title level={isMdUp ? 4 : 5} style={{ margin: 0, color: BRAND.violet }}>
               Case Management
             </Title>
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              Review, create, and update cases
-            </Text>
+            {isMdUp && (
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Review, create, and update cases
+              </Text>
+            )}
           </Space>
         </div>
 
@@ -544,7 +546,7 @@ export default function CaseManagement() {
 
       <Content
         style={{
-          padding: 16,
+          padding: screens.xs ? 8 : screens.sm ? 10 : 16,
           display: "flex",
           justifyContent: "center",
           paddingBottom: "max(16px, env(safe-area-inset-bottom))",
@@ -555,11 +557,11 @@ export default function CaseManagement() {
           style={{
             width: "100%",
             maxWidth: 1320,
-            borderRadius: 18,
+            borderRadius: screens.xs ? 12 : 18,
             borderColor: BRAND.soft,
             boxShadow: "0 20px 46px rgba(122,90,248,0.06)",
           }}
-          bodyStyle={{ padding: 16 }}
+          bodyStyle={{ padding: screens.xs ? 8 : screens.sm ? 12 : 16 }}
           title={
             <div
               style={{ display: "flex", alignItems: "center", gap: 8 }}
@@ -572,19 +574,22 @@ export default function CaseManagement() {
             </div>
           }
           extra={
-            <Space wrap>
+            <Space wrap size={screens.xs ? 4 : 8}>
               <Input
                 allowClear
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Search cases…"
+                placeholder={screens.xs ? "Search…" : "Search cases…"}
                 prefix={<SearchOutlined />}
-                style={{ width: 260, borderRadius: 999 }}
+                style={{ 
+                  width: screens.xs ? 140 : screens.sm ? 180 : 260, 
+                  borderRadius: 999 
+                }}
               />
               <Select
                 value={filterType}
                 onChange={setFilterType}
-                style={{ width: 200 }}
+                style={{ width: screens.xs ? 120 : screens.sm ? 160 : 200 }}
                 dropdownMatchSelectWidth={220}
               >
                 <Option value="all">All Cases</Option>
@@ -602,7 +607,10 @@ export default function CaseManagement() {
             dataSource={filteredCases}
             loading={loading}
             pagination={{ pageSize: 10, showSizeChanger: false }}
-            scroll={{ x: 980, y: 520 }}
+            scroll={{ 
+              x: 980, 
+              y: screens.xs ? 400 : screens.sm ? 460 : 520 
+            }}
             className="pretty-table"
           />
 
@@ -622,6 +630,15 @@ export default function CaseManagement() {
             okText="Save"
             onOk={() => {
               form.validateFields().then((v) => handleUpdateCase(v));
+            }}
+            width={screens.md ? 600 : "95%"}
+            centered
+            styles={{
+              body: { 
+                maxHeight: screens.xs ? "60vh" : "70vh", 
+                overflowY: "auto", 
+                padding: screens.xs ? "12px 16px" : "16px 24px" 
+              }
             }}
           >
             <Form form={form} layout="vertical">
@@ -716,7 +733,11 @@ export default function CaseManagement() {
             width={screens.md ? 800 : "95%"}
             centered
             styles={{
-              body: { maxHeight: "70vh", overflowY: "auto", padding: "16px 24px" }
+              body: { 
+                maxHeight: screens.xs ? "60vh" : "70vh", 
+                overflowY: "auto", 
+                padding: screens.xs ? "12px 16px" : "16px 24px" 
+              }
             }}
           >
             <Form form={addForm} layout="vertical">
@@ -726,8 +747,12 @@ export default function CaseManagement() {
                 style={{ 
                   background: "#f9f7ff", 
                   border: `1px solid ${BRAND.soft}`,
-                  marginBottom: 16,
-                  borderRadius: 8
+                  marginBottom: screens.xs ? 12 : 16,
+                  borderRadius: 8,
+                  padding: screens.xs ? "8px 12px" : undefined
+                }}
+                bodyStyle={{ 
+                  padding: screens.xs ? 8 : undefined 
                 }}
               >
                 <Form.Item
@@ -767,12 +792,15 @@ export default function CaseManagement() {
                 </Form.Item>
               </Card>
 
-              <Divider orientation="left" style={{ color: BRAND.violet }}>
+              <Divider orientation="left" style={{ 
+                color: BRAND.violet,
+                margin: screens.xs ? "12px 0" : "24px 0"
+              }}>
                 Case Information
               </Divider>
 
               {/* Case ID and Status Row */}
-              <Row gutter={16}>
+              <Row gutter={screens.xs ? 8 : 16}>
                 <Col xs={24} md={12}>
                   <Form.Item 
                     name="caseID" 
@@ -1003,7 +1031,7 @@ export default function CaseManagement() {
         .ant-input,
         .ant-input-affix-wrapper,
         .ant-select-selector,
-        .ant-btn {
+        .ant-btn:not(.ant-btn-circle) {
           border-radius: 12px !important;
         }
         .ant-input:focus,

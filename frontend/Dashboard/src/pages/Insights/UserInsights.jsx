@@ -14,6 +14,7 @@ import {
     Tag,
     Empty,
     Button,
+    Grid,
 } from "antd";
 import {
     UserOutlined,
@@ -43,6 +44,7 @@ const { Title, Text } = Typography;
 export default function UserInsights() {
     const { message } = AntApp.useApp();
     const loggedRef = React.useRef(false);
+    const screens = Grid.useBreakpoint();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [data, setData] = useState({ admins: [], victims: [], officials: [] });
@@ -169,7 +171,7 @@ export default function UserInsights() {
     );
 
     return (
-        <Layout style={{ minHeight: "100vh", background: "#fff" }}>
+        <Layout style={{ background: "#fff", minHeight: "100vh", padding: 16 }}>
             <Content>
                 <Row gutter={[16, 16]}>
                     <Col xs={24} md={6}>
@@ -215,7 +217,7 @@ export default function UserInsights() {
                             {loading ? (
                                 <Skeleton active />
                             ) : (
-                                <ResponsiveContainer width="100%" height={260}>
+                                <ResponsiveContainer width="100%" height={screens.xs ? 200 : 260}>
                                     <PieChart>
                                         <Pie
                                             data={userTypeDistribution}
@@ -247,7 +249,7 @@ export default function UserInsights() {
                             {loading ? (
                                 <Skeleton active />
                             ) : (
-                                <ResponsiveContainer width="100%" height={260}>
+                                <ResponsiveContainer width="100%" height={screens.xs ? 200 : 260}>
                                     <BarChart data={victimDistribution}>
                                         <XAxis dataKey="name" />
                                         <YAxis />
@@ -271,7 +273,7 @@ export default function UserInsights() {
                             ) : registrationTrend.length === 0 ? (
                                 <Empty description="No registration data" />
                             ) : (
-                                <ResponsiveContainer width="100%" height={280}>
+                                <ResponsiveContainer width="100%" height={screens.xs ? 220 : 280}>
                                     <LineChart data={registrationTrend}>
                                         <CartesianGrid strokeDasharray="3 3" />
                                         <XAxis dataKey="date" />

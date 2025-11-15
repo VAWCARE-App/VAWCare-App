@@ -185,12 +185,12 @@ export default function VictimNavbar() {
           position: "sticky",
           top: 0,
           zIndex: 20,
-          height: 64,
-          display: "grid",
-          gridTemplateColumns: "auto 1fr auto",
+          height: screens.xs ? 56 : 64,
+          display: "flex",
           alignItems: "center",
-          gap: 12,
-          padding: "0 14px",
+          justifyContent: "space-between",
+          gap: screens.xs ? 8 : 12,
+          padding: screens.xs ? "0 8px" : screens.sm ? "0 12px" : "0 14px",
           background: BRAND.headerBg,
           borderBottom: `1px solid ${BRAND.border}`,
           backdropFilter: "blur(10px) saturate(140%)",
@@ -198,7 +198,7 @@ export default function VictimNavbar() {
         }}
       >
         {/* Brand */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: screens.xs ? 6 : 10, minWidth: 0, flex: "0 0 auto" }}>
           {/* Hamburger Menu Button for Mobile */}
           {!screens.md && (
             <Button
@@ -207,25 +207,28 @@ export default function VictimNavbar() {
               aria-label="Open menu"
               onClick={() => setOpen(true)}
               style={{ 
-                fontSize: 20, 
+                fontSize: screens.xs ? 18 : 20, 
                 color: BRAND.primary, 
                 borderRadius: 10,
-                padding: "4px 8px",
+                padding: screens.xs ? "2px 6px" : "4px 8px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 outline: "none",
                 border: "none",
+                flexShrink: 0,
               }}
             />
           )}
-          <Avatar src={logo} size={36} />
-          <div style={{ lineHeight: 1 }}>
-            <Text strong style={{ fontSize: 18, color: BRAND.primary, fontWeight: 600 }}>
-              VAWCare
-            </Text>
-            <div style={{ fontSize: 11, color: "#8A8A8A" }}>Support & Safety</div>
-          </div>
+          <Avatar src={logo} size={screens.xs ? 32 : 36} style={{ flexShrink: 0 }} />
+          {screens.lg && (
+            <div style={{ lineHeight: 1, whiteSpace: "nowrap" }}>
+              <Text strong style={{ fontSize: 18, color: BRAND.primary, fontWeight: 600 }}>
+                VAWCare
+              </Text>
+              <div style={{ fontSize: 11, color: "#8A8A8A" }}>Support & Safety</div>
+            </div>
+          )}
         </div>
 
         {/* Desktop translucent-pill menu */}
@@ -240,38 +243,42 @@ export default function VictimNavbar() {
               justifySelf: "center",
               background: "transparent",
               borderBottom: "none",
+              minWidth: 0,
+              flex: "1 1 auto",
+              display: "flex",
+              justifyContent: "center",
             }}
           />
         ) : (
-          <div />
+          <div style={{ flex: "1 1 0", minWidth: 0 }} />
         )}
 
         {/* Actions */}
-        <Space align="center" size={8}>
+        <Space align="center" size={screens.xs ? 4 : 8} style={{ flexShrink: 0 }}>
           <EmergencyButton compact />
-          {screens.sm && (
-            <Dropdown menu={userMenu} placement="bottomRight" trigger={["click"]}>
-              <Button
-                type="text"
-                aria-label="Account menu"
-                style={{
-                  padding: "10px 12px",   // taller padding
-                  minHeight: 40,
-                  borderRadius: 12,
-                  border: `1px solid ${BRAND.soft}`,
-                  background: "rgba(255,255,255,0.9)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
-                  backdropFilter: "blur(6px) saturate(140%)",
-                }}
-              >
-                <Badge>
-                  <Avatar style={{ background: BRAND.primary, fontWeight: 600 }} size={28}>
-                    {initials}
-                  </Avatar>
-                </Badge>
+          <Dropdown menu={userMenu} placement="bottomRight" trigger={["click"]}>
+            <Button
+              type="text"
+              aria-label="Account menu"
+              style={{
+                padding: screens.sm ? "10px 12px" : "6px 8px",
+                minHeight: screens.xs ? 36 : 40,
+                borderRadius: screens.xs ? 10 : 12,
+                border: `1px solid ${BRAND.soft}`,
+                background: "rgba(255,255,255,0.9)",
+                display: "flex",
+                alignItems: "center",
+                gap: screens.sm ? 8 : 6,
+                boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
+                backdropFilter: "blur(6px) saturate(140%)",
+              }}
+            >
+              <Badge>
+                <Avatar style={{ background: BRAND.primary, fontWeight: 600 }} size={screens.xs ? 24 : 28}>
+                  {initials}
+                </Avatar>
+              </Badge>
+              {screens.sm && (
                 <div style={{ lineHeight: 1, textAlign: "left" }}>
                   <Text strong style={{ fontSize: 12, fontWeight: 600 }}>
                     {currentUser.firstName
@@ -279,9 +286,9 @@ export default function VictimNavbar() {
                       : "Anonymous"}
                   </Text>
                 </div>
-              </Button>
-            </Dropdown>
-          )}
+              )}
+            </Button>
+          </Dropdown>
         </Space>
       </Header>
 
@@ -290,7 +297,7 @@ export default function VictimNavbar() {
         placement="left"
         open={open}
         onClose={() => setOpen(false)}
-        width={304}
+        width={screens.xs ? "85%" : screens.sm ? 304 : 320}
         bodyStyle={{ padding: 0, display: "flex", flexDirection: "column", height: "100%" }}
         styles={{
           header: { display: "none" },
@@ -500,7 +507,7 @@ export default function VictimNavbar() {
 
         .victim-glass-pills .ant-menu-item {
           padding: 0 !important;
-          margin: 0 8px;
+          margin: 0 6px;
           background: transparent !important;
           border: 0 !important;
           box-shadow: none !important;
@@ -508,21 +515,69 @@ export default function VictimNavbar() {
         }
         .victim-glass-pills .ant-menu-item::after { display: none !important; }
 
+        @media (max-width: 1200px) {
+          .victim-glass-pills .ant-menu-item {
+            margin: 0 4px;
+          }
+        }
+
+        @media (max-width: 992px) {
+          .victim-glass-pills .ant-menu-item {
+            margin: 0 3px;
+          }
+        }
+
         /* The actual rounded pill */
         .victim-glass-pills .ant-menu-item .nav-pill {
           display: inline-flex;
           align-items: center;
-          gap: 10px;
-          height: 40px;
-          padding: 0 18px;
+          gap: 6px;
+          height: 38px;
+          padding: 0 12px;
           border-radius: 999px; /* <- TRUE pill */
           background: #fff;
           color: #5a4eb1;
           font-weight: 600;
-          font-size: 14px;
+          font-size: 13px;
           border: 1px solid rgba(0,0,0,0.04);
           box-shadow: 0 6px 18px rgba(0,0,0,0.06);
           transition: transform .15s ease, box-shadow .15s ease, background .15s ease, color .15s ease;
+          white-space: nowrap;
+        }
+
+        @media (max-width: 1200px) {
+          .victim-glass-pills .ant-menu-item .nav-pill {
+            height: 36px;
+            padding: 0 10px;
+            font-size: 12px;
+            gap: 5px;
+          }
+          .victim-glass-pills .ant-menu-item .nav-pill .anticon {
+            font-size: 14px;
+          }
+        }
+
+        @media (max-width: 992px) {
+          .victim-glass-pills .ant-menu-item .nav-pill {
+            height: 34px;
+            padding: 0 8px;
+            font-size: 12px;
+            gap: 4px;
+          }
+          .victim-glass-pills .ant-menu-item .nav-pill .anticon {
+            font-size: 13px;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .victim-glass-pills .ant-menu-item .nav-pill {
+            height: 32px;
+            padding: 0 8px;
+            font-size: 11px;
+          }
+          .victim-glass-pills .ant-menu-item .nav-pill .anticon {
+            font-size: 12px;
+          }
         }
 
         /* Hover state */

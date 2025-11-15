@@ -60,6 +60,16 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     return () => window.removeEventListener("toggle-sider", handler);
   }, [setCollapsed]);
 
+  // Navigation handler for instant navigation
+  const handleNavigate = (path) => {
+    if (location.pathname !== path) {
+      navigate(path);
+    }
+    if (isMobile) {
+      setCollapsed(true);
+    }
+  };
+
   // Logout
   const handleLogout = async () => {
     try {
@@ -93,75 +103,86 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   }, [currentUser]);
 
   // Menus
-  const adminMenu = [
-    { type: "item", key: "/admin", icon: <DashboardOutlined />, label: "Dashboard" },
-    {
-      type: "group",
-      key: "management",
-      icon: <TeamOutlined />,
-      label: "Users",
-      base: "/admin/users",
-      children: [
-        { key: "/admin/create-official", label: "Add Official", icon: <UserAddOutlined /> },
-        { key: "/admin/users", label: "View Users", icon: <UnorderedListOutlined /> },
-      ],
-    },
-    {
-      type: "group",
-      key: "reports",
-      icon: <FileTextOutlined />,
-      label: "Case & Reports",
-      base: "/admin/reports",
-      labelClass: "pink",
-      children: [
-        { key: "/admin/reports", label: "View Reports", icon: <FileSearchOutlined /> },
-        { key: "/admin/alerts", label: "View Alerts", icon: <BellOutlined /> },
-        { key: "/admin/cases", label: "View Cases", icon: <FolderOpenOutlined /> },
-        { key: "/admin/bpo-management", label: "View BPO", icon: <BankOutlined /> },
-      ],
-    },
-    { type: "item", key: "/admin/logs", icon: <IdcardOutlined />, label: "System Logs" },
-    { type: "item", key: "/admin/settings", icon: <SettingOutlined />, label: "Settings" },
-    { type: "item", key: "/landing", icon: <HomeOutlined />, label: "Home" },
-  ];
+  const adminMenu = useMemo(
+    () => [
+      { type: "item", key: "/admin", icon: <DashboardOutlined />, label: "Dashboard" },
+      {
+        type: "group",
+        key: "management",
+        icon: <TeamOutlined />,
+        label: "Users",
+        base: "/admin/users",
+        children: [
+          { key: "/admin/create-official", label: "Add Official", icon: <UserAddOutlined /> },
+          { key: "/admin/users", label: "View Users", icon: <UnorderedListOutlined /> },
+        ],
+      },
+      {
+        type: "group",
+        key: "reports",
+        icon: <FileTextOutlined />,
+        label: "Case & Reports",
+        base: "/admin/reports",
+        labelClass: "pink",
+        children: [
+          { key: "/admin/reports", label: "View Reports", icon: <FileSearchOutlined /> },
+          { key: "/admin/alerts", label: "View Alerts", icon: <BellOutlined /> },
+          { key: "/admin/cases", label: "View Cases", icon: <FolderOpenOutlined /> },
+          { key: "/admin/bpo-management", label: "View BPO", icon: <BankOutlined /> },
+        ],
+      },
+      { type: "item", key: "/admin/logs", icon: <IdcardOutlined />, label: "System Logs" },
+      { type: "item", key: "/admin/settings", icon: <SettingOutlined />, label: "Settings" },
+      { type: "item", key: "/landing", icon: <HomeOutlined />, label: "Home" },
+    ],
+    []
+  );
 
-  const officialMenu = [
-    { type: "item", key: "/admin/official-dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
-    { type: "item", key: "/admin/create-official", icon: <UserSwitchOutlined />, label: "Create Official" },
-    {
-      type: "group",
-      key: "official-cases",
-      icon: <TeamOutlined />,
-      label: "Cases",
-      base: "/admin/official-cases",
-      children: [{ key: "/admin/official-cases", label: "View Cases", icon: <FolderOpenOutlined /> }],
-    },
-    {
-      type: "group",
-      key: "official-reports",
-      icon: <FileTextOutlined />,
-      label: "Reports",
-      base: "/admin/reports",
-      children: [
-        { key: "/admin/reports", label: "View Reports", icon: <FileSearchOutlined /> },
-        { key: "/admin/alerts", label: "View Alerts", icon: <AlertOutlined /> },
-        { key: "/admin/bpo-management", label: "View BPO", icon: <BankOutlined /> },
-      ],
-    },
-    { type: "item", key: "/admin/official-settings", icon: <SettingOutlined />, label: "Settings" },
-    { type: "item", key: "/landing", icon: <HomeOutlined />, label: "Home" },
-  ];
+  const officialMenu = useMemo(
+    () => [
+      { type: "item", key: "/admin/official-dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
+      { type: "item", key: "/admin/create-official", icon: <UserSwitchOutlined />, label: "Create Official" },
+      {
+        type: "group",
+        key: "official-cases",
+        icon: <TeamOutlined />,
+        label: "Cases",
+        base: "/admin/official-cases",
+        children: [{ key: "/admin/official-cases", label: "View Cases", icon: <FolderOpenOutlined /> }],
+      },
+      {
+        type: "group",
+        key: "official-reports",
+        icon: <FileTextOutlined />,
+        label: "Reports",
+        base: "/admin/reports",
+        children: [
+          { key: "/admin/reports", label: "View Reports", icon: <FileSearchOutlined /> },
+          { key: "/admin/alerts", label: "View Alerts", icon: <AlertOutlined /> },
+          { key: "/admin/bpo-management", label: "View BPO", icon: <BankOutlined /> },
+        ],
+      },
+      { type: "item", key: "/admin/official-settings", icon: <SettingOutlined />, label: "Settings" },
+      { type: "item", key: "/landing", icon: <HomeOutlined />, label: "Home" },
+    ],
+    []
+  );
 
-  const victimMenu = [
-    { type: "item", key: "/victim/dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
-    { type: "item", key: "/victim/report", icon: <FileAddOutlined />, label: "Report" },
-    { type: "item", key: "/victim/messages", icon: <MessageOutlined />, label: "Messages" },
-    { type: "item", key: "/victim/help", icon: <InfoCircleOutlined />, label: "Help" },
-  ];
+  const victimMenu = useMemo(
+    () => [
+      { type: "item", key: "/victim/dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
+      { type: "item", key: "/victim/report", icon: <FileAddOutlined />, label: "Report" },
+      { type: "item", key: "/victim/messages", icon: <MessageOutlined />, label: "Messages" },
+      { type: "item", key: "/victim/help", icon: <InfoCircleOutlined />, label: "Help" },
+    ],
+    []
+  );
 
-  let menu = adminMenu;
-  if (userType === "official") menu = officialMenu;
-  else if (userType === "victim") menu = victimMenu;
+  const menu = useMemo(() => {
+    if (userType === "official") return officialMenu;
+    if (userType === "victim") return victimMenu;
+    return adminMenu;
+  }, [userType, adminMenu, officialMenu, victimMenu]);
 
   // Default open groups
   const defaultOpen = (pathname) => {
@@ -191,76 +212,34 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     }
   }, [location.pathname, collapsed]);
 
-  // Scroll indicator for nav-wrap
   const navWrapRef = useRef(null);
   const [showScrollHint, setShowScrollHint] = useState(false);
-  const [hiddenItems, setHiddenItems] = useState([]);
 
+  // LIGHT scroll listener only (heavy MutationObserver removed)
   useEffect(() => {
     const el = navWrapRef.current;
     if (!el) return;
 
     const checkScroll = () => {
-      const hasScroll = el.scrollHeight > el.clientHeight;
-      const isAtBottom = el.scrollHeight - el.scrollTop <= el.clientHeight + 10;
-      const shouldShow = hasScroll && !isAtBottom;
-      setShowScrollHint(shouldShow);
-
-      // Detect which items are cut off (not fully visible)
-      // Check whenever there's scroll, not just when shouldShow is true
-      if (hasScroll) {
-        const railEl = el.querySelector('.rail');
-        if (railEl) {
-          const containerRect = el.getBoundingClientRect();
-          const buttons = Array.from(railEl.querySelectorAll('.rail-btn, .sub-btn'));
-          const hidden = [];
-
-          buttons.forEach((btn) => {
-            const rect = btn.getBoundingClientRect();
-            const itemKey = btn.getAttribute('data-key');
-            const itemLabel = btn.getAttribute('data-label');
-            const itemType = btn.getAttribute('data-type');
-            
-            // Check if button is partially or fully below the visible area
-            // Account for footer height (86px) + logout section (~60px) + buffer (20px)
-            const footerAndLogoutHeight = 166;
-            if (rect.bottom > containerRect.bottom - footerAndLogoutHeight || rect.top > containerRect.bottom) {
-              if (itemKey && itemLabel) {
-                hidden.push({ key: itemKey, label: itemLabel, type: itemType });
-              }
-            }
-          });
-
-          setHiddenItems(hidden);
-        }
-      } else {
-        setHiddenItems([]);
-      }
+      const hasScroll = el.scrollHeight > el.clientHeight + 2;
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 4;
+      setShowScrollHint(hasScroll && !atBottom);
     };
 
-    // Add a small delay to ensure DOM is fully rendered
-    const timeoutId = setTimeout(checkScroll, 100);
     checkScroll();
-    
-    el.addEventListener("scroll", checkScroll);
+    el.addEventListener("scroll", checkScroll, { passive: true });
     window.addEventListener("resize", checkScroll);
 
-    const observer = new MutationObserver(() => {
-      // Delay the check to ensure DOM updates are complete
-      setTimeout(checkScroll, 100);
-    });
-    observer.observe(el, { childList: true, subtree: true, attributes: true });
-
     return () => {
-      clearTimeout(timeoutId);
       el.removeEventListener("scroll", checkScroll);
       window.removeEventListener("resize", checkScroll);
-      observer.disconnect();
     };
-  }, [collapsed, openGroups]);
+  }, [collapsed]);
 
   const toggleGroup = (key) => {
-    setOpenGroups((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [key]));
+    setOpenGroups((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [key]
+    );
   };
 
   const isActive = (key) =>
@@ -288,8 +267,13 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         {node.children?.map((child) => (
           <button
             key={child.key}
+            type="button"
             className={`flyout-item ${isActive(child.key) ? "active" : ""}`}
-            onClick={() => navigate(child.key)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleNavigate(child.key);
+            }}
           >
             <span className="flyout-icon">{child.icon}</span>
             <span className="flyout-label">{child.label}</span>
@@ -307,18 +291,30 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     useEffect(() => {
       const el = ref.current;
       if (!el) return;
-      const check = () => setOverflow(el.scrollWidth > el.clientWidth + 1);
+
+      let rafId = null;
+      const check = () => {
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(() => {
+          setOverflow(el.scrollWidth > el.clientWidth + 1);
+        });
+      };
+
       check();
+
       let ro;
-      try {
-        ro = new ResizeObserver(check);
-        ro.observe(el);
-      } catch {
-        window.addEventListener("resize", check);
+      if (typeof ResizeObserver !== "undefined") {
+        try {
+          ro = new ResizeObserver(check);
+          ro.observe(el);
+        } catch (error) {
+          console.warn("ResizeObserver failed:", error);
+        }
       }
+
       return () => {
+        if (rafId) cancelAnimationFrame(rafId);
         if (ro) ro.disconnect();
-        else window.removeEventListener("resize", check);
       };
     }, [text, collapsed]);
 
@@ -342,7 +338,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         {overflow && (
           <Popover
             placement="right"
-            trigger={["hover", "click"]}
+            trigger={["hover"]}
             overlayClassName="sider-more-pop"
             content={popContent || <div style={{ padding: 8 }}>{text}</div>}
             mouseEnterDelay={0.05}
@@ -351,6 +347,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
             <button
               className="more-btn"
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 if (onMoreClick) onMoreClick();
               }}
@@ -481,12 +478,14 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               background: BRAND.rail,
               border: `1px solid ${BRAND.border}`,
               borderRadius: 18,
-              padding: isMobile ? "12px" : "8px 6px",
+              padding: isMobile ? "16px" : "8px 6px",
               display: "grid",
               gap: isMobile ? 10 : 6,
-              boxShadow: isMobile ? "0 18px 48px rgba(122,90,248,0.08)" : "0 10px 26px rgba(122,90,248,0.08)",
-              width: isMobile ? "92%" : "auto",
-              margin: isMobile ? "8px auto" : undefined,
+              boxShadow: isMobile
+                ? "0 18px 48px rgba(122,90,248,0.08)"
+                : "0 10px 26px rgba(122,90,248,0.08)",
+              width: isMobile ? "100%" : "auto",
+              margin: isMobile ? "0" : undefined,
             }}
           >
             {menu.map((node) => {
@@ -495,13 +494,15 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                 return (
                   <button
                     key={node.key}
+                    type="button"
                     className={`rail-btn ${active ? "active" : ""}`}
-                    onClick={() => navigate(node.key)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleNavigate(node.key);
+                    }}
                     title={collapsed ? node.label : undefined}
                     style={railBtnStyle(BRAND, active, isMobile)}
-                    data-key={node.key}
-                    data-label={node.label}
-                    data-type="item"
                   >
                     <span className="rail-icon" style={railIconStyle(BRAND, isMobile)}>
                       {node.icon}
@@ -511,7 +512,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                         text={node.label}
                         className="rail-label"
                         style={{ whiteSpace: "nowrap" }}
-                        onMoreClick={() => navigate(node.key)}
+                        onMoreClick={() => handleNavigate(node.key)}
                         popContent={<div style={{ padding: 8 }}>{node.label}</div>}
                       />
                     )}
@@ -526,13 +527,17 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
               const GroupButton = (
                 <button
+                  type="button"
                   className={`rail-btn ${parentActive ? "active" : ""}`}
-                  onClick={() => (collapsed ? null : toggleGroup(node.key))}
+                  onClick={(e) => {
+                    if (!collapsed) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toggleGroup(node.key);
+                    }
+                  }}
                   title={collapsed ? node.label : undefined}
                   style={railBtnStyle(BRAND, parentActive, isMobile)}
-                  data-key={node.key}
-                  data-label={node.label}
-                  data-type="group"
                 >
                   <span className="rail-icon" style={railIconStyle(BRAND, isMobile)}>
                     {node.icon}
@@ -589,13 +594,14 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                         return (
                           <button
                             key={child.key}
+                            type="button"
                             className={`sub-btn ${active ? "active" : ""}`}
-                            onClick={() => navigate(child.key)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleNavigate(child.key);
+                            }}
                             style={subBtnStyle(BRAND, active, isMobile)}
-                            data-key={child.key}
-                            data-label={child.label}
-                            data-type="subitem"
-                            data-parent={node.key}
                           >
                             <span
                               className="sub-icon"
@@ -613,7 +619,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                               text={child.label}
                               className="sub-label"
                               popContent={<div style={{ padding: 8 }}>{child.label}</div>}
-                              onMoreClick={() => navigate(child.key)}
+                              onMoreClick={() => handleNavigate(child.key)}
                             />
                           </button>
                         );
@@ -624,36 +630,47 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               );
             })}
           </div>
-
         </div>
 
         {/* Logout */}
-        <div style={{ 
-          padding: "8px 10px", 
-          background: BRAND.panel,
-          position: "sticky",
-          bottom: 86,
-          zIndex: 1,
-          marginTop: "auto"
-        }}>
+        <div
+          style={{
+            padding: "8px 10px",
+            background: BRAND.panel,
+            position: "sticky",
+            bottom: 86,
+            zIndex: 1,
+            marginTop: "auto",
+          }}
+        >
           <div
             style={{
               background: BRAND.rail,
               border: `1px solid ${BRAND.border}`,
               borderRadius: 18,
               padding: isMobile ? "12px" : "8px 6px",
-              boxShadow: isMobile ? "0 18px 48px rgba(122,90,248,0.08)" : "0 10px 26px rgba(122,90,248,0.08)",
+              boxShadow: isMobile
+                ? "0 18px 48px rgba(122,90,248,0.08)"
+                : "0 10px 26px rgba(122,90,248,0.08)",
               width: isMobile ? "92%" : "auto",
               margin: isMobile ? "0 auto" : undefined,
             }}
           >
             <button
+              type="button"
               className="rail-btn danger"
-              onClick={handleLogout}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleLogout();
+              }}
               title={collapsed ? "Logout" : undefined}
               style={{ ...railBtnStyle(BRAND, false, isMobile), color: BRAND.primaryAlt }}
             >
-              <span className="rail-icon" style={{ ...railIconStyle(BRAND, isMobile), color: BRAND.primaryAlt }}>
+              <span
+                className="rail-icon"
+                style={{ ...railIconStyle(BRAND, isMobile), color: BRAND.primaryAlt }}
+              >
                 <LogoutOutlined />
               </span>
               {!collapsed && <span className="rail-label">Logout</span>}
@@ -708,37 +725,23 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         </div>
       </Sider>
 
-      {/* Popover & effects CSS */}
+      {/* styles (unchanged from your version except for removed hidden-items stuff) */}
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
         }
-        
-        @keyframes slideIn {
-          from { 
-            opacity: 0;
-            transform: translateX(-20px);
-          }
-          to { 
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
 
-        /* Mobile optimizations */
         @media (max-width: 767px) {
           .sider-mobile-card {
             max-width: calc(100vw - 24px) !important;
             touch-action: pan-y;
           }
-          
           .sider-mobile-card .rail-btn,
           .sider-mobile-card .sub-btn {
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
           }
-          
           .sider-mobile-card .nav-wrap {
             -webkit-overflow-scrolling: touch;
           }
@@ -771,7 +774,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         .sider-flyout .flyout-item.active {
           background: #f2edff; color: #7A5AF8; border-color: rgba(122,90,248,0.35);
         }
-        .sider-flyout .flyout-icon { width: 18px; display: grid; place-items: center; font-size: 16px; color: #7A5AF8; }
+        .sider-flyout .flyout-icon { width: 18px; display: grid; place-items: "center"; font-size: 16px; color: #7A5AF8; }
+
         .sider-backdrop { 
           position: fixed; 
           inset: 0; 
@@ -781,32 +785,6 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           -webkit-backdrop-filter: blur(4px);
         }
 
-        /* Profile popover with hidden items */
-        .sider-profile-more .ant-popover-inner {
-          background: #ffffff !important;
-          border: 1px solid rgba(122,90,248,0.22) !important;
-          border-radius: 16px !important;
-          box-shadow: 0 20px 60px rgba(16,24,40,0.22) !important;
-          padding: 0 !important;
-        }
-        .sider-profile-more .ant-popover-arrow {
-          display: block !important;
-        }
-
-        /* Custom scrollbar for profile popover */
-        .sider-profile-more .ant-popover-inner-content::-webkit-scrollbar {
-          width: 5px;
-        }
-        .sider-profile-more .ant-popover-inner-content::-webkit-scrollbar-track {
-          background: rgba(122, 90, 248, 0.08);
-          border-radius: 5px;
-        }
-        .sider-profile-more .ant-popover-inner-content::-webkit-scrollbar-thumb {
-          background: rgba(122, 90, 248, 0.3);
-          border-radius: 5px;
-        }
-
-        /* Custom scrollbar for nav-wrap */
         .nav-wrap::-webkit-scrollbar {
           width: 6px;
         }
@@ -822,12 +800,9 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           background: rgba(122, 90, 248, 0.5);
         }
 
-        /* Smooth transitions for buttons */
         .rail-btn, .sub-btn {
           transition: all .15s ease !important;
         }
-
-        /* User chip hover animation */
         .user-chip {
           transition: all .2s ease !important;
         }
@@ -850,7 +825,7 @@ function railBtnStyle(BRAND, active, isMobile) {
       fontWeight: 700,
       color: active ? BRAND.primary : "#5a4eb1",
       borderRadius: 16,
-      background: active ? "#fff" : "#ffffff",
+      background: "#fff",
       boxShadow: active ? "0 18px 40px rgba(122,90,248,0.14)" : "0 8px 22px rgba(0,0,0,0.06)",
       border: active ? `1px solid rgba(122,90,248,0.12)` : "1px solid rgba(0,0,0,0.04)",
       cursor: "pointer",
@@ -875,6 +850,7 @@ function railBtnStyle(BRAND, active, isMobile) {
     transition: "transform .15s ease, box-shadow .15s ease, background .15s ease, color .15s ease",
   };
 }
+
 function railIconStyle(BRAND, isMobile) {
   return {
     fontSize: isMobile ? 18 : 18,
@@ -887,6 +863,7 @@ function railIconStyle(BRAND, isMobile) {
     background: isMobile ? "#fff" : undefined,
   };
 }
+
 function subBtnStyle(BRAND, active, isMobile) {
   if (isMobile) {
     return {
@@ -896,7 +873,7 @@ function subBtnStyle(BRAND, active, isMobile) {
       gap: 12,
       border: "none",
       borderRadius: 14,
-      background: active ? "#fff" : "#ffffff",
+      background: "#fff",
       color: active ? BRAND.primary : "#5a4eb1",
       fontWeight: 700,
       padding: "0 14px",
@@ -917,20 +894,5 @@ function subBtnStyle(BRAND, active, isMobile) {
     padding: "0 14px",
     textAlign: "left",
     boxShadow: active ? "0 12px 24px rgba(122,90,248,0.16)" : "0 4px 10px rgba(0,0,0,0.04)",
-  };
-}
-function flyItemStyle(active, BRAND, isChild = false) {
-  return {
-    width: "100%",
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    padding: isChild ? "6px 12px 6px 24px" : "8px 12px",
-    border: "none",
-    background: active ? "#f7f4ff" : "transparent",
-    color: active ? BRAND.primary : "#666",
-    cursor: "pointer",
-    fontSize: 12,
-    textAlign: "left",
   };
 }

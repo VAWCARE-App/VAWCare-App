@@ -95,17 +95,22 @@ export default function AdminDashboard() {
           {!screens.md && (
             <Button
               type="text"
-              aria-label="Toggle sidebar"
               icon={<MenuOutlined />}
               onClick={handleToggleSidebar}
+              aria-label="Toggle sidebar"
               style={{
-                width: screens.md ? 40 : 36,
-                height: screens.md ? 40 : 36,
-                display: "grid",
-                placeItems: "center",
+                width: isXs ? 34 : 38,
+                height: isXs ? 34 : 38,
+                minWidth: isXs ? 34 : 38,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 borderRadius: 10,
-                background: "#ffffffaa",
-                boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
+                background: "rgba(255, 255, 255, 0.9)",
+                border: `1px solid ${BRAND.soft}`,
+                boxShadow: "0 4px 12px rgba(122,90,248,0.08)",
+                padding: 0,
+                fontSize: 18,
               }}
             />
           )}

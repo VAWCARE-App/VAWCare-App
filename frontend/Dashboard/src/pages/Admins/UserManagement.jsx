@@ -762,7 +762,7 @@ export default function UserManagement() {
           open={modalOpen}
           onCancel={() => setModalOpen(false)}
           footer={null}
-          centered={false}
+          centered={true}
           width={modalWidth}
           wrapClassName="floating-side"
           className="floating-modal"
@@ -770,8 +770,15 @@ export default function UserManagement() {
             backdropFilter: "blur(2px)",
             background: "rgba(17,17,26,0.24)",
           }}
-          getContainer={false}
-          styles={{ body: { padding: 12 } }}
+          destroyOnClose
+          styles={{ 
+            body: { 
+              padding: 12,
+              maxHeight: 'calc(100vh - 200px)',
+              overflowY: 'auto',
+              overflowX: 'hidden'
+            } 
+          }}
           title={
             activeUser ? (
               <div
@@ -1041,19 +1048,98 @@ export default function UserManagement() {
         }
 
         /* Side modal wrapper under sticky header */
-        .floating-side { display:flex; justify-content:flex-end; align-items:center; padding:12px; }
+        .floating-side { 
+          display: flex !important; 
+          justify-content: center !important; 
+          align-items: center !important; 
+          padding: 20px !important; 
+          overflow: hidden !important;
+        }
+        .floating-modal .ant-modal {
+          top: 0 !important;
+          padding-bottom: 0 !important;
+        }
         .floating-modal .ant-modal-content {
           border-radius: 18px;
           overflow: hidden;
           border: 1px solid ${BRAND.softBorder};
           background: linear-gradient(145deg, rgba(255,255,255,0.95), rgba(255,255,255,0.86));
           box-shadow: 0 24px 72px rgba(16,24,40,0.22);
+          max-height: calc(100vh - 40px);
+          display: flex;
+          flex-direction: column;
         }
         .floating-modal .ant-modal-header {
           background: rgba(245,245,255,0.7);
           border-bottom: 1px solid ${BRAND.softBorder};
           border-radius: 18px 18px 0 0;
           padding: 10px 16px;
+          flex-shrink: 0;
+        }
+        .floating-modal .ant-modal-body {
+          flex: 1;
+          min-height: 0;
+        }
+        
+        /* Mobile modal optimizations */
+        @media (max-width: 767px) {
+          .floating-side {
+            padding: 0 !important;
+            align-items: center !important;
+            overflow: hidden !important;
+          }
+          .floating-modal .ant-modal {
+            max-height: 100vh !important;
+            height: 100vh !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            top: 0 !important;
+          }
+          .floating-modal .ant-modal-content {
+            max-height: 100vh !important;
+            height: 100vh !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+          }
+          .floating-modal .ant-modal-header {
+            padding: 8px 12px;
+          }
+          .floating-modal .ant-modal-body {
+            padding: 8px !important;
+            max-height: calc(100vh - 120px) !important;
+          }
+          .floating-modal .ant-modal-close {
+            top: 8px;
+            right: 8px;
+          }
+        }
+        
+        @media (min-width: 768px) and (max-width: 991px) {
+          .floating-side {
+            padding: 4px !important;
+          }
+          .floating-modal .ant-modal-content {
+            max-height: calc(100vh - 16px);
+          }
+          .floating-modal .ant-modal-body {
+            max-height: calc(100vh - 140px) !important;
+          }
+        }
+        
+        /* Custom scrollbar for modal body */
+        .floating-modal .ant-modal-body::-webkit-scrollbar {
+          width: 6px;
+        }
+        .floating-modal .ant-modal-body::-webkit-scrollbar-track {
+          background: rgba(122, 90, 248, 0.08);
+          border-radius: 10px;
+        }
+        .floating-modal .ant-modal-body::-webkit-scrollbar-thumb {
+          background: rgba(122, 90, 248, 0.3);
+          border-radius: 10px;
+        }
+        .floating-modal .ant-modal-body::-webkit-scrollbar-thumb:hover {
+          background: rgba(122, 90, 248, 0.5);
         }
 
         .modal-inner-animate { animation: slideIn .28s cubic-bezier(.2,.7,.3,1) both; }

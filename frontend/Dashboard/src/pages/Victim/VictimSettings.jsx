@@ -329,11 +329,15 @@ export default function VictimSettings() {
         .soft-btn{
           height:36px; border-radius:10px; padding:0 12px;
           background:var(--chip-bg); color:var(--chip-ink); border:1px solid var(--soft-border);
+          font-size: ${screens.xs ? "13px" : "14px"};
+          white-space: nowrap;
         }
         .download-btn{
           height:36px; border-radius:12px; padding:0 14px;
           background:${BRAND.green}; color:#fff; font-weight:700; border:1px solid rgba(76,175,80,0.3);
           box-shadow:0 2px 8px rgba(76,175,80,0.2);
+          font-size: ${screens.xs ? "13px" : "14px"};
+          white-space: nowrap;
         }
 
         .meta-grid{
@@ -428,12 +432,12 @@ export default function VictimSettings() {
                   onChange={({ file }) => file && onAvatarChange({ file })}
                 >
                   <Button className="soft-btn" icon={<CameraOutlined />}>
-                    Change Photo
+                    {screens.xs ? "Photo" : "Change Photo"}
                   </Button>
                 </Upload>
 
                 <Button className="download-btn" icon={<DownloadOutlined />}>
-                  Download Info
+                  {screens.xs ? "Download" : "Download Info"}
                 </Button>
 
                 <Button

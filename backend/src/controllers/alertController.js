@@ -99,23 +99,30 @@ async function sendEmailsForAlert(alert, req) {
     // record that SOS processing started
     try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: req.user?.role || 'victim', actorId: req.user?._id || a.victimID || null, action: 'send_sos', details: `SOS send initiated for alert ${a.alertID || a._id}` }); } catch (e) { console.warn('Failed to record send_sos log', e && e.message); }
 
-    for (const recipient of Array.from(recipients)) {
-      try {
-        await sendMail(recipient, subject, html);
+    // Send a single email to VAWC Desk and every emergency contact
+    const recipientsArr = Array.from(recipients);
+    try {
+      const info = await sendMail(recipientsArr, subject, html);
+      const accepted = Array.isArray(info && info.accepted) ? info.accepted.map(x => String(x).toLowerCase()) : [];
+      const rejected = Array.isArray(info && info.rejected) ? info.rejected.map(x => String(x).toLowerCase()) : [];
+      for (const recipient of recipientsArr) {
+        const low = String(recipient).toLowerCase();
         try {
           await a.addNotifiedContact({
             contactID: `email-${recipient}`,
-            name: (a.victimID && a.victimID.emergencyContacts ? (a.victimID.emergencyContacts.find(ec => (ec.email || '').toLowerCase() === recipient) || {}).name : '') || recipient,
-            contactNumber: (a.victimID && a.victimID.emergencyContacts ? (a.victimID.emergencyContacts.find(ec => (ec.email || '').toLowerCase() === recipient) || {}).contactNumber : '') || '',
+            name: (a.victimID && a.victimID.emergencyContacts ? (a.victimID.emergencyContacts.find(ec => (ec.email || '').toLowerCase() === low) || {}).name : '') || recipient,
+            contactNumber: (a.victimID && a.victimID.emergencyContacts ? (a.victimID.emergencyContacts.find(ec => (ec.email || '').toLowerCase() === low) || {}).contactNumber : '') || '',
             notificationTime: new Date(),
-            notificationStatus: 'Sent'
+            notificationStatus: accepted.includes(low) ? 'Sent' : 'Failed'
           });
         } catch (e) { console.warn('Failed to record notified contact', e && e.message); }
-        try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: req.user?.role || 'victim', actorId: a.victimID || null, action: 'sos_email_sent', details: `SOS email sent to ${recipient} for alert ${a.alertID || a._id}` }); } catch (e) { /* ignore */ }
-      } catch (err) {
-        console.error('Failed to send SOS email to', recipient, err && err.message);
+        try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: req.user?.role || 'victim', actorId: a.victimID || null, action: accepted.includes(low) ? 'sos_email_sent' : 'sos_email_failed', details: `SOS email ${accepted.includes(low) ? 'sent' : 'failed'} to ${recipient} for alert ${a.alertID || a._id}` }); } catch (e) { /* ignore */ }
+      }
+    } catch (err) {
+      console.error('Failed to send SOS emails to recipients', recipientsArr, err && err.message);
+      for (const recipient of recipientsArr) {
         try { await a.addNotifiedContact({ contactID: `email-${recipient}`, name: recipient, contactNumber: '', notificationTime: new Date(), notificationStatus: 'Failed' }); } catch (e) { /* ignore */ }
-        try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: req.user?.role || 'victim', actorId: a.victimID || null, action: 'sos_email_failed', details: `SOS email failed to ${recipient} for alert ${a.alertID || a._id}` }); } catch (e) { /* ignore */ }
+        try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: req.user?.role || 'victim', actorId: a.victimID || null, action: 'sos_email_failed', details: `SOS email failed to ${recipient} for alert ${a.alertID || a._id}: ${err && err.message}` }); } catch (e) { /* ignore */ }
       }
     }
   } catch (e) {
@@ -184,10 +191,10 @@ const resolveAlert = asyncHandler(async (req, res) => {
 
   // After saving, decide whether to send SOS emails based on duration threshold
   try {
-    const THRESH_MS = parseInt(process.env.SOS_DURATION_MS, 10) || 3000;
+    const THRESH_MS = parseInt(process.env.SOS_DURATION_MS, 10) || 5000;
     // Only send SOS emails when not cancelled and duration passes threshold
-    if (!isCancelled && typeof alert.durationMs === 'number' && alert.durationMs >= THRESH_MS) {
-      // fire-and-forget
+    const existingEmails = Array.isArray(alert.notifiedContacts) ? alert.notifiedContacts.filter(n => (n.contactID || '').startsWith('email-')) : [];
+    if (!isCancelled && typeof alert.durationMs === 'number' && alert.durationMs >= THRESH_MS && existingEmails.length === 0) {
       sendEmailsForAlert(alert, req).catch((e) => console.warn('sendEmailsForAlert failed', e && e.message));
     } else {
       console.log('Skipping SOS emails on resolve/cancel: cancelled=', isCancelled, 'durationMs=', alert.durationMs);
@@ -236,7 +243,7 @@ const sendSOSEmail = asyncHandler(async (req, res) => {
   }
 
   // Wait a confirmation window so short accidental presses don't spam contacts
-  const CONFIRM_MS = 3000;
+  const CONFIRM_MS = Number.parseInt(process.env.SOS_CONFIRM_MS, 10) || 5000;
   await new Promise((resolve) => setTimeout(resolve, CONFIRM_MS));
 
   // Re-fetch alert to ensure latest status and createdAt
@@ -297,32 +304,28 @@ const sendSOSEmail = asyncHandler(async (req, res) => {
   const results = [];
   // record that SOS processing started
   try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: req.user?.role || 'victim', actorId: req.user?._id || alert.victimID || null, action: 'send_sos', details: `SOS processing started for alert ${alert.alertID || alert._id}` }); } catch (e) { console.warn('Failed to record send_sos log', e && e.message); }
-  for (const recipient of Array.from(recipients)) {
-    try {
-      await sendMail(recipient, subject, html);
+  const recipientsArr = Array.from(recipients);
+  try {
+    const info = await sendMail(recipientsArr, subject, html);
+    const accepted = Array.isArray(info && info.accepted) ? info.accepted.map(x => String(x).toLowerCase()) : [];
+    const rejected = Array.isArray(info && info.rejected) ? info.rejected.map(x => String(x).toLowerCase()) : [];
+    for (const recipient of recipientsArr) {
+      const low = String(recipient).toLowerCase();
       try {
         await alert.addNotifiedContact({
           contactID: `email-${recipient}`,
-          name: (alert.victimID && alert.victimID.emergencyContacts ? (alert.victimID.emergencyContacts.find(ec => (ec.email || '').toLowerCase() === recipient) || {}).name : '') || recipient,
-          contactNumber: (alert.victimID && alert.victimID.emergencyContacts ? (alert.victimID.emergencyContacts.find(ec => (ec.email || '').toLowerCase() === recipient) || {}).contactNumber : '') || '',
+          name: (alert.victimID && alert.victimID.emergencyContacts ? (alert.victimID.emergencyContacts.find(ec => (ec.email || '').toLowerCase() === low) || {}).name : '') || recipient,
+          contactNumber: (alert.victimID && alert.victimID.emergencyContacts ? (alert.victimID.emergencyContacts.find(ec => (ec.email || '').toLowerCase() === low) || {}).contactNumber : '') || '',
           notificationTime: new Date(),
-          notificationStatus: 'Sent'
+          notificationStatus: accepted.includes(low) ? 'Sent' : 'Failed'
         });
-      } catch (e) {
-        console.warn('Failed to record notified contact', e && e.message);
-      }
-      results.push({ recipient, status: 'Sent' });
-    } catch (err) {
-      console.error('Failed to send SOS email to', recipient, err && err.message);
-      try {
-        await alert.addNotifiedContact({
-          contactID: `email-${recipient}`,
-          name: (alert.victimID && alert.victimID.emergencyContacts ? (alert.victimID.emergencyContacts.find(ec => (ec.email || '').toLowerCase() === recipient) || {}).name : '') || recipient,
-          contactNumber: (alert.victimID && alert.victimID.emergencyContacts ? (alert.victimID.emergencyContacts.find(ec => (ec.email || '').toLowerCase() === recipient) || {}).contactNumber : '') || '',
-          notificationTime: new Date(),
-          notificationStatus: 'Failed'
-        });
-      } catch (e) { /* ignore */ }
+      } catch (e) { console.warn('Failed to record notified contact', e && e.message); }
+      results.push({ recipient, status: accepted.includes(low) ? 'Sent' : 'Failed' });
+    }
+  } catch (err) {
+    console.error('Failed to send SOS emails to recipients', recipientsArr, err && err.message);
+    for (const recipient of recipientsArr) {
+      try { await alert.addNotifiedContact({ contactID: `email-${recipient}`, name: recipient, contactNumber: '', notificationTime: new Date(), notificationStatus: 'Failed' }); } catch (e) { /* ignore */ }
       results.push({ recipient, status: 'Failed' });
     }
   }

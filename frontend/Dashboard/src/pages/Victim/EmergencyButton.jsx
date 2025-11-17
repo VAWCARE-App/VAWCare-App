@@ -1,16 +1,35 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { message } from "antd";
 import { api, getUserData } from "../../lib/api";
 import { BellFilled } from "@ant-design/icons";
+
+const CANCEL_WINDOW_MS = 5000; // 5 seconds to cancel before alert is sent
 
 export default function EmergencyButton() {
   const [loading, setLoading] = useState(false);
   const [pulsing, setPulsing] = useState(false);
   const [activeAlertId, setActiveAlertId] = useState(null);
   const [activeAlertStart, setActiveAlertStart] = useState(null);
+  const [timeRemaining, setTimeRemaining] = useState(0);
   const [messageApi, contextHolder] = message.useMessage();
   const submittingRef = useRef(false); // synchronous guard to prevent double-submit
   // client-side auto-resolve removed to keep alert active on server when browser is backgrounded
+
+  // Timer countdown effect
+  useEffect(() => {
+    if (!pulsing || !activeAlertStart) return;
+
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - new Date(activeAlertStart).getTime();
+      const remaining = Math.max(0, CANCEL_WINDOW_MS - elapsed);
+      setTimeRemaining(remaining);
+
+      if (remaining === 0) {
+        clearInterval(interval);
+      }
+    }, 100); 
+    return () => clearInterval(interval);
+  }, [pulsing, activeAlertStart]);
 
   // Format milliseconds to HH:MM:SS
   const formatDuration = (ms) => {
@@ -36,7 +55,6 @@ export default function EmergencyButton() {
         // Prefer server-returned duration if present
         const serverDuration = data?.data?.durationMs;
         const effectiveDuration = (typeof serverDuration === 'number') ? serverDuration : durationMs;
-        const CANCEL_WINDOW_MS = 5000; // keep in sync with server default
         if (typeof effectiveDuration === 'number' && effectiveDuration < CANCEL_WINDOW_MS) {
           messageApi.success('Alert cancelled');
         } else {
@@ -48,7 +66,6 @@ export default function EmergencyButton() {
         // optionally show duration if returned
         const duration = data?.data?.durationMs;
         if (typeof duration === 'number') {
-          const CANCEL_WINDOW_MS = 5000;
           if (duration < CANCEL_WINDOW_MS) {
             messageApi.info(`Alert active for ${formatDuration(duration)} (cancelled)`);
           } else {
@@ -312,8 +329,13 @@ export default function EmergencyButton() {
             {pulsing ? "ALERT ACTIVE" : "EMERGENCY ALERT"}
           </p>
           <p className="emergency-subtext">
-            {pulsing ? "Tap to stop broadcasting" : "Tap button to send alert"}
+            {pulsing ? "Tap to cancel alert" : "Tap button to send alert"}
           </p>
+          {pulsing && (
+            <p className="emergency-timer">
+              Cancel in: {(timeRemaining / 1000).toFixed(1)}s
+            </p>
+          )}
         </div>
         </div>
         {/* End Content Wrapper */}
@@ -615,6 +637,20 @@ export default function EmergencyButton() {
               letter-spacing: 1px;
               margin: 0;
               text-transform: uppercase;
+            }
+
+            .emergency-timer {
+              font-size: 18px;
+              font-weight: 700;
+              color: #ff1744;
+              letter-spacing: 1px;
+              margin: 15px 0 0 0;
+              animation: timer-pulse 1s ease-in-out infinite;
+            }
+
+            @keyframes timer-pulse {
+              0%, 100% { opacity: 1; }
+              50% { opacity: 0.6; }
             }
 
             @keyframes bg-shift {

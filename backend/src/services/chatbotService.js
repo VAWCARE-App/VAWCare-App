@@ -24,7 +24,7 @@ const CONTEXTS = [
   },
   {
     name: "reporting",
-    keywords: ["report", "incident", "ireport", "ulat", "sumbong", "i-report", "i-ulat", "i-sumbong"],
+    keywords: ["report", "incident", "ireport", "ulat", "sumbong", "i-report", "i-ulat", "i-sumbong", "cases", "case", "reporting"],
     priority: 2,
     prompt: `
       Explain briefly how to report an incident through the VAWCare system.

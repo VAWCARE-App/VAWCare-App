@@ -24,12 +24,8 @@ export default function EmergencyButton() {
   };
 
   const handleEmergencyClick = async () => {
-    // Prevent re-entry (covers very fast double/tap events)
-    if (submittingRef.current) return;
     // If already pulsing, this click should resolve the active alert
-  if (pulsing && activeAlertId) {
-      // mark submitting so resolve can't be re-triggered
-      submittingRef.current = true;
+    if (pulsing && activeAlertId) {
       // Stop pulsing immediately in UI
       setPulsing(false);
       setLoading(true);
@@ -40,7 +36,7 @@ export default function EmergencyButton() {
         // Prefer server-returned duration if present
         const serverDuration = data?.data?.durationMs;
         const effectiveDuration = (typeof serverDuration === 'number') ? serverDuration : durationMs;
-        const CANCEL_WINDOW_MS = 3000; // keep in sync with server default
+        const CANCEL_WINDOW_MS = 5000; // keep in sync with server default
         if (typeof effectiveDuration === 'number' && effectiveDuration < CANCEL_WINDOW_MS) {
           messageApi.success('Alert cancelled');
         } else {
@@ -52,7 +48,7 @@ export default function EmergencyButton() {
         // optionally show duration if returned
         const duration = data?.data?.durationMs;
         if (typeof duration === 'number') {
-          const CANCEL_WINDOW_MS = 3000;
+          const CANCEL_WINDOW_MS = 5000;
           if (duration < CANCEL_WINDOW_MS) {
             messageApi.info(`Alert active for ${formatDuration(duration)} (cancelled)`);
           } else {
@@ -64,17 +60,18 @@ export default function EmergencyButton() {
         messageApi.error(err?.response?.data?.message || 'Failed to resolve alert');
       } finally {
         setLoading(false);
-        submittingRef.current = false;
       }
       return;
     }
 
     // Only send emergency report when toggling ON
     if (!pulsing) {
+      // Prevent re-entry on send (covers very fast double/tap events)
+      if (loading) return;
 
   // Immediately show pulsing feedback so user sees action and is unlikely to double-press
   setPulsing(true);
-  submittingRef.current = true;
+  setLoading(true); 
 
       //sends location to backend
       if (!navigator.geolocation) {
@@ -223,7 +220,6 @@ export default function EmergencyButton() {
         messageApi.error(errMsg);
       } finally {
         setLoading(false);
-        submittingRef.current = false;
       }
     }
   };
@@ -275,7 +271,6 @@ export default function EmergencyButton() {
             onClick={handleEmergencyClick}
             style={{
               cursor: "pointer",
-              pointerEvents: submittingRef.current ? "none" : "auto",
             }}
           onMouseDown={(e) => {
             const logo = e.currentTarget.querySelector('.emergency-logo');

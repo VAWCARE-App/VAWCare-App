@@ -62,11 +62,8 @@ export default function Chatbot() {
 
       const res = await fetch(`${API}/api/chatbot/message`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${sessionStorage.getItem("token")}`,
-        },
-
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // ✅ send cookies automatically
         body: JSON.stringify({ message: userText }),
       });
 
@@ -192,13 +189,13 @@ export default function Chatbot() {
     { key: "desk", icon: <InfoCircleOutlined />, label: "Barangay VAW Desk", onClick: () => send("Where is the Barangay VAW Desk?") },
     { key: "hotlines", icon: <PhoneOutlined />, label: "Hotlines", onClick: () => send("Emergency hotlines in the Philippines") },
     { key: "legal", icon: <BookOutlined />, label: "Legal resources (RA 9262)", onClick: () => send("Show resources for RA 9262") },
-  
+
   ];
 
   const copyText = async (txt) => {
     try {
       await navigator.clipboard.writeText(txt);
-    } catch {}
+    } catch { }
   };
 
   return (

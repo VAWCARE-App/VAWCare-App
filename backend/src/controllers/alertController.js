@@ -158,7 +158,7 @@ const resolveAlert = asyncHandler(async (req, res) => {
   }
 
   // Decide whether this is a cancellation: short duration means accidental press
-  const CANCEL_WINDOW_MS = Number.isFinite(parseInt(process.env.ALERT_CANCEL_WINDOW_MS, 10)) ? parseInt(process.env.ALERT_CANCEL_WINDOW_MS, 10) : 3000; // 3s by default
+  const CANCEL_WINDOW_MS = Number.isFinite(parseInt(process.env.ALERT_CANCEL_WINDOW_MS, 10)) ? parseInt(process.env.ALERT_CANCEL_WINDOW_MS, 10) : 5000; // 5s by default
   const isCancelled = (typeof alert.durationMs === 'number') && (alert.durationMs < CANCEL_WINDOW_MS);
 
   // Diagnostic logging for quick debugging when durations are unexpectedly 0 or status mismatches

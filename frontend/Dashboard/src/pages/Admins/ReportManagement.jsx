@@ -256,7 +256,19 @@ export default function ReportManagement() {
       if (res?.data?.success) {
         message.success("Report updated");
         setMode("view");
-        fetchAllReports();
+        await fetchAllReports();
+        // Refresh the active report to reflect changes in the modal
+        const refreshed = (await api.get(`/api/reports/${activeReport.reportID}`))
+          .data;
+        if (refreshed?.data) {
+          const updated = {
+            ...activeReport,
+            ...refreshed.data,
+          };
+          setActiveReport(updated);
+          form.setFieldsValue({ status: normalizeStatus(updated.status) });
+          setQuickStatus(normalizeStatus(updated.status));
+        }
       } else {
         message.error(res?.data?.message || "Failed to update report");
       }

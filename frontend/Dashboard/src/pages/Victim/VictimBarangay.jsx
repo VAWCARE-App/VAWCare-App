@@ -75,9 +75,9 @@ export default function VictimBarangay() {
         setInfo(
           data?.data || {
             name: "Barangay Bonfal Proper",
-            captain: "—",
+            captain: "Mrs. Vangelyn Alcantara ",
             address: BRGY_NAME,
-            email: "barangayvawcdesk@email.com",
+            email: "vawcaresystem@gmail.com",
             officeHours: "8:00 AM – 5:00 PM (Mon–Fri)",
           }
         );
@@ -198,7 +198,7 @@ export default function VictimBarangay() {
                 labelStyle={{ fontWeight: 600 }}
               >
                 <Descriptions.Item label="Barangay">{info?.name}</Descriptions.Item>
-                <Descriptions.Item label="Captain / Officer">{info?.captain}</Descriptions.Item>
+                <Descriptions.Item label="VAWC Desk Officer">{info?.captain}</Descriptions.Item>
                 <Descriptions.Item label="Office Hours">{info?.officeHours}</Descriptions.Item>
                 <Descriptions.Item label="Address">{info?.address}</Descriptions.Item>
                 <Descriptions.Item label="Email">

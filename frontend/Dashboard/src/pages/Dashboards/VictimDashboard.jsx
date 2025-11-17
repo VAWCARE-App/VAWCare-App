@@ -98,7 +98,7 @@ export default function VictimDashboard() {
       }
     })();
 
-    // Hub defaults (PH)
+    // Hub defaults (PH) - Updated with legitimate hotlines
     setHotlines([
       {
         name: "Emergency (PH)",
@@ -107,44 +107,64 @@ export default function VictimDashboard() {
         cta: { href: "tel:911", text: "Call 911" },
       },
       {
+        name: "NCMH Crisis Hotline",
+        desc: "National Center for Mental Health - 24/7 Crisis Intervention.",
+        number: "1553 / 0917-899-8727",
+        cta: { href: "tel:1553", text: "Call 1553" },
+      },
+      {
+        name: "PNP Women & Children Protection Center",
+        desc: "Philippine National Police - WCPC Hotline for VAWC cases.",
+        number: "(02) 8723-0401 to 20",
+        cta: { href: "tel:0287230401", text: "Call WCPC" },
+      },
+      {
+        name: "DSWD Crisis Intervention Unit",
+        desc: "Department of Social Welfare & Development 24/7 hotline.",
+        number: "1343 (Toll-free)",
+        cta: { href: "tel:1343", text: "Call 1343" },
+      },
+      {
+        name: "Commission on Human Rights",
+        desc: "CHR Gender and Development Division for VAWC assistance.",
+        number: "(02) 8294-0942",
+        cta: { href: "tel:0282940942", text: "Call CHR" },
+      },
+      {
         name: "Barangay VAW Desk",
-        desc: "Nearest barangay desk for VAWC assistance.",
+        desc: "Nearest barangay desk for VAWC assistance and protection orders.",
         cta: {
           onClick: () => navigate("/victim/victim-barangay"),
           text: "Find Barangay",
         },
       },
-      {
-        name: "PNP WCPD",
-        desc: "Women & Children Protection Desk at your local police station.",
-        cta: {
-          onClick: () => navigate("/victim/victim-cases"),
-          text: "Contact WCPD",
-        },
-      },
-      {
-        name: "1343 Actionline",
-        desc: "Human trafficking national hotline.",
-        number: "1343",
-        cta: { href: "tel:1343", text: "Call 1343" },
-      },
     ]);
 
     setNews([
       {
-        title: "How Barangay VAW Desks help in reporting",
-        source: "LGU Guidance",
-        href: "#",
+        title: "How to File a VAWC Case: Step-by-Step Guide",
+        source: "Philippine Commission on Women (PCW)",
+        href: "https://pcw.gov.ph",
       },
       {
-        title: "What to bring when filing a VAWC case",
-        source: "Help Center",
-        href: "#",
+        title: "Barangay Protection Order (BPO) Requirements and Process",
+        source: "Department of the Interior and Local Government",
+        href: "https://dilg.gov.ph",
       },
       {
-        title: "DSWD support services for VAWC survivors",
-        source: "DSWD",
-        href: "#",
+        title: "Available Services at Women and Children Protection Units",
+        source: "Department of Health",
+        href: "https://doh.gov.ph",
+      },
+      {
+        title: "Legal Aid Services for VAWC Survivors",
+        source: "Public Attorney's Office (PAO)",
+        href: "https://pao.gov.ph",
+      },
+      {
+        title: "DSWD Crisis Intervention and Temporary Shelters",
+        source: "Department of Social Welfare and Development",
+        href: "https://dswd.gov.ph",
       },
     ]);
 
@@ -153,11 +173,29 @@ export default function VictimDashboard() {
         code: "RA 9262",
         name: "Anti-Violence Against Women and Their Children Act of 2004",
       },
-      { code: "RA 9710", name: "Magna Carta of Women" },
-      { code: "RA 11313", name: "Safe Spaces Act (Bawal Bastos Law)" },
+      { 
+        code: "RA 9710", 
+        name: "Magna Carta of Women (2009)" 
+      },
+      { 
+        code: "RA 11313", 
+        name: "Safe Spaces Act (Bawal Bastos Law) - 2019" 
+      },
       {
-        code: "RA 9208 / 10364",
-        name: "Anti-Trafficking in Persons Act (as amended)",
+        code: "RA 9208",
+        name: "Anti-Trafficking in Persons Act of 2003 (Expanded by RA 10364)",
+      },
+      {
+        code: "RA 7877",
+        name: "Anti-Sexual Harassment Act of 1995",
+      },
+      {
+        code: "RA 8505",
+        name: "Rape Victim Assistance and Protection Act of 1998",
+      },
+      {
+        code: "RA 11648",
+        name: "Act Providing Stronger Protection Against Rape and Sexual Exploitation (2022)",
       },
     ]);
 

@@ -12,6 +12,7 @@ import {
   TeamOutlined,
   FileTextOutlined,
   UserAddOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
 import { clearAllStorage, getUserData } from "../lib/api";
 import BrandPill from "./bits/BrandPill"; // adjust import if your BrandPill path differs
@@ -96,6 +97,20 @@ export default function Navbar({
     { key: "about", label: <a href="#about">About</a> },
     { key: "news", label: <a href="#news">News</a> },
     { key: "location", label: <a href="#location">Location</a> },
+    { 
+      key: "download", 
+      label: (
+        <a 
+          href="#download" 
+          onClick={(e) => {
+            e.preventDefault();
+            window.dispatchEvent(new CustomEvent('openInstallModal'));
+          }}
+        >
+          Download
+        </a>
+      ) 
+    },
   ];
 
   const items = [

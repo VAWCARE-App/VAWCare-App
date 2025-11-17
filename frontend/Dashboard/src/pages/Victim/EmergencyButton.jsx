@@ -191,30 +191,30 @@ export default function EmergencyButton() {
           ...(victimID ? { victimID } : {})
         };
 
-              const { data } = await api.post("/api/victims/anonymous/alert", payload); 
-              const alertId = data?.data?.alertId || data?.alertId || (data && data._id);
-              const createdAt = data?.data?.createdAt || data?.createdAt || null;
-              if (alertId) setActiveAlertId(alertId);
-              if (createdAt) setActiveAlertStart(new Date(createdAt));
-              // Start pulsing only after backend confirms the alert was saved
-              // Wait for server-side SOS confirmation (send emails) before showing success popup
-              try {
-                if (alertId) {
-                  const sosResp = await api.post(`/api/alerts/${alertId}/sos`);
-                  if (sosResp && sosResp.data && sosResp.data.success) {
-                    messageApi.success('🚨 Emergency alert sent!');
-                  } else {
-                    // If server returned non-success, treat as failure
-                    throw new Error((sosResp && sosResp.data && sosResp.data.message) || 'Failed to send SOS emails');
-                  }
-                } else {
-                  throw new Error('Missing alert id after creation');
-                }
-              } catch (sosErr) {
-                console.error('Failed to send SOS emails', sosErr);
-                setPulsing(false);
-                messageApi.error(sosErr?.response?.data?.message || sosErr?.message || 'Failed to deliver emergency email.');
-              }
+        const { data } = await api.post("/api/victims/anonymous/alert", payload); 
+        const alertId = data?.data?.alertId || data?.alertId || (data && data._id);
+        const createdAt = data?.data?.createdAt || data?.createdAt || null;
+        if (alertId) setActiveAlertId(alertId);
+        if (createdAt) setActiveAlertStart(new Date(createdAt));
+        // Start pulsing only after backend confirms the alert was saved
+        // Wait for server-side SOS confirmation (send emails) before showing success popup
+        try {
+          if (alertId) {
+            const sosResp = await api.post(`/api/alerts/${alertId}/sos`);
+            if (sosResp && sosResp.data && sosResp.data.success) {
+              messageApi.success('🚨 Emergency alert sent!');
+            } else {
+              // If server returned non-success, treat as failure
+              throw new Error((sosResp && sosResp.data && sosResp.data.message) || 'Failed to send SOS emails');
+            }
+          } else {
+            throw new Error('Missing alert id after creation');
+          }
+        } catch (sosErr) {
+          console.error('Failed to send SOS emails', sosErr);
+          setPulsing(false);
+          messageApi.error(sosErr?.response?.data?.message || sosErr?.message || 'Failed to deliver emergency email.');
+        }
       } catch (err) {
         console.error(err);
         const errMsg = err?.response?.data?.message || err?.message || "Emergency report failed. Try again.";
@@ -232,94 +232,479 @@ export default function EmergencyButton() {
     <>
       {contextHolder}
       <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        alignItems: "center",
-        background:
-          "radial-gradient(circle at center, #ff4d4f 20%, #ffd1dc 100%)", // red → pink gradient
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
-      <div
-        onClick={handleEmergencyClick}
+        className="emergency-container"
         style={{
-          position: "relative",
-          width: 180,
-          height: 180,
-          borderRadius: "50%",
-          background: "linear-gradient(145deg, #ff3333, #b91c1c)",
+          height: "100vh",
+          width: "100vw",
           display: "flex",
+          flexDirection: "column",
           justifyContent: "center",
           alignItems: "center",
-          cursor: "pointer",
-          pointerEvents: submittingRef.current ? 'none' : 'auto',
-          boxShadow:
-            "inset -6px -6px 12px rgba(255,255,255,0.25), inset 6px 6px 12px rgba(0,0,0,0.4), 0 12px 28px rgba(0,0,0,0.4)",
-          transition: "transform 0.1s ease",
-          zIndex: 2,
-          overflow: "visible",
+          position: "fixed",
+          top: 0,
+          left: 0,
+          overflow: "hidden",
+          paddingTop: "65px",
         }}
-        onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.95)")}
-        onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
       >
-        {/* Continuous pulses when active */}
-        {pulsing && (
-          <>
-            <span className="pulse-ring" />
-            <span className="pulse-ring delay1" />
-            <span className="pulse-ring delay2" />
-          </>
-        )}
+        {/* Animated gradient background */}
+        <div className="animated-bg"></div>
+        
+        {/* Floating particles */}
+        <div className="particles">
+          <div className="particle"></div>
+          <div className="particle"></div>
+          <div className="particle"></div>
+          <div className="particle"></div>
+          <div className="particle"></div>
+          <div className="particle"></div>
+        </div>
+        
+        {/* Content Wrapper for centering */}
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "50px",
+          zIndex: 10,
+        }}>
+          {/* Ripple Loader Container */}
+          <div
+            className="emergency-loader"
+            onClick={handleEmergencyClick}
+            style={{
+              cursor: "pointer",
+              pointerEvents: submittingRef.current ? "none" : "auto",
+            }}
+          onMouseDown={(e) => {
+            const logo = e.currentTarget.querySelector('.emergency-logo');
+            if (logo) logo.style.transform = "scale(0.92)";
+          }}
+          onMouseUp={(e) => {
+            const logo = e.currentTarget.querySelector('.emergency-logo');
+            if (logo) logo.style.transform = "scale(1)";
+          }}
+        >
+          {/* Outer glow ring */}
+          <div className={`outer-ring ${!pulsing ? 'active' : ''}`}></div>
+          
+          {/* Static background circle */}
+          <div className="emergency-static-circle"></div>
+          
+          {/* Ripple boxes - only animate when pulsing */}
+          {pulsing && (
+            <>
+              <div className="emergency-box"></div>
+              <div className="emergency-box"></div>
+              <div className="emergency-box"></div>
+              <div className="emergency-box"></div>
+              <div className="emergency-box"></div>
+            </>
+          )}
+          
+          {/* Center button with logo/icon */}
+          <div className={`emergency-logo ${pulsing ? 'active' : ''}`}>
+            <div className="emergency-button">
+              <div className="button-shine"></div>
+              <BellFilled style={{ fontSize: 80, color: "#fff", filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.3))" }} />
+            </div>
+          </div>
+        </div>
 
-        <BellFilled style={{ fontSize: 72, color: "#fff", zIndex: 3 }} />
+        <div className="text-container">
+          <p className={`emergency-text ${pulsing ? 'active' : ''}`}>
+            {pulsing ? "ALERT ACTIVE" : "EMERGENCY ALERT"}
+          </p>
+          <p className="emergency-subtext">
+            {pulsing ? "Tap to stop broadcasting" : "Tap button to send alert"}
+          </p>
+        </div>
+        </div>
+        {/* End Content Wrapper */}
+
+        <style>
+          {`
+            .emergency-container {
+              background: #0a0a0a;
+            }
+
+            .animated-bg {
+              position: absolute;
+              inset: 0;
+              background: 
+                radial-gradient(ellipse at top, #1a0a0f 0%, #0a0a0a 50%),
+                linear-gradient(135deg, 
+                  #ff1744 0%, 
+                  #d32f2f 25%, 
+                  #c62828 50%, 
+                  #b71c1c 75%, 
+                  #8b0000 100%
+                );
+              background-size: 100% 100%, 400% 400%;
+              animation: bg-shift 20s ease infinite;
+              opacity: 0.85;
+            }
+
+            .animated-bg::before {
+              content: '';
+              position: absolute;
+              inset: 0;
+              background: 
+                radial-gradient(circle at 30% 40%, rgba(255, 23, 68, 0.2) 0%, transparent 50%),
+                radial-gradient(circle at 70% 60%, rgba(211, 47, 47, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 50% 80%, rgba(183, 28, 28, 0.1) 0%, transparent 50%);
+              animation: float-bg 25s ease-in-out infinite;
+            }
+
+            .particles {
+              position: absolute;
+              inset: 0;
+              overflow: hidden;
+              z-index: 1;
+              pointer-events: none;
+            }
+
+            .particle {
+              position: absolute;
+              background: radial-gradient(circle, rgba(255, 255, 255, 0.8) 0%, transparent 70%);
+              border-radius: 50%;
+              pointer-events: none;
+            }
+
+            .particle:nth-child(1) {
+              width: 4px;
+              height: 4px;
+              top: 20%;
+              left: 10%;
+              animation: float-particle 15s ease-in-out infinite;
+            }
+
+            .particle:nth-child(2) {
+              width: 6px;
+              height: 6px;
+              top: 60%;
+              left: 80%;
+              animation: float-particle 18s ease-in-out infinite 2s;
+            }
+
+            .particle:nth-child(3) {
+              width: 3px;
+              height: 3px;
+              top: 80%;
+              left: 20%;
+              animation: float-particle 20s ease-in-out infinite 4s;
+            }
+
+            .particle:nth-child(4) {
+              width: 5px;
+              height: 5px;
+              top: 30%;
+              left: 70%;
+              animation: float-particle 17s ease-in-out infinite 1s;
+            }
+
+            .particle:nth-child(5) {
+              width: 4px;
+              height: 4px;
+              top: 50%;
+              left: 15%;
+              animation: float-particle 22s ease-in-out infinite 3s;
+            }
+
+            .particle:nth-child(6) {
+              width: 5px;
+              height: 5px;
+              top: 70%;
+              left: 85%;
+              animation: float-particle 19s ease-in-out infinite 5s;
+            }
+
+            .emergency-loader {
+              --size: 320px;
+              --duration: 2s;
+              height: var(--size);
+              width: var(--size);
+              aspect-ratio: 1;
+              position: relative;
+              z-index: 10;
+              margin: 0 auto;
+            }
+
+            .outer-ring {
+              position: absolute;
+              inset: -15%;
+              background: radial-gradient(
+                circle,
+                transparent 68%,
+                rgba(255, 23, 68, 0.1) 69%,
+                rgba(255, 23, 68, 0.2) 70%,
+                transparent 71%
+              );
+              border-radius: 50%;
+              z-index: 85;
+            }
+
+            .outer-ring.active {
+              animation: outer-ring-pulse 3s ease-in-out infinite;
+            }
+
+            .emergency-static-circle {
+              position: absolute;
+              inset: 0%;
+              background: linear-gradient(
+                135deg,
+                rgba(255, 23, 68, 0.08) 0%,
+                rgba(183, 28, 28, 0.05) 100%
+              );
+              border-radius: 50%;
+              border: 2px solid rgba(255, 23, 68, 0.25);
+              box-shadow: 
+                inset 0 0 40px rgba(255, 23, 68, 0.15),
+                0 0 60px rgba(255, 23, 68, 0.2),
+                0 0 100px rgba(255, 23, 68, 0.1);
+              z-index: 90;
+            }
+
+            .emergency-box {
+              position: absolute;
+              background: linear-gradient(
+                0deg,
+                rgba(255, 23, 68, 0.35) 0%,
+                rgba(183, 28, 28, 0.2) 100%
+              );
+              border-radius: 50%;
+              border-top: 2.5px solid rgba(255, 23, 68, 0.9);
+              box-shadow: 
+                0 0 40px rgba(255, 23, 68, 0.4),
+                inset 0 0 25px rgba(255, 255, 255, 0.08);
+              backdrop-filter: blur(10px);
+              animation: emergency-ripple var(--duration) infinite ease-in-out;
+            }
+
+            .emergency-box:nth-child(3) {
+              inset: 33%;
+              z-index: 99;
+            }
+
+            .emergency-box:nth-child(4) {
+              inset: 25%;
+              z-index: 98;
+              animation-delay: 0.2s;
+            }
+
+            .emergency-box:nth-child(5) {
+              inset: 17%;
+              z-index: 97;
+              animation-delay: 0.4s;
+            }
+
+            .emergency-box:nth-child(6) {
+              inset: 9%;
+              z-index: 96;
+              animation-delay: 0.6s;
+            }
+
+            .emergency-box:nth-child(7) {
+              inset: 0%;
+              z-index: 95;
+              animation-delay: 0.8s;
+            }
+
+            .emergency-logo {
+              position: absolute;
+              inset: 0;
+              display: grid;
+              place-content: center;
+              z-index: 100;
+              transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+
+            .emergency-logo.active {
+              animation: pulse-button 2s ease-in-out infinite;
+            }
+
+            .emergency-button {
+              width: 200px;
+              height: 200px;
+              border-radius: 50%;
+              background: linear-gradient(145deg, #ff1744, #c62828);
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              box-shadow:
+                inset -10px -10px 20px rgba(255, 255, 255, 0.15),
+                inset 10px 10px 20px rgba(0, 0, 0, 0.5),
+                0 20px 50px rgba(255, 23, 68, 0.4),
+                0 10px 30px rgba(183, 28, 28, 0.3);
+              position: relative;
+              overflow: hidden;
+              transition: all 0.3s ease;
+            }
+
+            .button-shine {
+              position: absolute;
+              top: -50%;
+              left: -50%;
+              width: 200%;
+              height: 200%;
+              background: linear-gradient(
+                45deg,
+                transparent 30%,
+                rgba(255, 255, 255, 0.1) 50%,
+                transparent 70%
+              );
+              animation: shine 3s ease-in-out infinite;
+            }
+
+            .emergency-button::before {
+              content: '';
+              position: absolute;
+              inset: -3px;
+              border-radius: 50%;
+              background: conic-gradient(
+                from 0deg,
+                rgba(255, 23, 68, 0.6),
+                rgba(255, 255, 255, 0.3),
+                rgba(255, 23, 68, 0.6)
+              );
+              animation: rotate-glow 4s linear infinite;
+              z-index: -1;
+            }
+
+            .emergency-button::after {
+              content: '';
+              position: absolute;
+              inset: 15%;
+              border-radius: 50%;
+              background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            }
+
+            .emergency-logo.active .emergency-button {
+              animation: pulse-button 1.2s ease-in-out infinite;
+              box-shadow:
+                inset -10px -10px 20px rgba(255, 255, 255, 0.2),
+                inset 10px 10px 20px rgba(0, 0, 0, 0.6),
+                0 25px 60px rgba(255, 23, 68, 0.6),
+                0 15px 40px rgba(255, 23, 68, 0.5),
+                0 0 80px rgba(255, 23, 68, 0.3);
+            }
+
+            .text-container {
+              text-align: center;
+              z-index: 10;
+              position: relative;
+            }
+
+            .emergency-text {
+              font-weight: 800;
+              font-size: 28px;
+              letter-spacing: 2px;
+              background: linear-gradient(135deg, #fff 0%, #ffd1d1 100%);
+              -webkit-background-clip: text;
+              -webkit-text-fill-color: transparent;
+              background-clip: text;
+              text-shadow: 0 4px 20px rgba(255, 23, 68, 0.5);
+              margin: 0 0 10px 0;
+              transition: all 0.3s ease;
+            }
+
+            .emergency-text.active {
+              animation: text-pulse 1.5s ease-in-out infinite;
+            }
+
+            .emergency-subtext {
+              font-weight: 500;
+              font-size: 14px;
+              color: rgba(255, 255, 255, 0.7);
+              letter-spacing: 1px;
+              margin: 0;
+              text-transform: uppercase;
+            }
+
+            @keyframes bg-shift {
+              0%, 100% { background-position: 0% 50%; }
+              50% { background-position: 100% 50%; }
+            }
+
+            @keyframes float-bg {
+              0%, 100% { transform: translate(0, 0) scale(1); }
+              33% { transform: translate(20px, -30px) scale(1.05); }
+              66% { transform: translate(-25px, 25px) scale(0.95); }
+            }
+
+            @keyframes float-particle {
+              0%, 100% {
+                transform: translate(0, 0);
+                opacity: 0;
+              }
+              10%, 90% {
+                opacity: 0.6;
+              }
+              50% {
+                transform: translate(var(--tx, 100px), var(--ty, -100px));
+                opacity: 1;
+              }
+            }
+
+            @keyframes outer-ring-pulse {
+              0%, 100% {
+                transform: scale(1);
+                opacity: 0.4;
+              }
+              50% {
+                transform: scale(1.05);
+                opacity: 0.7;
+              }
+            }
+
+            @keyframes emergency-ripple {
+              0% {
+                transform: scale(1);
+                opacity: 0.9;
+              }
+              50% {
+                transform: scale(1.3);
+                opacity: 0.5;
+              }
+              100% {
+                transform: scale(1);
+                opacity: 0.9;
+              }
+            }
+
+            @keyframes rotate-glow {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+
+            @keyframes shine {
+              0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+              100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+            }
+
+            @keyframes pulse-button {
+              0%, 100% {
+                transform: scale(1);
+              }
+              50% {
+                transform: scale(1.1);
+              }
+            }
+
+            @keyframes text-pulse {
+              0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+              }
+              50% {
+                opacity: 0.8;
+                transform: scale(1.05);
+              }
+            }
+          `}
+        </style>
       </div>
-
-      <p
-        style={{
-          marginTop: 32,
-          fontWeight: "700",
-          color: pulsing ? "#ff3333" : "#b91c1c",
-          fontSize: 20,
-          textAlign: "center",
-        }}
-      >
-        {pulsing ? "ALERT ACTIVE - TAP TO STOP" : "TAP TO SEND EMERGENCY ALERT"}
-      </p>
-
-      <style>
-        {`
-          .pulse-ring {
-            position: absolute;
-            border-radius: 50%;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle, rgba(255,77,79,0.5) 30%, rgba(255,209,220,0.3) 100%);
-            animation: pulse 2.4s infinite;
-            z-index: 1;
-          }
-          .pulse-ring.delay1 {
-            animation-delay: 0.8s;
-          }
-          .pulse-ring.delay2 {
-            animation-delay: 1.6s;
-          }
-          @keyframes pulse {
-            0% {
-              transform: scale(1);
-              opacity: 0.6;
-            }
-            100% {
-              transform: scale(3);
-              opacity: 0;
-            }
-          }
-        `}
-      </style>
-    </div>
     </>
   );
 }

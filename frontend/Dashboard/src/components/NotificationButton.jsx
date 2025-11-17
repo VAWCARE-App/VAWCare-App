@@ -343,25 +343,25 @@ export default function NotificationButton() {
             alignItems: 'center', 
             justifyContent: 'space-between',
           }}>
-            <Space>
+            <Space size={12}>
               <div style={{
-                width: 40,
-                height: 40,
-                borderRadius: 10,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                width: 48,
+                height: 48,
+                borderRadius: 12,
+                background: 'linear-gradient(135deg, #7A5AF8 0%, #E91E63 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+                boxShadow: '0 4px 16px rgba(122, 90, 248, 0.25)',
               }}>
-                <BellFilled style={{ fontSize: 20, color: '#fff' }} />
+                <BellFilled style={{ fontSize: 22, color: '#fff' }} />
               </div>
               <div>
-                <Typography.Title level={4} style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>
+                <Typography.Title level={4} style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#1a1a1a' }}>
                   Notifications
                 </Typography.Title>
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  {unread > 0 ? `${unread} new • ` : ''}{notifications.length} {notifications.length === 1 ? 'item' : 'items'}
+                <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+                  {notifications.length} {notifications.length === 1 ? 'item' : 'items'}
                 </Typography.Text>
               </div>
             </Space>
@@ -371,36 +371,36 @@ export default function NotificationButton() {
               onClick={closeDrawer}
               style={{ 
                 borderRadius: 8,
+                color: '#8c8c8c',
               }}
             />
           </div>
         }
         placement="right"
-        width={420}
+        width={440}
         onClose={closeDrawer}
         visible={drawerVisible}
         closable={false}
         bodyStyle={{
-          padding: '16px',
-          background: '#fafafa',
+          padding: '20px',
+          background: '#f5f5f5',
         }}
         headerStyle={{
-          borderBottom: '1px solid #f0f0f0',
+          borderBottom: '1px solid #e8e8e8',
           background: '#fff',
-          padding: '20px 24px',
+          padding: '24px',
         }}
       >
         {/* Connection Status Badge */}
         <div style={{ 
           marginBottom: 16, 
-          padding: '10px 14px', 
+          padding: '12px 16px', 
           background: '#fff',
-          borderRadius: 8,
-          border: '1px solid #e8e8e8',
+          borderRadius: 10,
           display: 'flex',
           alignItems: 'center',
           gap: 10,
-          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.04)',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
         }}>
           <div style={{
             width: 8,
@@ -408,41 +408,43 @@ export default function NotificationButton() {
             borderRadius: '50%',
             background: connectionStatus === 'Connected' ? '#52c41a' : '#ff4d4f',
             boxShadow: connectionStatus === 'Connected' 
-              ? '0 0 0 3px rgba(82, 196, 26, 0.15)' 
-              : '0 0 0 3px rgba(255, 77, 79, 0.15)',
+              ? '0 0 0 3px rgba(82, 196, 26, 0.12)' 
+              : '0 0 0 3px rgba(255, 77, 79, 0.12)',
           }} />
-          <Typography.Text style={{ fontSize: 13, fontWeight: 500 }}>
+          <Typography.Text style={{ fontSize: 13, fontWeight: 500, color: '#595959' }}>
             {connectionStatus}
           </Typography.Text>
         </div>
 
         {/* Action Buttons */}
         {notifications.length > 0 && (
-          <div style={{ marginBottom: 16, display: 'flex', gap: 8 }}>
+          <div style={{ marginBottom: 16, display: 'flex', gap: 10 }}>
             <Button
-              type="primary"
-              size="small"
+              size="middle"
               icon={<CheckCircleOutlined />}
               onClick={markAllRead}
               disabled={unread === 0}
               style={{
                 flex: 1,
-                borderRadius: 8,
-                height: 36,
-                boxShadow: '0 2px 8px rgba(24, 144, 255, 0.2)',
+                borderRadius: 10,
+                height: 40,
+                fontWeight: 500,
+                border: '1px solid #d9d9d9',
+                background: '#fff',
               }}
             >
-              Mark All Read
+              Mark Read
             </Button>
             <Button
               danger
-              size="small"
+              size="middle"
               icon={<DeleteOutlined />}
               onClick={clearAll}
               style={{
                 flex: 1,
-                borderRadius: 8,
-                height: 36,
+                borderRadius: 10,
+                height: 40,
+                fontWeight: 500,
               }}
             >
               Clear All
@@ -494,27 +496,22 @@ export default function NotificationButton() {
                 <List.Item
                   key={id}
                   style={{
-                    padding: '16px',
-                    marginBottom: 10,
-                    borderRadius: 10,
+                    padding: '18px',
+                    marginBottom: 12,
+                    borderRadius: 12,
                     background: '#fff',
-                    border: isUnread ? '1px solid #e6f7ff' : '1px solid #f0f0f0',
-                    borderLeft: isUnread ? '4px solid #1890ff' : '4px solid #d9d9d9',
+                    border: isUnread ? '2px solid #E91E63' : '1px solid #e8e8e8',
                     cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    boxShadow: isUnread 
-                      ? '0 2px 8px rgba(24, 144, 255, 0.08)' 
-                      : '0 1px 4px rgba(0, 0, 0, 0.06)',
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateX(-4px)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(24, 144, 255, 0.15)';
+                    e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.08)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateX(0)';
-                    e.currentTarget.style.boxShadow = isUnread 
-                      ? '0 2px 8px rgba(24, 144, 255, 0.08)' 
-                      : '0 1px 4px rgba(0, 0, 0, 0.06)';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)';
+                    e.currentTarget.style.transform = 'translateY(0)';
                   }}
                   onClick={() => {
                     handleNotifClick(id);
@@ -537,7 +534,8 @@ export default function NotificationButton() {
                         onClick={(e) => e.stopPropagation()}
                         size="small"
                         style={{
-                          color: '#8c8c8c',
+                          color: '#bfbfbf',
+                          borderRadius: 8,
                         }}
                       />
                     </Popconfirm>,

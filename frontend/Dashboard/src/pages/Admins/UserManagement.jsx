@@ -32,6 +32,7 @@ import {
   MenuOutlined,
   ExclamationCircleOutlined,
   DeleteOutlined,
+  PhoneOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 
@@ -135,6 +136,7 @@ export default function UserManagement() {
             name: `${a.firstName} ${a.middleInitial ? a.middleInitial + " " : ""}${a.lastName}`,
             email: a.adminEmail,
             username: a.adminID,
+            phoneNumber: a.phoneNumber,
             role: a.adminRole,
             status: a.status,
             isDeleted: a.isDeleted,
@@ -242,6 +244,7 @@ export default function UserManagement() {
           adminEmail: values.email,
           adminRole: values.role,
           status: values.status,
+          phoneNumber: values.phoneNumber,
         };
       } else if (record.userType === "official") {
         payload = {
@@ -839,6 +842,11 @@ export default function UserManagement() {
                       <MailOutlined /> {activeUser.email || "—"}
                     </Space>
                   </Descriptions.Item>
+                  <Descriptions.Item label="Phone Number">
+                    <Space>
+                      <PhoneOutlined /> {activeUser.phoneNumber || "—"}
+                    </Space>
+                  </Descriptions.Item>
                   <Descriptions.Item label="Username">
                     <Space>
                       <IdcardOutlined /> {activeUser.username}
@@ -904,6 +912,11 @@ export default function UserManagement() {
                     <Col xs={24}>
                       <Form.Item name="email" label="Email">
                         <Input type="email" />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24}>
+                      <Form.Item name="phoneNumber" label="Phone Number">
+                        <Input placeholder="+63 (234) 567-8900" />
                       </Form.Item>
                     </Col>
                     <Col xs={24} md={12}>

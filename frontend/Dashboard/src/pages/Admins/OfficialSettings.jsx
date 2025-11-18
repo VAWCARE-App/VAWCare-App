@@ -232,6 +232,125 @@
       setIsFormDirty(true);
     };
 
+    // Download profile info as JSON or PDF (print)
+    const handleDownload = async (format = "pdf") => {
+      try {
+        const formValues = form.getFieldsValue();
+        const exportObj = {
+          ...(user || {}),
+          ...(formValues || {}),
+        };
+
+        if (photoData) {
+          exportObj.photoData = photoData;
+          exportObj.photoMimeType = photoMimeType || "image/jpeg";
+        } else if (avatarUrl && typeof avatarUrl === "string" && avatarUrl.startsWith("data:")) {
+          exportObj.photoData = avatarUrl.split(",")[1] || avatarUrl;
+        }
+
+        if (format === "json") {
+          const filenameBase = (exportObj.officialEmail || exportObj.email || exportObj.officialID || "official").toString().replace(/[^a-z0-9@.\-_]/gi, "-");
+          const filename = `vawcare-official-${filenameBase}-${new Date().toISOString().slice(0,19).replace(/[:T]/g, "-")}.json`;
+          const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          message.success("Downloaded profile info");
+          return;
+        }
+
+        // PDF via print preview
+        if (format === "pdf") {
+          const html = [];
+          const css = `body{font-family:Inter,Roboto,Arial,sans-serif;color:#222;margin:20px} .card{border:1px solid rgba(0,0,0,0.06);padding:18px;border-radius:10px;max-width:800px;margin:0 auto} .header{display:flex;align-items:center;gap:12px} .avatar{width:84px;height:84px;border-radius:8px;object-fit:cover;border:1px solid #eee} .title{font-size:18px;font-weight:700;color:#7A5AF8} .meta{margin-top:8px;color:#555} .row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed #eee} .label{color:#777;font-weight:700;width:40%} .value{color:#111;width:60%}`;
+
+          html.push(`<html><head><title>VAWCare - Official Info</title><style>${css}</style></head><body>`);
+          html.push(`<div class="card">`);
+          html.push(`<div class="header">`);
+          if (exportObj.photoData || (avatarUrl && avatarUrl.startsWith('data:'))) {
+            const src = exportObj.photoData ? `data:${exportObj.photoMimeType || 'image/jpeg'};base64,${exportObj.photoData}` : avatarUrl;
+            html.push(`<img class="avatar" src="${src}" alt="avatar" />`);
+          } else {
+            html.push(`<div style="width:84px;height:84px;border-radius:8px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;color:#7A5AF8;font-weight:700">${(exportObj.firstName||'')[0]||''}${(exportObj.lastName||'')[0]||''}</div>`);
+          }
+          html.push(`<div><div class="title">${(exportObj.firstName || '') + ' ' + (exportObj.lastName || '')}</div><div class="meta">Official Profile</div></div>`);
+          html.push(`</div>`);
+
+          const fields = [
+            ['Email', exportObj.officialEmail || exportObj.email || '—'],
+            ['Phone', exportObj.contactNumber || exportObj.phone || '—'],
+            ['Official ID', exportObj.officialID || '—'],
+            ['Position', exportObj.position || '—']
+          ];
+
+          html.push(`<div style="margin-top:12px">`);
+          fields.forEach(([label, value]) => {
+            html.push(`<div class="row"><div class="label">${label}</div><div class="value">${value}</div></div>`);
+          });
+
+          html.push(`<div style="margin-top:18px;color:#999;font-size:12px">Generated: ${new Date().toLocaleString()}</div>`);
+          html.push(`</div></div></body></html>`);
+
+          const w = window.open('', '_blank');
+          if (!w) {
+            message.error('Popup blocked. Allow popups to download PDF.');
+            return;
+          }
+          w.document.open();
+          w.document.write(html.join(''));
+          w.document.close();
+          const triggerPrint = () => {
+            try { w.focus(); w.print(); } catch (err) { console.debug('Print failed', err); }
+          };
+          const imgs = w.document.getElementsByTagName('img');
+          if (imgs && imgs.length) {
+            let loaded = 0;
+            for (let i = 0; i < imgs.length; i++) {
+              imgs[i].onload = imgs[i].onerror = () => { loaded++; if (loaded === imgs.length) triggerPrint(); };
+            }
+            setTimeout(() => triggerPrint(), 800);
+          } else {
+            setTimeout(() => triggerPrint(), 300);
+          }
+          message.success('Preparing PDF (use Print -> Save as PDF)');
+          return;
+        }
+      } catch (err) {
+        console.error('[OfficialSettings] Download failed', err);
+        message.error('Failed to download profile info');
+      }
+    };
+
+    // Fully reset form and UI to last-saved profile state
+    const handleReset = async () => {
+      setLoading(true);
+      try {
+        try { if (previewObjectUrl) { URL.revokeObjectURL(previewObjectUrl); } } catch (_) {}
+        setPreviewObjectUrl(null);
+        setSelectedFile(null);
+        setPhotoData(null);
+        setPhotoMimeType(null);
+
+        form.resetFields();
+        const profile = await loadProfile();
+        try { await loadAvatar(); } catch (_) {}
+        setIsFormDirty(false);
+        setVerified(determineVerified(profile));
+        if (profile) setUser(profile);
+        message.success('Reset to last saved profile');
+      } catch (err) {
+        console.error('[OfficialSettings] Reset failed', err);
+        message.error('Failed to reset profile');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     /** Save profile */
     const onSave = async (values) => {
       setLoading(true);
@@ -574,19 +693,13 @@
                   </Button>
                 </Upload>
 
-                <Button className="download-btn" icon={<DownloadOutlined />}>
+                <Button className="download-btn" icon={<DownloadOutlined />} onClick={() => handleDownload('pdf')}>
                   {screens.xs ? "Download" : "Download Info"}
                 </Button>
 
                 <Button
                   icon={<SafetyCertificateOutlined />}
-                  onClick={() => {
-                    form.resetFields();
-                    (async () => {
-                      const fresh = await loadProfile();
-                      if (fresh) setUser(fresh);
-                    })();
-                  }}
+                  onClick={handleReset}
                   className="soft-btn"
                 >
                   Reset
@@ -683,7 +796,7 @@
 
                 <Col xs={24} md={12}>
                   <Form.Item name="contactNumber" label="Contact Number">
-                    <Input prefix={<PhoneOutlined />} placeholder="+639123456789" />
+                    <Input prefix={<PhoneOutlined />} placeholder="+63 (234) 567-8900" />
                   </Form.Item>
                 </Col>
               </Row>

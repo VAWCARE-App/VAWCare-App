@@ -936,6 +936,7 @@ exports.getProfile = asyncHandler(async (req, res) => {
                 firstName: adminUser.firstName,
                 middleInitial: adminUser.middleInitial,
                 lastName: adminUser.lastName,
+                phoneNumber: adminUser.phoneNumber,
                 adminRole: adminUser.adminRole
             }
         });
@@ -1119,6 +1120,7 @@ exports.updateProfile = asyncHandler(async (req, res) => {
     if (req.body.firstName !== undefined) adminUser.firstName = req.body.firstName;
     if (req.body.middleInitial !== undefined) adminUser.middleInitial = req.body.middleInitial;
     if (req.body.lastName !== undefined) adminUser.lastName = req.body.lastName;
+    if (req.body.phoneNumber !== undefined) adminUser.phoneNumber = req.body.phoneNumber;
 
 
     // If email is being updated, update in Firebase too (if uid available)
@@ -1199,6 +1201,7 @@ exports.updateProfile = asyncHandler(async (req, res) => {
             firstName: updated.firstName,
             middleInitial: updated.middleInitial,
             lastName: updated.lastName,
+            phoneNumber: updated.phoneNumber,
             adminRole: updated.adminRole
             , photoId: createdPhotoId || undefined
         }

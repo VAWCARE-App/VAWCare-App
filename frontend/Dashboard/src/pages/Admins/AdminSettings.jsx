@@ -245,29 +245,7 @@ export default function AdminSettings() {
     }
   };
 
-  // Fully reset form and UI to last-saved profile state
-  const handleReset = async () => {
-    setLoading(true);
-    try {
-      try { if (previewObjectUrl) { URL.revokeObjectURL(previewObjectUrl); } } catch (_) {}
-      setPreviewObjectUrl(null);
-      setSelectedFile(null);
-      setPhotoData(null);
-      setPhotoMimeType(null);
 
-      form.resetFields();
-      const profile = await loadProfile();
-      try { await loadAvatar(); } catch (_) {}
-      setIsFormDirty(false);
-      if (profile) setUser(profile);
-      message.success('Reset to last saved profile');
-    } catch (err) {
-      console.error('[AdminSettings] Reset failed', err);
-      message.error('Failed to reset profile');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const onSave = async (values) => {
     setLoading(true);
@@ -605,14 +583,6 @@ export default function AdminSettings() {
 
               <Button className="download-btn" icon={<DownloadOutlined />} onClick={() => handleDownload('pdf')}>
                 {screens.xs ? "Download" : "Download Info"}
-              </Button>
-
-              <Button
-                icon={<SafetyCertificateOutlined />}
-                onClick={handleReset}
-                className="soft-btn"
-              >
-                Reset
               </Button>
             </div>
           </div>

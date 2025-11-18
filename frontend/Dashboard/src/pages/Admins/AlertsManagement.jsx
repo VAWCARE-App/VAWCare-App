@@ -556,6 +556,8 @@ export default function AlertsManagement() {
           open={showMapModal}
           onCancel={() => setShowMapModal(false)}
           footer={null}
+          getContainer={() => document.body}
+          wrapClassName={isXs ? "floating-center" : undefined}
           width={isMdUp ? 820 : Math.min(window.innerWidth * 0.96, 820)}
           style={{ top: isMobile ? 16 : 24 }}
           bodyStyle={{ padding: isMobile ? 12 : 24 }}
@@ -637,11 +639,20 @@ export default function AlertsManagement() {
          .ant-table-thead > tr > th { background: #fff !important; }
          .ant-table .ant-table-tbody > tr:hover > td { background: #F1EEFF !important; }
 
+         /* Center modal wrapper for very small screens */
+         .floating-center {
+           display: flex;
+           justify-content: center;
+           align-items: center;
+           padding: 12px;
+         }
+
          @media (max-width: 575.98px) {
            .ant-typography, .ant-card { font-size: 13px; }
            .ant-table { font-size: 12px; }
            .ant-space { row-gap: 6px; }
          }
+        
       `}</style>
     </Layout>
   );

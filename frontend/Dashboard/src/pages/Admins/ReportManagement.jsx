@@ -268,7 +268,7 @@ export default function ReportManagement() {
           setActiveReport(updated);
           form.setFieldsValue({ status: normalizeStatus(updated.status) });
           setQuickStatus(normalizeStatus(updated.status));
-        }
+        } 
       } else {
         message.error(res?.data?.message || "Failed to update report");
       }
@@ -779,7 +779,7 @@ export default function ReportManagement() {
             backdropFilter: "blur(2px)",
             background: "rgba(17,17,26,0.24)",
           }}
-          getContainer={false}
+          getContainer={() => document.body}
           title={
             activeReport ? (
               <div
@@ -1174,16 +1174,19 @@ export default function ReportManagement() {
         /* Body scrolls independently */
         .floating-modal .ant-modal-body {
           overflow: auto;
-          padding: 12px;
-          max-height: calc(100vh - ${HEADER_H}px - 24px - 56px);
+          padding: 10px 12px 30px; /* extra bottom padding so footer buttons aren't clipped */
+          max-height: calc(100vh - ${HEADER_H}px - 120px);
+          box-sizing: border-box;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 760px) {
           .floating-side { padding: 10px; }
           .floating-side .ant-modal,
           .floating-modal .ant-modal-content {
-            max-height: calc(100vh - ${HEADER_H}px - 20px);
+            max-height: calc(100vh - ${HEADER_H}px - 100px);
           }
+          /* increase bottom padding on narrow screens to ensure buttons remain fully visible */
+          .floating-modal .ant-modal-body { padding-bottom: 96px; }
           .ant-table { font-size: 12px; }
         }
 

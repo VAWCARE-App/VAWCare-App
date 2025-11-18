@@ -255,6 +255,59 @@ export default function LogManagement() {
     []
   );
 
+  const columnsMobile = useMemo(() => {
+    return [
+      {
+        title: "Action",
+        dataIndex: "action",
+        key: "action",
+        render: (v) => (
+          <Tag color={actionColor(v)} style={{ borderRadius: 999, paddingInline: 10 }}>
+            {v || "—"}
+          </Tag>
+        ),
+        width: 120,
+        ellipsis: true,
+      },
+      {
+        title: "Actor",
+        key: "actor",
+        render: (_, r) => actorBadge(r),
+        width: 140,
+      },
+      {
+        title: "Details",
+        dataIndex: "details",
+        key: "details",
+        render: (text) => (
+          <Tooltip title={typeof text === "string" ? text : JSON.stringify(text, null, 2)}>
+            <span style={{ color: "#334155" }}>
+              {typeof text === "string"
+                ? text.length > 120
+                  ? text.slice(0, 120) + "..."
+                  : text
+                : text
+                ? JSON.stringify(text)
+                : "—"}
+            </span>
+          </Tooltip>
+        ),
+      },
+      {
+        title: "Time",
+        dataIndex: "timestamp",
+        key: "timestamp",
+        width: 160,
+        render: (t) => (
+          <div>
+            <div style={{ fontSize: 13 }}>{t ? new Date(t).toLocaleString() : "—"}</div>
+            <div style={{ color: "#8b8b8b", fontSize: 11 }}>{t ? new Date(t).toISOString() : ""}</div>
+          </div>
+        ),
+      },
+    ];
+  }, []);
+
   // Export CSV for current table view
   const exportCsv = () => {
     const rows = logs.map((r) => ({
@@ -548,10 +601,12 @@ export default function LogManagement() {
         >
           <Table
             dataSource={logs}
-            columns={columns}
+            columns={isXs ? columnsMobile : columns}
             rowKey={(r) => r._id || r.id || r.logID}
             loading={loading}
-            size="middle"
+            size={isXs ? "small" : "middle"}
+            tableLayout={isXs ? "auto" : "fixed"}
+            scroll={isXs ? { x: "max-content" } : undefined}
             bordered={false}
             sticky
             locale={{
@@ -766,6 +821,25 @@ export default function LogManagement() {
         }
         .ant-table .ant-table-cell-fix-left-last {
           box-shadow: 6px 0 6px -6px rgba(16,24,40,0.10);
+        }
+        @media (max-width: 576px) {
+          .ant-table .ant-table-tbody > tr > td {
+            white-space: normal !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+            word-break: break-word !important;
+            padding: 8px 10px !important;
+          }
+          .ant-table .ant-table-thead > tr > th {
+            white-space: nowrap !important;
+            padding: 8px 10px !important;
+            font-size: 13px;
+          }
+          /* allow the table to horizontally scroll when content is wide */
+          .ant-table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+          }
         }
       `}</style>
     </Layout>

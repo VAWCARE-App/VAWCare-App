@@ -377,6 +377,49 @@ export default function BPOManagement() {
   ];
   const columns = baseColumns.filter((c) => visibleCols[c.key ?? c.dataIndex]);
 
+  // Mobile-friendly columns (compact)
+  const columnsMobile = [
+    {
+      title: "No.",
+      dataIndex: "controlNO",
+      key: "controlNO",
+      render: (v) => <Text strong style={{ fontSize: 14 }}>{v}</Text>,
+    },
+    {
+      title: "Applicant",
+      dataIndex: "applicationName",
+      key: "applicationName",
+      render: (t) => <span style={{ fontSize: 13 }}>{t || '—'}</span>,
+    },
+    {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      render: (s) => {
+        const color = s === 'Active' ? 'green' : s === 'Expired' ? 'volcano' : s === 'Revoked' ? 'magenta' : 'default';
+        return <Tag color={color} style={{ borderRadius: 999 }}>{s || 'Unknown'}</Tag>;
+      }
+    },
+    {
+      title: "",
+      key: "actions",
+      align: "right",
+      render: (_, r) => (
+        <Space size={6}>
+          <Tooltip title="View">
+            <Button type="text" size="small" icon={<EyeOutlined />} onClick={(e) => { e.stopPropagation(); navigate(`/admin/bpo/${r.bpoID || r._id}`); }} />
+          </Tooltip>
+          <Tooltip title="Edit Status">
+            <Button type="text" size="small" icon={<EditOutlined />} onClick={(e) => { e.stopPropagation(); setStatusEditing(r); setStatusNew(r.status || 'Active'); setStatusCardVisible(true); }} style={{ color: '#52c41a' }} />
+          </Tooltip>
+          <Popconfirm title="Delete this BPO?" onConfirm={(e) => { e && e.stopPropagation(); handleDelete(r); }}>
+            <Button type="text" size="small" danger icon={<CloseCircleOutlined />} onClick={(e) => e.stopPropagation()} />
+          </Popconfirm>
+        </Space>
+      ),
+    }
+  ];
+
   // Column visibility dropdown (no actions item)
   const colMenu = (
     <Menu
@@ -673,19 +716,19 @@ export default function BPOManagement() {
           {/* Table (auto-fits viewport; rows clickable) */}
           <Card style={{ ...glassCard, padding: 0 }} ref={tableWrapRef}>
             <Table
-              columns={columns}
+              columns={isXs ? columnsMobile : columns}
               dataSource={filtered}
               loading={loading}
               rowKey={(r) => r.key}
               pagination={false}
-              size={density}
+              size={isXs ? 'small' : density}
               rowSelection={screens.md ? {
                 selectedRowKeys,
                 onChange: setSelectedRowKeys,
               } : undefined}
-              tableLayout="fixed"
+              tableLayout={isXs ? 'auto' : 'fixed'}
               sticky
-              scroll={{ y: tableY, x: screens.xs ? 800 : "max-content" }}
+              scroll={{ y: isXs ? Math.max(320, tableY - 80) : tableY, x: 'max-content' }}
               locale={{
                 emptyText: (
                   <Empty
@@ -719,8 +762,10 @@ export default function BPOManagement() {
             setStatusEditing(null);
           }}
           footer={null}
+          centered
+          getContainer={() => document.body}
           width={screens.lg ? 560 : "96vw"}
-          wrapClassName="bpo-status-modal"
+          wrapClassName={isXs ? "floating-center bpo-status-modal" : "bpo-status-modal"}
           title={
             statusEditing ? (
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -864,6 +909,26 @@ export default function BPOManagement() {
         }
         .bpo-status-modal .ant-modal-body {
           padding: 12px;
+        }
+        /* Center wrapper used when we want a centered modal on very small screens */
+        .floating-center {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          padding: 12px;
+        }
+        /* Mobile table: compact rows and allow wrapping */
+        @media (max-width: 576px) {
+          .pretty-table .ant-table-thead > tr > th {
+            padding: 10px 12px !important;
+            font-size: 13px;
+          }
+          .pretty-table .ant-table-tbody > tr > td {
+            padding: 8px 10px !important;
+            white-space: normal !important;
+          }
+          .pretty-table .ant-table-container { overflow: visible; }
+          .pretty-table .ant-table-wrapper { overflow-x: auto; }
         }
       `}</style>
     </Layout>

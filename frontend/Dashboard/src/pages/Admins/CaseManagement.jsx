@@ -463,6 +463,48 @@ export default function CaseManagement() {
     },
   ];
 
+  // Simplified mobile columns for small screens
+  const columnsMobile = [
+    {
+      title: "Case",
+      dataIndex: "caseID",
+      key: "caseID",
+      render: (v) => <Text strong style={{ fontSize: 14 }}>{v}</Text>,
+    },
+    {
+      title: "Type",
+      dataIndex: "incidentType",
+      key: "incidentType",
+      render: (t) => <span style={{ fontSize: 13 }}>{t}</span>,
+    },
+    {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      render: (s) => (
+        <Tag color={statusColor(s)} style={{ borderRadius: 999 }}>{s}</Tag>
+      ),
+    },
+    {
+      title: "",
+      key: "actions",
+      align: "right",
+      render: (_, rec) => (
+        <Space size={6}>
+          <Tooltip title="View Details">
+            <Button type="text" size="small" icon={<FileTextOutlined />} onClick={() => handleViewCase(rec)} style={{ color: '#1890ff' }} />
+          </Tooltip>
+          <Tooltip title="Edit">
+            <Button type="text" size="small" icon={<FormOutlined />} onClick={() => handleEditCase(rec)} style={{ color: '#52c41a' }} />
+          </Tooltip>
+          <Tooltip title="Delete">
+            <Button type="text" size="small" danger icon={<CloseCircleOutlined />} onClick={() => showDeleteConfirm(rec)} />
+          </Tooltip>
+        </Space>
+      ),
+    },
+  ];
+
   return (
     <Layout style={{ minHeight: "100vh", background: BRAND.bg }}>
       {/* Sticky header (matches dashboard look) */}
@@ -508,11 +550,11 @@ export default function CaseManagement() {
           )}
 
           <Space direction="vertical" size={0}>
-            <Title level={isMdUp ? 4 : 5} style={{ margin: 0, color: BRAND.violet }}>
+            <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
               Case Management
             </Title>
             {isMdUp && (
-              <Text type="secondary" style={{ fontSize: 12 }}>
+              <Text type="secondary" style={{ fontSize: 13 }}>
                 Review, create, and update cases
               </Text>
             )}
@@ -603,14 +645,15 @@ export default function CaseManagement() {
         >
           <Table
             rowKey="caseID"
-            columns={columns}
+            columns={screens.xs ? columnsMobile : columns}
             dataSource={filteredCases}
             loading={loading}
             pagination={{ pageSize: 10, showSizeChanger: false }}
-            scroll={{ 
-              x: 980, 
-              y: screens.xs ? 400 : screens.sm ? 460 : 520 
+            scroll={{
+              x: screens.xs ? 'max-content' : 980,
+              y: screens.xs ? 420 : screens.sm ? 460 : 520,
             }}
+            tableLayout={screens.xs ? 'auto' : 'fixed'}
             className="pretty-table"
           />
 
@@ -1024,6 +1067,20 @@ export default function CaseManagement() {
         }
         .pretty-table .ant-table-tbody > tr:hover > td {
           background: #fbf8ff !important;
+        }
+
+        /* Mobile adjustments: tighter padding and allow wrapping */
+        @media (max-width: 576px) {
+          .pretty-table .ant-table-thead > tr > th {
+            padding: 10px 12px !important;
+            font-size: 13px;
+          }
+          .pretty-table .ant-table-tbody > tr > td {
+            padding: 10px 12px !important;
+            white-space: normal !important;
+          }
+          .pretty-table .ant-table-container { overflow: visible; }
+          .pretty-table .ant-table-wrapper { overflow-x: auto; }
         }
         .row-action {
           border-radius: 10px;

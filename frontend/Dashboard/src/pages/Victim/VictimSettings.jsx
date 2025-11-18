@@ -417,8 +417,7 @@ export default function VictimSettings() {
                       fontSize: 12,
                     }}
                   >
-                    {verified ? <CheckCircleTwoTone twoToneColor="#fff" /> : <CloseCircleTwoTone twoToneColor="#fff" />}
-                    {verified ? "Verified" : "Not Verified"}
+                   
                   </Tag>
                 </div>
               </div>

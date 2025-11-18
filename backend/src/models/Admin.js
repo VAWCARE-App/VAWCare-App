@@ -49,6 +49,12 @@ const adminSchema = new mongoose.Schema({
         required: [true, 'Last name is required'],
         trim: true
     },
+    phoneNumber:{
+        type: String,
+        required: [false],
+        trim: true,
+        match: [/^(\+63|0)[0-9]{10}$/, 'Please enter a valid Philippine phone number']
+    },
     adminPassword: {
         type: String,
         required: [true, 'Password is required'],

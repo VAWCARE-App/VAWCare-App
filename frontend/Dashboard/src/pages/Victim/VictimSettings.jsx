@@ -101,37 +101,6 @@ export default function VictimSettings() {
     }
   };
 
-  // Fully reset form and UI to last-saved profile state
-  const handleReset = async () => {
-    setLoading(true);
-    try {
-      // clear any local preview/selection
-      try {
-        if (previewObjectUrl) {
-          URL.revokeObjectURL(previewObjectUrl);
-        }
-      } catch (_) {}
-      setPreviewObjectUrl(null);
-      setSelectedFile(null);
-      setPhotoData(null);
-      setPhotoMimeType(null);
-
-      // reset form fields and reload from server
-      form.resetFields();
-      const profile = await loadProfile();
-      try { await loadAvatar(); } catch (_) { /* non-fatal */ }
-
-      setIsFormDirty(false);
-      setVerified(determineVerified(profile));
-      message.success('Reset to last saved profile');
-    } catch (err) {
-      console.error('[VictimSettings] Reset failed', err);
-      message.error('Failed to reset profile');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // tolerantly determine verification from backend profile
   const determineVerified = (profile) => {
     if (!profile) return false;
@@ -609,14 +578,6 @@ export default function VictimSettings() {
 
                 <Button className="download-btn" icon={<DownloadOutlined />} onClick={() => handleDownload('pdf')}>
                   {screens.xs ? "Download" : "Download Info"}
-                </Button>
-
-                <Button
-                  icon={<SafetyCertificateOutlined />}
-                  onClick={handleReset}
-                  className="soft-btn"
-                >
-                  Reset
                 </Button>
               </div>
             </div>

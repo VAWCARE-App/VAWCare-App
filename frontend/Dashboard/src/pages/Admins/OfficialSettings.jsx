@@ -326,30 +326,7 @@
       }
     };
 
-    // Fully reset form and UI to last-saved profile state
-    const handleReset = async () => {
-      setLoading(true);
-      try {
-        try { if (previewObjectUrl) { URL.revokeObjectURL(previewObjectUrl); } } catch (_) {}
-        setPreviewObjectUrl(null);
-        setSelectedFile(null);
-        setPhotoData(null);
-        setPhotoMimeType(null);
 
-        form.resetFields();
-        const profile = await loadProfile();
-        try { await loadAvatar(); } catch (_) {}
-        setIsFormDirty(false);
-        setVerified(determineVerified(profile));
-        if (profile) setUser(profile);
-        message.success('Reset to last saved profile');
-      } catch (err) {
-        console.error('[OfficialSettings] Reset failed', err);
-        message.error('Failed to reset profile');
-      } finally {
-        setLoading(false);
-      }
-    };
 
     /** Save profile */
     const onSave = async (values) => {
@@ -695,14 +672,6 @@
 
                 <Button className="download-btn" icon={<DownloadOutlined />} onClick={() => handleDownload('pdf')}>
                   {screens.xs ? "Download" : "Download Info"}
-                </Button>
-
-                <Button
-                  icon={<SafetyCertificateOutlined />}
-                  onClick={handleReset}
-                  className="soft-btn"
-                >
-                  Reset
                 </Button>
               </div>
             </div>

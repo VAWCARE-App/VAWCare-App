@@ -221,144 +221,150 @@ const listAlerts = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, data: alerts });
 });
 
-module.exports = { resolveAlert, listAlerts };
-
 // Send SOS email containing a Google Maps link to a fixed recipient.
 // POST /api/alerts/:id/sos
 const sendSOSEmail = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+  try {
+    console.log('🔴 RECEIVED SOS REQUEST', { id: req.params.id, timestamp: new Date().toISOString() });
+    const { id } = req.params;
 
-  const alert = await Alert.findById(id).populate('victimID');
-  if (!alert) {
-    res.status(404);
-    throw new Error('Alert not found');
-  }
+    const alert = await Alert.findById(id).populate('victimID');
+    if (!alert) {
+      console.log('❌ Alert not found:', id);
+      return res.status(404).json({ success: false, message: 'Alert not found' });
+    }
 
-  const lat = alert.location?.latitude;
-  const lng = alert.location?.longitude;
+    const lat = alert.location?.latitude;
+    const lng = alert.location?.longitude;
 
-  if (typeof lat !== 'number' || typeof lng !== 'number') {
-    res.status(400);
-    throw new Error('Alert does not have valid latitude/longitude');
-  }
+    if (typeof lat !== 'number' || typeof lng !== 'number') {
+      console.log('❌ Invalid location:', { lat, lng });
+      return res.status(400).json({ success: false, message: 'Alert does not have valid latitude/longitude' });
+    }
 
-  // Wait a confirmation window so short accidental presses don't spam contacts
-  const CONFIRM_MS = Number.parseInt(process.env.SOS_CONFIRM_MS, 10) || 5000;
-  await new Promise((resolve) => setTimeout(resolve, CONFIRM_MS));
+    // Wait a confirmation window so short accidental presses don't spam contacts
+    const CONFIRM_MS = Number.parseInt(process.env.SOS_CONFIRM_MS, 10) || 5000;
+    await new Promise((resolve) => setTimeout(resolve, CONFIRM_MS));
 
-  // Re-fetch alert to ensure latest status and createdAt
-  const fresh = await Alert.findById(id).populate('victimID');
-  if (!fresh) {
-    res.status(404);
-    throw new Error('Alert not found after confirmation delay');
-  }
+    // Re-fetch alert to ensure latest status and createdAt
+    const fresh = await Alert.findById(id).populate('victimID');
+    if (!fresh) {
+      return res.status(404).json({ success: false, message: 'Alert not found after confirmation delay' });
+    }
 
-  // Skip if alert is no longer active
-  if (fresh.status && fresh.status !== 'Active') {
-    return res.status(200).json({ success: false, message: 'Alert not active after confirmation window; skipping SOS emails' });
-  }
+    // Skip if alert is no longer active
+    if (fresh.status && fresh.status !== 'Active') {
+      return res.status(200).json({ success: false, message: 'Alert not active after confirmation window; skipping SOS emails' });
+    }
 
-  const createdAt = fresh.createdAt ? new Date(fresh.createdAt).getTime() : null;
-  const ageMs = createdAt ? (Date.now() - createdAt) : null;
-  if (ageMs !== null && ageMs < CONFIRM_MS) {
-    return res.status(200).json({ success: false, message: 'Alert duration below confirmation threshold; skipping SOS emails', ageMs });
-  }
+    const createdAt = fresh.createdAt ? new Date(fresh.createdAt).getTime() : null;
+    const ageMs = createdAt ? (Date.now() - createdAt) : null;
+    if (ageMs !== null && ageMs < CONFIRM_MS) {
+      return res.status(200).json({ success: false, message: 'Alert duration below confirmation threshold; skipping SOS emails', ageMs });
+    }
 
-  const loc = await enrichLocation(lat, lng);
-  const subject = `SOS Alert — ${alert.alertID || 'Unknown ID'}`;
-  const victimInfo = fresh.victimID ? `${fresh.victimID.firstName || ''} ${fresh.victimID.lastName || ''}`.trim() || `Victim: ${fresh.victimID._id}` : 'Victim: unknown';
+    const loc = await enrichLocation(lat, lng);
+    const subject = `SOS Alert — ${alert.alertID || 'Unknown ID'}`;
+    const victimInfo = fresh.victimID ? `${fresh.victimID.firstName || ''} ${fresh.victimID.lastName || ''}`.trim() || `Victim: ${fresh.victimID._id}` : 'Victim: unknown';
 
-  const accuracy = (typeof alert.location?.accuracy === 'number') ? `${Math.round(alert.location.accuracy)} m` : null;
-  const sampleTime = alert.location?.timestamp ? new Date(alert.location.timestamp).toLocaleString() : null;
+    const accuracy = (typeof alert.location?.accuracy === 'number') ? `${Math.round(alert.location.accuracy)} m` : null;
+    const sampleTime = alert.location?.timestamp ? new Date(alert.location.timestamp).toLocaleString() : null;
 
-  const addressHtml = loc.address ? `<p>Address: <b>${loc.address}</b></p>` : '';
-  const staticMapHtml = loc.staticMap ? `<p><a href="${loc.mapsSearch}" target="_blank" rel="noopener noreferrer"><img src="${loc.staticMap}" alt="map" style="max-width:100%;height:auto;border:1px solid #ccc"/></a></p>` : '';
+    const addressHtml = loc.address ? `<p>Address: <b>${loc.address}</b></p>` : '';
+    const staticMapHtml = loc.staticMap ? `<p><a href="${loc.mapsSearch}" target="_blank" rel="noopener noreferrer"><img src="${loc.staticMap}" alt="map" style="max-width:100%;height:auto;border:1px solid #ccc"/></a></p>` : '';
 
-  const html = `
-    <p><strong>Emergency SOS</strong></p>
-    <p>${victimInfo}</p>
-    <p>Alert ID: <b>${alert.alertID}</b></p>
-    ${addressHtml}
-    ${staticMapHtml}
-    <p>Location: <a href="${loc.mapsSearch}" target="_blank" rel="noopener noreferrer">${loc.coords}</a></p>
-  ${accuracy ? `<p>Reported accuracy: <b>${accuracy}</b></p>` : ''}
-  ${sampleTime ? `<p>Sample time: <b>${sampleTime}</b></p>` : ''}
-  <p>Time: ${new Date(alert.createdAt).toLocaleString()}</p>
-    <hr>
-    <p>This message was generated by the VAWCare Barangay Support System.</p>
-  `;
+    const html = `
+      <p><strong>Emergency SOS</strong></p>
+      <p>${victimInfo}</p>
+      <p>Alert ID: <b>${alert.alertID}</b></p>
+      ${addressHtml}
+      ${staticMapHtml}
+      <p>Location: <a href="${loc.mapsSearch}" target="_blank" rel="noopener noreferrer">${loc.coords}</a></p>
+    ${accuracy ? `<p>Reported accuracy: <b>${accuracy}</b></p>` : ''}
+    ${sampleTime ? `<p>Sample time: <b>${sampleTime}</b></p>` : ''}
+    <p>Time: ${new Date(alert.createdAt).toLocaleString()}</p>
+      <hr>
+      <p>This message was generated by the VAWCare Barangay Support System.</p>
+    `;
 
-  // Build recipient list: default SOS recipient + any emergency contact emails on victim
-  const recipients = new Set();
-  const defaultRecipient = process.env.SOS_RECIPIENT || 'jadenyuki486@gmail.com';
-  recipients.add(defaultRecipient);
+    // Build recipient list: default SOS recipient + any emergency contact emails on victim
+    const recipients = new Set();
+    const defaultRecipient = process.env.SOS_RECIPIENT || 'jadenyuki486@gmail.com';
+    recipients.add(defaultRecipient);
 
-  if (alert.victimID && Array.isArray(alert.victimID.emergencyContacts)) {
-    for (const c of alert.victimID.emergencyContacts) {
-      if (c && c.email && typeof c.email === 'string' && c.email.trim()) {
-        recipients.add(c.email.trim().toLowerCase());
+    if (alert.victimID && Array.isArray(alert.victimID.emergencyContacts)) {
+      for (const c of alert.victimID.emergencyContacts) {
+        if (c && c.email && typeof c.email === 'string' && c.email.trim()) {
+          recipients.add(c.email.trim().toLowerCase());
+        }
       }
     }
-  }
 
-  const results = [];
-  // record that SOS processing started
-  try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: req.user?.role || 'victim', actorId: req.user?._id || alert.victimID || null, action: 'send_sos', details: `SOS processing started for alert ${alert.alertID || alert._id}` }); } catch (e) { console.warn('Failed to record send_sos log', e && e.message); }
-  const recipientsArr = Array.from(recipients);
-  console.log('[SOS EMAIL] Starting to send SOS emails to:', recipientsArr);
-  console.log('[SOS EMAIL] Environment check:', {
-    hasEmailUser: !!process.env.EMAIL_USER,
-    hasEmailPass: !!process.env.EMAIL_PASS,
-    sosRecipient: process.env.SOS_RECIPIENT || 'jadenyuki486@gmail.com'
-  });
-  
-  try {
-    console.log('[SOS EMAIL] Calling sendMail with recipients:', recipientsArr);
-    const info = await sendMail(recipientsArr, subject, html);
-    console.log('[SOS EMAIL] sendMail returned successfully:', { accepted: info?.accepted, rejected: info?.rejected });
+    const results = [];
+    const recipientsArr = Array.from(recipients);
+    console.log('🔵 SOS EMAIL: Attempting to send to', recipientsArr);
     
-    const accepted = Array.isArray(info && info.accepted) ? info.accepted.map(x => String(x).toLowerCase()) : [];
-    const rejected = Array.isArray(info && info.rejected) ? info.rejected.map(x => String(x).toLowerCase()) : [];
-    
-    for (const recipient of recipientsArr) {
-      const low = String(recipient).toLowerCase();
-      try {
-        await alert.addNotifiedContact({
-          contactID: `email-${recipient}`,
-          name: (alert.victimID && alert.victimID.emergencyContacts ? (alert.victimID.emergencyContacts.find(ec => (ec.email || '').toLowerCase() === low) || {}).name : '') || recipient,
-          contactNumber: (alert.victimID && alert.victimID.emergencyContacts ? (alert.victimID.emergencyContacts.find(ec => (ec.email || '').toLowerCase() === low) || {}).contactNumber : '') || '',
-          notificationTime: new Date(),
-          notificationStatus: accepted.includes(low) ? 'Sent' : 'Failed'
-        });
-      } catch (e) { console.warn('Failed to record notified contact', e && e.message); }
-      results.push({ recipient, status: accepted.includes(low) ? 'Sent' : 'Failed' });
+    try {
+      const info = await sendMail(recipientsArr, subject, html);
+      console.log('✅ SOS EMAIL SUCCESS:', { accepted: info?.accepted, rejected: info?.rejected });
+      const accepted = Array.isArray(info && info.accepted) ? info.accepted.map(x => String(x).toLowerCase()) : [];
+      const rejected = Array.isArray(info && info.rejected) ? info.rejected.map(x => String(x).toLowerCase()) : [];
+      for (const recipient of recipientsArr) {
+        const low = String(recipient).toLowerCase();
+        try {
+          await alert.addNotifiedContact({
+            contactID: `email-${recipient}`,
+            name: (alert.victimID && alert.victimID.emergencyContacts ? (alert.victimID.emergencyContacts.find(ec => (ec.email || '').toLowerCase() === low) || {}).name : '') || recipient,
+            contactNumber: (alert.victimID && alert.victimID.emergencyContacts ? (alert.victimID.emergencyContacts.find(ec => (ec.email || '').toLowerCase() === low) || {}).contactNumber : '') || '',
+            notificationTime: new Date(),
+            notificationStatus: accepted.includes(low) ? 'Sent' : 'Failed'
+          });
+        } catch (e) { console.warn('Failed to record notified contact', e && e.message); }
+        results.push({ recipient, status: accepted.includes(low) ? 'Sent' : 'Failed' });
+      }
+    } catch (err) {
+      console.error('❌ SOS EMAIL FAILED:', {
+        recipients: recipientsArr,
+        error: err?.message,
+        code: err?.code,
+        stack: err?.stack
+      });
+      for (const recipient of recipientsArr) {
+        try { await alert.addNotifiedContact({ contactID: `email-${recipient}`, name: recipient, contactNumber: '', notificationTime: new Date(), notificationStatus: 'Failed' }); } catch (e) { /* ignore */ }
+        results.push({ recipient, status: 'Failed' });
+      }
     }
-  } catch (err) {
-    console.error('[SOS EMAIL ERROR] Failed to send SOS emails:', {
-      recipients: recipientsArr,
-      errorMessage: err && err.message,
-      errorCode: err && err.code,
-      errorStack: err && err.stack
+
+    // Record per-recipient results
+    try {
+      const { recordLog } = require('../middleware/logger');
+      for (const r of results) {
+        const act = r.status === 'Sent' ? 'sos_email_sent' : 'sos_email_failed';
+        try { await recordLog({ req, actorType: req.user?.role || 'victim', actorId: alert.victimID || null, action: act, details: `SOS email ${r.status} to ${r.recipient} for alert ${alert.alertID || alert._id}` }); } catch (e) { /* ignore */ }
+      }
+    } catch (e) { console.warn('Failed to record per-recipient SOS logs', e && e.message); }
+
+    // Always return 200 with result details
+    const success = results.some(r => r.status === 'Sent');
+    console.log('📨 SOS RESPONSE:', { success, results });
+    return res.status(200).json({ 
+      success, 
+      message: success ? 'SOS email(s) sent successfully' : 'Failed to send SOS emails', 
+      results 
     });
     
-    for (const recipient of recipientsArr) {
-      try { await alert.addNotifiedContact({ contactID: `email-${recipient}`, name: recipient, contactNumber: '', notificationTime: new Date(), notificationStatus: 'Failed' }); } catch (e) { console.error('Failed to record failed notified contact', e); }
-      results.push({ recipient, status: 'Failed', error: err && err.message });
-    }
+  } catch (outerErr) {
+    console.error('❌ UNHANDLED ERROR IN sendSOSEmail:', {
+      message: outerErr?.message,
+      code: outerErr?.code,
+      stack: outerErr?.stack
+    });
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Internal server error: ' + (outerErr?.message || 'Unknown error'),
+      error: process.env.NODE_ENV === 'development' ? outerErr?.message : undefined
+    });
   }
-
-  // Record per-recipient results
-  try {
-    const { recordLog } = require('../middleware/logger');
-    for (const r of results) {
-      const act = r.status === 'Sent' ? 'sos_email_sent' : 'sos_email_failed';
-      try { await recordLog({ req, actorType: req.user?.role || 'victim', actorId: alert.victimID || null, action: act, details: `SOS email ${r.status} to ${r.recipient} for alert ${alert.alertID || alert._id}` }); } catch (e) { /* ignore */ }
-    }
-  } catch (e) { console.warn('Failed to record per-recipient SOS logs', e && e.message); }
-
-  // Always return 200 with detailed results; let frontend handle the outcome
-  console.log('[SOS EMAIL] Final results:', results);
-  res.status(200).json({ success: results.some(r => r.status === 'Sent'), message: 'SOS email(s) processed', results });
 });
 
 // export additional function

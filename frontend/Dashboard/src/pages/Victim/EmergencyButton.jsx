@@ -158,14 +158,24 @@ export default function EmergencyButton() {
 
         try {
           if (alertId) {
+            console.log('🔵 Sending SOS email for alert:', alertId);
             const sosResp = await api.post(`/api/alerts/${alertId}/sos`);
-            if (sosResp?.data?.success) messageApi.success('🚨 Emergency alert sent!');
-            else throw new Error(sosResp?.data?.message || 'Failed to send SOS emails');
-          } else throw new Error('Missing alert id after creation');
+            console.log('✅ SOS response:', sosResp?.data);
+            if (sosResp?.data?.success) {
+              console.log('✅ SOS email sent successfully');
+              messageApi.success('🚨 Emergency alert sent! Help is on the way.');
+            } else {
+              console.warn('⚠️ SOS response was not successful:', sosResp?.data);
+              messageApi.warning(sosResp?.data?.message || 'Alert created but email delivery uncertain');
+            }
+          } else {
+            throw new Error('Missing alert id after creation');
+          }
         } catch (sosErr) {
-          console.error('Failed to send SOS emails', sosErr);
+          console.error('❌ Failed to send SOS emails:', sosErr);
           setPulsing(false);
-          messageApi.error(sosErr?.response?.data?.message || sosErr?.message || 'Failed to deliver emergency email.');
+          const errorMsg = sosErr?.response?.data?.message || sosErr?.message || 'Failed to deliver emergency email.';
+          messageApi.error(errorMsg);
         }
       } catch (err) {
         console.error(err);

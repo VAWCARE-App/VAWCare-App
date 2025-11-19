@@ -1,74 +1,40 @@
-// utils/sendmail.js
-const nodemailer = require("nodemailer");
+const { MailerSend } = require("mailersend");
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER || "vawcareteam@gmail.com",
-    pass: process.env.EMAIL_PASS || "your_app_password_here",
-  },
+const mailersend = new MailerSend({
+  apiKey: process.env.MAILERSEND_API_KEY
 });
 
-if (process.env.SOS_DEBUG && String(process.env.SOS_DEBUG).toLowerCase() !== 'false') {
-  transporter.verify().then(() => {
-    console.log('✅ SMTP transporter verified');
-  }).catch((err) => {
-    console.warn('⚠️ SMTP transporter verification failed:', err && err.message);
-  });
-}
-
 async function sendMail(to, subject, html) {
-  const normalized = Array.isArray(to) ? to : (to instanceof Set ? Array.from(to) : (typeof to === 'string' ? [to] : []));
-  const toHeader = normalized.join(',');
-  
-  console.log('[SENDMAIL] Starting email send:', {
-    to: toHeader,
-    subject,
-    hasEmailUser: !!process.env.EMAIL_USER,
-    hasEmailPass: !!process.env.EMAIL_PASS,
-    emailUserValue: process.env.EMAIL_USER || 'vawcareteam@gmail.com'
-  });
-  
-  try {
-    const mailOptions = {
-      from: `"VAWCare Support" <${process.env.EMAIL_USER || 'vawcareteam@gmail.com'}>`,
-      to: toHeader,
+  const recipients = Array.isArray(to) ? to : [to];
+
+  const accepted = [];
+  const rejected = [];
+
+  for (const email of recipients) {
+    const emailParams = {
+      from: {
+        email: "MS_OyDH8j@test-pzkmgq78noml059v.mlsender.net",
+        name: "VAWCare Support"
+      },
+      to: [{ email }],
       subject,
-      html,
+      html
     };
-    
-    console.log('[SENDMAIL] Mail options prepared:', {
-      from: mailOptions.from,
-      to: mailOptions.to,
-      subject: mailOptions.subject,
-      htmlLength: mailOptions.html?.length
-    });
-    
-    const info = await transporter.sendMail(mailOptions);
-    
-    if (process.env.SOS_DEBUG && String(process.env.SOS_DEBUG).toLowerCase() !== 'false') {
-      console.log(`✅ Email send result: accepted=${JSON.stringify(info.accepted)}, rejected=${JSON.stringify(info.rejected)}`);
+
+    try {
+      await mailersend.email.send(emailParams);
+      accepted.push(email);
+      if (process.env.SOS_DEBUG && String(process.env.SOS_DEBUG).toLowerCase() !== "false") {
+        console.log(`[SENDMAIL] Email sent to ${email}`);
+      }
+    } catch (err) {
+      console.error(`[SENDMAIL ERROR] Failed to send email to ${email}:`, err.response?.body || err.message || err);
+      rejected.push(email);
     }
-    
-    console.log('[SENDMAIL] Email sent successfully:', {
-      accepted: info.accepted,
-      rejected: info.rejected,
-      messageId: info.messageId
-    });
-    
-    return info;
-  } catch (error) {
-    console.error("[SENDMAIL ERROR] Error sending email:", {
-      message: error && error.message,
-      code: error && error.code,
-      response: error && error.response,
-      stack: error && error.stack,
-      toHeader
-    });
-    const e = new Error(`Failed to send email to ${toHeader}: ${error && error.message}`);
-    e.original = error;
-    throw e;
+
   }
+
+  return { accepted, rejected };
 }
 
 module.exports = { sendMail };

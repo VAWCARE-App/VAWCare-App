@@ -283,35 +283,6 @@ export default function DssSuggestion({ caseData }) {
             </Card>
           )}
 
-          {/* Administrative Actions */}
-          {userType === 'admin' && (
-            <>
-              <Divider />
-              <Space direction="vertical" style={{ width: '100%' }}>
-                <Typography.Text type="secondary">
-                  <ClockCircleOutlined /> Administrative Actions
-                </Typography.Text>
-                <Space>
-                  <Button 
-                    onClick={async () => {
-                      setLoading(true);
-                      try {
-                        const res = await api.post('/api/dss/train');
-                        message.success(res.data.message || 'Training triggered');
-                      } catch (e) {
-                        message.error('Training failed');
-                      } finally { setLoading(false); }
-                    }} 
-                    type="default"
-                    icon={<InfoCircleOutlined />}
-                  >
-                    Retrain Model
-                  </Button>
-                </Space>
-              </Space>
-            </>
-          )}
-
           {/* Debug Information */}
           {result.ruleMatched && result.ruleEvent && (userType === 'admin' || userType === 'official') && (
             <Collapse ghost>

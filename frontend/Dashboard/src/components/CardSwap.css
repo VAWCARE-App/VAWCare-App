@@ -10,9 +10,18 @@
   left: 50%;
   will-change: transform;
   cursor: pointer;
-  transition: transform 0.3s ease;
+  transition: transform 220ms cubic-bezier(.2,.9,.2,1), z-index 120ms linear;
 }
 
 .card:hover {
-  transform: translateY(-8px) !important;
+  /* Move the hovered card to the exact center and bring it to front.
+     The `!important` here intentionally overrides inline GSAP transforms so
+     the hovered card appears centered. We keep a slight scale/translateZ to
+     emphasize it without breaking the GSAP swap logic which uses zIndex and
+     inline transforms for animation. */
+  transform: translate(-50%, -50%) translateZ(120px) scale(1.03) !important;
+  z-index: 9999 !important;
 }
+
+/* If you want the hover to only visually lift without changing stacking when
+   pauseOnHover is enabled, consider removing the z-index override above. */

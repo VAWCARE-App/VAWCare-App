@@ -46,12 +46,12 @@ const getTokenFromRequest = (req) => {
   if (req.cookies && req.cookies.authToken) {
     return req.cookies.authToken;
   }
-  
+
   // Fallback to Authorization header for compatibility
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     return req.headers.authorization.split(' ')[1];
   }
-  
+
   return null;
 };
 
@@ -63,15 +63,15 @@ const getTokenFromRequest = (req) => {
  */
 const setUserDataCookie = (res, userData) => {
   const userDataJson = JSON.stringify(userData);
-  
+
   const cookieOptions = {
     httpOnly: true,  // ✅ User data is also HTTP-only (NOT accessible to JS)
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',  // must be HTTPS in prod
+    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',  // cross-site in prod
     maxAge: 24 * 60 * 60 * 1000,  // 24 hours
     path: '/'
   };
-  
+
   res.cookie('userData', userDataJson, cookieOptions);
 };
 
@@ -82,8 +82,8 @@ const setUserDataCookie = (res, userData) => {
 const clearUserDataCookie = (res) => {
   res.clearCookie('userData', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',  // must be HTTPS in prod
+    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',  // cross-site in prod
     path: '/'
   });
 };

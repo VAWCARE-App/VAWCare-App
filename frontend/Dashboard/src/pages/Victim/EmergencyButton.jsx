@@ -27,7 +27,7 @@ export default function EmergencyButton() {
       if (remaining === 0) {
         clearInterval(interval);
       }
-    }, 100); 
+    }, 100);
     return () => clearInterval(interval);
   }, [pulsing, activeAlertStart]);
 
@@ -43,16 +43,13 @@ export default function EmergencyButton() {
   };
 
   const handleEmergencyClick = async () => {
-    // If already pulsing, this click should resolve the active alert
     if (pulsing && activeAlertId) {
-      // Stop pulsing immediately in UI
+      // Stop pulsing immediately
       setPulsing(false);
       setLoading(true);
       try {
-        // compute client-measured duration and send it to server
         const durationMs = activeAlertStart ? (Date.now() - new Date(activeAlertStart).getTime()) : null;
         const { data } = await api.put(`/api/alerts/${activeAlertId}/resolve`, { durationMs });
-        // Prefer server-returned duration if present
         const serverDuration = data?.data?.durationMs;
         const effectiveDuration = (typeof serverDuration === 'number') ? serverDuration : durationMs;
         if (typeof effectiveDuration === 'number' && effectiveDuration < CANCEL_WINDOW_MS) {
@@ -60,10 +57,8 @@ export default function EmergencyButton() {
         } else {
           messageApi.success('Alert resolved');
         }
-        // clear stored active alert and start time
         setActiveAlertId(null);
         setActiveAlertStart(null);
-        // optionally show duration if returned
         const duration = data?.data?.durationMs;
         if (typeof duration === 'number') {
           if (duration < CANCEL_WINDOW_MS) {
@@ -81,90 +76,55 @@ export default function EmergencyButton() {
       return;
     }
 
-    // Only send emergency report when toggling ON
     if (!pulsing) {
-      // Prevent re-entry on send (covers very fast double/tap events)
       if (loading) return;
 
-  // Immediately show pulsing feedback so user sees action and is unlikely to double-press
-  setPulsing(true);
-  setLoading(true); 
+      setPulsing(true);
+      setLoading(true);
 
-      //sends location to backend
       if (!navigator.geolocation) {
         messageApi.error("Geolocation is not supported by your browser.");
+        setPulsing(false);
+        setLoading(false);
         return;
       }
 
-  setLoading(true);
-
-      // Try to collect multiple high-accuracy samples and pick the best one
       const getBestPosition = (opts = {}) =>
         new Promise((resolve, reject) => {
-          const maxSamples = opts.maxSamples || 10; // Increased from 6 to 10 samples
-          const maxTime = opts.maxTime || 12000; // Increased from 8000 to 12000ms
+          const maxSamples = opts.maxSamples || 10;
+          const maxTime = opts.maxTime || 12000;
           const positions = [];
           let watchId = null;
           let finished = false;
-          const ACCURACY_THRESHOLD = 20; // meters - consider this "good enough"
+          const ACCURACY_THRESHOLD = 20;
 
           function done() {
             if (finished) return;
             finished = true;
             if (watchId !== null) navigator.geolocation.clearWatch(watchId);
             if (positions.length === 0) return reject(new Error('No position samples collected'));
-            
-            // First try to find a position with accuracy better than threshold
-            const accuratePosition = positions.find(p => 
-              p.coords && typeof p.coords.accuracy === 'number' && p.coords.accuracy <= ACCURACY_THRESHOLD
-            );
-            
+            const accuratePosition = positions.find(p => p.coords && p.coords.accuracy <= ACCURACY_THRESHOLD);
             if (accuratePosition) {
               resolve(accuratePosition);
               return;
             }
-
-            // If no position meets threshold, pick the most accurate one as before
-            positions.sort((a, b) => {
-              const aa = (a.coords && typeof a.coords.accuracy === 'number') ? a.coords.accuracy : Infinity;
-              const bb = (b.coords && typeof b.coords.accuracy === 'number') ? b.coords.accuracy : Infinity;
-              return aa - bb;
-            });
+            positions.sort((a, b) => (a.coords?.accuracy ?? Infinity) - (b.coords?.accuracy ?? Infinity));
             resolve(positions[0]);
           }
 
           try {
-              watchId = navigator.geolocation.watchPosition(
+            watchId = navigator.geolocation.watchPosition(
               (position) => {
                 positions.push(position);
-                // If we get a very accurate reading (under threshold), finish immediately
-                if (position.coords && position.coords.accuracy <= ACCURACY_THRESHOLD) {
-                  done();
-                  return;
-                }
-                // if we have enough samples, finish
+                if (position.coords.accuracy <= ACCURACY_THRESHOLD) done();
                 if (positions.length >= maxSamples) done();
               },
-              (err) => {
-                // on errors, if we already have samples resolve, otherwise reject
-                if (positions.length > 0) return done();
-                reject(err);
-              },
-              { 
-                enableHighAccuracy: true,
-                maximumAge: 0,
-                timeout: opts.sampleTimeout || 4000  // Increased from 2500 to 4000ms
-              }
+              (err) => { if (positions.length > 0) done(); else reject(err); },
+              { enableHighAccuracy: true, maximumAge: 0, timeout: opts.sampleTimeout || 4000 }
             );
-          } catch (e) {
-            return reject(e);
-          }
+          } catch (e) { return reject(e); }
 
-          // also set an overall timeout
-          const to = setTimeout(() => {
-            clearTimeout(to);
-            done();
-          }, maxTime);
+          setTimeout(done, maxTime);
         });
 
       try {
@@ -172,58 +132,36 @@ export default function EmergencyButton() {
         try {
           pos = await getBestPosition({ maxSamples: 6, maxTime: 8000 });
         } catch (err) {
-          // If sampler timed out (code 3) try a single getCurrentPosition with cached option as a fallback
           if (err && err.code === 3) {
-            try {
-              pos = await new Promise((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(resolve, reject, { 
-                  enableHighAccuracy: true, 
-                  maximumAge: 0, // Don't use cached positions
-                  timeout: 10000 // Increased timeout for better accuracy
-                });
-              });
-            } catch (fallbackErr) {
-              throw err; // rethrow original
-            }
-          } else {
-            throw err;
-          }
+            pos = await new Promise((resolve, reject) =>
+              navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 })
+            );
+          } else throw err;
         }
+
         const { latitude, longitude, accuracy } = pos.coords;
         const timestamp = pos.timestamp || Date.now();
-        const locationString = `${latitude.toFixed(6)}, ${longitude.toFixed(6)} (±${typeof accuracy === 'number' ? Math.round(accuracy) + 'm' : 'unknown'})`;
-        console.log('Emergency alert sent (best sample):', { latitude, longitude, accuracy, timestamp });
-
-        // For emergency one-click alerts we send an anonymous alert payload
         const userData = await getUserData();
-        const victimID = userData && (userData._id || userData.id);
+        const victimID = userData?._id || userData?.id;
 
         const payload = {
-          location: { latitude, longitude, accuracy: (typeof accuracy === 'number' ? Math.round(accuracy) : null), timestamp },
+          location: { latitude, longitude, accuracy: Math.round(accuracy), timestamp },
           alertType: "Emergency",
-          // include victimID when available; the backend Alert model requires it
           ...(victimID ? { victimID } : {})
         };
 
-        const { data } = await api.post("/api/victims/anonymous/alert", payload); 
-        const alertId = data?.data?.alertId || data?.alertId || (data && data._id);
+        const { data } = await api.post("/api/victims/anonymous/alert", payload);
+        const alertId = data?.data?.alertId || data?.alertId || data?._id;
         const createdAt = data?.data?.createdAt || data?.createdAt || null;
         if (alertId) setActiveAlertId(alertId);
         if (createdAt) setActiveAlertStart(new Date(createdAt));
-        // Start pulsing only after backend confirms the alert was saved
-        // Wait for server-side SOS confirmation (send emails) before showing success popup
+
         try {
           if (alertId) {
             const sosResp = await api.post(`/api/alerts/${alertId}/sos`);
-            if (sosResp && sosResp.data && sosResp.data.success) {
-              messageApi.success('🚨 Emergency alert sent!');
-            } else {
-              // If server returned non-success, treat as failure
-              throw new Error((sosResp && sosResp.data && sosResp.data.message) || 'Failed to send SOS emails');
-            }
-          } else {
-            throw new Error('Missing alert id after creation');
-          }
+            if (sosResp?.data?.success) messageApi.success('🚨 Emergency alert sent!');
+            else throw new Error(sosResp?.data?.message || 'Failed to send SOS emails');
+          } else throw new Error('Missing alert id after creation');
         } catch (sosErr) {
           console.error('Failed to send SOS emails', sosErr);
           setPulsing(false);
@@ -231,15 +169,15 @@ export default function EmergencyButton() {
         }
       } catch (err) {
         console.error(err);
-        const errMsg = err?.response?.data?.message || err?.message || "Emergency report failed. Try again.";
-        // revert optimistic pulsing on error
         setPulsing(false);
-        messageApi.error(errMsg);
+        messageApi.error(err?.response?.data?.message || err?.message || "Emergency report failed. Try again.");
       } finally {
         setLoading(false);
       }
+
     }
   };
+
 
   return (
     <>
@@ -262,7 +200,7 @@ export default function EmergencyButton() {
       >
         {/* Animated gradient background */}
         <div className="animated-bg"></div>
-        
+
         {/* Floating particles */}
         <div className="particles">
           <div className="particle"></div>
@@ -272,7 +210,7 @@ export default function EmergencyButton() {
           <div className="particle"></div>
           <div className="particle"></div>
         </div>
-        
+
         {/* Content Wrapper for centering */}
         <div style={{
           display: "flex",
@@ -289,54 +227,54 @@ export default function EmergencyButton() {
             style={{
               cursor: "pointer",
             }}
-          onMouseDown={(e) => {
-            const logo = e.currentTarget.querySelector('.emergency-logo');
-            if (logo) logo.style.transform = "scale(0.92)";
-          }}
-          onMouseUp={(e) => {
-            const logo = e.currentTarget.querySelector('.emergency-logo');
-            if (logo) logo.style.transform = "scale(1)";
-          }}
-        >
-          {/* Outer glow ring */}
-          <div className={`outer-ring ${!pulsing ? 'active' : ''}`}></div>
-          
-          {/* Static background circle */}
-          <div className="emergency-static-circle"></div>
-          
-          {/* Ripple boxes - only animate when pulsing */}
-          {pulsing && (
-            <>
-              <div className="emergency-box"></div>
-              <div className="emergency-box"></div>
-              <div className="emergency-box"></div>
-              <div className="emergency-box"></div>
-              <div className="emergency-box"></div>
-            </>
-          )}
-          
-          {/* Center button with logo/icon */}
-          <div className={`emergency-logo ${pulsing ? 'active' : ''}`}>
-            <div className="emergency-button">
-              <div className="button-shine"></div>
-              <BellFilled style={{ fontSize: 80, color: "#fff", filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.3))" }} />
+            onMouseDown={(e) => {
+              const logo = e.currentTarget.querySelector('.emergency-logo');
+              if (logo) logo.style.transform = "scale(0.92)";
+            }}
+            onMouseUp={(e) => {
+              const logo = e.currentTarget.querySelector('.emergency-logo');
+              if (logo) logo.style.transform = "scale(1)";
+            }}
+          >
+            {/* Outer glow ring */}
+            <div className={`outer-ring ${!pulsing ? 'active' : ''}`}></div>
+
+            {/* Static background circle */}
+            <div className="emergency-static-circle"></div>
+
+            {/* Ripple boxes - only animate when pulsing */}
+            {pulsing && (
+              <>
+                <div className="emergency-box"></div>
+                <div className="emergency-box"></div>
+                <div className="emergency-box"></div>
+                <div className="emergency-box"></div>
+                <div className="emergency-box"></div>
+              </>
+            )}
+
+            {/* Center button with logo/icon */}
+            <div className={`emergency-logo ${pulsing ? 'active' : ''}`}>
+              <div className="emergency-button">
+                <div className="button-shine"></div>
+                <BellFilled style={{ fontSize: 80, color: "#fff", filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.3))" }} />
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="text-container">
-          <p className={`emergency-text ${pulsing ? 'active' : ''}`}>
-            {pulsing ? "ALERT ACTIVE" : "EMERGENCY ALERT"}
-          </p>
-          <p className="emergency-subtext">
-            {pulsing ? "Tap to cancel alert" : "Tap button to send alert"}
-          </p>
-          {pulsing && (
-            <p className="emergency-timer">
-              Cancel in: {(timeRemaining / 1000).toFixed(1)}s
+          <div className="text-container">
+            <p className={`emergency-text ${pulsing ? 'active' : ''}`}>
+              {pulsing ? "ALERT ACTIVE" : "EMERGENCY ALERT"}
             </p>
-          )}
-        </div>
+            <p className="emergency-subtext">
+              {pulsing ? "Tap to cancel alert" : "Tap button to send alert"}
+            </p>
+            {pulsing && (
+              <p className="emergency-timer">
+                Cancel in: {(timeRemaining / 1000).toFixed(1)}s
+              </p>
+            )}
+          </div>
         </div>
         {/* End Content Wrapper */}
 

@@ -16,54 +16,32 @@ if (process.env.SOS_DEBUG && String(process.env.SOS_DEBUG).toLowerCase() !== 'fa
     console.warn('⚠️ SMTP transporter verification failed:', err && err.message);
   });
 }
-
 async function sendMail(to, subject, html) {
   const normalized = Array.isArray(to) ? to : (to instanceof Set ? Array.from(to) : (typeof to === 'string' ? [to] : []));
   const toHeader = normalized.join(',');
-  
-  console.log('[SENDMAIL] Starting email send:', {
-    to: toHeader,
-    subject,
-    hasEmailUser: !!process.env.EMAIL_USER,
-    hasEmailPass: !!process.env.EMAIL_PASS,
-    emailUserValue: process.env.EMAIL_USER || 'vawcareteam@gmail.com'
-  });
+  console.log('📧 SENDMAIL: Called with', { toHeader, subject, hasHtml: !!html });
+  console.log('📧 SENDMAIL: Using EMAIL_USER =', process.env.EMAIL_USER ? '***SET***' : '❌ NOT SET');
+  console.log('📧 SENDMAIL: Using EMAIL_PASS =', process.env.EMAIL_PASS ? '***SET***' : '❌ NOT SET');
   
   try {
-    const mailOptions = {
+    console.log('📧 SENDMAIL: About to call transporter.sendMail()');
+    const info = await transporter.sendMail({
       from: `"VAWCare Support" <${process.env.EMAIL_USER || 'vawcareteam@gmail.com'}>`,
       to: toHeader,
       subject,
       html,
-    };
-    
-    console.log('[SENDMAIL] Mail options prepared:', {
-      from: mailOptions.from,
-      to: mailOptions.to,
-      subject: mailOptions.subject,
-      htmlLength: mailOptions.html?.length
     });
-    
-    const info = await transporter.sendMail(mailOptions);
-    
+    console.log('✅ SENDMAIL: Success!', { accepted: info.accepted, rejected: info.rejected, messageId: info.messageId });
     if (process.env.SOS_DEBUG && String(process.env.SOS_DEBUG).toLowerCase() !== 'false') {
       console.log(`✅ Email send result: accepted=${JSON.stringify(info.accepted)}, rejected=${JSON.stringify(info.rejected)}`);
     }
-    
-    console.log('[SENDMAIL] Email sent successfully:', {
-      accepted: info.accepted,
-      rejected: info.rejected,
-      messageId: info.messageId
-    });
-    
     return info;
   } catch (error) {
-    console.error("[SENDMAIL ERROR] Error sending email:", {
-      message: error && error.message,
-      code: error && error.code,
-      response: error && error.response,
-      stack: error && error.stack,
-      toHeader
+    console.error("❌ SENDMAIL: Error sending email:", {
+      message: error?.message,
+      code: error?.code,
+      response: error?.response,
+      stack: error?.stack
     });
     const e = new Error(`Failed to send email to ${toHeader}: ${error && error.message}`);
     e.original = error;

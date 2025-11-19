@@ -25,7 +25,16 @@ const deleteNotification = asyncHandler(async (req, res) => {
     res.json({ success: true, message: 'Notification deleted' });
 });
 
+// @desc    Clear all notifications
+// @route   DELETE /api/notifications/clear-all
+// @access  Private or Public depending on your auth
+const clearAll = asyncHandler(async (req, res) => {
+    const result = await Notification.deleteMany({});
+    res.json({ success: true, message: 'All notifications cleared', deletedCount: result.deletedCount });
+});
+
 module.exports = {
     getNotifications,
     deleteNotification,
+    clearAll,
 };

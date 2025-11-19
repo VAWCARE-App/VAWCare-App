@@ -224,22 +224,23 @@ const listAlerts = asyncHandler(async (req, res) => {
 // Send SOS email containing a Google Maps link to a fixed recipient.
 // POST /api/alerts/:id/sos
 const sendSOSEmail = asyncHandler(async (req, res) => {
-  console.log('🔴 RECEIVED SOS REQUEST', { id: req.params.id, timestamp: new Date().toISOString() });
-  const { id } = req.params;
+  try {
+    console.log('🔴 RECEIVED SOS REQUEST', { id: req.params.id, timestamp: new Date().toISOString() });
+    const { id } = req.params;
 
-  const alert = await Alert.findById(id).populate('victimID');
-  if (!alert) {
-    res.status(404);
-    throw new Error('Alert not found');
-  }
+    const alert = await Alert.findById(id).populate('victimID');
+    if (!alert) {
+      console.log('❌ Alert not found:', id);
+      return res.status(404).json({ success: false, message: 'Alert not found' });
+    }
 
-  const lat = alert.location?.latitude;
-  const lng = alert.location?.longitude;
+    const lat = alert.location?.latitude;
+    const lng = alert.location?.longitude;
 
-  if (typeof lat !== 'number' || typeof lng !== 'number') {
-    res.status(400);
-    throw new Error('Alert does not have valid latitude/longitude');
-  }
+    if (typeof lat !== 'number' || typeof lng !== 'number') {
+      console.log('❌ Invalid location:', { lat, lng });
+      return res.status(400).json({ success: false, message: 'Alert does not have valid latitude/longitude' });
+    }
 
   // Wait a confirmation window so short accidental presses don't spam contacts
   const CONFIRM_MS = Number.parseInt(process.env.SOS_CONFIRM_MS, 10) || 5000;
@@ -350,6 +351,18 @@ const sendSOSEmail = asyncHandler(async (req, res) => {
     res.status(200).json({ success: true, message: 'SOS email(s) processed', results });
   } else {
     res.status(500).json({ success: false, message: 'Failed to send SOS emails', results });
+  }
+  } catch (outerErr) {
+    console.error('❌ UNHANDLED ERROR IN sendSOSEmail:', {
+      message: outerErr?.message,
+      code: outerErr?.code,
+      stack: outerErr?.stack
+    });
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Internal server error: ' + (outerErr?.message || 'Unknown error'),
+      error: process.env.NODE_ENV === 'development' ? outerErr?.message : undefined
+    });
   }
 });
 

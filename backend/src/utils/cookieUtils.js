@@ -12,8 +12,8 @@
 const setAuthCookie = (res, token, options = {}) => {
   const defaultOptions = {
     httpOnly: true,  // Prevents JavaScript access (XSS protection)
-    secure: process.env.NODE_ENV === 'production',  // HTTPS only in production
-    sameSite: 'lax',  // CSRF protection
+    secure: process.env.NODE_ENV === 'production',  // HTTPS only
+    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax', // cross-site in prod
     maxAge: 24 * 60 * 60 * 1000,  // 24 hours
     path: '/'
   };

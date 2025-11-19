@@ -272,6 +272,147 @@ export default function VictimSettings() {
     }
   };
 
+  // Download profile info as JSON or PDF
+  const handleDownload = async (format = "json") => {
+    try {
+      const formValues = form.getFieldsValue();
+      // Merge latest form values over profileData fetched from server
+      const exportObj = {
+        ...(profileData || {}),
+        ...(formValues || {}),
+      };
+
+      // Normalize emergency contacts if present as form fields
+      if (
+        formValues.emergencyContactName ||
+        formValues.emergencyContactNumber ||
+        formValues.emergencyContactRelationship ||
+        formValues.emergencyContactEmail ||
+        formValues.emergencyContactAddress
+      ) {
+        exportObj.emergencyContacts = [
+          {
+            name: formValues.emergencyContactName || (profileData?.emergencyContacts?.[0]?.name || ""),
+            relationship:
+              formValues.emergencyContactRelationship || (profileData?.emergencyContacts?.[0]?.relationship || ""),
+            contactNumber:
+              formValues.emergencyContactNumber || (profileData?.emergencyContacts?.[0]?.contactNumber || ""),
+            email: formValues.emergencyContactEmail || (profileData?.emergencyContacts?.[0]?.email || ""),
+            address: formValues.emergencyContactAddress || (profileData?.emergencyContacts?.[0]?.address || ""),
+          },
+        ];
+      }
+
+      // Include avatar/base64 if available
+      if (photoData) {
+        exportObj.photoData = photoData;
+        exportObj.photoMimeType = photoMimeType || "image/jpeg";
+      } else if (avatarUrl && typeof avatarUrl === "string" && avatarUrl.startsWith("data:")) {
+        exportObj.photoData = avatarUrl.split(",")[1] || avatarUrl;
+      }
+
+      if (format === "json") {
+        const filenameBase = (exportObj.victimEmail || exportObj.firstName || "victim").toString().replace(/[^a-z0-9@.\-_]/gi, "-");
+        const filename = `vawcare-victim-${filenameBase}-${new Date().toISOString().slice(0,19).replace(/[:T]/g, "-")}.json`;
+        const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        message.success("Downloaded profile info");
+        return;
+      }
+
+      // PDF flow: build a printable HTML and trigger print (users can save as PDF)
+      if (format === "pdf") {
+        const html = [];
+        const css = `body{font-family:Inter,Roboto,Arial,sans-serif;color:#222;margin:20px} .card{border:1px solid rgba(0,0,0,0.06);padding:18px;border-radius:10px;max-width:800px;margin:0 auto} .header{display:flex;align-items:center;gap:12px} .avatar{width:84px;height:84px;border-radius:8px;object-fit:cover;border:1px solid #eee} .title{font-size:18px;font-weight:700;color:#7A5AF8} .meta{margin-top:8px;color:#555} .row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed #eee} .label{color:#777;font-weight:700;width:40%} .value{color:#111;width:60%}`;
+
+        html.push(`<html><head><title>VAWCare - Victim Info</title><style>${css}</style></head><body>`);
+        html.push(`<div class="card">`);
+        html.push(`<div class="header">`);
+        if (photoData || (avatarUrl && avatarUrl.startsWith("data:"))) {
+          const src = photoData ? `data:${exportObj.photoMimeType || 'image/jpeg'};base64,${exportObj.photoData}` : avatarUrl;
+          html.push(`<img class="avatar" src="${src}" alt="avatar" />`);
+        } else {
+          html.push(`<div style="width:84px;height:84px;border-radius:8px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;color:#7A5AF8;font-weight:700">${(exportObj.firstName||'')[0]||''}${(exportObj.lastName||'')[0]||''}</div>`);
+        }
+        html.push(`<div><div class="title">${(exportObj.firstName || '') + ' ' + (exportObj.lastName || '')}</div><div class="meta">Victim Profile</div></div>`);
+        html.push(`</div>`);
+
+        // key fields
+        const fields = [
+          ['Email', exportObj.victimEmail || exportObj.email || '—'],
+          ['Phone', exportObj.contactNumber || '—'],
+          ['Role', 'Victim'],
+          ['Trusted Contacts', exportObj.emergencyContacts && exportObj.emergencyContacts.length ? String(exportObj.emergencyContacts.length) : '0']
+        ];
+
+        html.push(`<div style="margin-top:12px">`);
+        fields.forEach(([label, value]) => {
+          html.push(`<div class="row"><div class="label">${label}</div><div class="value">${value}</div></div>`);
+        });
+
+        if (exportObj.emergencyContacts && exportObj.emergencyContacts.length) {
+          html.push(`<div style="margin-top:12px;font-weight:700">Emergency Contact</div>`);
+          const ec = exportObj.emergencyContacts[0];
+          html.push(`<div class="row"><div class="label">Name</div><div class="value">${ec.name||'—'}</div></div>`);
+          html.push(`<div class="row"><div class="label">Relationship</div><div class="value">${ec.relationship||'—'}</div></div>`);
+          html.push(`<div class="row"><div class="label">Contact</div><div class="value">${ec.contactNumber||'—'}</div></div>`);
+          html.push(`<div class="row"><div class="label">Email</div><div class="value">${ec.email||'—'}</div></div>`);
+          if (ec.address) html.push(`<div class="row"><div class="label">Address</div><div class="value">${ec.address}</div></div>`);
+        }
+
+        html.push(`<div style="margin-top:18px;color:#999;font-size:12px">Generated: ${new Date().toLocaleString()}</div>`);
+        html.push(`</div></div></body></html>`);
+
+        const w = window.open('', '_blank');
+        if (!w) {
+          message.error('Popup blocked. Allow popups to download PDF.');
+          return;
+        }
+        w.document.open();
+        w.document.write(html.join(''));
+        w.document.close();
+        // Wait a moment for images to load, then trigger print
+        const triggerPrint = () => {
+          try {
+            w.focus();
+            w.print();
+            // optionally close after print
+            // setTimeout(() => w.close(), 500);
+          } catch (err) {
+            console.debug('Print failed', err);
+          }
+        };
+        // If image exists, wait until loaded
+        const imgs = w.document.getElementsByTagName('img');
+        if (imgs && imgs.length) {
+          let loaded = 0;
+          for (let i = 0; i < imgs.length; i++) {
+            imgs[i].onload = imgs[i].onerror = () => {
+              loaded++;
+              if (loaded === imgs.length) triggerPrint();
+            };
+          }
+          // fallback timeout
+          setTimeout(() => triggerPrint(), 800);
+        } else {
+          setTimeout(() => triggerPrint(), 300);
+        }
+        message.success('Preparing PDF (use Print -> Save as PDF)');
+        return;
+      }
+    } catch (err) {
+      console.error("Download failed", err);
+      message.error("Failed to download profile info");
+    }
+  };
+
   // Photo upload removed
 
   const displayName = useMemo(() => {
@@ -435,21 +576,8 @@ export default function VictimSettings() {
                   </Button>
                 </Upload>
 
-                <Button className="download-btn" icon={<DownloadOutlined />}>
+                <Button className="download-btn" icon={<DownloadOutlined />} onClick={() => handleDownload('pdf')}>
                   {screens.xs ? "Download" : "Download Info"}
-                </Button>
-
-                <Button
-                  icon={<SafetyCertificateOutlined />}
-                  onClick={() => {
-                    form.resetFields();
-                    (async () => {
-                      await loadProfile();
-                    })();
-                  }}
-                  className="soft-btn"
-                >
-                  Reset
                 </Button>
               </div>
             </div>

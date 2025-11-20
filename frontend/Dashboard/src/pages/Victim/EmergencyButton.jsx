@@ -6,7 +6,6 @@ import { BellFilled } from "@ant-design/icons";
 const CANCEL_WINDOW_MS = 5000; // 5 seconds to cancel before alert is sent
 
 export default function EmergencyButton() {
-  const [loading, setLoading] = useState(false);
   const [pulsing, setPulsing] = useState(false);
   const [activeAlertId, setActiveAlertId] = useState(null);
   const [activeAlertStart, setActiveAlertStart] = useState(null);
@@ -42,149 +41,118 @@ export default function EmergencyButton() {
     return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
   };
 
-  const handleEmergencyClick = async () => {
+  const handleEmergencyClick = () => {
     if (pulsing && activeAlertId) {
-      // Stop pulsing immediately
+      // Cancel button click - stop pulsing immediately
       setPulsing(false);
-      setLoading(true);
-      try {
-        const durationMs = activeAlertStart ? (Date.now() - new Date(activeAlertStart).getTime()) : null;
-        const { data } = await api.put(`/api/alerts/${activeAlertId}/resolve`, { durationMs });
-        const serverDuration = data?.data?.durationMs;
-        const effectiveDuration = (typeof serverDuration === 'number') ? serverDuration : durationMs;
-        if (typeof effectiveDuration === 'number' && effectiveDuration < CANCEL_WINDOW_MS) {
-          messageApi.success('Alert cancelled');
-        } else {
-          messageApi.success('Alert resolved');
-        }
-        setActiveAlertId(null);
-        setActiveAlertStart(null);
-        const duration = data?.data?.durationMs;
-        if (typeof duration === 'number') {
-          if (duration < CANCEL_WINDOW_MS) {
-            messageApi.info(`Alert active for ${formatDuration(duration)} (cancelled)`);
+      
+      // Resolve alert in background (non-blocking)
+      (async () => {
+        try {
+          const durationMs = activeAlertStart ? (Date.now() - new Date(activeAlertStart).getTime()) : null;
+          const { data } = await api.put(`/api/alerts/${activeAlertId}/resolve`, { durationMs });
+          const serverDuration = data?.data?.durationMs;
+          const effectiveDuration = (typeof serverDuration === 'number') ? serverDuration : durationMs;
+          if (typeof effectiveDuration === 'number' && effectiveDuration < CANCEL_WINDOW_MS) {
+            messageApi.success('Alert cancelled');
           } else {
-            messageApi.info(`Alert active for ${formatDuration(duration)} (resolved)`);
+            messageApi.success('Alert resolved');
           }
+          setActiveAlertId(null);
+          setActiveAlertStart(null);
+          const duration = data?.data?.durationMs;
+          if (typeof duration === 'number') {
+            if (duration < CANCEL_WINDOW_MS) {
+              messageApi.info(`Alert active for ${formatDuration(duration)} (cancelled)`);
+            } else {
+              messageApi.info(`Alert active for ${formatDuration(duration)} (resolved)`);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to resolve alert', err);
+          messageApi.error(err?.response?.data?.message || 'Failed to resolve alert');
         }
-      } catch (err) {
-        console.error('Failed to resolve alert', err);
-        messageApi.error(err?.response?.data?.message || 'Failed to resolve alert');
-      } finally {
-        setLoading(false);
-      }
+      })();
       return;
     }
 
     if (!pulsing) {
-      if (loading) return;
-
       setPulsing(true);
-      setLoading(true);
+      setActiveAlertStart(new Date());
 
-      if (!navigator.geolocation) {
-        messageApi.error("Geolocation is not supported by your browser.");
-        setPulsing(false);
-        setLoading(false);
-        return;
-      }
-
-      const getBestPosition = (opts = {}) =>
-        new Promise((resolve, reject) => {
-          const maxSamples = opts.maxSamples || 10;
-          const maxTime = opts.maxTime || 12000;
-          const positions = [];
-          let watchId = null;
-          let finished = false;
-          const ACCURACY_THRESHOLD = 20;
-
-          function done() {
-            if (finished) return;
-            finished = true;
-            if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-            if (positions.length === 0) return reject(new Error('No position samples collected'));
-            const accuratePosition = positions.find(p => p.coords && p.coords.accuracy <= ACCURACY_THRESHOLD);
-            if (accuratePosition) {
-              resolve(accuratePosition);
-              return;
+        try {
+          let pos = null;
+          
+          if (navigator.geolocation) {
+            try {
+              pos = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(
+                  resolve,
+                  reject,
+                  { enableHighAccuracy: false, maximumAge: 0, timeout: 5000 }
+                );
+              });
+            } catch (geoErr) {
+              console.warn('Geolocation failed, continuing without location:', geoErr);
             }
-            positions.sort((a, b) => (a.coords?.accuracy ?? Infinity) - (b.coords?.accuracy ?? Infinity));
-            resolve(positions[0]);
+          }
+
+          let payload = {
+            alertType: "Emergency"
+          };
+
+          if (pos) {
+            const { latitude, longitude, accuracy } = pos.coords;
+            const timestamp = pos.timestamp || Date.now();
+            payload.location = { latitude, longitude, accuracy: Math.round(accuracy), timestamp };
           }
 
           try {
-            watchId = navigator.geolocation.watchPosition(
-              (position) => {
-                positions.push(position);
-                if (position.coords.accuracy <= ACCURACY_THRESHOLD) done();
-                if (positions.length >= maxSamples) done();
-              },
-              (err) => { if (positions.length > 0) done(); else reject(err); },
-              { enableHighAccuracy: true, maximumAge: 0, timeout: opts.sampleTimeout || 4000 }
-            );
-          } catch (e) { return reject(e); }
-
-          setTimeout(done, maxTime);
-        });
-
-      try {
-        let pos = null;
-        try {
-          pos = await getBestPosition({ maxSamples: 6, maxTime: 8000 });
-        } catch (err) {
-          if (err && err.code === 3) {
-            pos = await new Promise((resolve, reject) =>
-              navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 })
-            );
-          } else throw err;
-        }
-
-        const { latitude, longitude, accuracy } = pos.coords;
-        const timestamp = pos.timestamp || Date.now();
-        const userData = await getUserData();
-        const victimID = userData?._id || userData?.id;
-
-        const payload = {
-          location: { latitude, longitude, accuracy: Math.round(accuracy), timestamp },
-          alertType: "Emergency",
-          ...(victimID ? { victimID } : {})
-        };
-
-        const { data } = await api.post("/api/victims/anonymous/alert", payload);
-        const alertId = data?.data?.alertId || data?.alertId || data?._id;
-        const createdAt = data?.data?.createdAt || data?.createdAt || null;
-        if (alertId) setActiveAlertId(alertId);
-        if (createdAt) setActiveAlertStart(new Date(createdAt));
-
-        try {
-          if (alertId) {
-            console.log('🔵 Sending SOS email for alert:', alertId);
-            const sosResp = await api.post(`/api/alerts/${alertId}/sos`);
-            console.log('✅ SOS response:', sosResp?.data);
-            if (sosResp?.data?.success) {
-              console.log('✅ SOS email sent successfully');
-              messageApi.success('🚨 Emergency alert sent! Help is on the way.');
-            } else {
-              console.warn('⚠️ SOS response was not successful:', sosResp?.data);
-              messageApi.warning(sosResp?.data?.message || 'Alert created but email delivery uncertain');
+            const userData = await getUserData();
+            const victimID = userData?._id || userData?.id;
+            if (victimID) {
+              payload.victimID = victimID;
             }
-          } else {
-            throw new Error('Missing alert id after creation');
+          } catch (userErr) {
+            console.warn('Could not get user data:', userErr);
           }
-        } catch (sosErr) {
-          console.error('❌ Failed to send SOS emails:', sosErr);
-          setPulsing(false);
-          const errorMsg = sosErr?.response?.data?.message || sosErr?.message || 'Failed to deliver emergency email.';
-          messageApi.error(errorMsg);
-        }
-      } catch (err) {
-        console.error(err);
-        setPulsing(false);
-        messageApi.error(err?.response?.data?.message || err?.message || "Emergency report failed. Try again.");
-      } finally {
-        setLoading(false);
-      }
 
+          // Send alert
+          const { data } = await api.post("/api/victims/anonymous/alert", payload);
+          const alertId = data?.data?.alertId || data?.alertId || data?._id;
+          const createdAt = data?.data?.createdAt || data?.createdAt || null;
+          
+          if (alertId) setActiveAlertId(alertId);
+          if (createdAt) setActiveAlertStart(new Date(createdAt));
+
+          // Send SOS email in background
+          try {
+            if (alertId) {
+              console.log('🔵 Sending SOS email for alert:', alertId);
+              const sosResp = await api.post(`/api/alerts/${alertId}/sos`);
+              console.log('✅ SOS response:', sosResp?.data);
+              if (sosResp?.data?.success) {
+                console.log('✅ SOS email sent successfully');
+                messageApi.success('🚨 Emergency alert sent! Help is on the way.');
+              } else {
+                console.warn('⚠️ SOS response was not successful:', sosResp?.data);
+                messageApi.warning(sosResp?.data?.message || 'Alert created but email delivery uncertain');
+              }
+            } else {
+              throw new Error('Missing alert id after creation');
+            }
+          } catch (sosErr) {
+            console.error('❌ Failed to send SOS emails:', sosErr);
+            const errorMsg = sosErr?.response?.data?.message || sosErr?.message || 'Failed to deliver emergency email.';
+            messageApi.error(errorMsg);
+            setPulsing(false);
+          }
+        } catch (err) {
+          console.error(err);
+          messageApi.error(err?.response?.data?.message || err?.message || "Emergency report failed. Try again.");
+          setPulsing(false);
+        }
+      })();
     }
   };
 

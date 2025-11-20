@@ -135,6 +135,8 @@ export default function EmergencyButton() {
               if (sosResp?.data?.success) {
                 console.log('✅ SOS email sent successfully');
                 messageApi.success('🚨 Emergency alert sent! Help is on the way.');
+              } else if (sosResp?.data?.canceled) {
+                console.log('ℹ️ Alert was canceled before confirmation window');
               } else {
                 console.warn('⚠️ SOS response was not successful:', sosResp?.data);
                 messageApi.warning(sosResp?.data?.message || 'Alert created but email delivery uncertain');

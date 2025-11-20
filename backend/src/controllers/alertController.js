@@ -252,15 +252,15 @@ const sendSOSEmail = asyncHandler(async (req, res) => {
       return res.status(404).json({ success: false, message: 'Alert not found after confirmation delay' });
     }
 
-    // Skip if alert is no longer active
+    // Skip if alert is no longer active (e.g., user canceled it)
     if (fresh.status && fresh.status !== 'Active') {
-      return res.status(200).json({ success: false, message: 'Alert not active after confirmation window; skipping SOS emails' });
+      return res.status(200).json({ success: false, message: 'Alert was canceled', canceled: true });
     }
 
     const createdAt = fresh.createdAt ? new Date(fresh.createdAt).getTime() : null;
     const ageMs = createdAt ? (Date.now() - createdAt) : null;
     if (ageMs !== null && ageMs < CONFIRM_MS) {
-      return res.status(200).json({ success: false, message: 'Alert duration below confirmation threshold; skipping SOS emails', ageMs });
+      return res.status(200).json({ success: false, message: 'Alert was cancelled before confirmation window', canceled: true, ageMs });
     }
 
     const loc = await enrichLocation(lat, lng);

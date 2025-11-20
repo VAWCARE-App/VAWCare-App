@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useImperativeHandle, forwardRef } from "react";
 import { Button, Modal, Radio, Typography, Space } from "antd";
 import { setDisguiseMode, loadDisguiseMode } from "../hooks/useDisguise";
 
 const { Text, Title } = Typography;
 
-export default function InstallButton() {
+const InstallButton = forwardRef((props, ref) => {
     const [modalVisible, setModalVisible] = useState(false);
     const [disguised, setDisguised] = useState(localStorage.getItem("disguise") === "1");
     const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -23,6 +23,12 @@ export default function InstallButton() {
 
         return () => window.removeEventListener("beforeinstallprompt", handler);
     }, []);
+
+    // Expose methods via ref
+    useImperativeHandle(ref, () => ({
+        openModal: () => setModalVisible(true),
+        closeModal: () => setModalVisible(false),
+    }));
 
     const handleAppearanceChange = (e) => {
         const enabled = e.target.value === "calculator";
@@ -96,4 +102,8 @@ export default function InstallButton() {
             </Modal>
         </>
     );
-}
+});
+
+InstallButton.displayName = "InstallButton";
+
+export default InstallButton;

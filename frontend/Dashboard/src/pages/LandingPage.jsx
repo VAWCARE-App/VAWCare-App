@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   Layout,
   Typography,
@@ -41,10 +41,23 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const screens = Grid.useBreakpoint();
   const prefersReduced = useReducedMotion();
+  const installButtonRef = useRef(null);
 
   // ── Stats
   const [reportCount, setReportCount] = useState(0);
   const [caseCount, setCaseCount] = useState(0);
+
+  useEffect(() => {
+    // Listen for openInstallModal event from Navbar
+    const handleOpenInstallModal = () => {
+      if (installButtonRef.current) {
+        installButtonRef.current.openModal();
+      }
+    };
+
+    window.addEventListener('openInstallModal', handleOpenInstallModal);
+    return () => window.removeEventListener('openInstallModal', handleOpenInstallModal);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -768,7 +781,7 @@ export default function LandingPage() {
       <b>original</b> or <b>disguise mode</b> for extra privacy.
     </Paragraph>
 
-    <InstallButton />
+    <InstallButton ref={installButtonRef} />
   </div>
 </motion.div>
 

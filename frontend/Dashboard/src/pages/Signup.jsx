@@ -155,6 +155,8 @@ export default function Signup() {
   const [accountType, setAccountType] = useState("anonymous");
   const [agreedToPrivacy, setAgreedToPrivacy] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successRedirect, setSuccessRedirect] = useState(null);
   const screens = Grid.useBreakpoint();
 
   const maxWidth = screens.xl ? 520 : screens.lg ? 480 : screens.md ? 420 : 360;
@@ -166,6 +168,18 @@ export default function Signup() {
       setAccountType(currentValue);
     }
   }, [currentStep, form, accountType]);
+
+  // Handle success modal and navigation
+  React.useEffect(() => {
+    if (showSuccessModal && successRedirect) {
+      const timer = setTimeout(() => {
+        setShowSuccessModal(false);
+        navigate(successRedirect);
+      }, 3000); 
+      
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccessModal, successRedirect, navigate]);
 
   const onFinish = async (values) => {
     try {
@@ -251,9 +265,9 @@ export default function Signup() {
         } catch (e) {
           console.warn('Unable to persist actorBusinessId on signup', e && e.message);
         }
-        message.success("Account created successfully!");
         const redirect = data.data.victim?.victimAccount === "anonymous" ? "/victim/report" : "/victim/dashboard";
-        navigate(redirect);
+        setSuccessRedirect(redirect);
+        setShowSuccessModal(true);
       } else throw new Error(data.message || "Registration failed");
     } catch (err) {
       message.error(err?.response?.data?.message || err.message || "Signup failed");
@@ -303,9 +317,8 @@ export default function Signup() {
       } catch (e) {
         console.warn('Unable to persist actorBusinessId for anonymous signup', e && e.message);
       }
-  message.success("Account created successfully!");
-  // anonymous creation should go straight to filing a report
-  navigate("/victim/report");
+      setSuccessRedirect("/victim/report");
+      setShowSuccessModal(true);
     } catch (err) {
       message.error(err?.response?.data?.message || err.message || "Unable to create account");
     } finally {
@@ -825,6 +838,111 @@ export default function Signup() {
           </div>
         </Card>
       </Flex>
+
+      {/* Success Registration Modal */}
+      <Modal
+        title={
+          <div style={{ textAlign: "center", color: "#5227FF", fontWeight: "bold" }}>
+            ✓ Account Created Successfully!
+          </div>
+        }
+        open={showSuccessModal}
+        footer={null}
+        closable={false}
+        centered
+        width={360}
+        bodyStyle={{
+          textAlign: "center",
+          padding: "32px 24px",
+        }}
+      >
+        <div style={{ marginBottom: 24 }}>
+          <div
+            style={{
+              fontSize: 48,
+              marginBottom: 16,
+              animation: "pulse 2s infinite",
+            }}
+          >
+            🎉
+          </div>
+          <Typography.Title level={4} style={{ marginBottom: 8 }}>
+            Welcome to VAWCare!
+          </Typography.Title>
+          <Typography.Paragraph style={{ color: "#666", marginBottom: 16 }}>
+            Your account has been created successfully.
+          </Typography.Paragraph>
+          <Typography.Paragraph style={{ color: "#ff6b9d", fontWeight: 500, marginBottom: 0 }}>
+            ⏳ Please wait... we're preparing your dashboard.
+          </Typography.Paragraph>
+          <Typography.Paragraph style={{ color: "#999", fontSize: 12, marginTop: 12 }}>
+            This may take a few moments depending on your connection speed.
+          </Typography.Paragraph>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: 8,
+            marginTop: 24,
+          }}
+        >
+          <div
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              backgroundColor: "#5227FF",
+              animation: "bounce 1.4s infinite",
+              animationDelay: "0s",
+            }}
+          />
+          <div
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              backgroundColor: "#5227FF",
+              animation: "bounce 1.4s infinite",
+              animationDelay: "0.2s",
+            }}
+          />
+          <div
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              backgroundColor: "#5227FF",
+              animation: "bounce 1.4s infinite",
+              animationDelay: "0.4s",
+            }}
+          />
+        </div>
+      </Modal>
+
+      <style>{`
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.7;
+            transform: scale(1.1);
+          }
+        }
+        
+        @keyframes bounce {
+          0%, 80%, 100% {
+            transform: translateY(0);
+            opacity: 1;
+          }
+          40% {
+            transform: translateY(-10px);
+            opacity: 0.7;
+          }
+        }
+      `}</style>
     </div>
   );
 }

@@ -378,7 +378,10 @@ export default function Sidebar({ collapsed, setCollapsed }) {
             zIndex: 1100,
             backdropFilter: "blur(4px)",
             WebkitBackdropFilter: "blur(4px)",
-            animation: "fadeIn 0.3s ease",
+            animation: "fadeIn 0.15s ease-out forwards",
+            willChange: "opacity",
+            transform: "translateZ(0)",
+            WebkitTransform: "translateZ(0)",
           }}
         />
       )}
@@ -401,11 +404,14 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           top: isMobile ? 12 : 0,
           left: isMobile ? (collapsed ? -320 : 12) : 0,
           zIndex: isMobile ? 1101 : 2,
-          transition: "left .3s cubic-bezier(0.4, 0, 0.2, 1), opacity .3s ease",
+          transition: isMobile ? "left .15s ease-out, opacity .15s ease-out" : "left .3s cubic-bezier(0.4, 0, 0.2, 1), opacity .3s ease",
           opacity: isMobile ? (collapsed ? 0 : 1) : 1,
           boxShadow: isMobile && !collapsed ? "0 30px 80px rgba(16,24,40,0.35)" : undefined,
           borderRadius: isMobile ? 18 : undefined,
           pointerEvents: isMobile && collapsed ? "none" : "auto",
+          willChange: isMobile ? "left, opacity" : undefined,
+          transform: isMobile ? "translateZ(0)" : undefined,
+          WebkitTransform: isMobile ? "translateZ(0)" : undefined,
         }}
         className={`sider-modern ${isMobile ? "sider-mobile-card" : ""}`}
       >
@@ -728,22 +734,29 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       {/* styles (unchanged from your version except for removed hidden-items stuff) */}
       <style>{`
         @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
+          from { opacity: 0; transform: translateZ(0); }
+          to { opacity: 1; transform: translateZ(0); }
         }
 
         @media (max-width: 767px) {
           .sider-mobile-card {
             max-width: calc(100vw - 24px) !important;
             touch-action: pan-y;
+            will-change: left, opacity;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
           }
           .sider-mobile-card .rail-btn,
           .sider-mobile-card .sub-btn {
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
+            will-change: auto;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
           }
           .sider-mobile-card .nav-wrap {
             -webkit-overflow-scrolling: touch;
+            will-change: scroll-position;
           }
         }
 
@@ -766,10 +779,13 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           border: 1px solid rgba(122,90,248,0.15); border-radius: 10px; background: #fff;
           color: #5a4eb1; font-weight: 600; text-align: left; cursor: pointer;
           box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-          transition: background .15s ease, box-shadow .15s ease, transform .15s ease, color .15s ease;
+          transition: background .12s ease, box-shadow .12s ease, transform .12s ease, color .12s ease;
+          will-change: background, box-shadow, transform;
+          transform: translateZ(0);
+          -webkit-transform: translateZ(0);
         }
         .sider-flyout .flyout-item:hover {
-          background: #f7f4ff; box-shadow: 0 10px 20px rgba(122,90,248,0.14); transform: translateY(-1px);
+          background: #f7f4ff; box-shadow: 0 10px 20px rgba(122,90,248,0.14); transform: translateY(-1px) translateZ(0);
         }
         .sider-flyout .flyout-item.active {
           background: #f2edff; color: #7A5AF8; border-color: rgba(122,90,248,0.35);
@@ -783,6 +799,9 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           z-index: 1100; 
           backdrop-filter: blur(4px);
           -webkit-backdrop-filter: blur(4px);
+          will-change: opacity;
+          transform: translateZ(0);
+          -webkit-transform: translateZ(0);
         }
 
         .nav-wrap::-webkit-scrollbar {
@@ -801,10 +820,16 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         }
 
         .rail-btn, .sub-btn {
-          transition: all .15s ease !important;
+          transition: all .12s ease !important;
+          will-change: transform, box-shadow, background;
+          transform: translateZ(0);
+          -webkit-transform: translateZ(0);
         }
         .user-chip {
-          transition: all .2s ease !important;
+          transition: all .15s ease !important;
+          will-change: auto;
+          transform: translateZ(0);
+          -webkit-transform: translateZ(0);
         }
       `}</style>
     </>
@@ -829,7 +854,10 @@ function railBtnStyle(BRAND, active, isMobile) {
       boxShadow: active ? "0 18px 40px rgba(122,90,248,0.14)" : "0 8px 22px rgba(0,0,0,0.06)",
       border: active ? `1px solid rgba(122,90,248,0.12)` : "1px solid rgba(0,0,0,0.04)",
       cursor: "pointer",
-      transition: "transform .15s ease, box-shadow .18s ease, background .15s ease, color .15s ease",
+      transition: "transform .12s ease-out, box-shadow .12s ease-out, background .12s ease-out, color .12s ease-out",
+      willChange: "transform, box-shadow, background, color",
+      transform: "translateZ(0)",
+      WebkitTransform: "translateZ(0)",
     };
   }
   return {
@@ -879,6 +907,10 @@ function subBtnStyle(BRAND, active, isMobile) {
       padding: "0 14px",
       textAlign: "left",
       boxShadow: active ? "0 14px 30px rgba(122,90,248,0.14)" : "0 6px 16px rgba(0,0,0,0.04)",
+      transition: "transform .12s ease-out, box-shadow .12s ease-out, background .12s ease-out, color .12s ease-out",
+      willChange: "transform, box-shadow, background, color",
+      transform: "translateZ(0)",
+      WebkitTransform: "translateZ(0)",
     };
   }
   return {

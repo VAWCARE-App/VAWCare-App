@@ -9,6 +9,7 @@ import {
   Badge,
   Grid,
   Popover,
+  Drawer,
 } from "antd";
 import {
   DashboardOutlined,
@@ -369,85 +370,365 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
   return (
     <>
-      {/* Backdrop (mobile) */}
-      {isMobile && !collapsed && (
-        <div
-          className="sider-backdrop"
-          onClick={() => setCollapsed(true)}
-          onTouchStart={() => setCollapsed(true)}
-          aria-hidden="true"
+      {/* Desktop Sidebar */}
+      {!isMobile && (
+        <Sider
+          trigger={null}
+          collapsible
+          collapsed={collapsed}
+          width={240}
+          collapsedWidth={80}
           style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(17,17,26,0.6)",
-            zIndex: 1100,
-            backdropFilter: "blur(4px)",
-            WebkitBackdropFilter: "blur(4px)",
-            animation: "fadeIn 0.15s ease-out forwards",
-            willChange: "opacity",
-            transform: "translateZ(0)",
-            WebkitTransform: "translateZ(0)",
-          }}
-        />
-      )}
-
-      <Sider
-        trigger={null}
-        collapsible
-        collapsed={collapsed}
-        width={isMobile ? Math.min(280, window.innerWidth - 40) : 240}
-        collapsedWidth={isMobile ? 0 : 80}
-        style={{
-          background: BRAND.panel,
-          borderRight: `1px solid ${BRAND.border}`,
-          display: "flex",
-          flexDirection: "column",
-          height: isMobile ? "calc(100vh - 24px)" : "100vh",
-          maxHeight: isMobile ? "calc(100vh - 24px)" : "100vh",
-          overflow: "hidden",
-          position: isMobile ? "fixed" : "sticky",
-          top: isMobile ? 12 : 0,
-          left: isMobile ? (collapsed ? -320 : 12) : 0,
-          zIndex: isMobile ? 1101 : 2,
-          transition: isMobile ? "left .15s ease-out, opacity .15s ease-out" : "left .3s cubic-bezier(0.4, 0, 0.2, 1), opacity .3s ease",
-          opacity: isMobile ? (collapsed ? 0 : 1) : 1,
-          boxShadow: isMobile && !collapsed ? "0 30px 80px rgba(16,24,40,0.35)" : undefined,
-          borderRadius: isMobile ? 18 : undefined,
-          pointerEvents: isMobile && collapsed ? "none" : "auto",
-          willChange: isMobile ? "left, opacity" : undefined,
-          transform: isMobile ? "translateZ(0)" : undefined,
-          WebkitTransform: isMobile ? "translateZ(0)" : undefined,
-        }}
-        className={`sider-modern ${isMobile ? "sider-mobile-card" : ""}`}
-      >
-        {/* Brand header */}
-        <div
-          className="brand"
-          style={{
-            height: 70,
-            padding: 10,
-            borderBottom: `1px solid ${BRAND.border}`,
-            display: "grid",
-            gridTemplateColumns: collapsed ? "40px 1fr auto" : "44px 1fr auto",
-            alignItems: "center",
-            gap: 8,
             background: BRAND.panel,
+            borderRight: `1px solid ${BRAND.border}`,
+            display: "flex",
+            flexDirection: "column",
+            height: "100vh",
+            overflow: "hidden",
             position: "sticky",
             top: 0,
             zIndex: 2,
           }}
+          className="sider-modern"
         >
-          <Avatar
-            src={!collapsed ? logo : undefined}
-            size={40}
-            style={{ background: "#efeafd", color: BRAND.primary, fontWeight: 700 }}
+          {/* Brand header */}
+          <div
+            className="brand"
+            style={{
+              height: 70,
+              padding: 10,
+              borderBottom: `1px solid ${BRAND.border}`,
+              display: "grid",
+              gridTemplateColumns: collapsed ? "40px 1fr auto" : "44px 1fr auto",
+              alignItems: "center",
+              gap: 8,
+              background: BRAND.panel,
+              position: "sticky",
+              top: 0,
+              zIndex: 2,
+            }}
           >
-            <img alt="VAWCare" src={logo} style={{ width: 22, height: 22 }} />
-          </Avatar>
+            <Avatar
+              src={!collapsed ? logo : undefined}
+              size={40}
+              style={{ background: "#efeafd", color: BRAND.primary, fontWeight: 700 }}
+            >
+              <img alt="VAWCare" src={logo} style={{ width: 22, height: 22 }} />
+            </Avatar>
 
-          {!collapsed && (
-            <div className="brand-text" style={{ lineHeight: 1.1 }}>
-              <Text style={{ color: BRAND.primary, fontWeight: 800 }}>VAWCare</Text>
+            {!collapsed && (
+              <div className="brand-text" style={{ lineHeight: 1.1 }}>
+                <Text style={{ color: BRAND.primary, fontWeight: 800 }}>VAWCare</Text>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <Badge color={BRAND.primary} dot />
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    {currentUser.firstName ? `Hi, ${currentUser.firstName}` : "Welcome"}
+                  </Text>
+                </div>
+              </div>
+            )}
+
+            <Button
+              size="small"
+              type="text"
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              onClick={() => setCollapsed(!collapsed)}
+              style={{ color: BRAND.primary, borderRadius: 8 }}
+            />
+          </div>
+
+          {/* NAV */}
+          <div
+            ref={navWrapRef}
+            className="nav-wrap"
+            style={{
+              flex: "1 1 0",
+              minHeight: 0,
+              maxHeight: "calc(100vh - 240px)",
+              display: "flex",
+              flexDirection: "column",
+              padding: 10,
+              overflowY: "auto",
+              overflowX: "hidden",
+              position: "relative",
+            }}
+          >
+            <div
+              className={`rail ${collapsed ? "collapsed" : ""}`}
+              style={{
+                background: BRAND.rail,
+                border: `1px solid ${BRAND.border}`,
+                borderRadius: 18,
+                padding: "8px 6px",
+                display: "grid",
+                gap: 6,
+                boxShadow: "0 10px 26px rgba(122,90,248,0.08)",
+              }}
+            >
+              {menu.map((node) => {
+                if (node.type === "item") {
+                  const active = isActive(node.key);
+                  return (
+                    <button
+                      key={node.key}
+                      type="button"
+                      className={`rail-btn ${active ? "active" : ""}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleNavigate(node.key);
+                      }}
+                      title={collapsed ? node.label : undefined}
+                      style={railBtnStyle(BRAND, active, false)}
+                    >
+                      <span className="rail-icon" style={railIconStyle(BRAND, false)}>
+                        {node.icon}
+                      </span>
+                      {!collapsed && (
+                        <TruncatedLabel
+                          text={node.label}
+                          className="rail-label"
+                          style={{ whiteSpace: "nowrap" }}
+                          onMoreClick={() => handleNavigate(node.key)}
+                          popContent={<div style={{ padding: 8 }}>{node.label}</div>}
+                        />
+                      )}
+                    </button>
+                  );
+                }
+
+                const isOpen = openGroups.includes(node.key);
+                const parentActive =
+                  (node.base && location.pathname.startsWith(node.base)) ||
+                  node.children?.some((c) => isActive(c.key));
+
+                const GroupButton = (
+                  <button
+                    type="button"
+                    className={`rail-btn ${parentActive ? "active" : ""}`}
+                    onClick={(e) => {
+                      if (!collapsed) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleGroup(node.key);
+                      }
+                    }}
+                    title={collapsed ? node.label : undefined}
+                    style={railBtnStyle(BRAND, parentActive, false)}
+                  >
+                    <span className="rail-icon" style={railIconStyle(BRAND, false)}>
+                      {node.icon}
+                    </span>
+                    {!collapsed && (
+                      <>
+                        <TruncatedLabel
+                          text={node.label}
+                          className={`rail-label ${node.labelClass || ""}`}
+                          style={{
+                            whiteSpace: "nowrap",
+                            color: node.labelClass === "pink" ? BRAND.primaryAlt : undefined,
+                          }}
+                          onMoreClick={() => toggleGroup(node.key)}
+                          popContent={<SubmenuFlyout node={node} />}
+                        />
+                        <DownOutlined
+                          className={`chev ${isOpen ? "open" : ""}`}
+                          style={{
+                            marginLeft: "auto",
+                            fontSize: 10,
+                            color: "#8a7ef2",
+                            transform: isOpen ? "rotate(180deg)" : "none",
+                            transition: "transform .2s ease",
+                          }}
+                        />
+                      </>
+                    )}
+                  </button>
+                );
+
+                return (
+                  <div key={node.key} className="group">
+                    {collapsed ? (
+                      <Popover
+                        overlayClassName="sider-flyout"
+                        placement="right"
+                        trigger={["hover", "click"]}
+                        mouseEnterDelay={0.05}
+                        destroyTooltipOnHide
+                        overlayStyle={{ padding: 0, zIndex: 1300, marginLeft: 4 }}
+                        content={<SubmenuFlyout node={node} />}
+                      >
+                        {GroupButton}
+                      </Popover>
+                    ) : (
+                      GroupButton
+                    )}
+
+                    {!collapsed && isOpen && (
+                      <div className="sub-flat" style={{ display: "grid", gap: 8, marginTop: 6 }}>
+                        {node.children?.map((child) => {
+                          const active = isActive(child.key);
+                          return (
+                            <button
+                              key={child.key}
+                              type="button"
+                              className={`sub-btn ${active ? "active" : ""}`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleNavigate(child.key);
+                              }}
+                              style={subBtnStyle(BRAND, active, false)}
+                            >
+                              <span
+                                className="sub-icon"
+                                style={{
+                                  width: 20,
+                                  display: "grid",
+                                  placeItems: "center",
+                                  color: BRAND.primary,
+                                  fontSize: 16,
+                                }}
+                              >
+                                {child.icon}
+                              </span>
+                              <TruncatedLabel
+                                text={child.label}
+                                className="sub-label"
+                                popContent={<div style={{ padding: 8 }}>{child.label}</div>}
+                                onMoreClick={() => handleNavigate(child.key)}
+                              />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Logout */}
+          <div
+            style={{
+              padding: "8px 10px",
+              background: BRAND.panel,
+              position: "sticky",
+              bottom: 86,
+              zIndex: 1,
+              marginTop: "auto",
+            }}
+          >
+            <div
+              style={{
+                background: BRAND.rail,
+                border: `1px solid ${BRAND.border}`,
+                borderRadius: 18,
+                padding: "8px 6px",
+                boxShadow: "0 10px 26px rgba(122,90,248,0.08)",
+              }}
+            >
+              <button
+                type="button"
+                className="rail-btn danger"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleLogout();
+                }}
+                title={collapsed ? "Logout" : undefined}
+                style={{ ...railBtnStyle(BRAND, false, false), color: BRAND.primaryAlt }}
+              >
+                <span
+                  className="rail-icon"
+                  style={{ ...railIconStyle(BRAND, false), color: BRAND.primaryAlt }}
+                >
+                  <LogoutOutlined />
+                </span>
+                {!collapsed && <span className="rail-label">Logout</span>}
+              </button>
+            </div>
+          </div>
+
+          {/* Footer user chip */}
+          <div
+            className="footer"
+            style={{
+              height: 86,
+              padding: 12,
+              borderTop: `1px solid ${BRAND.border}`,
+              background: BRAND.panel,
+              position: "sticky",
+              bottom: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: collapsed ? "center" : "flex-start",
+            }}
+          >
+            <div
+              className="user-chip"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                justifyContent: collapsed ? "center" : "flex-start",
+                width: "100%",
+              }}
+            >
+              <Avatar style={{ background: BRAND.primary, fontWeight: 700 }} size={30}>
+                {initials}
+              </Avatar>
+
+              {!collapsed && (
+                <div style={{ lineHeight: 1 }}>
+                  <Text strong style={{ fontSize: 12 }}>
+                    {currentUser.firstName
+                      ? `${currentUser.firstName} ${currentUser.lastName || ""}`
+                      : "User"}
+                  </Text>
+                  <div>
+                    <Text type="secondary" style={{ fontSize: 11 }}>
+                      {userType.charAt(0).toUpperCase() + userType.slice(1)}
+                    </Text>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </Sider>
+      )}
+
+      {/* Mobile Drawer Sidebar */}
+      {isMobile && (
+        <Drawer
+          placement="left"
+          onClose={() => setCollapsed(true)}
+          open={!collapsed}
+          width={Math.min(280, window.innerWidth - 40)}
+          bodyStyle={{ padding: 0, display: "flex", flexDirection: "column", height: "100%" }}
+          styles={{
+            header: { display: "none" },
+            body: { background: BRAND.panel },
+          }}
+        >
+          {/* Brand header */}
+          <div
+            className="brand"
+            style={{
+              height: 70,
+              padding: 10,
+              borderBottom: `1px solid ${BRAND.border}`,
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              background: BRAND.panel,
+            }}
+          >
+            <Avatar src={logo} size={40} style={{ background: "#efeafd" }} />
+            <div style={{ lineHeight: 1.1 }}>
+              <Text style={{ color: BRAND.primary, fontWeight: 800, fontSize: 16 }}>VAWCare</Text>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <Badge color={BRAND.primary} dot />
                 <Text type="secondary" style={{ fontSize: 12 }}>
@@ -455,70 +736,52 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                 </Text>
               </div>
             </div>
-          )}
+          </div>
 
-          <Button
-            size="small"
-            type="text"
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() => setCollapsed(!collapsed)}
-            style={{ color: BRAND.primary, borderRadius: 8 }}
-          />
-        </div>
-
-        {/* NAV */}
-        <div
-          ref={navWrapRef}
-          className="nav-wrap"
-          style={{
-            flex: "1 1 0",
-            minHeight: 0,
-            maxHeight: isMobile ? "calc(100vh - 300px)" : "calc(100vh - 240px)",
-            display: "flex",
-            flexDirection: "column",
-            padding: 10,
-            overflowY: "auto",
-            overflowX: "hidden",
-            position: "relative",
-          }}
-        >
+          {/* Scrollable nav */}
           <div
-            className={`rail ${collapsed ? "collapsed" : ""}`}
+            ref={navWrapRef}
+            className="nav-wrap"
             style={{
-              background: BRAND.rail,
-              border: `1px solid ${BRAND.border}`,
-              borderRadius: 18,
-              padding: isMobile ? "16px" : "8px 6px",
-              display: "grid",
-              gap: isMobile ? 10 : 6,
-              boxShadow: isMobile
-                ? "0 18px 48px rgba(122,90,248,0.08)"
-                : "0 10px 26px rgba(122,90,248,0.08)",
-              width: isMobile ? "100%" : "auto",
-              margin: isMobile ? "0" : undefined,
+              flex: "1 1 0",
+              minHeight: 0,
+              display: "flex",
+              flexDirection: "column",
+              padding: 10,
+              overflowY: "auto",
+              overflowX: "hidden",
             }}
           >
-            {menu.map((node) => {
-              if (node.type === "item") {
-                const active = isActive(node.key);
-                return (
-                  <button
-                    key={node.key}
-                    type="button"
-                    className={`rail-btn ${active ? "active" : ""}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleNavigate(node.key);
-                    }}
-                    title={collapsed ? node.label : undefined}
-                    style={railBtnStyle(BRAND, active, isMobile)}
-                  >
-                    <span className="rail-icon" style={railIconStyle(BRAND, isMobile)}>
-                      {node.icon}
-                    </span>
-                    {!collapsed && (
+            <div
+              style={{
+                background: BRAND.rail,
+                border: `1px solid ${BRAND.border}`,
+                borderRadius: 18,
+                padding: 16,
+                display: "grid",
+                gap: 10,
+                boxShadow: "0 18px 48px rgba(122,90,248,0.08)",
+                width: "100%",
+              }}
+            >
+              {menu.map((node) => {
+                if (node.type === "item") {
+                  const active = isActive(node.key);
+                  return (
+                    <button
+                      key={node.key}
+                      type="button"
+                      className={`rail-btn ${active ? "active" : ""}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleNavigate(node.key);
+                      }}
+                      style={railBtnStyle(BRAND, active, true)}
+                    >
+                      <span className="rail-icon" style={railIconStyle(BRAND, true)}>
+                        {node.icon}
+                      </span>
                       <TruncatedLabel
                         text={node.label}
                         className="rail-label"
@@ -526,35 +789,30 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                         onMoreClick={() => handleNavigate(node.key)}
                         popContent={<div style={{ padding: 8 }}>{node.label}</div>}
                       />
-                    )}
-                  </button>
-                );
-              }
+                    </button>
+                  );
+                }
 
-              const isOpen = openGroups.includes(node.key);
-              const parentActive =
-                (node.base && location.pathname.startsWith(node.base)) ||
-                node.children?.some((c) => isActive(c.key));
+                const isOpen = openGroups.includes(node.key);
+                const parentActive =
+                  (node.base && location.pathname.startsWith(node.base)) ||
+                  node.children?.some((c) => isActive(c.key));
 
-              const GroupButton = (
-                <button
-                  type="button"
-                  className={`rail-btn ${parentActive ? "active" : ""}`}
-                  onClick={(e) => {
-                    if (!collapsed) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      toggleGroup(node.key);
-                    }
-                  }}
-                  title={collapsed ? node.label : undefined}
-                  style={railBtnStyle(BRAND, parentActive, isMobile)}
-                >
-                  <span className="rail-icon" style={railIconStyle(BRAND, isMobile)}>
-                    {node.icon}
-                  </span>
-                  {!collapsed && (
-                    <>
+                return (
+                  <div key={node.key} className="group">
+                    <button
+                      type="button"
+                      className={`rail-btn ${parentActive ? "active" : ""}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleGroup(node.key);
+                      }}
+                      style={railBtnStyle(BRAND, parentActive, true)}
+                    >
+                      <span className="rail-icon" style={railIconStyle(BRAND, true)}>
+                        {node.icon}
+                      </span>
                       <TruncatedLabel
                         text={node.label}
                         className={`rail-label ${node.labelClass || ""}`}
@@ -575,150 +833,118 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                           transition: "transform .2s ease",
                         }}
                       />
-                    </>
-                  )}
-                </button>
-              );
+                    </button>
 
-              return (
-                <div key={node.key} className="group">
-                  {collapsed ? (
-                    <Popover
-                      overlayClassName="sider-flyout"
-                      placement="right"
-                      trigger={["hover", "click"]}
-                      mouseEnterDelay={0.05}
-                      destroyTooltipOnHide
-                      overlayStyle={{ padding: 0, zIndex: 1300, marginLeft: 4 }}
-                      content={<SubmenuFlyout node={node} />}
-                    >
-                      {GroupButton}
-                    </Popover>
-                  ) : (
-                    GroupButton
-                  )}
-
-                  {!collapsed && isOpen && (
-                    <div className="sub-flat" style={{ display: "grid", gap: 8, marginTop: 6 }}>
-                      {node.children?.map((child) => {
-                        const active = isActive(child.key);
-                        return (
-                          <button
-                            key={child.key}
-                            type="button"
-                            className={`sub-btn ${active ? "active" : ""}`}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleNavigate(child.key);
-                            }}
-                            style={subBtnStyle(BRAND, active, isMobile)}
-                          >
-                            <span
-                              className="sub-icon"
-                              style={{
-                                width: 20,
-                                display: "grid",
-                                placeItems: "center",
-                                color: BRAND.primary,
-                                fontSize: 16,
+                    {isOpen && (
+                      <div className="sub-flat" style={{ display: "grid", gap: 8, marginTop: 6 }}>
+                        {node.children?.map((child) => {
+                          const active = isActive(child.key);
+                          return (
+                            <button
+                              key={child.key}
+                              type="button"
+                              className={`sub-btn ${active ? "active" : ""}`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleNavigate(child.key);
                               }}
+                              style={subBtnStyle(BRAND, active, true)}
                             >
-                              {child.icon}
-                            </span>
-                            <TruncatedLabel
-                              text={child.label}
-                              className="sub-label"
-                              popContent={<div style={{ padding: 8 }}>{child.label}</div>}
-                              onMoreClick={() => handleNavigate(child.key)}
-                            />
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                              <span
+                                className="sub-icon"
+                                style={{
+                                  width: 20,
+                                  display: "grid",
+                                  placeItems: "center",
+                                  color: BRAND.primary,
+                                  fontSize: 16,
+                                }}
+                              >
+                                {child.icon}
+                              </span>
+                              <TruncatedLabel
+                                text={child.label}
+                                className="sub-label"
+                                popContent={<div style={{ padding: 8 }}>{child.label}</div>}
+                                onMoreClick={() => handleNavigate(child.key)}
+                              />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
 
-        {/* Logout */}
-        <div
-          style={{
-            padding: "8px 10px",
-            background: BRAND.panel,
-            position: "sticky",
-            bottom: 86,
-            zIndex: 1,
-            marginTop: "auto",
-          }}
-        >
+          {/* Mobile Logout */}
           <div
             style={{
-              background: BRAND.rail,
-              border: `1px solid ${BRAND.border}`,
-              borderRadius: 18,
-              padding: isMobile ? "12px" : "8px 6px",
-              boxShadow: isMobile
-                ? "0 18px 48px rgba(122,90,248,0.08)"
-                : "0 10px 26px rgba(122,90,248,0.08)",
-              width: isMobile ? "92%" : "auto",
-              margin: isMobile ? "0 auto" : undefined,
+              padding: "8px 10px",
+              background: BRAND.panel,
+              marginTop: "auto",
             }}
           >
-            <button
-              type="button"
-              className="rail-btn danger"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleLogout();
+            <div
+              style={{
+                background: BRAND.rail,
+                border: `1px solid ${BRAND.border}`,
+                borderRadius: 18,
+                padding: 16,
+                boxShadow: "0 18px 48px rgba(122,90,248,0.08)",
               }}
-              title={collapsed ? "Logout" : undefined}
-              style={{ ...railBtnStyle(BRAND, false, isMobile), color: BRAND.primaryAlt }}
             >
-              <span
-                className="rail-icon"
-                style={{ ...railIconStyle(BRAND, isMobile), color: BRAND.primaryAlt }}
+              <button
+                type="button"
+                className="rail-btn danger"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleLogout();
+                }}
+                style={railBtnStyle(BRAND, false, true)}
               >
-                <LogoutOutlined />
-              </span>
-              {!collapsed && <span className="rail-label">Logout</span>}
-            </button>
-          </div>
-        </div>
+                <span className="rail-icon" style={railIconStyle(BRAND, true)}>
+                  <LogoutOutlined />
+                </span>
+                <TruncatedLabel
+                  text="Logout"
+                  className="rail-label pink"
+                  style={{ color: BRAND.primaryAlt, whiteSpace: "nowrap" }}
+                  popContent={<div style={{ padding: 8 }}>Logout</div>}
+                />
+              </button>
+            </div>
 
-        {/* Footer user chip */}
-        <div
-          className="footer"
-          style={{
-            height: 86,
-            padding: 12,
-            borderTop: `1px solid ${BRAND.border}`,
-            background: BRAND.panel,
-            position: "sticky",
-            bottom: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: collapsed ? "center" : "flex-start",
-          }}
-        >
-          <div
-            className="user-chip"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              justifyContent: collapsed ? "center" : "flex-start",
-              width: "100%",
-            }}
-          >
-            <Avatar style={{ background: BRAND.primary, fontWeight: 700 }} size={30}>
-              {initials}
-            </Avatar>
+            {/* User info (mobile) */}
+            <div
+              className="user-chip"
+              style={{
+                marginTop: 10,
+                padding: "8px 10px",
+                borderRadius: 12,
+                background: "rgba(122,90,248,0.08)",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <Avatar
+                style={{
+                  background: BRAND.primary,
+                  color: "#fff",
+                  fontWeight: 700,
+                  fontSize: 13,
+                  flexShrink: 0,
+                }}
+                size={32}
+              >
+                {initials}
+              </Avatar>
 
-            {!collapsed && (
               <div style={{ lineHeight: 1 }}>
                 <Text strong style={{ fontSize: 12 }}>
                   {currentUser.firstName
@@ -731,10 +957,10 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                   </Text>
                 </div>
               </div>
-            )}
+            </div>
           </div>
-        </div>
-      </Sider>
+        </Drawer>
+      )}
 
       {/* styles (unchanged from your version except for removed hidden-items stuff) */}
       <style>{`

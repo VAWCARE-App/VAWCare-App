@@ -80,6 +80,7 @@ export default function EmergencyButton() {
       setPulsing(true);
       setActiveAlertStart(new Date());
 
+      (async () => {
         try {
           let pos = null;
           

@@ -1,5 +1,6 @@
 // src/components/Sidebar.jsx
 import React, { useMemo, useState, useEffect, useRef } from "react";
+import { flushSync } from "react-dom";
 import {
   Layout,
   Button,
@@ -55,7 +56,11 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
   // Toggle via global event from header
   useEffect(() => {
-    const handler = () => setCollapsed((c) => !c);
+    const handler = () => {
+      flushSync(() => {
+        setCollapsed((c) => !c);
+      });
+    };
     window.addEventListener("toggle-sider", handler);
     return () => window.removeEventListener("toggle-sider", handler);
   }, [setCollapsed]);
@@ -830,6 +835,21 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           will-change: auto;
           transform: translateZ(0);
           -webkit-transform: translateZ(0);
+        }
+
+        /* Override Ant Design Sider transitions for mobile */
+        @media (max-width: 767px) {
+          .ant-layout-sider.sider-modern {
+            transition: left 0.15s ease-out !important, opacity 0.15s ease-out !important, width 0.15s ease-out !important, margin-left 0.15s ease-out !important, margin-right 0.15s ease-out !important !important;
+            will-change: left, opacity !important;
+            transform: translateZ(0) !important;
+            -webkit-transform: translateZ(0) !important;
+          }
+          .ant-layout-sider.sider-modern .ant-layout-sider-children {
+            will-change: auto;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+          }
         }
       `}</style>
     </>

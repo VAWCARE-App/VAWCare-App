@@ -187,7 +187,7 @@ export default function Chatbot() {
     { key: "vawc", icon: <QuestionCircleOutlined />, label: "What is VAWC?", onClick: () => send("What is VAWC?") },
     { key: "report", icon: <ThunderboltOutlined />, label: "How to report", onClick: () => send("How do I report a case?") },
     { key: "desk", icon: <InfoCircleOutlined />, label: "Barangay VAW Desk", onClick: () => send("Where is the Barangay VAW Desk?") },
-    { key: "hotlines", icon: <PhoneOutlined />, label: "Hotlines", onClick: () => send("Emergency hotlines in the Philippines") },
+    { key: "hotlines", icon: <PhoneOutlined />, label: "Hotlines", onClick: () => send("What are some hotlines I can call?") },
     { key: "legal", icon: <BookOutlined />, label: "Legal resources (RA 9262)", onClick: () => send("Show resources for RA 9262") },
 
   ];

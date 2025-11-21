@@ -48,6 +48,7 @@ export default function LandingPage() {
   // ── Stats
   const [reportCount, setReportCount] = useState(0);
   const [caseCount, setCaseCount] = useState(0);
+  const [userCount, setUserCount] = useState(0);
 
   const [backendStatus, setBackendStatus] = useState("online");
 
@@ -76,11 +77,20 @@ export default function LandingPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [reportsRes, casesRes] = await Promise.all([api.get("/api/reports"), api.get("/api/cases")]);
+        const [reportsRes, casesRes, usersRes] = await Promise.all([
+          api.get("/api/reports"),
+          api.get("/api/cases"),
+          api.get("/api/admin/users")
+        ]);
         const reportList = reportsRes?.data?.data || [];
         const caseList = casesRes?.data?.data || [];
         setReportCount(reportList.length);
         setCaseCount(caseList.filter((c) => c.status === "Open").length);
+        // Calculate total users (admins + victims + officials)
+        const admins = usersRes?.data?.data?.admins?.length || 0;
+        const victims = usersRes?.data?.data?.victims?.length || 0;
+        const officials = usersRes?.data?.data?.officials?.length || 0;
+        setUserCount(admins + victims + officials);
       } catch {/* keep zeros */ }
     })();
   }, []);
@@ -473,14 +483,14 @@ export default function LandingPage() {
 
 
 
-                    <CTAButton icon={<UserSwitchOutlined />} onClick={() => navigate("/admin/login")}>
-                      Admin Login
+                    <CTAButton icon={<UserSwitchOutlined />} onClick={() => navigate("/login")}>
+                      Login
                     </CTAButton>
                   </Space>
 
                   {/* KPIs */}
                   <Row gutter={[16, 16]} style={{ marginTop: 28, maxWidth: 820, marginInline: "auto" }}>
-                    {[{ label: "Reports Filed (All-time)", value: reportCount }, { label: "Open Cases", value: caseCount }, { label: "Avg. Response (hrs)", value: 2.4 }].map(
+                    {[{ label: "Reports Filed (All-time)", value: reportCount }, { label: "Open Cases", value: caseCount }, { label: "Total Users", value: userCount }].map(
                       (k) => (
                         <Col xs={24} sm={8} key={k.label}>
                           <KPI title={k.label} value={k.value} />

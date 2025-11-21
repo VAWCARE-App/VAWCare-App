@@ -295,12 +295,12 @@ export default function CaseDetail() {
         </div>
 
         <div style={{ display: "flex", gap: 8 }}>
-          <Button 
+          {/* <Button 
             icon={<PrinterOutlined />} 
             onClick={onPrintClick}
           >
             {screens.md ? "Print" : null}
-          </Button>
+          </Button> */}
           {(userType === "admin" || userType === "official") && (
             <Button
               type="primary"

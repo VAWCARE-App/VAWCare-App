@@ -7,7 +7,7 @@ import {
   Typography,
   Tag,
   Layout,
-  Button, 
+  Button,
   Input,
   Select,
   Space,
@@ -77,7 +77,6 @@ export default function UserManagement() {
     const calc = () => {
       if (!pageRef.current) return;
       const rect = pageRef.current.getBoundingClientRect();
-      // available height below content top, minus small buffer
       const available = window.innerHeight - rect.top - 16;
       const y = Math.max(240, available - 220); // accounts for cards/toolbars inside content
       setTableY(y);
@@ -114,7 +113,7 @@ export default function UserManagement() {
   const [mode, setMode] = useState("view"); // view | edit
   const [activeUser, setActiveUser] = useState(null);
   const [form] = Form.useForm();
-  
+
   // Delete confirmation modal
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
@@ -133,7 +132,9 @@ export default function UserManagement() {
             firstName: a.firstName,
             middleInitial: a.middleInitial,
             lastName: a.lastName,
-            name: `${a.firstName} ${a.middleInitial ? a.middleInitial + " " : ""}${a.lastName}`,
+            name: `${a.firstName} ${
+              a.middleInitial ? a.middleInitial + " " : ""
+            }${a.lastName}`,
             email: a.adminEmail,
             username: a.adminID,
             phoneNumber: a.phoneNumber,
@@ -152,7 +153,9 @@ export default function UserManagement() {
             firstName: v.firstName,
             middleInitial: v.middleInitial,
             lastName: v.lastName,
-            name: `${v.firstName} ${v.middleInitial ? v.middleInitial + " " : ""}${v.lastName}`,
+            name: `${v.firstName} ${
+              v.middleInitial ? v.middleInitial + " " : ""
+            }${v.lastName}`,
             email: v.victimEmail || "N/A",
             username: v.victimUsername,
             role: v.victimAccount,
@@ -170,7 +173,9 @@ export default function UserManagement() {
             firstName: o.firstName,
             middleInitial: o.middleInitial,
             lastName: o.lastName,
-            name: `${o.firstName} ${o.middleInitial ? o.middleInitial + " " : ""}${o.lastName}`,
+            name: `${o.firstName} ${
+              o.middleInitial ? o.middleInitial + " " : ""
+            }${o.lastName}`,
             email: o.officialEmail,
             username: o.officialID,
             role: o.position,
@@ -201,17 +206,20 @@ export default function UserManagement() {
     form.setFieldsValue({
       firstName: record.firstName || record.name.split(" ")[0] || "",
       middleInitial: record.middleInitial || "",
-      lastName: record.lastName || record.name.split(" ").slice(1).join(" ") || "",
+      lastName:
+        record.lastName || record.name.split(" ").slice(1).join(" ") || "",
       email: record.email === "N/A" ? "" : record.email,
       role: record.role,
       status: record.status,
+      phoneNumber: record.phoneNumber || "",
     });
     setModalOpen(true);
   };
 
   // Helpers
   const getStatusColor = (status, userType) => {
-    if (userType === "victim") return status === "anonymous" ? "orange" : "blue";
+    if (userType === "victim")
+      return status === "anonymous" ? "orange" : "blue";
     switch (status) {
       case "approved":
         return "green";
@@ -256,7 +264,11 @@ export default function UserManagement() {
         };
       } else {
         payload = { firstName: values.firstName, lastName: values.lastName };
-        if (values.role !== "anonymous" && values.email && values.email.trim() !== "")
+        if (
+          values.role !== "anonymous" &&
+          values.email &&
+          values.email.trim() !== ""
+        )
           payload.victimEmail = values.email;
       }
       Object.keys(payload).forEach((k) => {
@@ -292,7 +304,9 @@ export default function UserManagement() {
           : activeUser.userType === "official"
           ? "officials"
           : "victims";
-      const res = await api.put(`/api/admin/${path}/soft-delete/${activeUser.id}`);
+      const res = await api.put(
+        `/api/admin/${path}/soft-delete/${activeUser.id}`
+      );
       if (res?.data?.success) {
         message.success("User soft-deleted successfully");
         setDeleteModalOpen(false);
@@ -317,7 +331,8 @@ export default function UserManagement() {
   // Filtering
   useEffect(() => {
     let filtered = [...allUsers];
-    if (filterType !== "all") filtered = filtered.filter((u) => u.userType === filterType);
+    if (filterType !== "all")
+      filtered = filtered.filter((u) => u.userType === filterType);
     if (filterStatus !== "all")
       filtered = filtered.filter(
         (u) => String(u.status).toLowerCase() === filterStatus
@@ -354,12 +369,19 @@ export default function UserManagement() {
         width: 260,
         render: (text, record) => (
           <Space>
-            <Avatar style={{ background: typePillBg(record.userType), color: "#444" }}>
+            <Avatar
+              style={{
+                background: typePillBg(record.userType),
+                color: "#444",
+              }}
+            >
               {record.avatar}
             </Avatar>
             <div>
               <div style={{ fontWeight: 700 }}>{text}</div>
-              <div style={{ fontSize: 12, color: "#999" }}>@{record.username}</div>
+              <div style={{ fontSize: 12, color: "#999" }}>
+                @{record.username}
+              </div>
             </div>
           </Space>
         ),
@@ -398,7 +420,10 @@ export default function UserManagement() {
         key: "status",
         width: 140,
         render: (s, r) => (
-          <Tag color={getStatusColor(s, r.userType)} style={{ borderRadius: 999 }}>
+          <Tag
+            color={getStatusColor(s, r.userType)}
+            style={{ borderRadius: 999 }}
+          >
             {String(s).charAt(0).toUpperCase() + String(s).slice(1)}
           </Tag>
         ),
@@ -457,7 +482,15 @@ export default function UserManagement() {
     URL.revokeObjectURL(url);
   };
 
-  const modalWidth = screens.xl ? 700 : screens.lg ? 660 : screens.md ? "92vw" : "96vw";
+  const modalWidth = isXs
+    ? "100%"
+    : screens.xl
+    ? 700
+    : screens.lg
+    ? 660
+    : screens.md
+    ? "92vw"
+    : "96vw";
 
   return (
     <Layout
@@ -488,8 +521,15 @@ export default function UserManagement() {
           flexShrink: 0,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: isXs ? 8 : 12, flex: 1 }}>
-          {/* Sidebar toggle only on phones & small screens (dispatches existing toggle event Sidebar listens for) */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: isXs ? 8 : 12,
+            flex: 1,
+          }}
+        >
+          {/* Sidebar toggle only on phones & small screens */}
           {!isMdUp && (
             <Button
               type="text"
@@ -513,12 +553,14 @@ export default function UserManagement() {
             />
           )}
 
-          <div style={{ 
-            display: "flex", 
-            flexDirection: "column", 
-            minWidth: 0,
-            flex: 1,
-          }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              minWidth: 0,
+              flex: 1,
+            }}
+          >
             <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
               User Management
             </Title>
@@ -565,26 +607,30 @@ export default function UserManagement() {
               ["Victims", userCounts.victims, BRAND.pink],
             ].map(([label, value, color], i) => (
               <Col xs={12} sm={12} md={6} key={i}>
-                <Card style={{ 
-                  ...glassCard, 
-                  padding: isXs ? "8px 10px" : "10px 12px",
-                  textAlign: isXs ? "center" : "left",
-                }}>
-                  <Typography.Text 
-                    type="secondary" 
-                    style={{ 
+                <Card
+                  style={{
+                    ...glassCard,
+                    padding: isXs ? "8px 10px" : "10px 12px",
+                    textAlign: isXs ? "center" : "left",
+                  }}
+                >
+                  <Typography.Text
+                    type="secondary"
+                    style={{
                       fontSize: isXs ? 11 : 13,
                       display: "block",
                       marginBottom: 4,
                     }}
                   >
-                    {isXs && label.includes("Administrators") ? "Admins" : label}
+                    {isXs && label.includes("Administrators")
+                      ? "Admins"
+                      : label}
                   </Typography.Text>
                   <Typography.Title
                     level={isXs ? 4 : 3}
-                    style={{ 
-                      margin: 0, 
-                      color, 
+                    style={{
+                      margin: 0,
+                      color,
                       fontSize: isXs ? 20 : isSm ? 22 : 24,
                       fontWeight: 700,
                     }}
@@ -596,12 +642,11 @@ export default function UserManagement() {
             ))}
           </Row>
 
-          {/* Toolbar - Sticky */}
-          <Card 
-            style={{ 
-              ...glassCard, 
+          {/* Toolbar - Sticky card */}
+          <Card
+            style={{
+              ...glassCard,
               padding: isXs ? "12px 8px" : isSm ? "12px 10px" : "14px 16px",
-            
               top: 0,
               zIndex: 99,
               backdropFilter: "blur(16px)",
@@ -611,32 +656,40 @@ export default function UserManagement() {
               marginBottom: 2,
             }}
           >
-            <div style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: isXs ? 10 : 12,
-              width: "100%",
-            }}>
-              {/* Search Bar and Filters Row */}
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: isXs 
-                  ? "1fr" 
-                  : isSm 
-                  ? "1fr 1fr" 
-                  : isMdUp 
-                  ? "minmax(240px, 320px) repeat(auto-fit, minmax(140px, 1fr))" 
-                  : "1fr 1fr",
-                gap: isXs ? 8 : 10,
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: isXs ? 10 : 12,
                 width: "100%",
-                alignItems: "center",
-              }}>
+              }}
+            >
+              {/* Search Bar and Filters Row */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: isXs
+                    ? "1fr"
+                    : isSm
+                    ? "1fr 1fr"
+                    : isMdUp
+                    ? "minmax(240px, 320px) repeat(auto-fit, minmax(140px, 1fr))"
+                    : "1fr 1fr",
+                  gap: isXs ? 8 : 10,
+                  width: "100%",
+                  alignItems: "center",
+                }}
+              >
                 <Search
-                  placeholder={isXs ? "Search users..." : "Search name, email, username…"}
+                  placeholder={
+                    isXs
+                      ? "Search users..."
+                      : "Search name, email, username…"
+                  }
                   allowClear
                   enterButton={
-                    <Button 
-                      type="primary" 
+                    <Button
+                      type="primary"
                       icon={<SearchOutlined />}
                       style={{
                         background: BRAND.violet,
@@ -663,7 +716,10 @@ export default function UserManagement() {
                   style={{ width: "100%" }}
                   options={[
                     { value: "all", label: "All Types" },
-                    { value: "admin", label: isXs ? "Admins" : "Administrators" },
+                    {
+                      value: "admin",
+                      label: isXs ? "Admins" : "Administrators",
+                    },
                     { value: "official", label: "Officials" },
                     { value: "victim", label: "Victims" },
                   ]}
@@ -688,7 +744,7 @@ export default function UserManagement() {
                   placeholder={["Start", "End"]}
                   suffixIcon={<CalendarOutlined />}
                   size={isXs ? "middle" : "large"}
-                  style={{ 
+                  style={{
                     width: "100%",
                     gridColumn: isXs ? "span 1" : "auto",
                   }}
@@ -696,17 +752,19 @@ export default function UserManagement() {
               </div>
 
               {/* Action Buttons */}
-              <div style={{
-                display: "flex",
-                gap: 8,
-                justifyContent: isXs ? "stretch" : "flex-end",
-                width: "100%",
-              }}>
-                <Button 
-                  icon={<ReloadOutlined />} 
-                  onClick={fetchAllUsers} 
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  justifyContent: isXs ? "stretch" : "flex-end",
+                  width: "100%",
+                }}
+              >
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={fetchAllUsers}
                   size={isXs ? "middle" : "large"}
-                  style={{ 
+                  style={{
                     flex: isXs ? 1 : "0 0 auto",
                     display: "flex",
                     alignItems: "center",
@@ -716,12 +774,12 @@ export default function UserManagement() {
                 >
                   {!isXs && "Refresh"}
                 </Button>
-                <Button 
-                  icon={<DownloadOutlined />} 
-                  onClick={exportCsv} 
+                <Button
+                  icon={<DownloadOutlined />}
+                  onClick={exportCsv}
                   size={isXs ? "middle" : "large"}
                   type="primary"
-                  style={{ 
+                  style={{
                     flex: isXs ? 1 : "0 0 auto",
                     background: BRAND.violet,
                     borderColor: BRAND.violet,
@@ -760,12 +818,12 @@ export default function UserManagement() {
           </Card>
         </div>
 
-        {/* RIGHT-SIDE FLOATING MODAL */}
+        {/* USER DETAIL / EDIT MODAL */}
         <Modal
           open={modalOpen}
           onCancel={() => setModalOpen(false)}
           footer={null}
-          centered={true}
+          centered={!isXs}
           width={modalWidth}
           wrapClassName="floating-side"
           className="floating-modal"
@@ -774,51 +832,90 @@ export default function UserManagement() {
             background: "rgba(17,17,26,0.24)",
           }}
           destroyOnClose
-          styles={{ 
-            body: { 
-              padding: 12,
-              maxHeight: 'calc(100vh - 200px)',
-              overflowY: 'auto',
-              overflowX: 'hidden'
-            } 
-          }}
+          style={isXs ? { top: 8, paddingBottom: 0 } : {}}
+          // ensure base layer below delete modal
+          zIndex={1000}
           title={
             activeUser ? (
               <div
                 style={{
                   display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 8,
+                  flexDirection: isXs ? "column" : "row",
+                  alignItems: isXs ? "flex-start" : "center",
+                  justifyContent: isXs ? "flex-start" : "space-between",
+                  gap: isXs ? 8 : 12,
                 }}
               >
-                <Space>
+                <Space
+                  align="start"
+                  size={8}
+                  style={{ flex: 1, minWidth: 0 }}
+                >
                   <Avatar
-                    style={{ background: typePillBg(activeUser.userType), color: "#444" }}
+                    style={{
+                      background: typePillBg(activeUser.userType),
+                      color: "#444",
+                    }}
                   >
                     {activeUser.avatar}
                   </Avatar>
                   <div>
-                    <div style={{ fontWeight: 800 }}>
-                      {activeUser.name} <Tag style={{ marginLeft: 6 }}>{activeUser.userType}</Tag>
+                    <div
+                      style={{
+                        fontWeight: 800,
+                        fontSize: isXs ? 15 : 16,
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {activeUser.name}{" "}
+                      <Tag style={{ marginLeft: 6 }}>
+                        {activeUser.userType}
+                      </Tag>
                     </div>
-                    <Typography.Text type="secondary">@{activeUser.username}</Typography.Text>
+                    <Typography.Text type="secondary">
+                      @{activeUser.username}
+                    </Typography.Text>
                   </div>
                 </Space>
-                <Space>
+                <Space
+                  size={8}
+                  style={{
+                    marginTop: isXs ? 4 : 0,
+                    width: isXs ? "100%" : "auto",
+                    justifyContent: isXs ? "flex-end" : "flex-start",
+                    flexWrap: isXs ? "wrap" : "nowrap",
+                    rowGap: 6,
+                  }}
+                >
                   {mode === "view" ? (
                     <Button
                       type="primary"
+                      size={isXs ? "small" : "middle"}
                       onClick={() => setMode("edit")}
                       icon={<EditOutlined />}
-                      style={{ background: BRAND.violet, borderColor: BRAND.violet }}
+                      style={{
+                        background: BRAND.violet,
+                        borderColor: BRAND.violet,
+                      }}
                     >
                       Edit
                     </Button>
                   ) : (
-                    <Button onClick={() => setMode("view")}>Cancel</Button>
+                    <Button
+                      size={isXs ? "small" : "middle"}
+                      onClick={() => setMode("view")}
+                    >
+                      Cancel
+                    </Button>
                   )}
-                  <Button danger onClick={showDeleteConfirm}>Delete</Button>
+                  <Button
+                    danger
+                    size={isXs ? "small" : "middle"}
+                    onClick={showDeleteConfirm}
+                    icon={<DeleteOutlined />}
+                  >
+                    Delete
+                  </Button>
                 </Space>
               </div>
             ) : (
@@ -829,7 +926,9 @@ export default function UserManagement() {
           {activeUser && (
             <div className="modal-inner-animate">
               {/* Details */}
-              <Card style={{ ...glassCard, borderRadius: 16, marginBottom: 12 }}>
+              <Card
+                style={{ ...glassCard, borderRadius: 16, marginBottom: 12 }}
+              >
                 <Descriptions
                   bordered
                   size="small"
@@ -857,7 +956,10 @@ export default function UserManagement() {
                   </Descriptions.Item>
                   <Descriptions.Item label="Status">
                     <Tag
-                      color={getStatusColor(activeUser.status, activeUser.userType)}
+                      color={getStatusColor(
+                        activeUser.status,
+                        activeUser.userType
+                      )}
                       style={{ borderRadius: 999 }}
                     >
                       {String(activeUser.status).charAt(0).toUpperCase() +
@@ -935,12 +1037,15 @@ export default function UserManagement() {
                   </Row>
 
                   {mode === "edit" && (
-                    <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                    <div className="edit-footer-bar">
                       <Button onClick={() => setMode("view")}>Cancel</Button>
                       <Button
                         type="primary"
                         htmlType="submit"
-                        style={{ background: BRAND.violet, borderColor: BRAND.violet }}
+                        style={{
+                          background: BRAND.violet,
+                          borderColor: BRAND.violet,
+                        }}
                       >
                         Save Changes
                       </Button>
@@ -956,7 +1061,9 @@ export default function UserManagement() {
         <Modal
           title={
             <Space>
-              <ExclamationCircleOutlined style={{ color: '#ff4d4f', fontSize: 20 }} />
+              <ExclamationCircleOutlined
+                style={{ color: "#ff4d4f", fontSize: 20 }}
+              />
               <span>Confirm Delete</span>
             </Space>
           }
@@ -967,18 +1074,22 @@ export default function UserManagement() {
           cancelText="Cancel"
           okButtonProps={{ danger: true, loading }}
           centered
+          // always above the user detail modal
+          zIndex={1200}
         >
-          <div style={{ padding: '12px 0' }}>
+          <div style={{ padding: "12px 0" }}>
             <p style={{ fontSize: 15, marginBottom: 8 }}>
               Are you sure you want to delete this user?
             </p>
             {activeUser && (
-              <div style={{ 
-                background: '#f5f5f5', 
-                padding: 12, 
-                borderRadius: 8,
-                marginTop: 12 
-              }}>
+              <div
+                style={{
+                  background: "#f5f5f5",
+                  padding: 12,
+                  borderRadius: 8,
+                  marginTop: 12,
+                }}
+              >
                 <Space direction="vertical" size={4}>
                   <Text strong>{activeUser.name}</Text>
                   <Text type="secondary" style={{ fontSize: 13 }}>
@@ -988,7 +1099,14 @@ export default function UserManagement() {
                 </Space>
               </div>
             )}
-            <p style={{ marginTop: 16, marginBottom: 0, color: '#666', fontSize: 13 }}>
+            <p
+              style={{
+                marginTop: 16,
+                marginBottom: 0,
+                color: "#666",
+                fontSize: 13,
+              }}
+            >
               This action will soft-delete the user.
             </p>
           </div>
@@ -1013,12 +1131,10 @@ export default function UserManagement() {
         .ant-card:hover { transform: translateY(-1px); box-shadow: 0 16px 36px rgba(16,24,40,0.08); }
         .ant-table-thead > tr > th { background: #fff !important; }
 
-        /* Smooth sticky transitions */
         .ant-layout-header {
           transition: box-shadow 0.3s ease, background 0.3s ease;
         }
 
-        /* Better mobile input sizing */
         @media (max-width: 576px) {
           .ant-input-search .ant-input-group .ant-input {
             font-size: 14px !important;
@@ -1034,7 +1150,6 @@ export default function UserManagement() {
           }
         }
 
-        /* Improve mobile date picker */
         @media (max-width: 576px) {
           .ant-picker-dropdown {
             width: 100vw !important;
@@ -1060,28 +1175,25 @@ export default function UserManagement() {
           z-index: 11 !important;
         }
 
-        /* Side modal wrapper under sticky header */
+        /* Side modal wrapper – centered */
         .floating-side { 
-          display: flex !important; 
-          justify-content: center !important; 
-          align-items: center !important; 
-          padding: 20px !important; 
-          overflow: hidden !important;
+          display: flex; 
+          justify-content: center; 
+          align-items: center; 
+          padding: 12px; 
         }
-        .floating-modal .ant-modal {
-          top: 0 !important;
-          padding-bottom: 0 !important;
-        }
+
         .floating-modal .ant-modal-content {
           border-radius: 18px;
           overflow: hidden;
           border: 1px solid ${BRAND.softBorder};
           background: linear-gradient(145deg, rgba(255,255,255,0.95), rgba(255,255,255,0.86));
           box-shadow: 0 24px 72px rgba(16,24,40,0.22);
-          max-height: calc(100vh - 40px);
           display: flex;
           flex-direction: column;
+          max-height: calc(100vh - 40px);
         }
+
         .floating-modal .ant-modal-header {
           background: rgba(245,245,255,0.7);
           border-bottom: 1px solid ${BRAND.softBorder};
@@ -1089,74 +1201,66 @@ export default function UserManagement() {
           padding: 10px 16px;
           flex-shrink: 0;
         }
+
         .floating-modal .ant-modal-body {
           flex: 1;
           min-height: 0;
+          overflow-y: auto;
+          padding: 10px 12px 30px;
+          box-sizing: border-box;
+          max-height: calc(100vh - ${HEADER_H}px - 80px);
         }
-        
-        /* Mobile modal optimizations */
-        @media (max-width: 767px) {
-          .floating-side {
-            padding: 0 !important;
-            align-items: center !important;
-            overflow: hidden !important;
+
+        @media (max-width: 576px) {
+          .floating-side { 
+            padding: 0; 
+            align-items: center; 
           }
-          .floating-modal .ant-modal {
-            max-height: 100vh !important;
-            height: 100vh !important;
+          .floating-side .ant-modal {
             margin: 0 !important;
-            padding: 0 !important;
-            top: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
           }
           .floating-modal .ant-modal-content {
-            max-height: 100vh !important;
-            height: 100vh !important;
-            margin: 0 !important;
-            border-radius: 0 !important;
-          }
-          .floating-modal .ant-modal-header {
-            padding: 8px 12px;
-          }
-          .floating-modal .ant-modal-body {
-            padding: 8px !important;
-            max-height: calc(100vh - 120px) !important;
-          }
-          .floating-modal .ant-modal-close {
-            top: 8px;
-            right: 8px;
-          }
-        }
-        
-        @media (min-width: 768px) and (max-width: 991px) {
-          .floating-side {
-            padding: 4px !important;
-          }
-          .floating-modal .ant-modal-content {
+            border-radius: 16px;
             max-height: calc(100vh - 16px);
           }
           .floating-modal .ant-modal-body {
-            max-height: calc(100vh - 140px) !important;
+            padding: 8px 10px 80px;
           }
         }
-        
-        /* Custom scrollbar for modal body */
-        .floating-modal .ant-modal-body::-webkit-scrollbar {
-          width: 6px;
+
+        /* Edit footer buttons – always inside card */
+        .edit-footer-bar {
+          margin-top: 16px;
+          padding: 12px 8px 4px;
+          box-sizing: border-box;
+          border-top: 1px dashed rgba(148, 163, 184, 0.6);
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+          gap: 8px;
+          width: 100%;
+          max-width: 100%;
         }
-        .floating-modal .ant-modal-body::-webkit-scrollbar-track {
-          background: rgba(122, 90, 248, 0.08);
-          border-radius: 10px;
-        }
-        .floating-modal .ant-modal-body::-webkit-scrollbar-thumb {
-          background: rgba(122, 90, 248, 0.3);
-          border-radius: 10px;
-        }
-        .floating-modal .ant-modal-body::-webkit-scrollbar-thumb:hover {
-          background: rgba(122, 90, 248, 0.5);
+        @media (max-width: 480px) {
+          .edit-footer-bar {
+            flex-direction: column-reverse;
+            align-items: stretch;
+            padding: 12px 10px 4px;
+          }
+          .edit-footer-bar .ant-btn {
+            width: 100%;
+          }
         }
 
-        .modal-inner-animate { animation: slideIn .28s cubic-bezier(.2,.7,.3,1) both; }
-        @keyframes slideIn { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1); } }
+        .modal-inner-animate { 
+          animation: slideIn .28s cubic-bezier(.2,.7,.3,1) both; 
+        }
+        @keyframes slideIn {
+          from { transform: translateY(8px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
       `}</style>
     </Layout>
   );

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Layout,
   Typography,
@@ -31,6 +31,9 @@ import InstallButton from "../components/InstallButton";
 import { exchangeCustomTokenForIdToken } from "../lib/firebase";
 import { api, getUserData } from "../lib/api";
 
+import ApiBanner from "../components/ApiBanner";
+import { checkHealth } from "../utils/checkHealth";
+
 /** React Bits (from your bits/index.jsx) */
 import { Container, Section, GlassCard, KPI, CTAButton, BrandPill } from "../components/bits";
 
@@ -41,22 +44,33 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const screens = Grid.useBreakpoint();
   const prefersReduced = useReducedMotion();
-  const installButtonRef = useRef(null);
 
   // ── Stats
   const [reportCount, setReportCount] = useState(0);
   const [caseCount, setCaseCount] = useState(0);
 
+  const [backendStatus, setBackendStatus] = useState("online");
+
   useEffect(() => {
-    // Listen for openInstallModal event from Navbar
-    const handleOpenInstallModal = () => {
-      if (installButtonRef.current) {
-        installButtonRef.current.openModal();
+    let mounted = true;
+
+    const checkStatus = async () => {
+      try {
+        const status = await checkHealth(); // your existing utility
+        if (mounted) setBackendStatus(status);
+      } catch (err) {
+        if (mounted) setBackendStatus("offline");
+        console.error(err);
       }
     };
 
-    window.addEventListener('openInstallModal', handleOpenInstallModal);
-    return () => window.removeEventListener('openInstallModal', handleOpenInstallModal);
+    checkStatus(); // initial check
+    const interval = setInterval(checkStatus, 5000); // check every 5s
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   useEffect(() => {
@@ -212,6 +226,7 @@ export default function LandingPage() {
         },
       }}
     >
+      <ApiBanner status={backendStatus} />
       <Layout style={{ minHeight: "100vh", background: "transparent", position: "relative", overflow: "hidden" }}>
         {/* Page variables + subtle base gradient (under shader) */}
         <style>{`
@@ -428,7 +443,7 @@ export default function LandingPage() {
                   </Paragraph>
 
                   <Space style={{ marginTop: 20 }} wrap>
-                    
+
                     <CTAButton
                       primary
                       icon={<SafetyCertificateOutlined />}
@@ -456,7 +471,7 @@ export default function LandingPage() {
                       Report
                     </CTAButton>
 
-                      
+
 
                     <CTAButton icon={<UserSwitchOutlined />} onClick={() => navigate("/admin/login")}>
                       Admin Login
@@ -486,7 +501,7 @@ export default function LandingPage() {
                     { icon: <SafetyCertificateOutlined style={{ fontSize: 32, color: "#2196f3" }} />, title: "VAWCare Alerts", desc: "One-tap emergency notifications to your barangay and contacts." },
                     { icon: <TeamOutlined style={{ fontSize: 32, color: "#4caf50" }} />, title: "VAWCare Support", desc: "Helplines, chatbot, resources—organized in one trusted place." }
                   ].map((item, idx) => (
-                    <motion.div 
+                    <motion.div
                       key={item.title}
                       variants={prefersReduced ? undefined : fadeUp}
                       initial="hidden"
@@ -494,7 +509,7 @@ export default function LandingPage() {
                       viewport={{ once: true, amount: 0.3 }}
                       transition={{ delay: idx * 0.1 }}
                     >
-                      <GlassCard 
+                      <GlassCard
                         hoverable={false}
                         style={{
                           background: `linear-gradient(135deg, ${BRAND.pink}08, ${BRAND.violet}10)`,
@@ -503,20 +518,20 @@ export default function LandingPage() {
                           position: "relative",
                         }}
                       >
-                        <div style={{ 
-                          position: "absolute", 
-                          top: -30, 
-                          right: -30, 
-                          width: 150, 
+                        <div style={{
+                          position: "absolute",
+                          top: -30,
+                          right: -30,
+                          width: 150,
                           height: 150,
                           background: `radial-gradient(circle, ${BRAND.violet}12, transparent 70%)`,
                           pointerEvents: "none",
                         }} />
-                        <div style={{ 
-                          position: "absolute", 
-                          bottom: -40, 
-                          left: -40, 
-                          width: 180, 
+                        <div style={{
+                          position: "absolute",
+                          bottom: -40,
+                          left: -40,
+                          width: 180,
                           height: 180,
                           background: `radial-gradient(circle, ${BRAND.pink}10, transparent 70%)`,
                           pointerEvents: "none",
@@ -592,9 +607,9 @@ export default function LandingPage() {
                             justifyContent: "center",
                           }}
                         >
-                          <div style={{ 
-                            width: 100, 
-                            height: 100, 
+                          <div style={{
+                            width: 100,
+                            height: 100,
                             marginBottom: 24,
                             borderRadius: 24,
                             background: "#fff",
@@ -634,9 +649,9 @@ export default function LandingPage() {
                             justifyContent: "center",
                           }}
                         >
-                          <div style={{ 
-                            width: 100, 
-                            height: 100, 
+                          <div style={{
+                            width: 100,
+                            height: 100,
                             marginBottom: 24,
                             borderRadius: 24,
                             background: "#fff",
@@ -676,9 +691,9 @@ export default function LandingPage() {
                             justifyContent: "center",
                           }}
                         >
-                          <div style={{ 
-                            width: 100, 
-                            height: 100, 
+                          <div style={{
+                            width: 100,
+                            height: 100,
                             marginBottom: 24,
                             borderRadius: 24,
                             background: "#fff",
@@ -707,89 +722,89 @@ export default function LandingPage() {
                     </div>
                   </Col>
                 </Row>
-                
+
                 {/* Install App Section */}
-               <motion.div
-  variants={prefersReduced ? undefined : fadeUp}
-  initial="hidden"
-  whileInView="show"
-  viewport={{ once: true, amount: 0.4 }}
-  style={{
-    marginTop: screens.md ? 24 : 60,
-    padding: screens.md ? "48px 40px" : "32px 24px",
-    textAlign: "center",
-    maxWidth: 640,
-    marginInline: "auto",
-    borderRadius: 24,
-    paddingTop: "50px",
-    position: "relative",
-    overflow: "hidden",
-  }}
->
-  {/* soft accent strip */}
-  <div
-    style={{
-      position: "absolute",
-      inset: 0,
-      
-      opacity: dark ? 0.55 : 0.35,
-      pointerEvents: "none",
-    }}
-  />
-  <div style={{ position: "relative", zIndex: 1 }}>
-    {/* small pill label */}
-    <div
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-        padding: "4px 10px",
-        borderRadius: 999,
-        color: "#fff",
-        fontSize: 11,
-        fontWeight: 600,
-        textTransform: "uppercase",
-        letterSpacing: 0.08,
-        marginBottom: 10,
-      }}
-    >
-    
-    </div>
+                <motion.div
+                  variants={prefersReduced ? undefined : fadeUp}
+                  initial="hidden"
+                  whileInView="show"
+                  viewport={{ once: true, amount: 0.4 }}
+                  style={{
+                    marginTop: screens.md ? 24 : 60,
+                    padding: screens.md ? "48px 40px" : "32px 24px",
+                    textAlign: "center",
+                    maxWidth: 640,
+                    marginInline: "auto",
+                    borderRadius: 24,
+                    paddingTop: "50px",
+                    position: "relative",
+                    overflow: "hidden",
+                  }}
+                >
+                  {/* soft accent strip */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
 
-    <Title
-      level={screens.md ? 3 : 4}
-      style={{
-        marginBottom: 10,
-        color: "var(--ink)",
-        fontWeight: 700,
-      }}
-    >
-      Install the VAWCare App
-    </Title>
+                      opacity: dark ? 0.55 : 0.35,
+                      pointerEvents: "none",
+                    }}
+                  />
+                  <div style={{ position: "relative", zIndex: 1 }}>
+                    {/* small pill label */}
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        padding: "4px 10px",
+                        borderRadius: 999,
+                        color: "#fff",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        textTransform: "uppercase",
+                        letterSpacing: 0.08,
+                        marginBottom: 10,
+                      }}
+                    >
 
-    <Paragraph
-      className="muted"
-      style={{
-        fontSize: 15,
-        marginBottom: 24,
-        maxWidth: 560,
-        marginInline: "auto",
-      }}
-    >
-      Save VAWCare to your home screen so help, reports, and hotlines are just
-      one tap away. Choose{" "}
-      <b>original</b> or <b>disguise mode</b> for extra privacy.
-    </Paragraph>
+                    </div>
 
-    <InstallButton ref={installButtonRef} />
-  </div>
-</motion.div>
+                    <Title
+                      level={screens.md ? 3 : 4}
+                      style={{
+                        marginBottom: 10,
+                        color: "var(--ink)",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Install the VAWCare App
+                    </Title>
+
+                    <Paragraph
+                      className="muted"
+                      style={{
+                        fontSize: 15,
+                        marginBottom: 24,
+                        maxWidth: 560,
+                        marginInline: "auto",
+                      }}
+                    >
+                      Save VAWCare to your home screen so help, reports, and hotlines are just
+                      one tap away. Choose{" "}
+                      <b>original</b> or <b>disguise mode</b> for extra privacy.
+                    </Paragraph>
+
+                    <InstallButton />
+                  </div>
+                </motion.div>
 
               </Container>
             </Section>
 
             {/* HOW IT WORKS */}
-            <Section style={{ paddingBottom: 56,  }}>
+            <Section style={{ paddingBottom: 56, }}>
               <Container>
                 <Title level={3} style={{ textAlign: "center", marginBottom: 24, color: "var(--ink)" }}>
                   How VAWCare Works
@@ -935,40 +950,40 @@ export default function LandingPage() {
                       We're Here to Help
                     </Title>
                     <Paragraph className="muted" style={{ fontSize: 16, maxWidth: 680, margin: "0 auto" }}>
-                      VAWCare is proudly serving Barangay Bonfal Proper, bringing comprehensive support 
+                      VAWCare is proudly serving Barangay Bonfal Proper, bringing comprehensive support
                       and protection services directly to our community.
                     </Paragraph>
                   </div>
 
                   <Row style={{ paddingTop: 40, paddingBottom: 40 }} gutter={[32, 32]} align="middle">
                     <Col xs={24} lg={12}>
-                      <GlassCard 
-                        style={{ 
+                      <GlassCard
+                        style={{
                           background: `linear-gradient(135deg, ${BRAND.pink}08, ${BRAND.violet}10)`,
                           border: `1px solid ${SURFACE.border}`,
                           overflow: "hidden",
                           position: "relative",
                         }}
                       >
-                        <div style={{ 
-                          position: "absolute", 
-                          top: -40, 
-                          right: -40, 
-                          width: 200, 
+                        <div style={{
+                          position: "absolute",
+                          top: -40,
+                          right: -40,
+                          width: 200,
                           height: 200,
                           background: `radial-gradient(circle, ${BRAND.violet}12, transparent 70%)`,
                           pointerEvents: "none",
                         }} />
-                        <div style={{ 
-                          position: "absolute", 
-                          bottom: -60, 
-                          left: -60, 
-                          width: 250, 
+                        <div style={{
+                          position: "absolute",
+                          bottom: -60,
+                          left: -60,
+                          width: 250,
                           height: 250,
                           background: `radial-gradient(circle, ${BRAND.pink}10, transparent 70%)`,
                           pointerEvents: "none",
                         }} />
-                        
+
                         <div style={{ position: "relative", zIndex: 1 }}>
                           <motion.div
                             style={{
@@ -988,7 +1003,7 @@ export default function LandingPage() {
                           >
                             🗺️
                           </motion.div>
-                          
+
                           <Title level={3} style={{ margin: "0 0 24px", color: "var(--ink)" }}>
                             Visit Our Office
                           </Title>
@@ -1009,7 +1024,7 @@ export default function LandingPage() {
                                 HOW TO GET THERE
                               </Text>
                               <Paragraph className="muted" style={{ margin: "4px 0 0", fontSize: 15 }}>
-                                Located in the heart of Barangay Bonfal Proper, accessible via local transport 
+                                Located in the heart of Barangay Bonfal Proper, accessible via local transport
                                 and major thoroughfares in Nueva Vizcaya.
                               </Paragraph>
                             </div>
@@ -1031,8 +1046,8 @@ export default function LandingPage() {
                                 boxShadow: `0 12px 32px ${dark ? "rgba(122,90,248,0.3)" : "rgba(233,30,99,0.25)"}`,
                                 border: "none",
                               }}
-                              whileHover={{ 
-                                scale: 1.03, 
+                              whileHover={{
+                                scale: 1.03,
                                 y: -3,
                                 boxShadow: `0 16px 40px ${dark ? "rgba(122,90,248,0.4)" : "rgba(233,30,99,0.35)"}`,
                               }}
@@ -1048,7 +1063,7 @@ export default function LandingPage() {
                     </Col>
 
                     <Col xs={24} lg={12}>
-                      <div style={{ height: screens.md ? "500px" : "450px", position: "relative", display: "flex", alignItems: "center", justifyContent: "center",  paddingTop: screens.md ? 0 : 120, paddingRight: screens.md ? 0 : 40}}>
+                      <div style={{ height: screens.md ? "500px" : "450px", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", paddingTop: screens.md ? 0 : 120, paddingRight: screens.md ? 0 : 40 }}>
                         <CardSwap
                           width={screens.md ? 380 : 320}
                           height={screens.md ? 420 : 380}
@@ -1070,9 +1085,9 @@ export default function LandingPage() {
                             }}
                           >
                             <div style={{ textAlign: "center" }}>
-                              <div style={{ 
-                                width: 80, 
-                                height: 80, 
+                              <div style={{
+                                width: 80,
+                                height: 80,
                                 margin: "0 auto 20px",
                                 borderRadius: 24,
                                 background: `linear-gradient(135deg, ${BRAND.pink}20, ${BRAND.violet}20)`,
@@ -1114,9 +1129,9 @@ export default function LandingPage() {
                             }}
                           >
                             <div style={{ textAlign: "center" }}>
-                              <div style={{ 
-                                width: 80, 
-                                height: 80, 
+                              <div style={{
+                                width: 80,
+                                height: 80,
                                 margin: "0 auto 20px",
                                 borderRadius: 24,
                                 background: `linear-gradient(135deg, ${BRAND.violet}20, ${BRAND.pink}20)`,
@@ -1139,10 +1154,10 @@ export default function LandingPage() {
                                   <Text style={{ fontSize: 12, color: BRAND.violet, fontWeight: 700, letterSpacing: "0.5px", display: "block", marginBottom: 8 }}>
                                     EMAIL ADDRESS
                                   </Text>
-                                  <a 
+                                  <a
                                     href="mailto:barangayvawcdesk@email.com"
-                                    style={{ 
-                                      color: BRAND.pink, 
+                                    style={{
+                                      color: BRAND.pink,
                                       fontWeight: 600,
                                       textDecoration: "none",
                                       fontSize: 14,
@@ -1166,9 +1181,9 @@ export default function LandingPage() {
                             }}
                           >
                             <div style={{ textAlign: "center" }}>
-                              <div style={{ 
-                                width: 80, 
-                                height: 80, 
+                              <div style={{
+                                width: 80,
+                                height: 80,
                                 margin: "0 auto 20px",
                                 borderRadius: 24,
                                 background: `linear-gradient(135deg, ${BRAND.pink}20, ${BRAND.violet}20)`,

@@ -18,11 +18,11 @@ const app = express();
 
 // CORS configuration to allow credentials (cookies)
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true,  // Allow credentials (cookies)
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-actor-business-id', 'x-actor-id', 'x-actor-type', 'cache-control'],
-  optionsSuccessStatus: 200
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true,  // Allow credentials (cookies)
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-actor-business-id', 'x-actor-id', 'x-actor-type', 'cache-control'],
+    optionsSuccessStatus: 200
 };
 
 // Middleware
@@ -71,9 +71,10 @@ app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/alerts', alertRoutes);
 
 // Health check - lightweight endpoint for manual connectivity tests
-app.get('/api/ping', (req, res) => {
-    res.json({ success: true, message: 'pong', now: new Date().toISOString() });
+app.get("/health", (req, res) => {
+    res.status(200).json({ status: "ok" });
 });
+
 
 // Debug endpoint - show incoming cookies and headers
 app.get('/api/debug/cookies', (req, res) => {
@@ -101,7 +102,7 @@ app.use((err, req, res, next) => {
         path: req.path,
         size: req.get('content-length') || 'unknown'
     });
-    
+
     const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
     res.status(statusCode);
     res.json({
@@ -117,45 +118,45 @@ app.listen(PORT, () => {
     console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
     console.log('\x1b[36m%s\x1b[0m', `Swagger documentation available at: http://localhost:${PORT}/api-docs`);
     console.log('\x1b[36m%s\x1b[0m', '-----------------------------------------------------------');
-        // Background supervisor for alerts: keep server-side authority for alert lifecycle
+    // Background supervisor for alerts: keep server-side authority for alert lifecycle
+    try {
+        const ALERT_POLL_MS = Number(process.env.ALERT_POLL_MS) || 30000; // default 30s
+        const ALERT_MAX_ACTIVE_MS = process.env.ALERT_MAX_ACTIVE_MS ? Number(process.env.ALERT_MAX_ACTIVE_MS) : null; // optional
+        const alerts = require('./models/Alert');
+        setInterval(async () => {
+            try {
+                const activeCount = await alerts.countDocuments({ status: 'Active' });
+                if (process.env.ALERT_DEBUG) console.log(`Alert supervisor: active alerts=${activeCount}`);
+                const ALERT_MAX_ACTIVE_MS = 1000 * 60 * 60; // 1 hour countdown timer before auto-resolve
+                if (ALERT_MAX_ACTIVE_MS && Number.isFinite(ALERT_MAX_ACTIVE_MS)) {
+                    const cutoff = new Date(Date.now() - ALERT_MAX_ACTIVE_MS);
+                    const stale = await alerts.find({ status: 'Active', createdAt: { $lte: cutoff } }).limit(100).lean();
+                    for (const s of stale) {
+                        try {
+                            await alerts.updateOne({ _id: s._id }, { $set: { status: 'Resolved', resolvedAt: new Date(), durationMs: Date.now() - new Date(s.createdAt).getTime(), durationStr: 'Auto-resolved' } });
+                            if (process.env.ALERT_DEBUG) console.log('Auto-resolved alert', s._id);
+                        } catch (e) { console.warn('Failed to auto-resolve alert', s._id, e && e.message); }
+                    }
+                }
+            } catch (e) { console.warn('Alert supervisor iteration failed', e && e.message); }
+        }, ALERT_POLL_MS);
+        // BPO supervisor: mark expired BPOs
         try {
-            const ALERT_POLL_MS = Number(process.env.ALERT_POLL_MS) || 30000; // default 30s
-            const ALERT_MAX_ACTIVE_MS = process.env.ALERT_MAX_ACTIVE_MS ? Number(process.env.ALERT_MAX_ACTIVE_MS) : null; // optional
-            const alerts = require('./models/Alert');
+            const BPO = require('./models/BPO');
+            const BPO_POLL_MS = Number(process.env.BPO_POLL_MS) || 30000;
             setInterval(async () => {
                 try {
-                    const activeCount = await alerts.countDocuments({ status: 'Active' });
-                    if (process.env.ALERT_DEBUG) console.log(`Alert supervisor: active alerts=${activeCount}`);
-                    const ALERT_MAX_ACTIVE_MS = 1000 * 60 * 60; // 1 hour countdown timer before auto-resolve
-                    if (ALERT_MAX_ACTIVE_MS && Number.isFinite(ALERT_MAX_ACTIVE_MS)) {
-                        const cutoff = new Date(Date.now() - ALERT_MAX_ACTIVE_MS);
-                        const stale = await alerts.find({ status: 'Active', createdAt: { $lte: cutoff } }).limit(100).lean();
-                        for (const s of stale) {
-                            try {
-                                await alerts.updateOne({ _id: s._id }, { $set: { status: 'Resolved', resolvedAt: new Date(), durationMs: Date.now() - new Date(s.createdAt).getTime(), durationStr: 'Auto-resolved' } });
-                                if (process.env.ALERT_DEBUG) console.log('Auto-resolved alert', s._id);
-                            } catch (e) { console.warn('Failed to auto-resolve alert', s._id, e && e.message); }
-                        }
+                    const now = new Date();
+                    const expired = await BPO.find({ status: 'Active', expiryDate: { $lte: now } }).limit(200).lean();
+                    if (expired && expired.length > 0) {
+                        const ids = expired.map(e => e._id);
+                        await BPO.updateMany({ _id: { $in: ids } }, { $set: { status: 'Expired', updatedAt: new Date() } });
+                        if (process.env.BPO_DEBUG) console.log(`BPO supervisor: marked ${ids.length} BPO(s) expired`);
+                    } else {
+                        if (process.env.BPO_DEBUG) console.log('BPO supervisor: no expired BPOs this iteration');
                     }
-                } catch (e) { console.warn('Alert supervisor iteration failed', e && e.message); }
-            }, ALERT_POLL_MS);
-                    // BPO supervisor: mark expired BPOs
-                    try {
-                        const BPO = require('./models/BPO');
-                        const BPO_POLL_MS = Number(process.env.BPO_POLL_MS) || 30000;
-                        setInterval(async () => {
-                            try {
-                                const now = new Date();
-                                const expired = await BPO.find({ status: 'Active', expiryDate: { $lte: now } }).limit(200).lean();
-                                if (expired && expired.length > 0) {
-                                    const ids = expired.map(e => e._id);
-                                    await BPO.updateMany({ _id: { $in: ids } }, { $set: { status: 'Expired', updatedAt: new Date() } });
-                                    if (process.env.BPO_DEBUG) console.log(`BPO supervisor: marked ${ids.length} BPO(s) expired`);
-                                } else {
-                                    if (process.env.BPO_DEBUG) console.log('BPO supervisor: no expired BPOs this iteration');
-                                }
-                            } catch (e) { console.warn('BPO supervisor iteration failed', e && e.message); }
-                        }, BPO_POLL_MS);
-                    } catch (e) { console.warn('Failed to start BPO supervisor', e && e.message); }
-        } catch (e) { console.warn('Failed to start alert supervisor', e && e.message); }
+                } catch (e) { console.warn('BPO supervisor iteration failed', e && e.message); }
+            }, BPO_POLL_MS);
+        } catch (e) { console.warn('Failed to start BPO supervisor', e && e.message); }
+    } catch (e) { console.warn('Failed to start alert supervisor', e && e.message); }
 });

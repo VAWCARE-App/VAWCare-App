@@ -241,7 +241,7 @@ function SessionExpirationHandler() {
                 fontWeight: 500,
               }}
             >
-              barangayvawcdesk@email.com
+              barangayvawcdesk@gmail.com
             </a>
           </div>
         </div>

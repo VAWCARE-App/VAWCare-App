@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useImperativeHandle, forwardRef } from "react";
 import { Button, Modal, Radio, Typography, Space, Tabs, Alert } from "antd";
-import { DesktopOutlined, MobileOutlined } from "@ant-design/icons";
+import { DesktopOutlined, MobileOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import { setDisguiseMode, loadDisguiseMode } from "../hooks/useDisguise";
 
 const { Text, Title, Paragraph } = Typography;
@@ -10,11 +10,21 @@ const InstallButton = forwardRef((props, ref) => {
     const [disguised, setDisguised] = useState(localStorage.getItem("disguise") === "1");
     const [deferredPrompt, setDeferredPrompt] = useState(null);
     const [isDesktop, setIsDesktop] = useState(window.innerWidth > 768);
+    const [isInstalled, setIsInstalled] = useState(false);
 
     useEffect(() => {
         // Load saved disguise mode
         loadDisguiseMode();
         setDisguised(localStorage.getItem("disguise") === "1");
+
+        // Check if app is already installed
+        const checkInstalled = async () => {
+            if (window.navigator.getInstalledRelatedApps) {
+                const apps = await window.navigator.getInstalledRelatedApps();
+                setIsInstalled(apps.length > 0);
+            }
+        };
+        checkInstalled();
 
         // Capture PWA install prompt
         const handler = (e) => {
@@ -57,6 +67,7 @@ const InstallButton = forwardRef((props, ref) => {
         const choice = await deferredPrompt.userChoice;
         if (choice.outcome === "accepted") {
             console.log("User accepted the install");
+            setIsInstalled(true);
         } else {
             console.log("User dismissed the install");
         }
@@ -115,7 +126,14 @@ const InstallButton = forwardRef((props, ref) => {
                                         Install App
                                     </Button>
 
-                                    {!deferredPrompt && (
+                                    {isInstalled ? (
+                                        <Alert
+                                            message={<><CheckCircleOutlined /> App Already Installed</>}
+                                            description="VAWCare is already installed on your device! You can find it on your home screen or app drawer."
+                                            type="success"
+                                            showIcon
+                                        />
+                                    ) : !deferredPrompt ? (
                                         <Alert
                                             message="Install Prompt Not Available"
                                             description={
@@ -126,7 +144,7 @@ const InstallButton = forwardRef((props, ref) => {
                                             type="info"
                                             showIcon
                                         />
-                                    )}
+                                    ) : null}
                                 </Space>
                             ),
                         },

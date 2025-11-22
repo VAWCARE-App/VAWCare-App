@@ -84,15 +84,30 @@ function SessionExpirationHandler() {
 
   return (
     <Modal
-      title="Session Expired"
+      title={<span style={{ fontWeight: 700, fontSize: 22, color: '#e91e63', letterSpacing: 0.5 }}>Session Expired</span>}
       open={sessionExpiredModal}
       onOk={handleClose}
       okText="OK"
       cancelButtonProps={{ style: { display: 'none' } }}
       closable={false}
       centered
+      bodyStyle={{ padding: 28, fontFamily: 'inherit', background: '#fff', borderRadius: 16 }}
+      style={{ maxWidth: 420 }}
     >
-      <p>Session Expired. Please login again</p>
+      <div style={{ fontSize: 16, color: '#222', marginBottom: 18 }}>
+        <p style={{ marginBottom: 12 }}>Session Expired. Please login again.</p>
+        <div style={{ background: '#f8f8fa', borderRadius: 10, padding: 16, marginBottom: 16, border: '1px solid #f0f0f0' }}>
+          <b>Guidelines:</b>
+          <ul style={{ margin: '10px 0 0 18px', padding: 0, fontSize: 15 }}>
+            <li style={{ marginBottom: 8 }}><b>For iOS (iPhone/iPad):</b> Go to <b>Settings</b> &rarr; search <b>Safari</b> &rarr; scroll down and <b>disable "Prevent Cross-Site Tracking"</b> to use VAWCare.</li>
+            <li style={{ marginBottom: 8 }}><b>For Mobile & Desktop:</b> Please check your internet connection and try again.</li>
+          </ul>
+        </div>
+        <div style={{ fontSize: 15, color: '#666', marginBottom: 10 }}>
+          If this problem continues, please contact us:<br />
+          <a href="mailto:barangayvawcdesk@email.com" style={{ color: '#e91e63', textDecoration: 'underline' }}>barangayvawcdesk@email.com</a>
+        </div>
+      </div>
     </Modal>
   );
 }

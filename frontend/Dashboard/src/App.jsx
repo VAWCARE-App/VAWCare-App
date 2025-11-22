@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { App as AntApp, ConfigProvider, Spin, Modal } from "antd";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { ExclamationCircleFilled, MailOutlined } from "@ant-design/icons";
 
 import Login from "./pages/Login";
 import LandingPage from "./pages/LandingPage";
@@ -32,14 +33,12 @@ import OfficialDashboard from "./pages/Dashboards/OfficialDashboard";
 import VictimBarangay from "./pages/Victim/VictimBarangay";
 import VictimCases from "./pages/Victim/VictimCases";
 
-
 import Test from "./pages/Test";
 import ReportCase from "./pages/Victim/Report";
 import EmergencyButton from "./pages/Victim/EmergencyButton";
 import LogManagement from "./pages/Admins/LogManagement";
 import VictimSettings from "./pages/Victim/VictimSettings";
 import ColorBends from "./components/ColorBends";
-
 
 import { isAuthed, getUserType, getUserData, clearAllStorage } from "./lib/api";
 
@@ -69,21 +68,26 @@ function SessionExpirationHandler() {
   const [sessionExpiredModal, setSessionExpiredModal] = useState(false);
 
   useEffect(() => {
-    const handler = (e) => {
+    const handler = () => {
       setSessionExpiredModal(true);
     };
-    window.addEventListener('session:expired', handler);
-    return () => window.removeEventListener('session:expired', handler);
+    window.addEventListener("session:expired", handler);
+    return () => window.removeEventListener("session:expired", handler);
   }, []);
 
   const handleClose = async () => {
     setSessionExpiredModal(false);
     await clearAllStorage();
-    window.location.href = '/landing';
+    window.location.href = "/landing";
+  };
+
+  const BRAND = {
+    violet: "#7A5AF8",
+    pink: "#e91e63",
   };
 
   return (
-     <Modal
+    <Modal
       open={sessionExpiredModal}
       onOk={handleClose}
       okText="Return to login"
@@ -264,15 +268,17 @@ function Protected({ children, roles }) {
           if (userData) {
             // populate sessionStorage so other parts of the app behave normally
             const role = userData.userType || userData.role || null;
-            if (role) sessionStorage.setItem('userType', role);
-            if (userData.id) sessionStorage.setItem('actorId', String(userData.id));
-            const businessId = userData.adminID || userData.officialID || userData.victimID || null;
-            if (businessId) sessionStorage.setItem('actorBusinessId', String(businessId));
+            if (role) sessionStorage.setItem("userType", role);
+            if (userData.id) sessionStorage.setItem("actorId", String(userData.id));
+            const businessId =
+              userData.adminID || userData.officialID || userData.victimID || null;
+            if (businessId)
+              sessionStorage.setItem("actorBusinessId", String(businessId));
             logged = true;
           }
         } catch (e) {
           // ignore; we'll treat as not logged
-          console.debug('[App] restore session failed', e && e.message);
+          console.debug("[App] restore session failed", e && e.message);
         }
       }
 
@@ -314,22 +320,26 @@ function Protected({ children, roles }) {
 
   // Not logged in -> go to login
   if (!authed) {
-    const redirectToAdmin = window.location.pathname.startsWith('/admin');
-    return <Navigate to={redirectToAdmin ? "/admin/login" : "/login"} replace />;
+    const redirectToAdmin = window.location.pathname.startsWith("/admin");
+    return (
+      <Navigate
+        to={redirectToAdmin ? "/admin/login" : "/login"}
+        replace
+      />
+    );
   }
 
   // Logged in but not authorized -> send to role home (or show 403)
   if (!authorized) {
     // map role -> safe home route
-    const roleHome = {
-      victim: "/victim",
-      admin: "/admin",
-      official: "/admin/official-dashboard",
-    }[userType] || "/";
+    const roleHome =
+      {
+        victim: "/victim",
+        admin: "/admin",
+        official: "/admin/official-dashboard",
+      }[userType] || "/";
 
     return <Navigate to={roleHome} replace />;
-    // Alternative: return a 403 page instead of redirecting
-    // return <Navigate to="/forbidden" replace />
   }
 
   return children;
@@ -353,41 +363,207 @@ export default function App() {
             <Route path="/color-bends" element={<ColorBends />} />
             <Route path="/sidebar" element={<Sidebar />} />
 
-
-
             <Route path="/victim" element={<Main />}>
-              <Route index element={<Protected roles={["victim"]}><VictimDashboard /></Protected>} />
-              <Route path="dashboard" element={<Protected roles={["victim"]}><VictimDashboard /></Protected>} />
-              <Route path="report" element={<Protected roles={["victim"]}><ReportCase /></Protected>} />
-              <Route path="emergency" element={<Protected roles={["victim"]}><EmergencyButton /></Protected>} />
-              <Route path="victim-barangay" element={<Protected roles={["victim"]}><VictimBarangay /></Protected>} />
-              <Route path="victim-cases" element={<Protected roles={["victim"]}><VictimCases /></Protected>} />
-              <Route path="victim-settings" element={<Protected roles={["victim"]}><VictimSettings /></Protected>} />
+              <Route
+                index
+                element={
+                  <Protected roles={["victim"]}>
+                    <VictimDashboard />
+                  </Protected>
+                }
+              />
+              <Route
+                path="dashboard"
+                element={
+                  <Protected roles={["victim"]}>
+                    <VictimDashboard />
+                  </Protected>
+                }
+              />
+              <Route
+                path="report"
+                element={
+                  <Protected roles={["victim"]}>
+                    <ReportCase />
+                  </Protected>
+                }
+              />
+              <Route
+                path="emergency"
+                element={
+                  <Protected roles={["victim"]}>
+                    <EmergencyButton />
+                  </Protected>
+                }
+              />
+              <Route
+                path="victim-barangay"
+                element={
+                  <Protected roles={["victim"]}>
+                    <VictimBarangay />
+                  </Protected>
+                }
+              />
+              <Route
+                path="victim-cases"
+                element={
+                  <Protected roles={["victim"]}>
+                    <VictimCases />
+                  </Protected>
+                }
+              />
+              <Route
+                path="victim-settings"
+                element={
+                  <Protected roles={["victim"]}>
+                    <VictimSettings />
+                  </Protected>
+                }
+              />
             </Route>
 
             {/* Admin shell moved to /admin */}
-            <Route path="/admin" element={<Protected roles={["admin", "official"]}><Admin /></Protected>}>
+            <Route
+              path="/admin"
+              element={
+                <Protected roles={["admin", "official"]}>
+                  <Admin />
+                </Protected>
+              }
+            >
               {/* Default (admin) */}
-              <Route index element={<Protected roles={["admin", "official"]}><Dashboard /></Protected>} />
+              <Route
+                index
+                element={
+                  <Protected roles={["admin", "official"]}>
+                    <Dashboard />
+                  </Protected>
+                }
+              />
 
               {/* Officials */}
-              <Route path="official-dashboard" element={<Protected roles={["admin", "official"]}><OfficialDashboard /></Protected>} />
-              <Route path="official-cases" element={<Protected roles={["admin", "official"]}><CaseManagement /></Protected>} />
-              <Route path="official-cases/:id" element={<Protected roles={["admin", "official"]}><CaseDetail /></Protected>} />
-              <Route path="official-settings" element={<Protected roles={["official"]}><OfficialSettings /></Protected>} />
-              <Route path="create-official" element={<Protected roles={["admin", "official"]}><CreateOfficial /></Protected>} />
-              <Route path="reports" element={<Protected roles={["admin", "official"]}><ReportManagement /></Protected>} />
-              <Route path="alerts" element={<Protected roles={["admin", "official"]}><AlertsManagement /></Protected>} />
-              <Route path="bpo" element={<Protected roles={["admin", "official"]}><BPO /></Protected>} />
-              <Route path="bpo/:id" element={<Protected roles={["admin", "official"]}><BPODetail /></Protected>} />
-              <Route path="bpo-management" element={<Protected roles={["admin", "official"]}><BPOManagement /></Protected>} />
-              <Route path="cases" element={<Protected roles={["admin", "official"]}><CaseManagement /></Protected>} />
-              <Route path="cases/:id" element={<Protected roles={["admin", "official"]}><CaseDetail /></Protected>} />
+              <Route
+                path="official-dashboard"
+                element={
+                  <Protected roles={["admin", "official"]}>
+                    <OfficialDashboard />
+                  </Protected>
+                }
+              />
+              <Route
+                path="official-cases"
+                element={
+                  <Protected roles={["admin", "official"]}>
+                    <CaseManagement />
+                  </Protected>
+                }
+              />
+              <Route
+                path="official-cases/:id"
+                element={
+                  <Protected roles={["admin", "official"]}>
+                    <CaseDetail />
+                  </Protected>
+                }
+              />
+              <Route
+                path="official-settings"
+                element={
+                  <Protected roles={["official"]}>
+                    <OfficialSettings />
+                  </Protected>
+                }
+              />
+              <Route
+                path="create-official"
+                element={
+                  <Protected roles={["admin", "official"]}>
+                    <CreateOfficial />
+                  </Protected>
+                }
+              />
+              <Route
+                path="reports"
+                element={
+                  <Protected roles={["admin", "official"]}>
+                    <ReportManagement />
+                  </Protected>
+                }
+              />
+              <Route
+                path="alerts"
+                element={
+                  <Protected roles={["admin", "official"]}>
+                    <AlertsManagement />
+                  </Protected>
+                }
+              />
+              <Route
+                path="bpo"
+                element={
+                  <Protected roles={["admin", "official"]}>
+                    <BPO />
+                  </Protected>
+                }
+              />
+              <Route
+                path="bpo/:id"
+                element={
+                  <Protected roles={["admin", "official"]}>
+                    <BPODetail />
+                  </Protected>
+                }
+              />
+              <Route
+                path="bpo-management"
+                element={
+                  <Protected roles={["admin", "official"]}>
+                    <BPOManagement />
+                  </Protected>
+                }
+              />
+              <Route
+                path="cases"
+                element={
+                  <Protected roles={["admin", "official"]}>
+                    <CaseManagement />
+                  </Protected>
+                }
+              />
+              <Route
+                path="cases/:id"
+                element={
+                  <Protected roles={["admin", "official"]}>
+                    <CaseDetail />
+                  </Protected>
+                }
+              />
 
               {/* Admin */}
-              <Route path="users" element={<Protected roles={["admin"]}><UserManagement /></Protected>} />
-              <Route path="settings" element={<Protected roles={["admin"]}><AdminSettings /></Protected>} />
-              <Route path="logs" element={<Protected roles={["admin"]}><LogManagement /></Protected>} />
+              <Route
+                path="users"
+                element={
+                  <Protected roles={["admin"]}>
+                    <UserManagement />
+                  </Protected>
+                }
+              />
+              <Route
+                path="settings"
+                element={
+                  <Protected roles={["admin"]}>
+                    <AdminSettings />
+                  </Protected>
+                }
+              />
+              <Route
+                path="logs"
+                element={
+                  <Protected roles={["admin"]}>
+                    <LogManagement />
+                  </Protected>
+                }
+              />
             </Route>
 
             {/* Simple test route (outside shell) */}

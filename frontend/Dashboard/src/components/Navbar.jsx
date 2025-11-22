@@ -107,7 +107,7 @@ export default function Navbar({
             window.dispatchEvent(new CustomEvent('openInstallModal'));
           }}
         >
-          Download App
+          Download
         </a>
       ) 
     },

@@ -92,24 +92,62 @@ export default function Navbar({
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const handleHomeClick = (e) => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    navigate("/landing");
+  };
+
+  // Smooth scroll to section by id
+  const handleSectionClick = (e, sectionId) => {
+    e.preventDefault();
+    const el = document.getElementById(sectionId);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   const navItems = [
-    { key: "home", label: <a href="#home">Home</a> },
-    { key: "about", label: <a href="#about">About</a> },
-    { key: "news", label: <a href="#news">News</a> },
-    { key: "location", label: <a href="#location">Location</a> },
-    { 
-      key: "download", 
+    {
+      key: "home",
       label: (
-        <a 
-          href="#download" 
-          onClick={(e) => {
+        <a href="#home" onClick={handleHomeClick}>
+          Home
+        </a>
+      ),
+    },
+    {
+      key: "about",
+      label: (
+        <a href="#about" onClick={e => handleSectionClick(e, "about")}>About</a>
+      ),
+    },
+    {
+      key: "news",
+      label: (
+        <a href="#news" onClick={e => handleSectionClick(e, "news")}>News</a>
+      ),
+    },
+    {
+      key: "location",
+      label: (
+        <a href="#location" onClick={e => handleSectionClick(e, "location")}>Location</a>
+      ),
+    },
+    {
+      key: "download",
+      label: (
+        <a
+          href="#download"
+          onClick={e => {
             e.preventDefault();
-            window.dispatchEvent(new CustomEvent('openInstallModal'));
+            handleSectionClick(e, "download");
+            window.dispatchEvent(new CustomEvent("openInstallModal"));
           }}
         >
           Download
         </a>
-      ) 
+      ),
     },
   ];
 

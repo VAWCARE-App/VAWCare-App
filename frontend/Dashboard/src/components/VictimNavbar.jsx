@@ -119,6 +119,7 @@ export default function VictimNavbar() {
 
   // Desktop nav items → render a custom "pill" inside each item
   const desktopLinks = [
+    { key: "/", icon: <HomeOutlined />, text: "Home" },
     ...(isAnonymousUser ? [] : [{ key: "/victim/dashboard", icon: <DashboardOutlined />, text: "Dashboard" }]),
     { key: "/victim/report", icon: <FileAddOutlined />, text: "Report Case" },
     ...(isAnonymousUser ? [] : [{ key: "/victim/victim-cases", icon: <UserSwitchOutlined />, text: "My Cases" }]),
@@ -149,6 +150,11 @@ export default function VictimNavbar() {
           <span>Emergency</span>
         </div>
       ),
+    },
+    {
+      key: "/",
+      icon: <HomeOutlined />,
+      label: <span className="drawer-pill">Home</span>,
     },
     ...(isAnonymousUser ? [] : [{
       key: "/victim/dashboard",

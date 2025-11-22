@@ -399,7 +399,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               padding: 10,
               borderBottom: `1px solid ${BRAND.border}`,
               display: "grid",
-              gridTemplateColumns: collapsed ? "40px 1fr auto" : "44px 1fr auto",
+              gridTemplateColumns: collapsed ? "44px 1fr 44px" : "44px 1fr 44px",
               alignItems: "center",
               gap: 8,
               background: BRAND.panel,
@@ -416,17 +416,31 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               <img alt="VAWCare" src={logo} style={{ width: 22, height: 22 }} />
             </Avatar>
 
-            {!collapsed && (
-              <div className="brand-text" style={{ lineHeight: 1.1 }}>
-                <Text style={{ color: BRAND.primary, fontWeight: 800 }}>VAWCare</Text>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <Badge color={BRAND.primary} dot />
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    {currentUser.firstName ? `Hi, ${currentUser.firstName}` : "Welcome"}
-                  </Text>
-                </div>
+            <div
+              className="brand-text"
+              style={{
+                lineHeight: '1.1',
+                height: 40,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                width: collapsed ? 0 : 'auto',
+                opacity: collapsed ? 0 : 1,
+                transition: 'width 0.22s cubic-bezier(0.4,0,0.2,1), opacity 0.18s',
+                pointerEvents: collapsed ? 'none' : 'auto',
+                marginLeft: collapsed ? 0 : 4,
+              }}
+            >
+              <Text style={{ color: BRAND.primary, fontWeight: 800 }}>VAWCare</Text>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Badge color={BRAND.primary} dot />
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  {currentUser.firstName ? `Hi, ${currentUser.firstName}` : "Welcome"}
+                </Text>
               </div>
-            )}
+            </div>
 
             <Button
               size="small"
@@ -434,7 +448,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
               icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
               onClick={() => setCollapsed(!collapsed)}
-              style={{ color: BRAND.primary, borderRadius: 8 }}
+              style={{ color: BRAND.primary, borderRadius: 8, marginLeft: collapsed ? -15 : 14, boxShadow: '0 1px 4px #eae6fa' }}
             />
           </div>
 

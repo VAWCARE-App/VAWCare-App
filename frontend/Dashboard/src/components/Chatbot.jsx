@@ -62,7 +62,7 @@ export default function Chatbot() {
 
       const res = await fetch(`${API}/api/chatbot/message`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-internal-key": import.meta.env.VITE_INTERNAL_API_KEY },
         credentials: "include", // ✅ send cookies automatically
         body: JSON.stringify({ message: userText }),
       });

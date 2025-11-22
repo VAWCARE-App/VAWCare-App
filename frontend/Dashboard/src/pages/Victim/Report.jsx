@@ -405,6 +405,7 @@ export default function Report() {
                       style={{ width: "100%", borderRadius: 12 }} 
                       size="large"
                       suffixIcon={<CalendarOutlined style={{ color: BRAND.violet }} />}
+                      disabledDate={(current) => current && current > new Date()}
                     />
                   </Form.Item>
                 </Col>

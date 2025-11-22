@@ -29,7 +29,8 @@ It provides a **confidential**, **accessible**, and **community-driven** digital
 **UI:**  
 - Ant Design (antd) – UI component library and design system.  
 - Recharts – Charts and data visualization.  
-- Framer Motion – Animations and smooth UI transitions.  
+- Framer Motion – Animations and smooth UI transitions.
+- React Bits - UI compenent Library
 
 **Routing & Networking:**  
 - React Router DOM – Client-side routing and navigation.  

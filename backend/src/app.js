@@ -21,7 +21,7 @@ const corsOptions = {
     origin: process.env.FRONTEND_URL || 'http://localhost:5173',
     credentials: true,  // Allow credentials (cookies)
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-actor-business-id', 'x-actor-id', 'x-actor-type', 'cache-control'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-actor-business-id', 'x-actor-id', 'x-actor-type', 'cache-control', 'x-internal-key'],
     optionsSuccessStatus: 200
 };
 
@@ -30,6 +30,24 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cors(corsOptions));
 app.use(cookieParser());
+
+const allowedDomains = [process.env.FRONTEND_URL || 'http://localhost:5173'];
+
+app.use((req, res, next) => {
+    // Domain check
+    const origin = req.headers.origin;
+    if (origin && !allowedDomains.includes(origin)) {
+        return res.status(403).json({ error: 'Forbidden: Invalid origin' });
+    }
+
+    // Internal API key check
+    const internalKey = req.headers['x-internal-key'];
+    if (!internalKey || internalKey !== process.env.INTERNAL_API_KEY) {
+        return res.status(401).json({ error: 'Unauthorized: Invalid API key' });
+    }
+
+    next();
+});
 
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));

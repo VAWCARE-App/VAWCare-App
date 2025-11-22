@@ -83,29 +83,163 @@ function SessionExpirationHandler() {
   };
 
   return (
-    <Modal
-      title={<span style={{ fontWeight: 700, fontSize: 22, color: '#e91e63', letterSpacing: 0.5 }}>Session Expired</span>}
+     <Modal
       open={sessionExpiredModal}
       onOk={handleClose}
-      okText="OK"
-      cancelButtonProps={{ style: { display: 'none' } }}
+      okText="Return to login"
+      cancelButtonProps={{ style: { display: "none" } }}
       closable={false}
       centered
-      bodyStyle={{ padding: 28, fontFamily: 'inherit', background: '#fff', borderRadius: 16 }}
-      style={{ maxWidth: 420 }}
+      styles={{
+        content: {
+          borderRadius: 20,
+          overflow: "hidden",
+          padding: 0,
+          border: "1px solid rgba(233,30,99,0.18)",
+          boxShadow: "0 22px 45px rgba(15,23,42,0.35)",
+          backdropFilter: "blur(18px)",
+          background:
+            "radial-gradient(circle at top left, rgba(233,30,99,0.06), transparent 55%)," +
+            "radial-gradient(circle at bottom right, rgba(122,90,248,0.08), transparent 55%)," +
+            "#ffffff",
+        },
+        header: {
+          padding: "18px 22px 10px",
+          borderBottom: "none",
+          background:
+            "linear-gradient(135deg, rgba(233,30,99,0.08), rgba(122,90,248,0.14))",
+        },
+        body: {
+          padding: "4px 22px 20px",
+        },
+        footer: {
+          padding: "0 22px 20px",
+          borderTop: "none",
+        },
+      }}
+      title={
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          <div
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: "999px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background:
+                "linear-gradient(135deg, rgba(233,30,99,0.16), rgba(122,90,248,0.24))",
+              boxShadow: "0 10px 24px rgba(15,23,42,0.25)",
+            }}
+          >
+            <ExclamationCircleFilled
+              style={{ fontSize: 20, color: BRAND.pink }}
+            />
+          </div>
+          <div>
+            <div
+              style={{
+                fontWeight: 700,
+                fontSize: 18,
+                letterSpacing: 0.4,
+                color: "#111827",
+              }}
+            >
+              Session expired
+            </div>
+            <div
+              style={{
+                fontSize: 13,
+                color: "#6B7280",
+                marginTop: 2,
+              }}
+            >
+              For your safety, we signed you out of VAWCare.
+            </div>
+          </div>
+        </div>
+      }
+      okButtonProps={{
+        style: {
+          borderRadius: 999,
+          padding: "6px 20px",
+          fontWeight: 600,
+          fontSize: 14,
+          background: `linear-gradient(135deg, ${BRAND.pink}, ${BRAND.violet})`,
+          border: "none",
+          boxShadow: "0 12px 28px rgba(233,30,99,0.45)",
+        },
+      }}
     >
-      <div style={{ fontSize: 16, color: '#222', marginBottom: 18 }}>
-        <p style={{ marginBottom: 12 }}>Session Expired. Please login again.</p>
-        <div style={{ background: '#f8f8fa', borderRadius: 10, padding: 16, marginBottom: 16, border: '1px solid #f0f0f0' }}>
-          <b>Guidelines:</b>
-          <ul style={{ margin: '10px 0 0 18px', padding: 0, fontSize: 15 }}>
-            <li style={{ marginBottom: 8 }}><b>For iOS (iPhone/iPad):</b> Go to <b>Settings</b> &rarr; search <b>Safari</b> &rarr; scroll down and <b>disable "Prevent Cross-Site Tracking"</b> to use VAWCare.</li>
-            <li style={{ marginBottom: 8 }}><b>For Mobile & Desktop:</b> Please check your internet connection and try again.</li>
+      <div style={{ fontSize: 14.5, color: "#111827" }}>
+        <p style={{ marginBottom: 12 }}>
+          Your session has ended to keep your account secure. Please log in
+          again to continue using VAWCare.
+        </p>
+
+        <div
+          style={{
+            background: "rgba(248,249,252,0.96)",
+            borderRadius: 12,
+            padding: 14,
+            marginBottom: 14,
+            border: "1px solid rgba(226,232,240,0.9)",
+          }}
+        >
+          <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 6 }}>
+            Quick tips
+          </div>
+          <ul
+            style={{
+              margin: "4px 0 0 18px",
+              padding: 0,
+              fontSize: 13.5,
+              color: "#374151",
+            }}
+          >
+            <li style={{ marginBottom: 6 }}>
+              <b>For iOS (iPhone/iPad):</b> Go to <b>Settings</b> → search{" "}
+              <b>Safari</b> → scroll down and{" "}
+              <b>disable &quot;Prevent Cross-Site Tracking&quot;</b> to use
+              VAWCare.
+            </li>
+            <li style={{ marginBottom: 2 }}>
+              <b>For mobile &amp; desktop:</b> Please check your internet
+              connection and try again.
+            </li>
           </ul>
         </div>
-        <div style={{ fontSize: 15, color: '#666', marginBottom: 10 }}>
-          If this problem continues, please contact us:<br />
-          <a href="mailto:barangayvawcdesk@email.com" style={{ color: '#e91e63', textDecoration: 'underline' }}>barangayvawcdesk@email.com</a>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 8,
+            fontSize: 13.5,
+            color: "#4B5563",
+          }}
+        >
+          <MailOutlined style={{ marginTop: 3, fontSize: 16, color: BRAND.violet }} />
+          <div>
+            If this problem continues, please contact our VAWDesk:
+            <br />
+            <a
+              href="mailto:barangayvawcdesk@email.com"
+              style={{
+                color: BRAND.pink,
+                textDecoration: "underline",
+                fontWeight: 500,
+              }}
+            >
+              barangayvawcdesk@email.com
+            </a>
+          </div>
         </div>
       </div>
     </Modal>

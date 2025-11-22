@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useImperativeHandle, forwardRef } from "react";
 import { Button, Modal, Radio, Typography, Space, Tabs, Alert } from "antd";
-import { DesktopOutlined, MobileOutlined } from "@ant-design/icons";
+import { DesktopOutlined, MobileOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import { setDisguiseMode, loadDisguiseMode } from "../hooks/useDisguise";
 
 const { Text, Title, Paragraph } = Typography;
@@ -10,11 +10,21 @@ const InstallButton = forwardRef((props, ref) => {
     const [disguised, setDisguised] = useState(localStorage.getItem("disguise") === "1");
     const [deferredPrompt, setDeferredPrompt] = useState(null);
     const [isDesktop, setIsDesktop] = useState(window.innerWidth > 768);
+    const [isInstalled, setIsInstalled] = useState(false);
 
     useEffect(() => {
         // Load saved disguise mode
         loadDisguiseMode();
         setDisguised(localStorage.getItem("disguise") === "1");
+
+        // Check if app is already installed
+        const checkInstalled = async () => {
+            if (window.navigator.getInstalledRelatedApps) {
+                const apps = await window.navigator.getInstalledRelatedApps();
+                setIsInstalled(apps.length > 0);
+            }
+        };
+        checkInstalled();
 
         // Capture PWA install prompt
         const handler = (e) => {
@@ -57,6 +67,7 @@ const InstallButton = forwardRef((props, ref) => {
         const choice = await deferredPrompt.userChoice;
         if (choice.outcome === "accepted") {
             console.log("User accepted the install");
+            setIsInstalled(true);
         } else {
             console.log("User dismissed the install");
         }
@@ -89,43 +100,57 @@ const InstallButton = forwardRef((props, ref) => {
                             ),
                             children: (
                                 <Space direction="vertical" size="large" style={{ width: "100%" }}>
-                                    <div>
-                                        <Title level={5}>Choose how the app looks:</Title>
-                                        <Radio.Group
-                                            onChange={handleAppearanceChange}
-                                            value={disguised ? "calculator" : "real"}
-                                        >
-                                            <Space direction="vertical">
-                                                <Radio value="real">VAWCare (Original)</Radio>
-                                                <Radio value="calculator">Calculator (Disguise)</Radio>
-                                            </Space>
-                                        </Radio.Group>
-                                    </div>
-
-                                    <Text type="secondary">
-                                        After selecting, press "Install" to add the app to your home screen.
-                                    </Text>
-
-                                    <Button
-                                        type="primary"
-                                        block
-                                        onClick={handleInstall}
-                                        disabled={!deferredPrompt}
-                                    >
-                                        Install App
-                                    </Button>
-
-                                    {!deferredPrompt && (
+                                    {isInstalled && (
                                         <Alert
-                                            message="Install Prompt Not Available"
-                                            description={
-                                                isDesktop
-                                                    ? "Your browser doesn't support the automatic install prompt on desktop. See 'Desktop Instructions' tab for alternative methods."
-                                                    : "Your browser doesn't support automatic install prompts. Try using a modern mobile browser or check the Desktop Instructions."
-                                            }
-                                            type="info"
+                                            message="App Already Installed"
+                                            description="VAWCare is already installed on your device! You can find it on your home screen or app drawer."
+                                            type="success"
+                                            icon={<CheckCircleOutlined />}
                                             showIcon
                                         />
+                                    )}
+
+                                    {!isInstalled && (
+                                        <>
+                                            <div>
+                                                <Title level={5}>Choose how the app looks:</Title>
+                                                <Radio.Group
+                                                    onChange={handleAppearanceChange}
+                                                    value={disguised ? "calculator" : "real"}
+                                                >
+                                                    <Space direction="vertical">
+                                                        <Radio value="real">VAWCare (Original)</Radio>
+                                                        <Radio value="calculator">Calculator (Disguise)</Radio>
+                                                    </Space>
+                                                </Radio.Group>
+                                            </div>
+
+                                            <Text type="secondary">
+                                                After selecting, press "Install" to add the app to your home screen.
+                                            </Text>
+
+                                            <Button
+                                                type="primary"
+                                                block
+                                                onClick={handleInstall}
+                                                disabled={!deferredPrompt}
+                                            >
+                                                Install App
+                                            </Button>
+
+                                            {!deferredPrompt && (
+                                                <Alert
+                                                    message="Install Prompt Not Available"
+                                                    description={
+                                                        isDesktop
+                                                            ? "Your browser doesn't support the automatic install prompt on desktop. See 'Desktop Instructions' tab for alternative methods."
+                                                            : "Your browser doesn't support automatic install prompts. Try using a modern mobile browser or check the Desktop Instructions."
+                                                    }
+                                                    type="info"
+                                                    showIcon
+                                                />
+                                            )}
+                                        </>
                                     )}
                                 </Space>
                             ),
@@ -190,4 +215,3 @@ const InstallButton = forwardRef((props, ref) => {
 InstallButton.displayName = "InstallButton";
 
 export default InstallButton;
-

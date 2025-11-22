@@ -7,6 +7,7 @@ import LandingPage from "./pages/LandingPage";
 import AdminLogin from "./pages/Admins/AdminLogin";
 import Sidebar from "./components/Sidebar";
 import WaveLoader from "./components/WaveLoader";
+import NotFoundPage from "./pages/NotFoundPage";
 
 import Signup from "./pages/Signup";
 import TwoFactor from "./pages/2FA";
@@ -246,7 +247,7 @@ export default function App() {
             </Route>
 
             {/* Fallback */}
-            {/* <Route path="*" element={<Navigate to="/victim" replace />} /> */}
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </BrowserRouter>
       </AntApp>

@@ -22,7 +22,7 @@ export default function ForgotPasswordModal({ open, onClose }) {
         setSendingOTP(true);
         setEmailError("");
         try {
-            const res = await axios.post(`${apiUrl}/api/auth/send-otp`, { email });
+            const res = await axios.post(`${apiUrl}/api/auth/send-otp`, { email, "x-internal-key": import.meta.env.VITE_INTERNAL_API_KEY });
             message.success(res?.data?.message || "OTP sent to your email.");
             setCurrentStep(1);
         } catch (error) {

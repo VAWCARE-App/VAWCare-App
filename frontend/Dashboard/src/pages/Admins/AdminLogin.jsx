@@ -296,7 +296,7 @@ export default function AdminLogin() {
             setLoading(true);
             const endpoint = getApiEndpoint(userType);
             const loginData = formatLoginData(values, userType);
-            const { data } = await api.post(endpoint, loginData);
+            const { data } = await api.post(endpoint, loginData, { headers: { 'x-internal-key': import.meta.env.VITE_INTERNAL_API_KEY } });
             if (data.success) {
                 // Exchange custom token for ID token
                 const customToken = data.data.token;
@@ -314,7 +314,7 @@ export default function AdminLogin() {
                   
                   // Send ID token AND user data to backend for secure HTTP-only cookie storage
                   // User data will be stored in a secure HTTP-only cookie (NOT accessible to JS)
-                  await api.post('/api/auth/set-token', { idToken, userData: userInfo });
+                  await api.post('/api/auth/set-token', { idToken, userData: userInfo }, { headers: { 'x-internal-key': import.meta.env.VITE_INTERNAL_API_KEY } });
                   console.log('ID token and user data set in HTTP-only cookies');
                 } catch (exchangeError) {
                   console.error('Token exchange failed:', exchangeError);

@@ -82,7 +82,7 @@ export default function NotificationButton() {
   // --- SSE listener ---
   useEffect(() => {
     const url = `${api}/api/sse/stream`;
-    const es = new EventSourcePolyfill(url, { withCredentials: true });
+    const es = new EventSourcePolyfill(url, { withCredentials: true, headers: { "x-internal-key": import.meta.env.VITE_INTERNAL_API_KEY } });
 
     es.onopen = () => setConnectionStatus("Connected");
     es.onerror = (err) => {
@@ -143,7 +143,7 @@ export default function NotificationButton() {
     setDrawerVisible(true);
 
     try {
-      const res = await fetch(`${api}/api/notifications`, { credentials: "include" });
+      const res = await fetch(`${api}/api/notifications`, { credentials: "include", headers: { "x-internal-key": import.meta.env.VITE_INTERNAL_API_KEY } });
       const data = await res.json();
       if (data.success) {
         setNotifications((prev) => {
@@ -161,7 +161,10 @@ export default function NotificationButton() {
       // Mark all as read when opening drawer
       await fetch(`${api}/api/notifications/mark-all-read`, { 
         method: "PUT", 
-        credentials: "include" 
+        credentials: "include",
+        headers: {
+          "x-internal-key": import.meta.env.VITE_INTERNAL_API_KEY
+        }
       });
       
       // Update local state to mark all as read
@@ -176,7 +179,7 @@ export default function NotificationButton() {
 
   const deleteNotification = async (id) => {
     try {
-      await fetch(`${api}/api/notifications/${id}`, { method: "DELETE", credentials: "include" });
+      await fetch(`${api}/api/notifications/${id}`, { method: "DELETE", credentials: "include", headers: { "x-internal-key": import.meta.env.VITE_INTERNAL_API_KEY } });
       setNotifications((prev) => prev.filter((n) => (n._id || n.notificationID) !== id));
     } catch (err) {
       console.error("Failed to delete notification:", err);
@@ -187,7 +190,10 @@ export default function NotificationButton() {
     try {
       await fetch(`${api}/api/notifications/mark-all-read`, { 
         method: "PUT", 
-        credentials: "include" 
+        credentials: "include",
+        headers: {
+          "x-internal-key": import.meta.env.VITE_INTERNAL_API_KEY
+        }
       });
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnread(0);
@@ -200,7 +206,10 @@ export default function NotificationButton() {
     try {
       await fetch(`${api}/api/notifications/clear-all`, { 
         method: "DELETE", 
-        credentials: "include" 
+        credentials: "include",
+        headers: {
+          "x-internal-key": import.meta.env.VITE_INTERNAL_API_KEY
+        }
       });
       setNotifications([]);
       setUnread(0);
@@ -213,7 +222,8 @@ export default function NotificationButton() {
     try {
       await fetch(`${api}/api/notifications/${id}/read`, { 
         method: "PUT", 
-        credentials: "include" 
+        credentials: "include",
+        headers: { "x-internal-key": import.meta.env.VITE_INTERNAL_API_KEY }
       });
       setNotifications((prev) => 
         prev.map((n) => 

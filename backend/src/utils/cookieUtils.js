@@ -31,7 +31,7 @@ const clearAuthCookie = (res) => {
   res.clearCookie('authToken', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',  // cross-site in prod
     path: '/'
   });
 };

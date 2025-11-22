@@ -10,7 +10,8 @@ export const api = axios.create({
   baseURL,
   withCredentials: true,  // Enable sending cookies with requests (CRITICAL!)
   headers: {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'x-internal-key': import.meta.env.VITE_INTERNAL_API_KEY
   }
 });
 

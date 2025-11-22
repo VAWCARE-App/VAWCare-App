@@ -71,13 +71,7 @@ export default function LandingPage() {
     const checkStatus = async () => {
       try {
         const status = await checkHealth(); // your existing utility
-        if (mounted) {
-          setBackendStatus(status ? "online" : "offline");
-
-          if (status === "online") {
-            window.location.reload();
-          }
-        }
+        if (mounted) setBackendStatus(status);
       } catch (err) {
         if (mounted) setBackendStatus("offline");
         console.error(err);

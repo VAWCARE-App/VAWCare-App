@@ -111,7 +111,22 @@ export default function LandingPage() {
   // ── Theme (light/dark) – keep your saved choice
   const [dark, setDark] = useState(() => sessionStorage.getItem("vawc_theme") === "dark");
   useEffect(() => {
+    // Persist theme selection
     sessionStorage.setItem("vawc_theme", dark ? "dark" : "light");
+
+    try {
+      const root = document.documentElement;
+      // Keep a data attribute so CSS that targets [data-theme="dark"] works
+      root.setAttribute("data-theme", dark ? "dark" : "light");
+
+      // Also toggle legacy class name (some components may check for it)
+      if (dark) root.classList.add("dark"); else root.classList.remove("dark");
+
+      // Notify other parts of the app that theme changed (InstallButton listens for this)
+      window.dispatchEvent(new Event("themechange"));
+    } catch (e) {
+      // ignore
+    }
   }, [dark]);
 
   // --- Session / cookie restore for landing CTA (from friend)

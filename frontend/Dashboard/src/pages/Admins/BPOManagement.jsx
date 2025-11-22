@@ -581,18 +581,34 @@ export default function BPOManagement() {
               ["Revoked", kpis.revoked, "magenta", <ExclamationCircleOutlined key="i" />],
             ].map(([label, value, color, icon], i) => (
               <Col xs={12} md={6} key={i}>
-                <Card style={{ ...glassCard, padding: 10 }}>
-                  <Space align="center">
-                    <Avatar style={{ background: "#fff" }} icon={icon} />
-                    <div>
-                      <Text type="secondary" style={{ fontSize: 13 }}>
-                        {label}
-                      </Text>
-                      <Title level={3} style={{ margin: 0, color, fontSize: 24 }}>
-                        {value}
-                      </Title>
-                    </div>
-                  </Space>
+                <Card style={{ ...glassCard, padding: isXs ? 8 : 10, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 90 }}>
+                  <div style={{
+                    width: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 2,
+                  }}>
+                    <span style={{
+                      color: '#888',
+                      fontWeight: 500,
+                      fontSize: isXs ? 12 : 13,
+                      display: 'block',
+                      marginBottom: 0,
+                      letterSpacing: 0.1,
+                      lineHeight: 1.1,
+                      wordBreak: 'break-word',
+                    }}>{label}</span>
+                    <span style={{
+                      color,
+                      fontWeight: 700,
+                      fontSize: isXs ? 20 : 24,
+                      lineHeight: 1.1,
+                      display: 'block',
+                      marginTop: 0,
+                    }}>{value}</span>
+                  </div>
                 </Card>
               </Col>
             ))}

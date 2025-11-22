@@ -72,7 +72,6 @@ export default function ReportManagement() {
   const [tableY, setTableY] = useState(520);
   const pageRef = useRef(null);
 
-  // Compute available table height responsively
   useEffect(() => {
     const calc = () => {
       if (!pageRef.current) return;
@@ -257,7 +256,6 @@ export default function ReportManagement() {
         message.success("Report updated");
         setMode("view");
         await fetchAllReports();
-        // Refresh the active report to reflect changes in the modal
         const refreshed = (await api.get(`/api/reports/${activeReport.reportID}`))
           .data;
         if (refreshed?.data) {
@@ -268,7 +266,7 @@ export default function ReportManagement() {
           setActiveReport(updated);
           form.setFieldsValue({ status: normalizeStatus(updated.status) });
           setQuickStatus(normalizeStatus(updated.status));
-        } 
+        }
       } else {
         message.error(res?.data?.message || "Failed to update report");
       }
@@ -348,16 +346,44 @@ export default function ReportManagement() {
         title: "Report",
         key: "report",
         fixed: "left",
-        width: 280,
+        width: isXs ? 180 : isSm ? 220 : 280,
         render: (_, record) => (
           <Space>
             <Avatar
-              style={{ background: typePillBg, color: "#444" }}
+              style={{
+                background: typePillBg,
+                color: "#444",
+                width: isXs ? 36 : 44,
+                height: isXs ? 36 : 44,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
               icon={<AlertOutlined />}
             />
             <div>
-              <div style={{ fontWeight: 700 }}>{record.reportID}</div>
-              <div style={{ fontSize: 12, color: "#999" }}>
+              <div
+                style={{
+                  fontWeight: 700,
+                  fontSize: isXs ? 13 : 15,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  maxWidth: isXs ? 110 : 180,
+                }}
+              >
+                {record.reportID}
+              </div>
+              <div
+                style={{
+                  fontSize: isXs ? 11 : 12,
+                  color: "#999",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  maxWidth: isXs ? 110 : 180,
+                }}
+              >
                 {record.incidentType}
               </div>
             </div>
@@ -475,7 +501,15 @@ export default function ReportManagement() {
     URL.revokeObjectURL(url);
   };
 
-  const modalWidth = screens.xl ? 720 : screens.lg ? 680 : screens.md ? "92vw" : "96vw";
+  const modalWidth = isXs
+    ? "100%"
+    : screens.xl
+    ? 720
+    : screens.lg
+    ? 680
+    : screens.md
+    ? "92vw"
+    : "96vw";
 
   return (
     <Layout
@@ -506,8 +540,14 @@ export default function ReportManagement() {
           flexShrink: 0,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: isXs ? 8 : 12, flex: 1 }}>
-          {/* Sidebar toggle only on phones & small screens */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: isXs ? 8 : 12,
+            flex: 1,
+          }}
+        >
           {!isMdUp && (
             <Button
               type="text"
@@ -531,12 +571,14 @@ export default function ReportManagement() {
             />
           )}
 
-          <div style={{ 
-            display: "flex", 
-            flexDirection: "column", 
-            minWidth: 0,
-            flex: 1,
-          }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              minWidth: 0,
+              flex: 1,
+            }}
+          >
             <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
               Report Management
             </Title>
@@ -583,26 +625,30 @@ export default function ReportManagement() {
               ["Closed", reportCounts.closed, BRAND.green],
             ].map(([label, value, color], i) => (
               <Col xs={12} sm={12} md={6} key={i}>
-                <Card style={{ 
-                  ...glassCard, 
-                  padding: isXs ? "8px 10px" : "10px 12px",
-                  textAlign: isXs ? "center" : "left",
-                }}>
-                  <Typography.Text 
-                    type="secondary" 
-                    style={{ 
+                <Card
+                  style={{
+                    ...glassCard,
+                    padding: isXs ? "8px 10px" : "10px 12px",
+                    textAlign: isXs ? "center" : "left",
+                  }}
+                >
+                  <Typography.Text
+                    type="secondary"
+                    style={{
                       fontSize: isXs ? 11 : 13,
                       display: "block",
                       marginBottom: 4,
                     }}
                   >
-                    {isXs && label.includes("Under Investigation") ? "Investigating" : label}
+                    {isXs && label.includes("Under Investigation")
+                      ? "Investigating"
+                      : label}
                   </Typography.Text>
                   <Typography.Title
                     level={isXs ? 4 : 3}
-                    style={{ 
-                      margin: 0, 
-                      color, 
+                    style={{
+                      margin: 0,
+                      color,
                       fontSize: isXs ? 20 : isSm ? 22 : 24,
                       fontWeight: 700,
                     }}
@@ -614,12 +660,11 @@ export default function ReportManagement() {
             ))}
           </Row>
 
-          {/* Toolbar - Sticky */}
-          <Card 
-            style={{ 
-              ...glassCard, 
+          {/* Toolbar */}
+          <Card
+            style={{
+              ...glassCard,
               padding: isXs ? "12px 8px" : isSm ? "12px 10px" : "14px 16px",
-
               top: 0,
               zIndex: 99,
               backdropFilter: "blur(16px)",
@@ -629,32 +674,39 @@ export default function ReportManagement() {
               marginBottom: 2,
             }}
           >
-            <div style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: isXs ? 10 : 12,
-              width: "100%",
-            }}>
-              {/* Search Bar and Filters Row */}
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: isXs 
-                  ? "1fr" 
-                  : isSm 
-                  ? "1fr 1fr" 
-                  : isMdUp 
-                  ? "minmax(240px, 320px) repeat(auto-fit, minmax(140px, 1fr))" 
-                  : "1fr 1fr",
-                gap: isXs ? 8 : 10,
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: isXs ? 10 : 12,
                 width: "100%",
-                alignItems: "center",
-              }}>
+              }}
+            >
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: isXs
+                    ? "1fr"
+                    : isSm
+                    ? "1fr 1fr"
+                    : isMdUp
+                    ? "minmax(240px, 320px) repeat(auto-fit, minmax(140px, 1fr))"
+                    : "1fr 1fr",
+                  gap: isXs ? 8 : 10,
+                  width: "100%",
+                  alignItems: "center",
+                }}
+              >
                 <Search
-                  placeholder={isXs ? "Search reports..." : "Search report ID, type, location…"}
+                  placeholder={
+                    isXs
+                      ? "Search reports..."
+                      : "Search report ID, type, location…"
+                  }
                   allowClear
                   enterButton={
-                    <Button 
-                      type="primary" 
+                    <Button
+                      type="primary"
                       icon={<SearchOutlined />}
                       style={{
                         background: BRAND.violet,
@@ -682,7 +734,10 @@ export default function ReportManagement() {
                   options={[
                     { value: "all", label: "All Status" },
                     { value: "Open", label: "Open" },
-                    { value: "Under Investigation", label: isXs ? "Investigating" : "Under Investigation" },
+                    {
+                      value: "Under Investigation",
+                      label: isXs ? "Investigating" : "Under Investigation",
+                    },
                     { value: "Closed", label: "Closed" },
                     { value: "Pending", label: "Pending" },
                   ]}
@@ -694,7 +749,7 @@ export default function ReportManagement() {
                   placeholder={["Start", "End"]}
                   suffixIcon={<CalendarOutlined />}
                   size={isXs ? "middle" : "large"}
-                  style={{ 
+                  style={{
                     width: "100%",
                     gridColumn: isXs ? "span 1" : "auto",
                   }}
@@ -702,17 +757,19 @@ export default function ReportManagement() {
               </div>
 
               {/* Action Buttons */}
-              <div style={{
-                display: "flex",
-                gap: 8,
-                justifyContent: isXs ? "stretch" : "flex-end",
-                width: "100%",
-              }}>
-                <Button 
-                  icon={<ReloadOutlined />} 
-                  onClick={fetchAllReports} 
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  justifyContent: isXs ? "stretch" : "flex-end",
+                  width: "100%",
+                }}
+              >
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={fetchAllReports}
                   size={isXs ? "middle" : "large"}
-                  style={{ 
+                  style={{
                     flex: isXs ? 1 : "0 0 auto",
                     display: "flex",
                     alignItems: "center",
@@ -722,12 +779,12 @@ export default function ReportManagement() {
                 >
                   {!isXs && "Refresh"}
                 </Button>
-                <Button 
-                  icon={<DownloadOutlined />} 
-                  onClick={exportCsv} 
+                <Button
+                  icon={<DownloadOutlined />}
+                  onClick={exportCsv}
                   size={isXs ? "middle" : "large"}
                   type="primary"
-                  style={{ 
+                  style={{
                     flex: isXs ? 1 : "0 0 auto",
                     background: BRAND.violet,
                     borderColor: BRAND.violet,
@@ -746,6 +803,7 @@ export default function ReportManagement() {
           {/* Table */}
           <Card style={{ ...glassCard, padding: 0 }}>
             <Table
+              className="pretty-table"
               columns={columns}
               dataSource={filteredReports}
               loading={loading}
@@ -753,7 +811,7 @@ export default function ReportManagement() {
               sticky
               rowKey="key"
               pagination={false}
-              tableLayout="fixed"
+              tableLayout={isMdUp ? "fixed" : "auto"}
               scroll={{ y: tableY, x: "max-content" }}
               onRow={(record) => ({
                 onClick: () => openModalFor(record, "view"),
@@ -771,7 +829,7 @@ export default function ReportManagement() {
           open={modalOpen}
           onCancel={() => setModalOpen(false)}
           footer={null}
-          centered={true}
+          centered={!isXs}
           width={modalWidth}
           wrapClassName="floating-side"
           className="floating-modal"
@@ -780,25 +838,39 @@ export default function ReportManagement() {
             background: "rgba(17,17,26,0.24)",
           }}
           getContainer={() => document.body}
+          style={isXs ? { top: 8, paddingBottom: 0 } : {}}
           title={
             activeReport ? (
               <div
                 style={{
                   display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 8,
+                  flexDirection: isXs ? "column" : "row",
+                  alignItems: isXs ? "flex-start" : "center",
+                  justifyContent: isXs ? "flex-start" : "space-between",
+                  gap: isXs ? 8 : 12,
                 }}
               >
-                <Space>
+                <Space
+                  align="start"
+                  size={8}
+                  style={{ flex: 1, minWidth: 0 }}
+                >
                   <Avatar
                     style={{ background: typePillBg, color: "#444" }}
                     icon={<AlertOutlined />}
                   />
                   <div>
-                    <div style={{ fontWeight: 800 }}>
+                    <div
+                      style={{
+                        fontWeight: 800,
+                        fontSize: isXs ? 15 : 16,
+                        lineHeight: 1.2,
+                      }}
+                    >
                       {activeReport.reportID}{" "}
-                      <Tag style={{ marginLeft: 6 }}>{activeReport.incidentType}</Tag>
+                      <Tag style={{ marginLeft: 6 }}>
+                        {activeReport.incidentType}
+                      </Tag>
                     </div>
                     <Typography.Text type="secondary">
                       {activeReport.location ? (
@@ -811,20 +883,44 @@ export default function ReportManagement() {
                     </Typography.Text>
                   </div>
                 </Space>
-                <Space>
+
+                <Space
+                  size={8}
+                  style={{
+                    marginTop: isXs ? 4 : 0,
+                    width: isXs ? "100%" : "auto",
+                    justifyContent: isXs ? "flex-end" : "flex-start",
+                    flexWrap: isXs ? "wrap" : "nowrap",
+                    rowGap: 6,
+                  }}
+                >
                   {mode === "view" ? (
                     <Button
                       type="primary"
+                      size={isXs ? "small" : "middle"}
                       onClick={() => setMode("edit")}
                       icon={<EditOutlined />}
-                      style={{ background: BRAND.violet, borderColor: BRAND.violet }}
+                      style={{
+                        background: BRAND.violet,
+                        borderColor: BRAND.violet,
+                      }}
                     >
                       Edit
                     </Button>
                   ) : (
-                    <Button onClick={() => setMode("view")}>Cancel</Button>
+                    <Button
+                      size={isXs ? "small" : "middle"}
+                      onClick={() => setMode("view")}
+                    >
+                      Cancel
+                    </Button>
                   )}
-                  <Button danger onClick={showDeleteConfirm} icon={<DeleteOutlined />}>
+                  <Button
+                    danger
+                    size={isXs ? "small" : "middle"}
+                    onClick={showDeleteConfirm}
+                    icon={<DeleteOutlined />}
+                  >
                     Delete
                   </Button>
                 </Space>
@@ -836,10 +932,14 @@ export default function ReportManagement() {
         >
           {/* Quick status editor box */}
           <Card style={{ marginBottom: 12, borderRadius: 12 }}>
-            <Row gutter={12} align="middle">
-              <Col flex="1">
-                <div style={{ fontWeight: 700, marginBottom: 6 }}>Quick Status</div>
-                <div style={{ color: "#666", fontSize: 13, marginBottom: 8 }}>
+            <div className="quick-status-layout">
+              <div className="quick-status-main">
+                <div style={{ fontWeight: 700, marginBottom: 6 }}>
+                  Quick Status
+                </div>
+                <div
+                  style={{ color: "#666", fontSize: 13, marginBottom: 8 }}
+                >
                   Update case status quickly without editing the whole report.
                 </div>
                 <Select
@@ -848,13 +948,16 @@ export default function ReportManagement() {
                   options={[
                     { label: "Pending", value: "Pending" },
                     { label: "Open", value: "Open" },
-                    { label: "Under Investigation", value: "Under Investigation" },
+                    {
+                      label: "Under Investigation",
+                      value: "Under Investigation",
+                    },
                     { label: "Closed", value: "Closed" },
                   ]}
-                  style={{ width: 260 }}
+                  style={{ width: "100%", maxWidth: 280 }}
                 />
-              </Col>
-              <Col>
+              </div>
+              <div className="quick-status-actions">
                 <Button
                   type="primary"
                   loading={statusUpdating}
@@ -862,19 +965,20 @@ export default function ReportManagement() {
                   style={{
                     background: BRAND.violet,
                     borderColor: BRAND.violet,
-                    marginLeft: 8,
                   }}
                 >
                   Save
                 </Button>
-              </Col>
-            </Row>
+              </div>
+            </div>
           </Card>
 
           {activeReport && (
             <div className="modal-inner-animate">
               {/* Details */}
-              <Card style={{ ...glassCard, borderRadius: 16, marginBottom: 10 }}>
+              <Card
+                style={{ ...glassCard, borderRadius: 16, marginBottom: 10 }}
+              >
                 <Descriptions
                   bordered
                   size="small"
@@ -950,14 +1054,20 @@ export default function ReportManagement() {
                         name="incidentType"
                         label="Incident Type"
                         rules={[
-                          { required: true, message: "Please select the incident type" },
+                          {
+                            required: true,
+                            message: "Please select the incident type",
+                          },
                         ]}
                       >
                         <Select
                           options={[
                             { value: "Physical", label: "Physical" },
                             { value: "Sexual", label: "Sexual" },
-                            { value: "Psychological", label: "Psychological" },
+                            {
+                              value: "Psychological",
+                              label: "Psychological",
+                            },
                             { value: "Economic", label: "Economic" },
                             { value: "Emergency", label: "Emergency" },
                           ]}
@@ -970,7 +1080,10 @@ export default function ReportManagement() {
                           options={[
                             { value: "Pending", label: "Pending" },
                             { value: "Open", label: "Open" },
-                            { value: "Under Investigation", label: "Under Investigation" },
+                            {
+                              value: "Under Investigation",
+                              label: "Under Investigation",
+                            },
                             { value: "Closed", label: "Closed" },
                           ]}
                         />
@@ -998,12 +1111,15 @@ export default function ReportManagement() {
                   </Row>
 
                   {mode === "edit" && (
-                    <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                    <div className="edit-footer-bar">
                       <Button onClick={() => setMode("view")}>Cancel</Button>
                       <Button
                         type="primary"
                         htmlType="submit"
-                        style={{ background: BRAND.violet, borderColor: BRAND.violet }}
+                        style={{
+                          background: BRAND.violet,
+                          borderColor: BRAND.violet,
+                        }}
                       >
                         Save Changes
                       </Button>
@@ -1019,7 +1135,9 @@ export default function ReportManagement() {
         <Modal
           title={
             <Space>
-              <ExclamationCircleOutlined style={{ color: '#ff4d4f', fontSize: 20 }} />
+              <ExclamationCircleOutlined
+                style={{ color: "#ff4d4f", fontSize: 20 }}
+              />
               <span>Confirm Delete</span>
             </Space>
           }
@@ -1031,26 +1149,43 @@ export default function ReportManagement() {
           okButtonProps={{ danger: true, loading }}
           centered
         >
-          <div style={{ padding: '12px 0' }}>
+          <div style={{ padding: "12px 0" }}>
             <p style={{ fontSize: 15, marginBottom: 8 }}>
               Are you sure you want to delete this report?
             </p>
             {activeReport && (
-              <div style={{ 
-                background: '#f5f5f5', 
-                padding: 12, 
-                borderRadius: 8,
-                marginTop: 12 
-              }}>
-                <Space direction="vertical" size={4} style={{ width: '100%' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div
+                style={{
+                  background: "#f5f5f5",
+                  padding: 12,
+                  borderRadius: 8,
+                  marginTop: 12,
+                }}
+              >
+                <Space
+                  direction="vertical"
+                  size={4}
+                  style={{ width: "100%" }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
                     <Text strong>Report ID: {activeReport.reportID}</Text>
-                    <Tag color={
-                      activeReport.status === 'Closed' ? 'green' :
-                      activeReport.status === 'Open' ? 'blue' :
-                      activeReport.status === 'Under Investigation' ? 'orange' :
-                      'default'
-                    }>
+                    <Tag
+                      color={
+                        activeReport.status === "Closed"
+                          ? "green"
+                          : activeReport.status === "Open"
+                          ? "blue"
+                          : activeReport.status === "Under Investigation"
+                          ? "orange"
+                          : "default"
+                      }
+                    >
                       {activeReport.status}
                     </Tag>
                   </div>
@@ -1062,14 +1197,23 @@ export default function ReportManagement() {
                   </Text>
                   {activeReport.victimID && (
                     <Text type="secondary" style={{ fontSize: 13 }}>
-                      Victim: {activeReport.victimID.firstName} {activeReport.victimID.lastName}
+                      Victim: {activeReport.victimID.firstName}{" "}
+                      {activeReport.victimID.lastName}
                     </Text>
                   )}
                 </Space>
               </div>
             )}
-            <p style={{ marginTop: 16, marginBottom: 0, color: '#666', fontSize: 13 }}>
-              This action cannot be undone. The report will be permanently removed from the system.
+            <p
+              style={{
+                marginTop: 16,
+                marginBottom: 0,
+                color: "#666",
+                fontSize: 13,
+              }}
+            >
+              This action cannot be undone. The report will be permanently
+              removed from the system.
             </p>
           </div>
         </Modal>
@@ -1093,12 +1237,10 @@ export default function ReportManagement() {
         .ant-card:hover { transform: translateY(-1px); box-shadow: 0 16px 36px rgba(16,24,40,0.08); }
         .ant-table-thead > tr > th { background: #fff !important; }
 
-        /* Smooth sticky transitions */
         .ant-layout-header {
           transition: box-shadow 0.3s ease, background 0.3s ease;
         }
 
-        /* Better mobile input sizing */
         @media (max-width: 576px) {
           .ant-input-search .ant-input-group .ant-input {
             font-size: 14px !important;
@@ -1114,7 +1256,6 @@ export default function ReportManagement() {
           }
         }
 
-        /* Improve mobile date picker */
         @media (max-width: 576px) {
           .ant-picker-dropdown {
             width: 100vw !important;
@@ -1122,7 +1263,37 @@ export default function ReportManagement() {
           }
         }
 
-        /* Row hover */
+        .pretty-table .ant-table { width: 100%; }
+        .pretty-table .ant-table-thead > tr > th { background: #fff !important; }
+        @media (max-width: 576px) {
+          .pretty-table .ant-table-thead > tr > th {
+            padding: 8px 10px !important;
+            font-size: 13px;
+          }
+          .pretty-table .ant-table-tbody > tr > td {
+            padding: 8px 10px !important;
+            white-space: normal !important;
+            font-size: 13px;
+          }
+          .pretty-table .ant-table-container { overflow: visible; }
+          .pretty-table .ant-table-wrapper { overflow-x: auto; }
+          .pretty-table .ant-table-cell-fix-left {
+            position: sticky;
+            left: 0;
+            z-index: 12 !important;
+            background: #fff !important;
+          }
+          .pretty-table .ant-table-tbody > tr > td:first-child,
+          .pretty-table .ant-table-thead > tr > th:first-child {
+            padding-left: 8px !important;
+            padding-right: 8px !important;
+            max-width: 140px !important;
+          }
+          .ant-table.pretty-table .ant-table-tbody > tr > td {
+            white-space: normal !important;
+          }
+        }
+
         .ant-table .ant-table-tbody > tr:hover > td {
           background: ${BRAND.rowHover} !important;
         }
@@ -1148,7 +1319,6 @@ export default function ReportManagement() {
           z-index: 11 !important;
         }
 
-        /* Side modal wrapper */
         .floating-side { 
           display: flex; 
           justify-content: flex-end; 
@@ -1171,23 +1341,90 @@ export default function ReportManagement() {
           padding: 10px 16px;
         }
 
-        /* Body scrolls independently */
         .floating-modal .ant-modal-body {
-          overflow: auto;
-          padding: 10px 12px 30px; /* extra bottom padding so footer buttons aren't clipped */
-          max-height: calc(100vh - ${HEADER_H}px - 120px);
+          overflow-y: auto;
+          overflow-x: hidden;
+          padding: 10px 12px 30px;
+          max-height: calc(100vh - 140px);
           box-sizing: border-box;
+        }
+
+        @media (max-width: 576px) {
+          .floating-side { 
+            align-items: flex-start; 
+            padding: 8px; 
+          }
+          .floating-side .ant-modal {
+            margin: 0;
+            width: 100% !important;
+            max-width: 100% !important;
+          }
+          .floating-modal .ant-modal-content {
+            border-radius: 16px;
+            max-height: calc(100vh - 16px);
+            display: flex;
+            flex-direction: column;
+          }
+          .floating-modal .ant-modal-body {
+            flex: 1;
+            max-height: none;
+            padding-bottom: 80px;
+          }
+          .ant-table { font-size: 12px; }
         }
 
         @media (max-width: 760px) {
           .floating-side { padding: 10px; }
-          .floating-side .ant-modal,
-          .floating-modal .ant-modal-content {
-            max-height: calc(100vh - ${HEADER_H}px - 100px);
+        }
+
+        /* Quick status layout */
+        .quick-status-layout {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+          align-items: flex-end;
+        }
+        .quick-status-main {
+          flex: 1 1 220px;
+          min-width: 0;
+        }
+        .quick-status-actions {
+          display: flex;
+          justify-content: flex-end;
+          align-items: center;
+        }
+        @media (max-width: 576px) {
+          .quick-status-layout {
+            flex-direction: column;
+            align-items: stretch;
           }
-          /* increase bottom padding on narrow screens to ensure buttons remain fully visible */
-          .floating-modal .ant-modal-body { padding-bottom: 96px; }
-          .ant-table { font-size: 12px; }
+          .quick-status-actions {
+            justify-content: flex-end;
+          }
+        }
+
+        /* Edit footer buttons – always inside card */
+        .edit-footer-bar {
+          margin-top: 16px;
+          padding: 12px 8px 4px;
+          box-sizing: border-box;
+          border-top: 1px dashed rgba(148, 163, 184, 0.6);
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+          gap: 8px;
+          width: 100%;
+          max-width: 100%;
+        }
+        @media (max-width: 480px) {
+          .edit-footer-bar {
+            flex-direction: column-reverse;
+            align-items: stretch;
+            padding: 12px 10px 4px;
+          }
+          .edit-footer-bar .ant-btn {
+            width: 100%;
+          }
         }
 
         .modal-inner-animate { animation: slideIn .28s cubic-bezier(.2,.7,.3,1) both; }

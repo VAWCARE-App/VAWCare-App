@@ -45,6 +45,7 @@ export default function VictimDashboard() {
 
   const [loading, setLoading] = useState(true);
   const [reportsLoading, setReportsLoading] = useState(false);
+  const [chatbotOpen, setChatbotOpen] = useState(false);
 
   const [metrics, setMetrics] = useState({
     totalReports: 0,
@@ -234,7 +235,7 @@ export default function VictimDashboard() {
         btn: {
           text: "Open Chat",
           icon: <MessageOutlined />,
-          onClick: () => navigate("/victim-chatbot"),
+          onClick: () => setChatbotOpen(true),
         },
       },
     ]);
@@ -767,6 +768,9 @@ export default function VictimDashboard() {
         .ant-card { transition: transform .18s ease, box-shadow .18s ease; }
         .ant-card:hover { transform: translateY(-3px); box-shadow: 0 28px 56px rgba(122,90,248,.10); }
       `}</style>
+
+      {/* Chatbot Drawer */}
+      <Chatbot open={chatbotOpen} onClose={() => setChatbotOpen(false)} />
     </Layout>
   );
 }

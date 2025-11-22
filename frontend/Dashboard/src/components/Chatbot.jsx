@@ -34,8 +34,13 @@ import logo from "../assets/logo1.png"; // ✅ your logo
 
 const { Text } = Typography;
 
-export default function Chatbot() {
-  const [open, setOpen] = useState(false);
+export default function Chatbot({ open: controlledOpen, onClose }) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  // Use controlled open state if provided, otherwise use internal state
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onClose ? (value) => {
+    if (!value) onClose();
+  } : setInternalOpen;
   const [messages, setMessages] = useState([
     { role: "assistant", text: "Hi! I’m your VAWCare assistant. How can I help you today?", id: Date.now() },
   ]);

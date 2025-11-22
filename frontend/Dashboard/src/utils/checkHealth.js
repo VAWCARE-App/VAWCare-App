@@ -7,6 +7,9 @@ export async function checkHealth() {
     try {
         const res = await fetch(`${import.meta.env.VITE_API_URL}/health`, {
             signal: controller.signal,
+            headers: {
+                "x-internal-key": import.meta.env.VITE_INTERNAL_API_KEY
+            }
         });
 
         clearTimeout(timeout);

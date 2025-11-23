@@ -25,7 +25,7 @@ export default function BPODetail() {
     };
     checkUser();
   }, [navigate]);
-  
+
   const [form, setForm] = useState({});
   const [loading, setLoading] = useState(false);
 
@@ -194,14 +194,36 @@ export default function BPODetail() {
           {/* Download PDF button */}
           <Button
             type="primary"
-            onClick={() => {
-              const downloadUrl = `http://localhost:5000/api/bpo/${form.bpoID}/pdf`;
-              window.open(downloadUrl, "_blank");
+            onClick={async () => {
+              const downloadUrl = `${import.meta.env.VITE_API_URL}/api/bpo/${form.bpoID}/pdf`;
+
+              try {
+                const response = await fetch(downloadUrl, {
+                  headers: {
+                    "x-internal-key": import.meta.env.VITE_API_KEY, // your custom header
+                  },
+                });
+
+                if (!response.ok) throw new Error("Failed to fetch PDF");
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = `bpo_${form.bpoID}.pdf`;
+                link.click();
+
+                window.URL.revokeObjectURL(url);
+              } catch (err) {
+                console.error(err);
+              }
             }}
             style={{ backgroundColor: BRAND_PRIMARY, borderColor: BRAND_PRIMARY }}
           >
             Download PDF
           </Button>
+
 
           {/* Title */}
           <Title level={3} style={{ margin: 0, color: BRAND_PRIMARY }}>

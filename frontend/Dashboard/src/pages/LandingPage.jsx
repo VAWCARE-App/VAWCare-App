@@ -1068,7 +1068,7 @@ export default function LandingPage() {
                             </div>
 
                             <motion.a
-                              href="https://www.google.com/maps?q=16.4990,121.1771"
+                              href="https://maps.app.goo.gl/yG7M3EYZyg7NgLwo6"
                               target="_blank"
                               rel="noreferrer"
                               style={{

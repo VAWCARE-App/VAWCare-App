@@ -304,7 +304,12 @@ export default function Navbar({
                           } else if (user.userType === "official") {
                             window.location.href = "/admin/official-dashboard";
                           } else {
-                            window.location.href = "/victim";
+                           
+                            if (user.victimAccount === "anonymous") {
+                              window.location.href = "/victim/report";
+                            } else {
+                              window.location.href = "/victim";
+                            }
                           }
                         }}
                       >
@@ -400,7 +405,12 @@ export default function Navbar({
                           } else if (user.userType === "official") {
                             window.location.href = "/admin/official-dashboard";
                           } else {
-                            window.location.href = "/victim";
+                            // Redirect anonymous victims to report page
+                            if (user.victimAccount === "anonymous") {
+                              window.location.href = "/victim/report";
+                            } else {
+                              window.location.href = "/victim";
+                            }
                           }
                         }}
                       >

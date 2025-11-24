@@ -14,10 +14,12 @@ import {
   Col,
   Modal,
   Checkbox,
+  Tag,
+  Space,
 } from "antd";
 import { api } from "../lib/api";
 import { exchangeCustomTokenForIdToken } from "../lib/firebase";
-import {  SafetyCertificateOutlined } from '@ant-design/icons';
+import { SafetyCertificateOutlined, ExclamationCircleOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useNavigate, Link } from "react-router-dom";
 import Stepper, { Step } from "../components/Stepper";
 
@@ -157,6 +159,8 @@ export default function Signup() {
   const [currentStep, setCurrentStep] = useState(1);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successRedirect, setSuccessRedirect] = useState(null);
+  const [missingFields, setMissingFields] = useState([]);
+  const [showMissingModal, setShowMissingModal] = useState(false);
   const screens = Grid.useBreakpoint();
 
   const maxWidth = screens.xl ? 520 : screens.lg ? 480 : screens.md ? 420 : 360;
@@ -270,7 +274,40 @@ export default function Signup() {
         setShowSuccessModal(true);
       } else throw new Error(data.message || "Registration failed");
     } catch (err) {
-      message.error(err?.response?.data?.message || err.message || "Signup failed");
+      const errMsg = err?.response?.data?.message || err.message || "Signup failed";
+      // Try to extract field names from server validation messages (look for backticked field names)
+      try {
+        const re = /`([^`]+)`/g;
+        const found = [];
+        let m;
+        while ((m = re.exec(String(errMsg)))) {
+          if (m[1]) found.push(m[1]);
+        }
+        if (found.length > 0) {
+          // Map server field names to form field keys
+          const serverToForm = {
+            victimUsername: 'username',
+            victimPassword: 'password',
+            victimEmail: 'email',
+            victimType: 'victimType',
+            contactNumber: 'contactNumber',
+            address: 'address',
+            firstName: 'firstName',
+            lastName: 'lastName',
+          };
+          const mapped = found.map((f) => serverToForm[f] || f).filter((v, i, a) => a.indexOf(v) === i);
+          setMissingFields(mapped);
+          setShowMissingModal(true);
+          message.error('Some required fields are missing or invalid. Please review the highlighted fields.');
+        } else {
+          message.error(errMsg);
+          Modal.error({ title: 'Registration Failed', content: errMsg });
+        }
+      } catch (e) {
+        console.warn('Error parsing server validation message', e);
+        message.error(errMsg);
+        Modal.error({ title: 'Registration Failed', content: errMsg });
+      }
     } finally {
       setLoading(false);
     }
@@ -379,8 +416,9 @@ export default function Signup() {
       .catch(errorInfo => {
         console.log("Form validation failed:", errorInfo);
         if (errorInfo.errorFields && errorInfo.errorFields.length > 0) {
-          const firstErrorField = errorInfo.errorFields[0].name[0];
-          message.error(`Please fill in: ${firstErrorField}`);
+          const fields = errorInfo.errorFields.map((f) => f.name[0]);
+          setMissingFields(fields);
+          setShowMissingModal(true);
         } else {
           message.error("Please fill all required fields.");
         }
@@ -839,84 +877,133 @@ export default function Signup() {
         </Card>
       </Flex>
 
-      {/* Success Registration Modal */}
+      {/* Missing fields modal - shown when validation fails */}
       <Modal
         title={
-          <div style={{ textAlign: "center", color: "#5227FF", fontWeight: "bold" }}>
-            ✓ Account Created Successfully!
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <ExclamationCircleOutlined style={{ color: '#e91e63', fontSize: 20 }} />
+            <div style={{ fontWeight: 800 }}>Almost there — a few details needed</div>
           </div>
         }
-        open={showSuccessModal}
-        footer={null}
-        closable={false}
-        centered
-        width={360}
-        bodyStyle={{
-          textAlign: "center",
-          padding: "32px 24px",
-        }}
-      >
-        <div style={{ marginBottom: 24 }}>
-          <div
+        open={showMissingModal}
+        onCancel={() => setShowMissingModal(false)}
+        width={520}
+        footer={[
+          <Button key="close" onClick={() => setShowMissingModal(false)}>Close</Button>,
+          <Button
+            key="review"
+            type="primary"
             style={{
-              fontSize: 48,
-              marginBottom: 16,
-              animation: "pulse 2s infinite",
+              background: 'linear-gradient(135deg, #5227FF 0%, #7A5AF8 100%)',
+              border: 'none',
+              borderRadius: 8,
+              padding: '6px 14px',
+              boxShadow: '0 6px 18px rgba(82,39,255,0.14)'
+            }}
+            onClick={() => {
+              setShowMissingModal(false);
+              if (missingFields && missingFields.length > 0) {
+                const first = missingFields[0];
+                const fieldToStep = {
+                  username: 1,
+                  victimType: 1,
+                  email: 1,
+                  password: 1,
+                  confirmPassword: 1,
+                  firstName: 2,
+                  lastName: 2,
+                  address: 2,
+                  contactNumber: 2,
+                  emergencyContactName: 3,
+                  emergencyContactRelationship: 3,
+                  emergencyContactNumber: 3,
+                  emergencyContactEmail: 3,
+                  emergencyContactAddress: 3,
+                };
+                const step = fieldToStep[first] || 1;
+                setTimeout(() => {
+                  try {
+                    const indicators = document.querySelectorAll('.step-indicator');
+                    if (indicators && indicators.length >= step) {
+                      indicators[step - 1].click();
+                    }
+                  } catch (e) {}
+                  try { form.scrollToField(first); } catch (e) {}
+                }, 120);
+              }
             }}
           >
-            🎉
+            Review & fix
+          </Button>
+        ]}
+      >
+        <div style={{ display: 'flex', gap: 16 }}>
+          <div style={{ flex: 1 }}>
+            <p style={{ marginBottom: 8, color: '#444' }}>
+              We just need a couple more details to finish setting up your account. Tap "Review & fix" to go to the first missing field.
+            </p>
+            <ul style={{ marginTop: 6, paddingLeft: 18, listStyle: 'disc' }}>
+              {missingFields && missingFields.length > 0 ? (
+                missingFields.map((f) => {
+                  const labels = {
+                    username: 'Username',
+                    victimType: 'Victim Category',
+                    email: 'Email',
+                    password: 'Password',
+                    confirmPassword: 'Confirm Password',
+                    firstName: 'First Name',
+                    lastName: 'Last Name',
+                    address: 'Address',
+                    contactNumber: 'Contact Number',
+                    emergencyContactName: 'Emergency Contact Name',
+                    emergencyContactRelationship: 'Emergency Contact Relationship',
+                    emergencyContactNumber: 'Emergency Contact Number',
+                    emergencyContactEmail: 'Emergency Contact Email',
+                    emergencyContactAddress: 'Emergency Contact Address',
+                  };
+                  const stepLabel = (f) => {
+                    const map = { username: 1, victimType: 1, email: 1, password: 1, confirmPassword: 1, firstName: 2, lastName: 2, address: 2, contactNumber: 2, emergencyContactName: 3, emergencyContactRelationship: 3, emergencyContactNumber: 3, emergencyContactEmail: 3, emergencyContactAddress: 3 };
+                    return map[f] ? `Step ${map[f]}` : '';
+                  };
+                  return (
+                    <li key={f} style={{ marginBottom: 10, color: '#333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 600 }}>{labels[f] || f}</span>
+                      {stepLabel(f) && <span style={{ color: '#888', fontSize: 12 }}>{`(Step ${stepLabel(f).split(' ')[1]})`}</span>}
+                    </li>
+                  );
+                })
+              ) : (
+                <li>Required fields are missing</li>
+              )}
+            </ul>
           </div>
-          <Typography.Title level={4} style={{ marginBottom: 8 }}>
-            Welcome to VAWCare!
-          </Typography.Title>
-          <Typography.Paragraph style={{ color: "#666", marginBottom: 16 }}>
-            Your account has been created successfully.
-          </Typography.Paragraph>
-          <Typography.Paragraph style={{ color: "#ff6b9d", fontWeight: 500, marginBottom: 0 }}>
-            ⏳ Please wait... we're preparing your dashboard.
-          </Typography.Paragraph>
-          <Typography.Paragraph style={{ color: "#999", fontSize: 12, marginTop: 12 }}>
-            This may take a few moments depending on your connection speed.
-          </Typography.Paragraph>
         </div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            gap: 8,
-            marginTop: 24,
-          }}
-        >
-          <div
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              backgroundColor: "#5227FF",
-              animation: "bounce 1.4s infinite",
-              animationDelay: "0s",
-            }}
-          />
-          <div
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              backgroundColor: "#5227FF",
-              animation: "bounce 1.4s infinite",
-              animationDelay: "0.2s",
-            }}
-          />
-          <div
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              backgroundColor: "#5227FF",
-              animation: "bounce 1.4s infinite",
-              animationDelay: "0.4s",
-            }}
-          />
+      </Modal>
+
+      {/* Success Registration Modal */}
+      <Modal
+        title={<div style={{ textAlign: 'center', fontWeight: 700 }}>Account Created</div>}
+        open={showSuccessModal}
+        centered
+        width={420}
+        onCancel={() => setShowSuccessModal(false)}
+        footer={[
+          <Button key="close" onClick={() => setShowSuccessModal(false)}>Close</Button>,
+          <Button key="now" type="primary" onClick={() => {
+            setShowSuccessModal(false);
+            if (successRedirect) navigate(successRedirect);
+          }}>Go to my dashboard</Button>
+        ]}
+      >
+        <div style={{ textAlign: 'center', padding: '6px 6px 0' }}>
+          <div style={{ fontSize: 48, marginBottom: 8 }}>✅</div>
+          <Typography.Title level={4} style={{ marginBottom: 6 }}>You're all set</Typography.Title>
+          <Typography.Paragraph style={{ color: '#666', marginBottom: 6 }}>
+            Your account was created successfully.
+          </Typography.Paragraph>
+          <Typography.Paragraph style={{ color: '#666', marginBottom: 0 }}>
+            We are finalizing your account. You will be redirected shortly — or click "Go to my dashboard" to continue now.
+          </Typography.Paragraph>
         </div>
       </Modal>
 
@@ -941,6 +1028,12 @@ export default function Signup() {
             transform: translateY(-10px);
             opacity: 0.7;
           }
+        }
+        /* Highlight animation for fields navigated-to by the modal review action */
+        .vawcare-highlight-target {
+          box-shadow: 0 0 0 6px rgba(122,90,248,0.12) !important;
+          transition: box-shadow 0.25s ease-in-out;
+          border-radius: 6px;
         }
       `}</style>
     </div>

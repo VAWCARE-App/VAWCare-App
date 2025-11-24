@@ -15,6 +15,7 @@ import {
   Upload,
   Tag,
   Divider,
+  Modal,
   Grid,
   Progress,
   Tooltip,
@@ -108,9 +109,18 @@ export default function CreateOfficial() {
       if (res?.status === 201 || res?.data?.success) {
         const serverMsg = res?.data?.message || "Official created successfully.";
         message.success(serverMsg);
-        message.info(
-          "Account is pending approval. The official will be able to log in once approved."
-        );
+        // Show a prominent modal confirmation as well
+        Modal.success({
+          title: "Official Created",
+          content: (
+            <div>
+              <p>{serverMsg}</p>
+              <p style={{ marginBottom: 0 }}>
+                Account is pending approval. The official will be able to log in once approved.
+              </p>
+            </div>
+          ),
+        });
         form.resetFields();
         setAvatar(null);
         setPhotoMimeType(null);

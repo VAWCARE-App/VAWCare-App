@@ -992,6 +992,32 @@ const updateReport = asyncHandler(async (req, res) => {
         throw new Error('Error updating report');
     }
 });
+
+// @desc    Delete (soft-delete) current victim account
+// @route   DELETE /api/victims/profile
+// @access  Private
+const deleteAccount = asyncHandler(async (req, res) => {
+    try {
+        const victim = await Victim.findOne({ firebaseUid: req.user.uid });
+        if (!victim) {
+            res.status(404);
+            throw new Error('Victim not found');
+        }
+
+        victim.isDeleted = true;
+        await victim.save();
+
+        try {
+            const { recordLog } = require('../middleware/logger');
+            await recordLog({ req, actorType: 'victim', actorId: victim._id, action: 'victim_deleted', details: `Victim soft-deleted ${victim.victimID || victim._id}` });
+        } catch (e) { console.warn('Failed to record victim deletion log', e && e.message); }
+
+        res.status(200).json({ success: true, message: 'Account deleted' });
+    } catch (error) {
+        res.status(500);
+        throw new Error('Error deleting account: ' + (error && error.message));
+    }
+});
 module.exports = {
     registerVictim,
 
@@ -1001,6 +1027,7 @@ module.exports = {
     verifyEmail,
     verifyPhone,
     updateProfile,
+    deleteAccount,
     submitAnonymousReport,
     sendAnonymousAlert,
     getReports,

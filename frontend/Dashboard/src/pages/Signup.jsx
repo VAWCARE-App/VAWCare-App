@@ -863,6 +863,15 @@ export default function Signup() {
                 </div>
               </Step>
             </Stepper>
+
+            {loading && !showSuccessModal && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div className="vaw-spinner" aria-hidden></div>
+                  <div style={{ color: '#5227FF', fontWeight: 700 }}>Creating your account…</div>
+                </div>
+              </div>
+            )}
             </Form>
             
             <div style={{ marginTop: 12, textAlign: "center" }}>
@@ -988,10 +997,16 @@ export default function Signup() {
         width={420}
         onCancel={() => setShowSuccessModal(false)}
         footer={[
-          <Button key="close" onClick={() => setShowSuccessModal(false)}>Close</Button>,
+          <Button key="close" onClick={() => setShowSuccessModal(false)} style={{ borderRadius: 8, padding: '6px 12px' }}>Close</Button>,
           <Button key="now" type="primary" onClick={() => {
             setShowSuccessModal(false);
             if (successRedirect) navigate(successRedirect);
+          }} style={{
+            background: 'linear-gradient(135deg, #5227FF 0%, #7A5AF8 100%)',
+            border: 'none',
+            borderRadius: 10,
+            padding: '8px 14px',
+            boxShadow: '0 8px 24px rgba(82,39,255,0.18)'
           }}>Go to my dashboard</Button>
         ]}
       >
@@ -1035,6 +1050,23 @@ export default function Signup() {
           transition: box-shadow 0.25s ease-in-out;
           border-radius: 6px;
         }
+        .vaw-spinner {
+          width: 38px;
+          height: 38px;
+          border-radius: 50%;
+          background: conic-gradient(from 0deg, #9b7aff, #5227FF, #7A5AF8, #d9c9ff, #9b7aff);
+          animation: vaw-spin 1s linear infinite;
+          box-shadow: 0 6px 18px rgba(82,39,255,0.12);
+          position: relative;
+        }
+        .vaw-spinner::after {
+          content: '';
+          position: absolute;
+          inset: 6px;
+          background: #fff;
+          border-radius: 50%;
+        }
+        @keyframes vaw-spin { to { transform: rotate(360deg); } }
       `}</style>
     </div>
   );

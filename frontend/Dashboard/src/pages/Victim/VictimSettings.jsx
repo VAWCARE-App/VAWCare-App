@@ -13,6 +13,7 @@ import {
   Upload,
   Divider,
   Tag,
+  Modal,
 } from "antd";
 import {
   SafetyCertificateOutlined,
@@ -25,8 +26,9 @@ import {
   DownloadOutlined,
   SaveOutlined,
   CloseOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
-import { api } from "../../lib/api";
+import { api, clearAllStorage } from "../../lib/api";
 import InstallButton from "../../components/InstallButton";
 
 const { Title, Text } = Typography;
@@ -55,6 +57,7 @@ export default function VictimSettings() {
   const [isFormDirty, setIsFormDirty] = useState(false);
   const [profileData, setProfileData] = useState(null); // Add state to track profile data
   const [form] = Form.useForm();
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
 
   const toBase64 = (file) =>
@@ -415,6 +418,31 @@ export default function VictimSettings() {
 
   // Photo upload removed
 
+  const showDeleteConfirm = () => {
+    setDeleteModalOpen(true);
+  };
+
+  const performDeleteAccount = async () => {
+    try {
+      setLoading(true);
+      const res = await api.delete('/api/victims/profile');
+      if (res?.data?.success) {
+        message.success(res.data.message || 'Account deleted');
+        try { await clearAllStorage(); } catch (e) { console.debug('clearAllStorage failed', e && e.message); }
+        // close modal briefly then redirect
+        setDeleteModalOpen(false);
+        window.location.href = '/';
+      } else {
+        message.error(res?.data?.message || 'Failed to delete account');
+      }
+    } catch (err) {
+      console.error('Delete account failed', err);
+      message.error(err?.response?.data?.message || err.message || 'Failed to delete account');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const displayName = useMemo(() => {
     if (profileData) {
       const combo = [profileData.firstName, profileData.lastName].filter(Boolean).join(" ");
@@ -466,7 +494,7 @@ export default function VictimSettings() {
         .name-role .name{ margin:0; color:var(--panel-ink); font-weight:800; letter-spacing:.2px; }
         .name-role .role{ margin-top:2px; color:var(--muted-ink); font-size:13px; }
 
-        .panel-actions{ display:flex; align-items:center; gap:10px; flex-wrap: wrap; }
+        .panel-actions{ display:flex; align-items:center; gap:8px; flex-wrap: wrap; }
         .soft-btn{
           height:36px; border-radius:10px; padding:0 12px;
           background:var(--chip-bg); color:var(--chip-ink); border:1px solid var(--soft-border);
@@ -578,6 +606,14 @@ export default function VictimSettings() {
 
                 <Button className="download-btn" icon={<DownloadOutlined />} onClick={() => handleDownload('pdf')}>
                   {screens.xs ? "Download" : "Download Info"}
+                </Button>
+
+                <Button
+                  danger
+                  style={{ borderRadius: 12, height: 36 }}
+                  onClick={showDeleteConfirm}
+                >
+                  {screens.xs ? 'Delete' : 'Delete Account'}
                 </Button>
               </div>
             </div>
@@ -698,6 +734,44 @@ export default function VictimSettings() {
 
             <InstallButton />
           </Card>
+
+          {/* Delete Confirmation Modal (matches Admin UserManagement style) */}
+          <Modal
+            title={
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <ExclamationCircleOutlined style={{ color: '#ff4d4f', fontSize: 20 }} />
+                <span>Confirm Delete</span>
+              </div>
+            }
+            open={deleteModalOpen}
+            onCancel={() => setDeleteModalOpen(false)}
+            onOk={performDeleteAccount}
+            okText="Yes, Delete"
+            cancelText="Cancel"
+            okButtonProps={{ danger: true, loading }}
+            centered
+            zIndex={1200}
+          >
+            <div style={{ padding: '12px 0' }}>
+              <p style={{ fontSize: 15, marginBottom: 8 }}>
+                Are you sure you want to delete your account?
+              </p>
+              {profileData && (
+                <div style={{ background: '#f5f5f5', padding: 12, borderRadius: 8, marginTop: 12 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ fontWeight: 700 }}>{displayName}</div>
+                    <div style={{ color: '#666', fontSize: 13 }}>
+                      @{profileData.victimUsername || ''} • {profileData.victimEmail || ''}
+                    </div>
+                    <div style={{ marginTop: 6 }}><Tag style={{ marginTop: 4 }}>Victim</Tag></div>
+                  </div>
+                </div>
+              )}
+              <p style={{ marginTop: 16, marginBottom: 0, color: '#666', fontSize: 13 }}>
+                This action will soft-delete your account and can be restored by an administrator.
+              </p>
+            </div>
+          </Modal>
         </div>
 
         {/* Fixed Bottom Action Bar */}

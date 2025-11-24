@@ -399,6 +399,23 @@ export default function Chatbot({ open: controlledOpen, onClose }) {
         .typing .dot:nth-child(3){ animation-delay:.3s; }
         @keyframes bounce{ 0%,80%,100%{transform:scale(.6);opacity:.5;}40%{transform:scale(1);opacity:1;} }
 
+        /* Force avatar/logo to remain consistent size on all screens */
+        .vaw-drawer .ant-avatar {
+          width: 40px !important;
+          height: 40px !important;
+          min-width: 40px !important;
+          min-height: 40px !important;
+          flex: 0 0 40px !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+        .vaw-drawer .ant-avatar img {
+          width: 100% !important;
+          height: 100% !important;
+          object-fit: contain !important;
+        }
+
         .composer{ border-top:1px solid ${BRAND.border}; background:#fff; padding:10px 12px 12px; flex:0 0 auto; }
         .compose-toolbar{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
         .compose-toolbar .hint{ font-size:12px; color:#999; }

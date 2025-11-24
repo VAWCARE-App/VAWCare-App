@@ -1,12 +1,29 @@
 import React, { useMemo, useState } from "react";
-import { Card, Button, Skeleton, Space, Segmented } from "antd";
+import { Card, Button, Skeleton, Space, Segmented, Grid } from "antd";
+import { DownloadOutlined, PictureOutlined } from "@ant-design/icons";
 import html2canvas from "html2canvas";
 
 export default function IncidentTable({ cases = [], loading }) {
   const [mode, setMode] = useState("Half-Year"); // "Half-Year" | "Quarterly"
   const [period, setPeriod] = useState("first"); // first | second | Q1 | Q2 | Q3 | Q4
 
-  const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.md; // xs/sm => mobile
+
+  const monthLabels = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
 
   const incidentData = useMemo(() => {
     let start = 0,
@@ -38,7 +55,9 @@ export default function IncidentTable({ cases = [], loading }) {
       rangeName = `${period}`;
     }
 
-    const allIncidentTypes = Array.from(new Set(cases.map((c) => c.incidentType || "Unknown")));
+    const allIncidentTypes = Array.from(
+      new Set(cases.map((c) => c.incidentType || "Unknown"))
+    );
     const map = {};
     allIncidentTypes.forEach((t) => (map[t] = Array(end - start).fill(0)));
 
@@ -64,13 +83,18 @@ export default function IncidentTable({ cases = [], loading }) {
 
   const downloadCSV = () => {
     const header = ["Incident Type", ...incidentData.labels, "Total"];
-    const rows = incidentData.data.map((row) => [row.incidentType, ...row.months, row.total].join(","));
+    const rows = incidentData.data.map((row) =>
+      [row.incidentType, ...row.months, row.total].join(",")
+    );
     const csv = [header.join(","), ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `incident_type_${incidentData.rangeName.replace(" ", "_")}.csv`;
+    a.download = `incident_type_${incidentData.rangeName.replace(
+      " ",
+      "_"
+    )}.csv`;
     a.click();
   };
 
@@ -79,20 +103,53 @@ export default function IncidentTable({ cases = [], loading }) {
     if (!tableElement) return;
     html2canvas(tableElement, { scale: 2 }).then((canvas) => {
       const link = document.createElement("a");
-      link.download = `incident_type_${incidentData.rangeName.replace(" ", "_")}.png`;
+      link.download = `incident_type_${incidentData.rangeName.replace(
+        " ",
+        "_"
+      )}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
     });
   };
 
+  // responsive options for segmented controls
+  const modeOptions = isMobile
+    ? [
+        { label: "Half", value: "Half-Year" },
+        { label: "Qtr", value: "Quarterly" },
+      ]
+    : ["Half-Year", "Quarterly"];
+
+  const halfOptions = isMobile
+    ? [
+        { label: "1st", value: "first" },
+        { label: "2nd", value: "second" },
+      ]
+    : [
+        { label: "1st Half", value: "first" },
+        { label: "2nd Half", value: "second" },
+      ];
+
+  const quarterOptions = ["Q1", "Q2", "Q3", "Q4"];
+
   return (
     <Card
       title="Incident Type by Period"
       extra={
-        <Space>
-          {/* 🔹 Granularity Toggle */}
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: isMobile ? 6 : 10,
+            alignItems: "center",
+            justifyContent: isMobile ? "flex-start" : "flex-end",
+            maxWidth: isMobile ? 320 : "100%", // prevent overflow on tiny screens
+          }}
+        >
+          {/* Granularity Toggle */}
           <Segmented
-            options={["Half-Year", "Quarterly"]}
+            options={modeOptions}
+            size={isMobile ? "small" : "middle"}
             value={mode}
             onChange={(val) => {
               setMode(val);
@@ -100,28 +157,41 @@ export default function IncidentTable({ cases = [], loading }) {
             }}
           />
 
-          {/* 🔹 Period Toggle */}
+          {/* Period Toggle */}
           {mode === "Half-Year" ? (
             <Segmented
-              options={[
-                { label: "1st Half", value: "first" },
-                { label: "2nd Half", value: "second" },
-              ]}
+              options={halfOptions}
+              size={isMobile ? "small" : "middle"}
               value={period}
               onChange={setPeriod}
             />
           ) : (
             <Segmented
-              options={["Q1", "Q2", "Q3", "Q4"]}
+              options={quarterOptions}
+              size={isMobile ? "small" : "middle"}
               value={period}
               onChange={setPeriod}
             />
           )}
 
-          {/* 🔹 Download Buttons */}
-          <Button onClick={downloadCSV}>Download CSV</Button>
-          <Button onClick={downloadImage}>Download Image</Button>
-        </Space>
+          {/* Download Buttons */}
+          <Space wrap size={isMobile ? 4 : 8}>
+            <Button
+              onClick={downloadCSV}
+              size={isMobile ? "small" : "middle"}
+              icon={<DownloadOutlined />}
+            >
+              {!isMobile && "Download CSV"}
+            </Button>
+            <Button
+              onClick={downloadImage}
+              size={isMobile ? "small" : "middle"}
+              icon={<PictureOutlined />}
+            >
+              {!isMobile && "Download Image"}
+            </Button>
+          </Space>
+        </div>
       }
       style={{ borderRadius: 16 }}
     >
@@ -139,27 +209,60 @@ export default function IncidentTable({ cases = [], loading }) {
           >
             <thead>
               <tr>
-                <th style={{ borderBottom: "1px solid #ddd", padding: 8, textAlign: "left" }}>Incident Type</th>
+                <th
+                  style={{
+                    borderBottom: "1px solid #ddd",
+                    padding: 8,
+                    textAlign: "left",
+                  }}
+                >
+                  Incident Type
+                </th>
                 {incidentData.labels.map((m) => (
-                  <th key={m} style={{ borderBottom: "1px solid #ddd", padding: 8 }}>
+                  <th
+                    key={m}
+                    style={{ borderBottom: "1px solid #ddd", padding: 8 }}
+                  >
                     {m}
                   </th>
                 ))}
-                <th style={{ borderBottom: "1px solid #ddd", padding: 8 }}>Total</th>
+                <th style={{ borderBottom: "1px solid #ddd", padding: 8 }}>
+                  Total
+                </th>
               </tr>
             </thead>
             <tbody>
               {incidentData.data.map((row) => (
                 <tr key={row.incidentType}>
-                  <td style={{ borderBottom: "1px solid #f0f0f0", padding: 8, textAlign: "left" }}>
+                  <td
+                    style={{
+                      borderBottom: "1px solid #f0f0f0",
+                      padding: 8,
+                      textAlign: "left",
+                    }}
+                  >
                     {row.incidentType}
                   </td>
                   {row.months.map((val, i) => (
-                    <td key={i} style={{ borderBottom: "1px solid #f0f0f0", padding: 8 }}>
+                    <td
+                      key={i}
+                      style={{
+                        borderBottom: "1px solid #f0f0f0",
+                        padding: 8,
+                      }}
+                    >
                       {val}
                     </td>
                   ))}
-                  <td style={{ borderBottom: "1px solid #f0f0f0", padding: 8, fontWeight: 600 }}>{row.total}</td>
+                  <td
+                    style={{
+                      borderBottom: "1px solid #f0f0f0",
+                      padding: 8,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {row.total}
+                  </td>
                 </tr>
               ))}
             </tbody>

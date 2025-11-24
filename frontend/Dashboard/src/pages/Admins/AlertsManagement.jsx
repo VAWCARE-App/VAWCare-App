@@ -51,6 +51,9 @@ export default function AlertsManagement() {
   const [alerts, setAlerts] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(false);
+  // Pagination
+  const PAGE_SIZE = 15;
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [showMapModal, setShowMapModal] = useState(false);
   const [iframeCoords, setIframeCoords] = useState({ lat: 0, lng: 0 });
@@ -91,6 +94,7 @@ export default function AlertsManagement() {
       const items = Array.isArray(data?.data) ? data.data : data?.data?.items || [];
       setAlerts(items);
       setFiltered(items);
+      setCurrentPage(1);
     } catch (err) {
       console.error("Failed to load alerts", err);
     } finally {
@@ -115,7 +119,11 @@ export default function AlertsManagement() {
 
   const onSearch = (val) => {
     const q = String(val || "").trim().toLowerCase();
-    if (!q) return setFiltered(alerts);
+    if (!q) {
+      setFiltered(alerts);
+      setCurrentPage(1);
+      return;
+    }
     setFiltered(
       alerts.filter((a) => {
         const victim =
@@ -128,11 +136,17 @@ export default function AlertsManagement() {
         );
       })
     );
+    setCurrentPage(1);
   };
 
   const onFilterStatus = (v) => {
-    if (!v || v === "all") return setFiltered(alerts);
+    if (!v || v === "all") {
+      setFiltered(alerts);
+      setCurrentPage(1);
+      return;
+    }
     setFiltered(alerts.filter((a) => String(a.status || "").toLowerCase() === String(v).toLowerCase()));
+    setCurrentPage(1);
   };
 
   const stats = useMemo(() => {
@@ -525,7 +539,14 @@ export default function AlertsManagement() {
               columns={isMobile ? columnsMobile : columns}
               rowKey={(r) => r._id}
               loading={loading}
-              pagination={false}
+              pagination={{
+                current: currentPage,
+                pageSize: PAGE_SIZE,
+                total: filtered.length,
+                showSizeChanger: false,
+                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} alerts`,
+                onChange: (page) => setCurrentPage(page),
+              }}
               sticky
               tableLayout={isMobile ? "auto" : "fixed"}
               scroll={{ y: tableY, x: isMobile ? "max-content" : "max-content" }}

@@ -101,6 +101,9 @@ export default function ReportManagement() {
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateRange, setDateRange] = useState(null);
+  // Pagination
+  const PAGE_SIZE = 15;
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Right-side modal
   const [modalOpen, setModalOpen] = useState(false);
@@ -143,6 +146,7 @@ export default function ReportManagement() {
         });
         setAllReports(formatted);
         setFilteredReports(formatted);
+        setCurrentPage(1);
       } else {
         message.error("Failed to load reports");
       }
@@ -337,6 +341,7 @@ export default function ReportManagement() {
     }
 
     setFilteredReports(filtered);
+    setCurrentPage(1);
   }, [allReports, searchText, statusFilter, dateRange]);
 
   // === Columns ===
@@ -810,7 +815,14 @@ export default function ReportManagement() {
               size="middle"
               sticky
               rowKey="key"
-              pagination={false}
+              pagination={{
+                current: currentPage,
+                pageSize: PAGE_SIZE,
+                total: filteredReports.length,
+                showSizeChanger: false,
+                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} reports`,
+                onChange: (page) => setCurrentPage(page),
+              }}
               tableLayout={isMdUp ? "fixed" : "auto"}
               scroll={{ y: tableY, x: "max-content" }}
               onRow={(record) => ({

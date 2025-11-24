@@ -8,6 +8,7 @@ export default function Stepper({
   initialStep = 1,
   onStepChange = () => {},
   onFinalStepCompleted = () => {},
+  current,
   stepCircleContainerClassName = '',
   stepContainerClassName = '',
   contentClassName = '',
@@ -21,6 +22,20 @@ export default function Stepper({
   ...rest
 }) {
   const [currentStep, setCurrentStep] = useState(initialStep);
+  // support controlled current step when `current` prop is provided
+  React.useEffect(() => {
+    if (typeof current === 'number' && current !== currentStep) {
+      const dir = current > currentStep ? 1 : -1;
+      setDirection(dir);
+      setCurrentStep(current);
+      if (current > totalSteps) {
+        onFinalStepCompleted();
+      } else {
+        onStepChange(current);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current]);
   const [direction, setDirection] = useState(0);
   const stepsArray = Children.toArray(children);
   const totalSteps = stepsArray.length;
@@ -123,23 +138,12 @@ export default function Stepper({
 }
 
 function StepContentWrapper({ isCompleted, currentStep, direction, children, className }) {
-  const [parentHeight, setParentHeight] = useState(0);
-
+  // Render step content directly to avoid measuring/animation timing issues in some modals.
+  if (isCompleted) return null;
   return (
-    <motion.div
-      className={className}
-      style={{ position: 'relative', overflow: 'hidden' }}
-      animate={{ height: isCompleted ? 0 : parentHeight }}
-      transition={{ type: 'spring', duration: 0.4 }}
-    >
-      <AnimatePresence initial={false} mode="sync" custom={direction}>
-        {!isCompleted && (
-          <SlideTransition key={currentStep} direction={direction} onHeightReady={h => setParentHeight(h)}>
-            {children}
-          </SlideTransition>
-        )}
-      </AnimatePresence>
-    </motion.div>
+    <div className={className} style={{ marginBottom: 16 }}>
+      {children}
+    </div>
   );
 }
 

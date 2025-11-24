@@ -14,6 +14,8 @@ router.post('/anonymous/alert', victimController.sendAnonymousAlert);
 // Protected routes (require authentication)
 router.get('/profile', protect, victimController.getProfile);
 router.put('/profile', protect, victimController.updateProfile);
+// Allow victims to delete (soft-delete) their own account
+router.delete('/profile', protect, victimController.deleteAccount);
 // Photo upload/get endpoints (base64 JSON)
 router.post('/profile/photo', protect, victimController.uploadPhoto);
 router.get('/profile/photo', protect, victimController.getPhoto);

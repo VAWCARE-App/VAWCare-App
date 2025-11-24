@@ -179,6 +179,11 @@
   transform: none;
 }
 
+/* Hide footer when Stepper is given footerClassName="no-footer" */
+.footer-container.no-footer {
+  display: none;
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   .step-circle-container {

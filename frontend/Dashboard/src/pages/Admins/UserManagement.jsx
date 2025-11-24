@@ -355,6 +355,12 @@ export default function UserManagement() {
           (u.username || "").toLowerCase().includes(q)
       );
     }
+    // Sorting (oldest accounts first)
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return dateA - dateB;
+    });
     setFilteredUsers(filtered);
   }, [allUsers, searchText, filterType, filterStatus, dateRange]);
 

@@ -26,7 +26,7 @@ export default function ForgotPasswordModal({ open, onClose }) {
         setSendingOTP(true);
         setEmailError("");
         try {
-            const res = await axios.post(`${apiUrl}/api/auth/send-otp`, { email: emailToSend, "x-internal-key": import.meta.env.VITE_INTERNAL_API_KEY });
+            const res = await axios.post(`${apiUrl}/api/auth/send-otp`, { email, "x-internal-key": import.meta.env.VITE_INTERNAL_API_KEY });
             message.success(res?.data?.message || "OTP sent to your email.");
             setEmail(emailToSend);
             return res;
@@ -67,47 +67,40 @@ export default function ForgotPasswordModal({ open, onClose }) {
         setVerifyingOTP(true);
         const otpString = otp.join("");
         try {
-            const res = await axios.post(`${apiUrl}/api/auth/verify-otp`, { email, otp: otpString });
+            const res = await axios.post(`${apiUrl}/api/auth/verify-otp`, { email, otp: otpString }, {
+                headers: { "x-internal-key": import.meta.env.VITE_INTERNAL_API_KEY }
+            });
             message.success(res?.data?.message || "OTP verified successfully!");
-            return res;
-                } catch (error) {
-                    const serverMsg = error?.response?.data?.message;
-                    const fallback = "Invalid OTP. Please try again.";
-                    message.error(serverMsg || (error && error.message) || fallback);
-                    throw error;
-                } finally {
-                    setVerifyingOTP(false);
-                }
-            };
-        
-            // --- STEP 3: Reset Password ---
-            const handleResetPassword = async ({ password }) => {
-                try {
-                    const res = await axios.post(`${apiUrl}/api/auth/reset-password`, { email, password });
-                    message.success(res?.data?.message || "Password reset successfully!");
-                    form.resetFields();
-                    setStepperCurrent(1);
-                    setOtp(Array(6).fill(""));
-                    setOtpComplete(false);
-                    onClose();
-                    return res;
-                } catch (error) {
-                    const serverMsg = error?.response?.data?.message;
-                    const fallback = "Failed to reset password.";
-                    message.error(serverMsg || (error && error.message) || fallback);
-                    throw error;
-                }
-            };
-        
-            // --- Modal Reset ---
-            const resetModal = () => {
-                setStepperCurrent(1);
-                setEmail("");
-                setOtp(Array(6).fill(""));
-                setEmailError("");
-                form.resetFields();
-                onClose();
-            };
+            setCurrentStep(2);
+        } catch (error) {
+            const serverMsg = error?.response?.data?.message;
+            const fallback = "Invalid OTP. Please try again.";
+            message.error(serverMsg || (error && error.message) || fallback);
+        }
+    };
+
+    // --- STEP 3: Reset Password ---
+    const handleResetPassword = async ({ password }) => {
+        try {
+            const res = await axios.post(`${apiUrl}/api/auth/reset-password`, { email, password });
+            message.success(res?.data?.message || "Password reset successfully!");
+            form.resetFields();
+            setCurrentStep(0);
+            onClose();
+        } catch (error) {
+            const serverMsg = error?.response?.data?.message;
+            const fallback = "Failed to reset password.";
+            message.error(serverMsg || (error && error.message) || fallback);
+        }
+    };
+
+    const resetModal = () => {
+        setCurrentStep(0);
+        setEmail("");
+        setOtp(Array(6).fill(""));
+        form.resetFields();
+        onClose();
+    };
 
             // When modal opens, show the first step and clear transient state
             useEffect(() => {

@@ -340,3 +340,33 @@
 .ant-radio-group {
   margin-bottom: 6px !important;
 }
+
+/* ----------------------------
+   FIX: Reduce gap before Continue button
+   ---------------------------- */
+
+/* Reduce the space before footer */
+.step-content-default {
+  margin-bottom: 6px !important;  /* was 16 */
+}
+
+/* Reduce footer padding */
+.footer-container {
+  padding-top: 6px !important;    /* was 10/16 */
+}
+
+/* Reduce spacing inside button row */
+.footer-nav {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+/* Reduce spacing inside the whole step box */
+.step-circle-container {
+  padding-bottom: 10px !important; /* was 14–18 */
+}
+
+/* Reduce gap after the last form item */
+.step-content-default .ant-form-item:last-child {
+  margin-bottom: 4px !important;
+}

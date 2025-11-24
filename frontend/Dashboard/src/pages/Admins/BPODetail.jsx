@@ -200,7 +200,7 @@ export default function BPODetail() {
               try {
                 const response = await fetch(downloadUrl, {
                   headers: {
-                    "x-internal-key": import.meta.env.VITE_API_KEY, // your custom header
+                    "x-internal-key": import.meta.env.VITE_INTERNAL_API_KEY, // your custom header
                   },
                 });
 

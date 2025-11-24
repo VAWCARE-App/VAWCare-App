@@ -944,7 +944,7 @@ export default function LandingPage() {
                               description={
                                 <Space split={<span>•</span>} wrap>
                                   <Text className="muted">{item.source}</Text>
-                                  <Text className="muted">{new Date(item.date).toLocaleDateString()}</Text>
+                                  {/* <Text className="muted">{new Date(item.date).toLocaleDateString()}</Text> */}
                                 </Space>
                               }
                             />

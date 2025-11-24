@@ -10,6 +10,8 @@
   border-radius: 12px;
   padding: 20px 18px 18px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  position: relative;
+  overflow: visible;
 }
 
 /* Step Indicators Row */
@@ -78,11 +80,14 @@
 
 /* Step Content */
 .step-content-default {
+  margin-top: 12px !important;
   margin-bottom: 16px;
-  overflow: visible;
+  width: 100%;
+  padding-top: 6px;
+  overflow: visible; /* no internal scrolling */
 }
 
-/* Hide scrollbars for privacy section */
+/* Hide scrollbars for privacy section (inner div uses its own overflow) */
 .step-content-default *::-webkit-scrollbar {
   width: 0px;
   height: 0px;
@@ -184,15 +189,38 @@
   display: none;
 }
 
-/* Responsive */
+/* ----------------------------
+   FIX: Responsive Form Layout
+   ---------------------------- */
+.custom-step-content {
+  width: 100%;
+  overflow: visible; /* important: no clipping */
+}
+
+.step-content-default .ant-row,
+.step-content-default .ant-form-item {
+  max-width: 100%;
+}
+
+.step-content-default input,
+.step-content-default .ant-select,
+.step-content-default .ant-input-password,
+.step-content-default textarea {
+  width: 100% !important;
+  min-width: 0 !important; /* prevents horizontal overflow */
+}
+
+/* ----------------------------
+   TABLET / SMALL DESKTOP
+   ---------------------------- */
 @media (max-width: 640px) {
   .step-circle-container {
-    padding: 20px 16px;
+    padding: 18px 14px;
   }
 
   .step-indicator-row {
     padding: 0 10px;
-    margin-bottom: 24px;
+    margin-bottom: 20px;
   }
 
   .step-indicator-inner {
@@ -212,12 +240,103 @@
     min-width: 90px;
     height: 40px;
   }
-  
+
   .footer-nav {
     padding: 0 4px;
   }
-  
-  .step-content-default {
-    max-height: 55vh;
+
+  .step-default {
+    padding: 4px 0;
   }
+}
+
+/* ----------------------------
+   Extra small devices (Phones)
+   ---------------------------- */
+@media (max-width: 480px) {
+  .step-indicator-row {
+    gap: 6px;
+    padding: 0 4px !important;
+  }
+
+  .step-indicator-inner {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 12px !important;
+  }
+
+  .custom-step-content {
+    margin-top: 16px !important;
+  }
+
+  .ant-col {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+
+/* ----------------------------
+   CLEANER, TIGHTER FORM SPACING
+   ---------------------------- */
+
+/* Reduce space between stepper and section title */
+.step-content-default {
+  margin-top: 4px !important;
+}
+
+/* Reduce default form item margin */
+.step-content-default .ant-form-item {
+  margin-bottom: 10px !important; /* default is 24px */
+}
+
+/* More compact label spacing */
+.step-content-default .ant-form-item-label {
+  padding-bottom: 2px !important;
+}
+
+/* Reduce red error text spacing */
+.step-content-default .ant-form-item-explain-error {
+  margin-top: 2px !important;
+  font-size: 12px !important;
+}
+
+/* Tighten row/column spacing */
+.step-content-default .ant-row {
+  margin-bottom: 6px !important; /* less space between rows */
+}
+
+.step-content-default .ant-col > .ant-form-item {
+  margin-bottom: 10px !important;
+}
+
+/* Even spacing between 2-column fields */
+.step-content-default .ant-row > .ant-col {
+  padding-right: 8px !important;
+}
+
+.step-content-default .ant-row > .ant-col:last-child {
+  padding-right: 0 !important;
+}
+
+/* Reduce spacing before the Continue button */
+.footer-container {
+  padding-top: 10px !important;
+  margin-top: 0 !important;
+}
+
+/* Make the card itself tighter */
+.step-circle-container {
+  padding-bottom: 14px !important;
+}
+
+/* Title spacing inside steps */
+.step-default > h4,
+.step-default > .ant-typography {
+  margin-bottom: 10px !important;
+}
+
+/* Fix spacing under radio group */
+.ant-radio-group {
+  margin-bottom: 6px !important;
 }

@@ -22,7 +22,9 @@ export default function ForgotPasswordModal({ open, onClose }) {
         setSendingOTP(true);
         setEmailError("");
         try {
-            const res = await axios.post(`${apiUrl}/api/auth/send-otp`, { email, "x-internal-key": import.meta.env.VITE_INTERNAL_API_KEY });
+            const res = await axios.post(`${apiUrl}/api/auth/send-otp`, { email }, {
+                headers: { "x-internal-key": import.meta.env.VITE_INTERNAL_API_KEY }
+            });
             message.success(res?.data?.message || "OTP sent to your email.");
             setCurrentStep(1);
         } catch (error) {
@@ -61,7 +63,9 @@ export default function ForgotPasswordModal({ open, onClose }) {
     const handleVerifyOTP = async () => {
         const otpString = otp.join("");
         try {
-            const res = await axios.post(`${apiUrl}/api/auth/verify-otp`, { email, otp: otpString });
+            const res = await axios.post(`${apiUrl}/api/auth/verify-otp`, { email, otp: otpString }, {
+                headers: { "x-internal-key": import.meta.env.VITE_INTERNAL_API_KEY }
+            });
             message.success(res?.data?.message || "OTP verified successfully!");
             setCurrentStep(2);
         } catch (error) {
@@ -74,7 +78,9 @@ export default function ForgotPasswordModal({ open, onClose }) {
     // --- STEP 3: Reset Password ---
     const handleResetPassword = async ({ password }) => {
         try {
-            const res = await axios.post(`${apiUrl}/api/auth/reset-password`, { email, password });
+            const res = await axios.post(`${apiUrl}/api/auth/reset-password`, { email, password }, {
+                headers: { "x-internal-key": import.meta.env.VITE_INTERNAL_API_KEY }
+            });
             message.success(res?.data?.message || "Password reset successfully!");
             form.resetFields();
             setCurrentStep(0);

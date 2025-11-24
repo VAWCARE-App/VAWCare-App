@@ -997,17 +997,17 @@ export default function Signup() {
         width={420}
         onCancel={() => setShowSuccessModal(false)}
         footer={[
-          <Button key="close" onClick={() => setShowSuccessModal(false)} style={{ borderRadius: 8, padding: '6px 12px' }}>Close</Button>,
-          <Button key="now" type="primary" onClick={() => {
-            setShowSuccessModal(false);
-            if (successRedirect) navigate(successRedirect);
-          }} style={{
-            background: 'linear-gradient(135deg, #5227FF 0%, #7A5AF8 100%)',
-            border: 'none',
-            borderRadius: 10,
-            padding: '8px 14px',
-            boxShadow: '0 8px 24px rgba(82,39,255,0.18)'
-          }}>Go to my dashboard</Button>
+         
+          // <Button key="now" type="primary" onClick={() => {
+          //   setShowSuccessModal(false);
+          //   if (successRedirect) navigate(successRedirect);
+          // }} style={{
+          //   background: 'linear-gradient(135deg, #5227FF 0%, #7A5AF8 100%)',
+          //   border: 'none',
+          //   borderRadius: 10,
+          //   padding: '8px 14px',
+          //   boxShadow: '0 8px 24px rgba(82,39,255,0.18)'
+          // }}>Go to my dashboard</Button>
         ]}
       >
         <div style={{ textAlign: 'center', padding: '6px 6px 0' }}>

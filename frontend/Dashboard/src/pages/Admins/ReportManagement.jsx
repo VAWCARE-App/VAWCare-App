@@ -442,9 +442,9 @@ export default function ReportManagement() {
         ),
       },
       {
-        title: "Date Reported",
-        dataIndex: "dateReported",
-        key: "dateReported",
+        title: "Date Submitted",
+        dataIndex: "createdAt",
+        key: "createdAt",
         width: 200,
         render: (d) => (d ? new Date(d).toLocaleString() : "-"),
         responsive: ["lg"],
@@ -1034,9 +1034,14 @@ export default function ReportManagement() {
                       "—"
                     )}
                   </Descriptions.Item>
-                  <Descriptions.Item label="Date Reported">
+                  <Descriptions.Item label="Date & Time of Incident">
                     {activeReport.dateReported
                       ? new Date(activeReport.dateReported).toLocaleString()
+                      : "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Date Submitted">
+                    {activeReport.createdAt
+                      ? new Date(activeReport.createdAt).toLocaleString()
                       : "-"}
                   </Descriptions.Item>
                   <Descriptions.Item label="Perpetrator">

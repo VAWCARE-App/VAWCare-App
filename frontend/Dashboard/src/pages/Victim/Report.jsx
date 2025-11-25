@@ -398,10 +398,15 @@ export default function Report() {
                 <Col xs={24} md={12}>
                   <Form.Item
                     name="dateReported"
-                    label={<Text strong>Date</Text>}
-                    rules={[{ required: true, message: "Please select the date" }]}
+                    label={<Text strong>Date & Time of the Incident</Text>}
+                    rules={[{ required: true, message: "Please select the date and time of the incident" }]}
                   >
                     <DatePicker 
+                      showTime={{
+                        format: 'HH:mm',
+                        use12Hours: true,
+                      }}
+                      format="YYYY-MM-DD HH:mm"
                       style={{ width: "100%", borderRadius: 12 }} 
                       size="large"
                       suffixIcon={<CalendarOutlined style={{ color: BRAND.violet }} />}

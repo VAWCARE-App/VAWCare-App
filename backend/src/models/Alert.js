@@ -84,6 +84,14 @@ const alertSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
         required: true
+    },
+    deleted: {
+        type: Boolean,
+        default: false
+    },
+    deletedAt: {
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true // This will add createdAt and updatedAt timestamps

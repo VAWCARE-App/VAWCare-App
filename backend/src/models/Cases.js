@@ -107,4 +107,19 @@ CasesSchema.add({
 	dssManualOverride: { type: Boolean, required: false, default: false }
 });
 
+// Soft-delete pre-hooks to exclude deleted records from queries
+function addNotDeletedConstraint() {
+	const q = this.getQuery();
+	if (q && Object.prototype.hasOwnProperty.call(q, 'deleted')) return;
+	this.where({ deleted: { $ne: true } });
+}
+
+CasesSchema.pre(/^find/, addNotDeletedConstraint);
+CasesSchema.pre('countDocuments', addNotDeletedConstraint);
+CasesSchema.pre('findOneAndUpdate', function(next) {
+	const q = this.getQuery();
+	if (!Object.prototype.hasOwnProperty.call(q, 'deleted')) this.where({ deleted: { $ne: true } });
+	next();
+});
+
 module.exports = mongoose.model('Cases', CasesSchema);

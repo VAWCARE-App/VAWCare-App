@@ -40,6 +40,14 @@ export default function Navbar({
     return "home";
   }, [location]);
 
+  // Keep a local selected key so clicks (that only scroll) keep the menu highlighted
+  const [selectedKey, setSelectedKey] = useState(activeKey);
+
+  // Sync selectedKey when location changes (e.g., when navigation occurs)
+  useEffect(() => {
+    setSelectedKey(activeKey);
+  }, [activeKey]);
+
   const handleLogout = async () => {
     await clearAllStorage();
     setUser(null);
@@ -96,6 +104,7 @@ export default function Navbar({
     e.preventDefault();
     window.scrollTo({ top: 0, behavior: "smooth" });
     navigate("/landing");
+    setSelectedKey("home");
   };
 
   // Smooth scroll to section by id
@@ -105,6 +114,8 @@ export default function Navbar({
     if (el) {
       el.scrollIntoView({ behavior: "smooth" });
     }
+    // keep the menu highlighted for this section
+    setSelectedKey(sectionId);
   };
 
   const navItems = [
@@ -143,6 +154,7 @@ export default function Navbar({
             e.preventDefault();
             handleSectionClick(e, "download");
             window.dispatchEvent(new CustomEvent("openInstallModal"));
+            setSelectedKey("download");
           }}
         >
           Download
@@ -275,7 +287,8 @@ export default function Navbar({
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <Menu
                 mode="horizontal"
-                selectedKeys={[activeKey]}
+                selectedKeys={[selectedKey]}
+                onClick={(e) => setSelectedKey(e.key)}
                 items={navItems}
                 style={{ display: "flex", gap: 4 }}
                 overflowedIndicator={<MenuOutlined />}
@@ -383,12 +396,12 @@ export default function Navbar({
               >
                 <Menu
                   mode="inline"
-                  selectedKeys={[activeKey]}
+                  selectedKeys={[selectedKey]}
                   items={[
                     ...navItems,
                     { type: "divider" },
                   ]}
-                  onClick={() => setOpen(false)}
+                  onClick={({ key }) => { setOpen(false); setSelectedKey(key); }}
                 />
 
                 <Space direction="vertical" size={8} style={{ width: "100%", marginTop: 12 }}>

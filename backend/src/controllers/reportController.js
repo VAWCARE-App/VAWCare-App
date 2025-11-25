@@ -2,7 +2,7 @@ const asyncHandler = require('express-async-handler');
 const ReportService = require('../services/reportService');
 
 // Create a new incident report (victim submits)
-const { recordLog } = require('../middleware/logger');
+const { recordLog, extractKeyFields } = require('../middleware/logger');
 
 const createReport = asyncHandler(async (req, res) => {
   const payload = req.body;
@@ -88,7 +88,7 @@ const updateReport = asyncHandler(async (req, res) => {
 
   // Log edit
   try {
-    await recordLog({ req, actorType: req.user?.role || 'official', actorId: req.user?.officialID || req.user?.adminID, action: 'edit_report', details: `Updated report ${updated.reportID || updated._id}: ${JSON.stringify(updates)}` });
+    await recordLog({ req, actorType: req.user?.role || 'official', actorId: req.user?.officialID || req.user?.adminID, action: 'edit_report', details: `Updated report ${updated.reportID || updated._id}: ${extractKeyFields(updates)}` });
   } catch (e) { console.warn('Failed to record report edit log', e && e.message); }
 
   res.status(200).json({ success: true, message: 'Report updated', data: updated });

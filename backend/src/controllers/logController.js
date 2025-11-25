@@ -5,16 +5,24 @@ const Victim = require('../models/Victims');
 const Admin = require('../models/Admin');
 const Official = require('../models/BarangayOfficials');
 
-// @desc    List system logs with optional filters (action, actor, date range, ip)
+// @desc    List system logs with optional filters (action, actor, date range, ip, free text)
 // @route   GET /api/logs
 // @access  Private (Admin only)
 exports.listLogs = asyncHandler(async (req, res) => {
-    const { action, actorType, actorId, startDate, endDate, ipAddress, page = 1, limit = 50 } = req.query;
+    const { action, actorType, actorId, startDate, endDate, ipAddress, q, page = 1, limit = 50 } = req.query;
 
     const query = {};
 
     if (action) query.action = action;
-    if (ipAddress) query.ipAddress = ipAddress;
+    if (ipAddress) query.ipAddress = new RegExp(ipAddress, 'i'); // Case-insensitive IP search
+
+    // Free text search on action and details
+    if (q) {
+        query.$or = [
+            { action: new RegExp(q, 'i') },
+            { details: new RegExp(q, 'i') }
+        ];
+    }
 
     if (actorType) {
         // If actorId not supplied, filter for logs where the relevant actor field exists

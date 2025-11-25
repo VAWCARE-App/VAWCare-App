@@ -65,6 +65,36 @@ export default function LandingPage() {
     return () => window.removeEventListener('openInstallModal', handleOpenInstallModal);
   }, []);
 
+  // Log page view when landing page is visited (fire-and-forget with deduplication)
+  useEffect(() => {
+    try {
+      const path = '/landing';
+      // Dedupe quick successive posts for same path (same as MainLayout)
+      const lastPath = sessionStorage.getItem('__lastPageviewPath') || '';
+      const lastAt = Number(sessionStorage.getItem('__lastPageviewAt') || '0');
+      const now = Date.now();
+      
+      // Only send if path changed or more than 3 seconds elapsed since last post
+      if (lastPath !== path || (now - lastAt) > 3000) {
+        const actorId = sessionStorage.getItem('actorId');
+        const actorType = sessionStorage.getItem('actorType');
+        const actorBusinessId = sessionStorage.getItem('actorBusinessId');
+        api.post('/api/logs/pageview', { 
+          path, 
+          actorId, 
+          actorType, 
+          actorBusinessId 
+        }).catch(() => {});
+        try { 
+          sessionStorage.setItem('__lastPageviewPath', path); 
+          sessionStorage.setItem('__lastPageviewAt', String(now)); 
+        } catch (e) {}
+      }
+    } catch (e) {
+      console.warn('Failed to log landing page view', e && e.message);
+    }
+  }, []);
+
   useEffect(() => {
     let mounted = true;
 

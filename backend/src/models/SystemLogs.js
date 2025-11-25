@@ -85,6 +85,7 @@ const systemLogSchema = new mongoose.Schema({
         type: String,
         required: [true, 'IP address is required'],
         trim: true,
+        lowercase: true, // Normalize to lowercase for consistent filtering
         // Removed strict IPv4 validation to allow IPv6, proxy headers, or other formats
     }
 }, {

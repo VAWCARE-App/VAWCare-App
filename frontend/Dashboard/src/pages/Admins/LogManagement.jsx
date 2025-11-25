@@ -1,5 +1,5 @@
 // src/pages/admin/LogManagement.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   Table,
   Card,
@@ -88,23 +88,41 @@ export default function LogManagement() {
       if (filters.ipAddress) params.ipAddress = filters.ipAddress;
       if (filters.q) params.q = filters.q;
 
-      // Date range -> whole-day bounds
+      // Date range -> whole-day bounds in UTC
       if (filters.dateRange && filters.dateRange.length === 2) {
         const [startVal, endVal] = filters.dateRange;
-        const startISO =
-          typeof startVal?.startOf === "function"
-            ? startVal.startOf("day").toISOString()
-            : new Date(
-                new Date(startVal instanceof Date ? startVal : new Date(startVal)).setHours(0, 0, 0, 0)
-              ).toISOString();
-        const endISO =
-          typeof endVal?.endOf === "function"
-            ? endVal.endOf("day").toISOString()
-            : new Date(
-                new Date(endVal instanceof Date ? endVal : new Date(endVal)).setHours(23, 59, 59, 999)
-              ).toISOString();
-        params.startDate = startISO;
-        params.endDate = endISO;
+        let startDate, endDate;
+        
+        // Handle Dayjs objects
+        if (startVal && typeof startVal.startOf === "function" && typeof startVal.toISOString === "function") {
+          // Dayjs approach: get start of day and convert to ISO string
+          startDate = startVal.hour(0).minute(0).second(0).millisecond(0).toISOString();
+        } else if (startVal instanceof Date) {
+          const sd = new Date(startVal);
+          sd.setHours(0, 0, 0, 0);
+          startDate = sd.toISOString();
+        } else if (startVal) {
+          const sd = new Date(startVal);
+          sd.setHours(0, 0, 0, 0);
+          startDate = sd.toISOString();
+        }
+        
+        // Handle Dayjs objects
+        if (endVal && typeof endVal.endOf === "function" && typeof endVal.toISOString === "function") {
+          // Dayjs approach: get end of day and convert to ISO string
+          endDate = endVal.hour(23).minute(59).second(59).millisecond(999).toISOString();
+        } else if (endVal instanceof Date) {
+          const ed = new Date(endVal);
+          ed.setHours(23, 59, 59, 999);
+          endDate = ed.toISOString();
+        } else if (endVal) {
+          const ed = new Date(endVal);
+          ed.setHours(23, 59, 59, 999);
+          endDate = ed.toISOString();
+        }
+        
+        params.startDate = startDate;
+        params.endDate = endDate;
       }
 
       const res = await api.get("/api/logs", { params });
@@ -129,6 +147,15 @@ export default function LogManagement() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, limit]);
 
+  // Reset to page 1 when limit changes
+  const prevLimitRef = useRef(limit);
+  useEffect(() => {
+    if (prevLimitRef.current !== limit) {
+      setPage(1);
+      prevLimitRef.current = limit;
+    }
+  }, [limit]);
+
   // Debounced fetch on filter changes
   useEffect(() => {
     const t = setTimeout(() => {
@@ -142,21 +169,38 @@ export default function LogManagement() {
   // ------- UI helpers -------
   const actionColor = (action = "") => {
     const a = String(action).toLowerCase();
+    // Authentication
     if (a.includes("login") || a.includes("signin")) return "geekblue";
     if (a.includes("logout")) return "default";
-    if (a.includes("create") || a.includes("add")) return "green";
-    if (a.includes("update") || a.includes("edit")) return "blue";
-    if (a.includes("delete") || a.includes("remove")) return "red";
+    // Creation and additions
+    if (a.includes("create") || a.includes("add") || a.includes("issued")) return "green";
+    // Updates and edits
+    if (a.includes("update") || a.includes("edit") || a.includes("changed")) return "blue";
+    // Deletions and removals
+    if (a.includes("delete") || a.includes("remove") || a.includes("deactivated")) return "red";
+    // Export and downloads
     if (a.includes("export") || a.includes("download")) return "purple";
+    // Status and assignments
     if (a.includes("assign") || a.includes("status")) return "gold";
+    // Emergency and alerts
+    if (a.includes("emergency") || a.includes("sos") || a.includes("alert")) return "magenta";
+    // Reports and cases
+    if (a.includes("report") || a.includes("case")) return "orange";
+    // Notifications and communications
+    if (a.includes("notification") || a.includes("chatbot")) return "cyan";
+    // BPO operations
+    if (a.includes("bpo")) return "lime";
+    // Page views and general actions
+    if (a.includes("page_view") || a.includes("view")) return "default";
+    // Default
     return "processing";
   };
 
   const actorBadge = (r) => {
     const { victimID, adminID, officialID } = r || {};
-    if (adminID?.adminID) return <Tag color="magenta">Admin • {adminID.adminID}</Tag>;
-    if (officialID?.officialID) return <Tag color="geekblue">Official • {officialID.officialID}</Tag>;
-    if (victimID?.victimID) return <Tag color="green">Victim • {victimID.victimID}</Tag>;
+    if (adminID) return <Tag color="magenta">Admin • {adminID.adminID}</Tag>;
+    if (officialID) return <Tag color="geekblue">Official • {officialID.officialID}</Tag>;
+    if (victimID) return <Tag color="green">Victim • {victimID.victimID}</Tag>;
     return <Tag>System</Tag>;
   };
 
@@ -168,6 +212,60 @@ export default function LogManagement() {
       return;
     }
     messageApi.success("Copied to clipboard");
+  };
+
+  // Extract key details from the full details object/string
+  const extractKeyDetails = (details) => {
+    if (!details) return "—";
+    
+    try {
+      // If details is a string, try to parse it as JSON
+      let obj = typeof details === "string" ? JSON.parse(details) : details;
+      
+      // Build a summary with key fields
+      const keyFields = [];
+      
+      // Add action-specific key info
+      if (obj.victimName) keyFields.push(`Victim: ${obj.victimName}`);
+      if (obj.victimID) keyFields.push(`VictimID: ${obj.victimID}`);
+      if (obj.caseID) keyFields.push(`CaseID: ${obj.caseID}`);
+      if (obj.caseName) keyFields.push(`Case: ${obj.caseName}`);
+      if (obj.officialName) keyFields.push(`Official: ${obj.officialName}`);
+      if (obj.title) keyFields.push(`Title: ${obj.title}`);
+      if (obj.status) keyFields.push(`Status: ${obj.status}`);
+      
+      // If we found key fields, return them; otherwise return first 100 chars
+      if (keyFields.length > 0) {
+        return keyFields.join(" | ");
+      }
+      
+      // Fallback: if it's the "Opened page" format, just return as-is
+      if (typeof details === "string") {
+        return details.length > 100 ? details.slice(0, 100) + "..." : details;
+      }
+      
+      return JSON.stringify(obj).slice(0, 100) + "...";
+    } catch (e) {
+      // If parsing fails, return first 100 chars
+      const str = String(details);
+      return str.length > 100 ? str.slice(0, 100) + "..." : str;
+    }
+  };
+
+  // Format details with line breaks at commas for better readability
+  const formatDetailsWithLineBreaks = (details) => {
+    if (!details) return "—";
+    
+    try {
+      const str = typeof details === "string" ? details : JSON.stringify(details);
+      
+      // Split by comma and join with newline, but preserve structure
+      // This regex splits on ", " boundaries
+      const formatted = str.replace(/,\s+/g, ',\n');
+      return formatted;
+    } catch (e) {
+      return String(details);
+    }
   };
 
   const handleRowClick = (record) => {
@@ -203,7 +301,7 @@ export default function LogManagement() {
         render: (text) => (
           <Tooltip title={typeof text === "string" ? text : JSON.stringify(text, null, 2)}>
             <span style={{ color: "#334155" }}>
-              {typeof text === "string" ? text : text ? JSON.stringify(text) : "—"}
+              {extractKeyDetails(text)}
             </span>
           </Tooltip>
         ),
@@ -282,13 +380,7 @@ export default function LogManagement() {
         render: (text) => (
           <Tooltip title={typeof text === "string" ? text : JSON.stringify(text, null, 2)}>
             <span style={{ color: "#334155" }}>
-              {typeof text === "string"
-                ? text.length > 120
-                  ? text.slice(0, 120) + "..."
-                  : text
-                : text
-                ? JSON.stringify(text)
-                : "—"}
+              {extractKeyDetails(text)}
             </span>
           </Tooltip>
         ),
@@ -318,6 +410,7 @@ export default function LogManagement() {
         (r.officialID && r.officialID.officialID) ||
         (r.victimID && r.victimID.victimID) ||
         "System",
+      ActorBusinessId: r.actorBusinessId || "",
       IP: r.ipAddress || "",
       TimestampLocal: r.timestamp ? new Date(r.timestamp).toLocaleString() : "",
       TimestampISO: r.timestamp ? new Date(r.timestamp).toISOString() : "",
@@ -329,7 +422,7 @@ export default function LogManagement() {
           : "",
     }));
 
-    const header = "LogID,Action,Actor,IP,TimestampLocal,TimestampISO,Details";
+    const header = "LogID,Action,Actor,ActorBusinessId,IP,TimestampLocal,TimestampISO,Details";
     const body = rows
       .map((row) =>
         Object.values(row)
@@ -558,14 +651,45 @@ export default function LogManagement() {
               onChange={(v) => setFilters((f) => ({ ...f, action: v }))}
               size={isXs ? "middle" : "large"}
               options={[
-                { value: "Login", label: "Login" },
-                { value: "Logout", label: "Logout" },
-                { value: "Create", label: "Create" },
-                { value: "Update", label: "Update" },
-                { value: "Delete", label: "Delete" },
-                { value: "Assign", label: "Assign" },
-                { value: "Status Change", label: "Status Change" },
-                { value: "Export", label: "Export" },
+                { value: "login", label: "Login" },
+                { value: "logout", label: "Logout" },
+                { value: "page_view", label: "Page View" },
+                { value: "emergency_button", label: "Emergency Button" },
+                { value: "report_submission", label: "Report Submission" },
+                { value: "chatbot_interaction", label: "Chatbot Interaction" },
+                { value: "bpo_issued", label: "BPO Issued" },
+                { value: "bpo_saved", label: "BPO Saved" },
+                { value: "bpo_edited", label: "BPO Edited" },
+                { value: "bpo_deleted", label: "BPO Deleted" },
+                { value: "view_bpo", label: "View BPO" },
+                { value: "alert_created", label: "Alert Created" },
+                { value: "alert_resolved", label: "Alert Resolved" },
+                { value: "send_sos", label: "Send SOS" },
+                { value: "sos_email_sent", label: "SOS Email Sent" },
+                { value: "sos_email_failed", label: "SOS Email Failed" },
+                { value: "notification_sent", label: "Notification Sent" },
+                { value: "notification_failed", label: "Notification Failed" },
+                { value: "profile_updated", label: "Profile Updated" },
+                { value: "admin_profile_updated", label: "Admin Profile Updated" },
+                { value: "official_profile_updated", label: "Official Profile Updated" },
+                { value: "victim_profile_updated", label: "Victim Profile Updated" },
+                { value: "settings_updated", label: "Settings Updated" },
+                { value: "password_changed", label: "Password Changed" },
+                { value: "account_created", label: "Account Created" },
+                { value: "account_deactivated", label: "Account Deactivated" },
+                { value: "create_official", label: "Create Official" },
+                { value: "view_report", label: "View Report" },
+                { value: "edit_report", label: "Edit Report" },
+                { value: "delete_report", label: "Delete Report" },
+                { value: "view_case", label: "View Case" },
+                { value: "edit_case", label: "Edit Case" },
+                { value: "delete_case", label: "Delete Case" },
+                { value: "edit_user", label: "Edit User" },
+                { value: "view_user", label: "View User" },
+                { value: "delete_user", label: "Delete User" },
+                { value: "emergency_contact_added", label: "Emergency Contact Added" },
+                { value: "emergency_contact_updated", label: "Emergency Contact Updated" },
+                { value: "emergency_contact_removed", label: "Emergency Contact Removed" },
               ]}
             />
             
@@ -634,9 +758,11 @@ export default function LogManagement() {
                       maxHeight: 260,
                       overflow: "auto",
                       fontSize: 12.5,
+                      whiteSpace: 'pre-wrap',
+                      wordWrap: 'break-word',
                     }}
                   >
-                    {JSON.stringify(record?.details ?? record, null, 2)}
+                    {formatDetailsWithLineBreaks(record?.details ?? record)}
                   </pre>
                 </div>
               ),
@@ -775,9 +901,11 @@ export default function LogManagement() {
                     overflow: "auto",
                     fontSize: 12.5,
                     fontFamily: 'Monaco, Consolas, "Courier New", monospace',
+                    whiteSpace: 'pre-wrap',
+                    wordWrap: 'break-word',
                   }}
                 >
-                  {JSON.stringify(selectedLog.details ?? selectedLog, null, 2)}
+                  {formatDetailsWithLineBreaks(selectedLog.details ?? selectedLog)}
                 </pre>
               </Card>
             </div>

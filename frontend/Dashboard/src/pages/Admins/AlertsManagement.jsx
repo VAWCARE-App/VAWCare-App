@@ -15,6 +15,7 @@ import {
   Modal,
   Grid,
   Select,
+  DatePicker,
 } from "antd";
 import {
   ReloadOutlined,
@@ -54,6 +55,11 @@ export default function AlertsManagement() {
   // Pagination
   const PAGE_SIZE = 15;
   const [currentPage, setCurrentPage] = useState(1);
+  
+  // Filters
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [dateRange, setDateRange] = useState([null, null]);
 
   const [showMapModal, setShowMapModal] = useState(false);
   const [iframeCoords, setIframeCoords] = useState({ lat: 0, lng: 0 });
@@ -117,35 +123,90 @@ export default function AlertsManagement() {
     return () => window.removeEventListener("alert-map-open", handler);
   }, []);
 
-  const onSearch = (val) => {
-    const q = String(val || "").trim().toLowerCase();
-    if (!q) {
-      setFiltered(alerts);
-      setCurrentPage(1);
-      return;
-    }
-    setFiltered(
-      alerts.filter((a) => {
+  // Combined filter function - applies all active filters
+  const applyAllFilters = (data, searchQ, status, type, dates) => {
+    return data.filter((a) => {
+      // Search filter
+      if (searchQ) {
         const victim =
           a.victimID && (a.victimID.victimID || `${a.victimID.firstName || ""} ${a.victimID.lastName || ""}`);
-        return (
-          String(a.alertID || "").toLowerCase().includes(q) ||
-          String(a.type || "").toLowerCase().includes(q) ||
-          String(victim || "").toLowerCase().includes(q) ||
-          String(a.location?.address || `${a.location?.latitude},${a.location?.longitude}`).toLowerCase().includes(q)
-        );
-      })
-    );
+        const searchMatch =
+          String(a.alertID || "").toLowerCase().includes(searchQ) ||
+          String(a.type || "").toLowerCase().includes(searchQ) ||
+          String(victim || "").toLowerCase().includes(searchQ) ||
+          String(a.victimID?.victimID || "").toLowerCase().includes(searchQ) ||
+          String(a.location?.address || "").toLowerCase().includes(searchQ) ||
+          `${a.location?.latitude || ""},${a.location?.longitude || ""}`.includes(searchQ);
+        if (!searchMatch) return false;
+      }
+
+      // Status filter
+      if (status && status !== "all") {
+        if (String(a.status || "").toLowerCase() !== String(status).toLowerCase()) return false;
+      }
+
+      // Type filter
+      if (type && type !== "all") {
+        if (String(a.type || "").toLowerCase() !== String(type).toLowerCase()) return false;
+      }
+
+      // Date range filter
+      if (dates && dates[0] && dates[1]) {
+        const alertDate = new Date(a.createdAt);
+        
+        // Handle Dayjs objects from DatePicker
+        let start, end;
+        
+        if (dates[0]?.toDate) {
+          // Dayjs object - convert to Date
+          start = new Date(dates[0].toDate());
+          start.setHours(0, 0, 0, 0);
+        } else {
+          start = new Date(dates[0]);
+          start.setHours(0, 0, 0, 0);
+        }
+        
+        if (dates[1]?.toDate) {
+          // Dayjs object - convert to Date
+          end = new Date(dates[1].toDate());
+          end.setHours(23, 59, 59, 999);
+        } else {
+          end = new Date(dates[1]);
+          end.setHours(23, 59, 59, 999);
+        }
+        
+        if (alertDate < start || alertDate > end) return false;
+      }
+
+      return true;
+    });
+  };
+
+  const onSearch = (val) => {
+    const q = String(val || "").trim().toLowerCase();
+    const newFiltered = applyAllFilters(alerts, q, statusFilter, typeFilter, dateRange);
+    setFiltered(newFiltered);
     setCurrentPage(1);
   };
 
   const onFilterStatus = (v) => {
-    if (!v || v === "all") {
-      setFiltered(alerts);
-      setCurrentPage(1);
-      return;
-    }
-    setFiltered(alerts.filter((a) => String(a.status || "").toLowerCase() === String(v).toLowerCase()));
+    setStatusFilter(v || "all");
+    const newFiltered = applyAllFilters(alerts, "", v || "all", typeFilter, dateRange);
+    setFiltered(newFiltered);
+    setCurrentPage(1);
+  };
+
+  const onFilterType = (v) => {
+    setTypeFilter(v || "all");
+    const newFiltered = applyAllFilters(alerts, "", statusFilter, v || "all", dateRange);
+    setFiltered(newFiltered);
+    setCurrentPage(1);
+  };
+
+  const onFilterDateRange = (dates) => {
+    setDateRange(dates);
+    const newFiltered = applyAllFilters(alerts, "", statusFilter, typeFilter, dates);
+    setFiltered(newFiltered);
     setCurrentPage(1);
   };
 
@@ -473,7 +534,7 @@ export default function AlertsManagement() {
                 : isSm 
                 ? "1fr 1fr" 
                 : isMdUp 
-                ? "minmax(240px, 320px) 1fr auto" 
+                ? "repeat(auto-fit, minmax(180px, 1fr)) auto" 
                 : "1fr 1fr",
               gap: isXs ? 8 : 10,
               width: "100%",
@@ -503,7 +564,7 @@ export default function AlertsManagement() {
               />
 
               <Select 
-                defaultValue="all" 
+                value={statusFilter}
                 onChange={onFilterStatus} 
                 size={isXs ? "middle" : "large"}
                 style={{ width: "100%" }}
@@ -513,6 +574,27 @@ export default function AlertsManagement() {
                 <Option value="Resolved">Resolved</Option>
                 <Option value="Cancelled">Cancelled</Option>
               </Select>
+
+              <Select 
+                value={typeFilter}
+                onChange={onFilterType}
+                placeholder="All Types"
+                size={isXs ? "middle" : "large"}
+                style={{ width: "100%" }}
+              >
+                <Option value="all">All Types</Option>
+                <Option value="Emergency">Emergency</Option>
+                <Option value="Concern">Concern</Option>
+              </Select>
+
+              <DatePicker.RangePicker
+                value={dateRange}
+                onChange={onFilterDateRange}
+                format="YYYY-MM-DD"
+                placeholder={["From", "To"]}
+                size={isXs ? "middle" : "large"}
+                style={{ width: "100%" }}
+              />
 
               <Button 
                 icon={<ReloadOutlined />} 

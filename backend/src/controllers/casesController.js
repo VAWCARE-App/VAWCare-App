@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const reportService = require('../services/reportService');
 const Victim = require('../models/Victims');
 const dssService = require('../services/dssService');
-const { recordLog } = require('../middleware/logger');
+const { recordLog, extractKeyFields } = require('../middleware/logger');
 
 // Helper: map an incident type (or 4-class predictedRisk) to stored riskLevel
 function mapToStored(pred) {
@@ -230,7 +230,7 @@ exports.updateCase = async (req, res, next) => {
 
     const item = await Cases.findOneAndUpdate(query, updates, { new: true }).lean();
     if (!item) return res.status(404).json({ success: false, message: 'Case not found or deleted' });
-    try { await recordLog({ req, actorType: req.user?.role || 'official', actorId: req.user?.officialID || req.user?.adminID, action: 'edit_case', details: `Edited case ${item.caseID || item._id}: ${JSON.stringify(updates)}` }); } catch(e) { console.warn('Failed to record case edit log', e && e.message); }
+    try { await recordLog({ req, actorType: req.user?.role || 'official', actorId: req.user?.officialID || req.user?.adminID, action: 'edit_case', details: `Edited case ${item.caseID || item._id}: ${extractKeyFields(updates)}` }); } catch(e) { console.warn('Failed to record case edit log', e && e.message); }
     return res.json({ success: true, data: item });
   } catch (err) {
     next(err);

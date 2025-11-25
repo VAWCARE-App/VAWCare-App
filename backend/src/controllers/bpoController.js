@@ -76,7 +76,7 @@ const updateBPO = asyncHandler(async (req, res) => {
         const updated = await BPO.findOneAndUpdate(q, { $set: updates }, { new: true, runValidators: true });
         if (!updated) return res.status(404).json({ success: false, message: 'BPO not found or deleted' });
         console.log('[updateBPO] updated', { _id: updated._id, bpoID: updated.bpoID });
-    try { const { recordLog } = require('../middleware/logger'); await recordLog({ req, actorType: req.user?.role || 'official', actorId: req.user?.officialID || req.user?.adminID, action: 'bpo_edited', details: `Edited BPO ${updated.bpoID || updated._id}: ${JSON.stringify(updates)}` }); } catch(e) { console.warn('Failed to record BPO edit log', e && e.message); }
+    try { const { recordLog, extractKeyFields } = require('../middleware/logger'); await recordLog({ req, actorType: req.user?.role || 'official', actorId: req.user?.officialID || req.user?.adminID, action: 'bpo_edited', details: `Edited BPO ${updated.bpoID || updated._id}: ${extractKeyFields(updates)}` }); } catch(e) { console.warn('Failed to record BPO edit log', e && e.message); }
     return res.json({ success: true, data: updated });
     } catch (err) {
         console.error('[updateBPO] error', err && err.message);

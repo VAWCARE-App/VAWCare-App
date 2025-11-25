@@ -5,6 +5,22 @@ function getIpFromReq(req) {
 	return forwarded ? String(forwarded).split(',')[0].trim() : (req.ip || req.connection && req.connection.remoteAddress || '');
 }
 
+// Helper to extract key fields from update objects for cleaner logs
+function extractKeyFields(obj) {
+	if (!obj || typeof obj !== 'object') return '';
+	
+	const keyFields = [];
+	const keys = ['victimName', 'victimID', 'caseID', 'caseName', 'officialName', 'status', 'riskLevel', 'title', 'assignedOfficer', 'description'];
+	
+	keys.forEach(key => {
+		if (obj[key] !== undefined && obj[key] !== null && obj[key] !== '') {
+			keyFields.push(`${key}: ${String(obj[key]).slice(0, 50)}`);
+		}
+	});
+	
+	return keyFields.length > 0 ? keyFields.join(', ') : JSON.stringify(obj).slice(0, 100);
+}
+
 // Generic record helper used by controllers
 async function recordLog({ req, actorType, actorId, action, details }) {
 	try {
@@ -62,5 +78,6 @@ function pageViewLogger(actionName = 'page_view') {
 
 module.exports = {
 	recordLog,
-	pageViewLogger
+	pageViewLogger,
+	extractKeyFields
 };

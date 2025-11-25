@@ -112,13 +112,31 @@ export default function ReportsInsights() {
         loadDssInsights();
     }, []);
 
-    // Log page view to system logs (only once per mount)
+    // Log page view when this insight tab is opened (with deduplication)
     useEffect(() => {
-        if (!loggedRef.current) {
-            loggedRef.current = true;
-            api.post("/api/logs/pageview", { path: "/admin/insights/reports" }).catch((e) => {
-                console.debug("Failed to log page view:", e.message);
-            });
+        try {
+            const path = '/admin/insights/reports';
+            const lastPath = sessionStorage.getItem('__lastPageviewPath') || '';
+            const lastAt = Number(sessionStorage.getItem('__lastPageviewAt') || '0');
+            const now = Date.now();
+            
+            if (lastPath !== path || (now - lastAt) > 3000) {
+                const actorId = sessionStorage.getItem('actorId');
+                const actorType = sessionStorage.getItem('actorType');
+                const actorBusinessId = sessionStorage.getItem('actorBusinessId');
+                api.post('/api/logs/pageview', { 
+                    path, 
+                    actorId, 
+                    actorType, 
+                    actorBusinessId 
+                }).catch(() => {});
+                try {
+                    sessionStorage.setItem('__lastPageviewPath', path);
+                    sessionStorage.setItem('__lastPageviewAt', String(now));
+                } catch (e) {}
+            }
+        } catch (e) {
+            console.warn('Failed to log insights page view', e && e.message);
         }
     }, []);
 

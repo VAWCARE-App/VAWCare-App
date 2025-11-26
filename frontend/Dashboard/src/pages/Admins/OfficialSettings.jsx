@@ -741,29 +741,66 @@
                 </Col>
 
                 <Col xs={24} md={12}>
-                  <Form.Item name="firstName" label="First Name">
+                  <Form.Item
+                    name="firstName"
+                    label="First Name"
+                    rules={[
+                      { required: true, message: "Please enter first name" },
+                      { min: 2, message: "First name must be at least 2 characters" },
+                      { max: 60, message: "First name cannot exceed 60 characters" },
+                    ]}
+                  >
                     <Input prefix={<UserOutlined />} placeholder="First name" />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
-                  <Form.Item name="lastName" label="Last Name">
+                  <Form.Item
+                    name="lastName"
+                    label="Last Name"
+                    rules={[
+                      { required: true, message: "Please enter last name" },
+                      { min: 2, message: "Last name must be at least 2 characters" },
+                      { max: 60, message: "Last name cannot exceed 60 characters" },
+                    ]}
+                  >
                     <Input prefix={<UserOutlined />} placeholder="Last name" />
                   </Form.Item>
                 </Col>
 
                 <Col xs={24} md={12}>
-                  <Form.Item name="middleInitial" label="Middle Initial">
+                  <Form.Item
+                    name="middleInitial"
+                    label="Middle Initial"
+                    rules={[{ pattern: /^[A-Za-z]$/, message: "Middle initial must be a single letter" }]}
+                  >
                     <Input maxLength={1} placeholder="M" />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
-                  <Form.Item name="email" label="Email">
+                  <Form.Item
+                    name="email"
+                    label="Email"
+                    rules={[
+                      { required: true, message: "Please enter an email address" },
+                      { type: "email", message: "Please enter a valid email address" },
+                    ]}
+                  >
                     <Input prefix={<MailOutlined />} placeholder="you@example.com" />
                   </Form.Item>
                 </Col>
 
                 <Col xs={24} md={12}>
-                  <Form.Item name="contactNumber" label="Contact Number">
+                  <Form.Item
+                    name="contactNumber"
+                    label="Contact Number"
+                    rules={[
+                      {
+                        pattern: /^\+?[0-9\s\-()]{7,20}$/, // simple international-ish pattern
+                        message: "Please enter a valid phone number",
+                      },
+                      { max: 20, message: "Phone number is too long" },
+                    ]}
+                  >
                     <Input prefix={<PhoneOutlined />} placeholder="+63 (234) 567-8900" />
                   </Form.Item>
                 </Col>

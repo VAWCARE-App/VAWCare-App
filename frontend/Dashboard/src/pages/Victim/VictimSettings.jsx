@@ -126,7 +126,7 @@ export default function VictimSettings() {
     try {
       const { data } = await api.get("/api/victims/profile");
       console.log("[VictimSettings] API response:", data);
-      
+
       if (data?.success && data?.data) {
         const profile = { ...data.data };
         console.log("[VictimSettings] Profile data:", profile);
@@ -173,7 +173,7 @@ export default function VictimSettings() {
 
   useEffect(() => {
     console.log("[VictimSettings] useEffect - Component mounted");
-    
+
     // Immediately load profile from server (don't rely on sessionStorage)
     (async () => {
       try {
@@ -184,9 +184,9 @@ export default function VictimSettings() {
           form.setFieldsValue(fresh);
           setVerified(determineVerified(fresh));
           // try to load avatar for this victim
-          try { 
-            await loadAvatar(); 
-          } catch (e) { 
+          try {
+            await loadAvatar();
+          } catch (e) {
             console.debug('[VictimSettings] Avatar load failed:', e?.message);
           }
         } else {
@@ -197,9 +197,9 @@ export default function VictimSettings() {
         messageApi.error("Failed to load profile. Please try refreshing the page.");
       }
     })();
-    
+
     setIsFormDirty(false);
-    
+
     return () => {
       // cleanup any object URL created for preview
       try { if (previewObjectUrl) { URL.revokeObjectURL(previewObjectUrl); } } catch (_) { }
@@ -269,8 +269,14 @@ export default function VictimSettings() {
       if (refreshed && determineVerified(refreshed)) setVerified(true);
 
       setIsFormDirty(false);
-    } catch {
-      messageApi.error("Unable to update profile");
+    } catch (err) {
+      const backendMessage =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        "Unable to update profile";
+
+      messageApi.error(backendMessage);
     } finally {
       setLoading(false);
     }
@@ -317,7 +323,7 @@ export default function VictimSettings() {
 
       if (format === "json") {
         const filenameBase = (exportObj.victimEmail || exportObj.firstName || "victim").toString().replace(/[^a-z0-9@.\-_]/gi, "-");
-        const filename = `vawcare-victim-${filenameBase}-${new Date().toISOString().slice(0,19).replace(/[:T]/g, "-")}.json`;
+        const filename = `vawcare-victim-${filenameBase}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json`;
         const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -343,7 +349,7 @@ export default function VictimSettings() {
           const src = photoData ? `data:${exportObj.photoMimeType || 'image/jpeg'};base64,${exportObj.photoData}` : avatarUrl;
           html.push(`<img class="avatar" src="${src}" alt="avatar" />`);
         } else {
-          html.push(`<div style="width:84px;height:84px;border-radius:8px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;color:#7A5AF8;font-weight:700">${(exportObj.firstName||'')[0]||''}${(exportObj.lastName||'')[0]||''}</div>`);
+          html.push(`<div style="width:84px;height:84px;border-radius:8px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;color:#7A5AF8;font-weight:700">${(exportObj.firstName || '')[0] || ''}${(exportObj.lastName || '')[0] || ''}</div>`);
         }
         html.push(`<div><div class="title">${(exportObj.firstName || '') + ' ' + (exportObj.lastName || '')}</div><div class="meta">Victim Profile</div></div>`);
         html.push(`</div>`);
@@ -364,10 +370,10 @@ export default function VictimSettings() {
         if (exportObj.emergencyContacts && exportObj.emergencyContacts.length) {
           html.push(`<div style="margin-top:12px;font-weight:700">Emergency Contact</div>`);
           const ec = exportObj.emergencyContacts[0];
-          html.push(`<div class="row"><div class="label">Name</div><div class="value">${ec.name||'—'}</div></div>`);
-          html.push(`<div class="row"><div class="label">Relationship</div><div class="value">${ec.relationship||'—'}</div></div>`);
-          html.push(`<div class="row"><div class="label">Contact</div><div class="value">${ec.contactNumber||'—'}</div></div>`);
-          html.push(`<div class="row"><div class="label">Email</div><div class="value">${ec.email||'—'}</div></div>`);
+          html.push(`<div class="row"><div class="label">Name</div><div class="value">${ec.name || '—'}</div></div>`);
+          html.push(`<div class="row"><div class="label">Relationship</div><div class="value">${ec.relationship || '—'}</div></div>`);
+          html.push(`<div class="row"><div class="label">Contact</div><div class="value">${ec.contactNumber || '—'}</div></div>`);
+          html.push(`<div class="row"><div class="label">Email</div><div class="value">${ec.email || '—'}</div></div>`);
           if (ec.address) html.push(`<div class="row"><div class="label">Address</div><div class="value">${ec.address}</div></div>`);
         }
 
@@ -588,7 +594,7 @@ export default function VictimSettings() {
                       fontSize: 12,
                     }}
                   >
-                   
+
                   </Tag>
                 </div>
               </div>

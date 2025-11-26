@@ -1,8 +1,7 @@
-const { MailerSend } = require("mailersend");
+const sgMail = require('@sendgrid/mail');
 
-const mailersend = new MailerSend({
-  apiKey: process.env.MAILERSEND_API_KEY
-});
+// Set your SendGrid API key in environment variables
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 async function sendMail(to, subject, html) {
   const recipients = Array.isArray(to) ? to : [to];
@@ -11,27 +10,26 @@ async function sendMail(to, subject, html) {
   const rejected = [];
 
   for (const email of recipients) {
-    const emailParams = {
+    const msg = {
       from: {
-        email: "MS_OyDH8j@test-pzkmgq78noml059v.mlsender.net",
-        name: "VAWCare Support"
+        email: 'vawcaresystem@gmail.com', // e.g. "support@yourdomain.com"
+        name: 'VAWCare Support',
       },
-      to: [{ email }],
+      to: email,
       subject,
-      html
+      html,
     };
 
     try {
-      await mailersend.email.send(emailParams);
+      await sgMail.send(msg);
       accepted.push(email);
-      if (process.env.SOS_DEBUG && String(process.env.SOS_DEBUG).toLowerCase() !== "false") {
+      if (process.env.SOS_DEBUG && String(process.env.SOS_DEBUG).toLowerCase() !== 'false') {
         console.log(`[SENDMAIL] Email sent to ${email}`);
       }
     } catch (err) {
       console.error(`[SENDMAIL ERROR] Failed to send email to ${email}:`, err.response?.body || err.message || err);
       rejected.push(email);
     }
-
   }
 
   return { accepted, rejected };

@@ -117,8 +117,15 @@ export default function VictimBarangay() {
             }
             .info-card:hover { transform: translateY(-3px); box-shadow: 0 28px 56px rgba(122,90,248,0.10); }
             .btn-brand { background: ${BRAND.violet}; border-color: ${BRAND.violet}; color: #fff; border-radius: 12px; }
-            .leaflet-container { width: 100% !important; height: 420px !important; border-radius: 16px; }
-            .map-shell { margin-top: 10px; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 24px rgba(0,0,0,0.14); }
+
+            /* Map styling: ensure map does not overlay the fixed header */
+            .map-shell { margin-top: 10px; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 24px rgba(0,0,0,0.14); position: relative; z-index: 0; }
+            .map-shell .leaflet-container { width: 100% !important; height: 420px !important; border-radius: 16px; position: relative; z-index: 0; }
+            /* Ensure Leaflet control panes don't float above the fixed header */
+            .map-shell .leaflet-top, .map-shell .leaflet-bottom, .map-shell .leaflet-left, .map-shell .leaflet-right, .map-shell .leaflet-control {
+              z-index: 0 !important;
+            }
+
             @keyframes fadeUp { from { opacity:0; transform: translateY(20px) } to { opacity:1; transform: translateY(0) } }
           `}</style>
 

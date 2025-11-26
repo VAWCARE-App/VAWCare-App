@@ -58,6 +58,7 @@ export default function VictimSettings() {
   const [profileData, setProfileData] = useState(null); // Add state to track profile data
   const [form] = Form.useForm();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [messageApi, messageContextHolder] = message.useMessage();
 
 
   const toBase64 = (file) =>
@@ -79,7 +80,7 @@ export default function VictimSettings() {
       setAvatarUrl(objUrl);
       setSelectedFile(file);
       setIsFormDirty(true);
-      message.info('Photo selected. Click "Save changes" to save to profile.');
+      messageApi.info('Photo selected. Click "Save changes" to save to profile.');
 
       // compute base64 asynchronously and store for eventual save
       try {
@@ -100,7 +101,7 @@ export default function VictimSettings() {
       }
     } catch (err) {
       console.error('Avatar selection error', err);
-      message.error('Failed to select photo');
+      messageApi.error('Failed to select photo');
     }
   };
 
@@ -150,7 +151,7 @@ export default function VictimSettings() {
       }
     } catch (err) {
       console.error("[VictimSettings] Failed to load profile:", err);
-      message.error("Failed to load profile");
+      messageApi.error("Failed to load profile");
     }
     return null;
   };
@@ -193,7 +194,7 @@ export default function VictimSettings() {
         }
       } catch (err) {
         console.error('[VictimSettings] Profile refresh failed:', err);
-        message.error("Failed to load profile. Please try refreshing the page.");
+        messageApi.error("Failed to load profile. Please try refreshing the page.");
       }
     })();
     
@@ -262,14 +263,14 @@ export default function VictimSettings() {
       }
 
       await api.put("/api/victims/profile", payload);
-      message.success("Profile updated successfully!");
+      messageApi.success("Profile updated successfully!");
       // refresh profile from backend to pick up any verification changes
       const refreshed = await loadProfile();
       if (refreshed && determineVerified(refreshed)) setVerified(true);
 
       setIsFormDirty(false);
     } catch {
-      message.error("Unable to update profile");
+      messageApi.error("Unable to update profile");
     } finally {
       setLoading(false);
     }
@@ -326,7 +327,7 @@ export default function VictimSettings() {
         a.click();
         a.remove();
         URL.revokeObjectURL(url);
-        message.success("Downloaded profile info");
+        messageApi.success("Downloaded profile info");
         return;
       }
 
@@ -375,7 +376,7 @@ export default function VictimSettings() {
 
         const w = window.open('', '_blank');
         if (!w) {
-          message.error('Popup blocked. Allow popups to download PDF.');
+          messageApi.error('Popup blocked. Allow popups to download PDF.');
           return;
         }
         w.document.open();
@@ -407,12 +408,12 @@ export default function VictimSettings() {
         } else {
           setTimeout(() => triggerPrint(), 300);
         }
-        message.success('Preparing PDF (use Print -> Save as PDF)');
+        messageApi.success('Preparing PDF (use Print -> Save as PDF)');
         return;
       }
     } catch (err) {
       console.error("Download failed", err);
-      message.error("Failed to download profile info");
+      messageApi.error("Failed to download profile info");
     }
   };
 
@@ -427,17 +428,17 @@ export default function VictimSettings() {
       setLoading(true);
       const res = await api.delete('/api/victims/profile');
       if (res?.data?.success) {
-        message.success(res.data.message || 'Account deleted');
+        messageApi.success(res.data.message || 'Account deleted');
         try { await clearAllStorage(); } catch (e) { console.debug('clearAllStorage failed', e && e.message); }
         // close modal briefly then redirect
         setDeleteModalOpen(false);
         window.location.href = '/';
       } else {
-        message.error(res?.data?.message || 'Failed to delete account');
+        messageApi.error(res?.data?.message || 'Failed to delete account');
       }
     } catch (err) {
       console.error('Delete account failed', err);
-      message.error(err?.response?.data?.message || err.message || 'Failed to delete account');
+      messageApi.error(err?.response?.data?.message || err.message || 'Failed to delete account');
     } finally {
       setLoading(false);
     }
@@ -456,6 +457,7 @@ export default function VictimSettings() {
 
   return (
     <div style={{ minHeight: "100vh", background: BRAND.pageBg, position: "relative", paddingBottom: 80 }}>
+      {messageContextHolder}
       <div style={{ display: "flex", justifyContent: "center" }}>
         <style>{`
         :root {

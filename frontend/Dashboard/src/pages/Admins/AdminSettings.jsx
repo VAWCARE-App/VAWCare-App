@@ -1,5 +1,5 @@
 // src/pages/official/OfficialSettings.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   Card,
   Form,
@@ -63,6 +63,7 @@ export default function AdminSettings() {
   const [previewObjectUrl, setPreviewObjectUrl] = useState(null);
 
   const [form] = Form.useForm();
+  const originalProfileRef = useRef(null);
 
   const toBase64 = (file) =>
     new Promise((resolve, reject) => {
@@ -81,6 +82,7 @@ export default function AdminSettings() {
         if (profile.adminEmail && !profile.email) profile.email = profile.adminEmail;
 
         setUser(profile);
+        originalProfileRef.current = profile;
         form.setFieldsValue(profile);
         return profile;
       }
@@ -115,6 +117,7 @@ export default function AdminSettings() {
       if (cached) {
         const parsed = JSON.parse(cached);
         setUser(parsed);
+        originalProfileRef.current = parsed;
         form.setFieldsValue(parsed);
         if (parsed.photoURL) setAvatarUrl(parsed.photoURL);
         if (parsed.photoData) {
@@ -138,6 +141,7 @@ export default function AdminSettings() {
         if (fresh) {
           if (fresh.adminEmail && !fresh.email) fresh.email = fresh.adminEmail;
           setUser(fresh);
+          originalProfileRef.current = fresh;
           form.setFieldsValue(fresh);
           // try to load avatar
           try { await loadAvatar(); } catch (e) { /* ignore avatar load errors */ }
@@ -412,8 +416,7 @@ export default function AdminSettings() {
               form.resetFields();
               setIsFormDirty(false);
               try {
-                const userData = await getUserData();
-                if (userData) setUser(userData);
+                await loadProfile();
               } catch {}
             }}
           >
@@ -653,29 +656,65 @@ export default function AdminSettings() {
               </Col>
 
               <Col xs={24} md={12}>
-                <Form.Item name="firstName" label="First Name">
+                <Form.Item
+                  name="firstName"
+                  label="First Name"
+                  rules={[
+                    { required: true, message: "Please enter first name" },
+                    { min: 2, message: "First name must be at least 2 characters" },
+                  ]}
+                >
                   <Input prefix={<UserOutlined />} placeholder="First name" />
                 </Form.Item>
               </Col>
               <Col xs={24} md={12}>
-                <Form.Item name="lastName" label="Last Name">
+                <Form.Item
+                  name="lastName"
+                  label="Last Name"
+                  rules={[
+                    { required: true, message: "Please enter last name" },
+                    { min: 2, message: "Last name must be at least 2 characters" },
+                  ]}
+                >
                   <Input prefix={<UserOutlined />} placeholder="Last name" />
                 </Form.Item>
               </Col>
 
               <Col xs={24} md={12}>
-                <Form.Item name="middleInitial" label="Middle Initial">
+                <Form.Item
+                  name="middleInitial"
+                  label="Middle Initial"
+                  rules={[
+                    { pattern: /^[A-Za-z]$/, message: "Middle initial must be a single letter" },
+                  ]}
+                >
                   <Input maxLength={1} placeholder="M" />
                 </Form.Item>
               </Col>
               <Col xs={24} md={12}>
-                <Form.Item name="email" label="Email">
+                <Form.Item
+                  name="email"
+                  label="Email"
+                  rules={[
+                    { required: true, message: "Please enter an email address" },
+                    { type: "email", message: "Please enter a valid email address" },
+                  ]}
+                >
                   <Input prefix={<MailOutlined />} placeholder="you@example.com" />
                 </Form.Item>
               </Col>
 
               <Col xs={24} md={12}>
-                <Form.Item name="phoneNumber" label="Phone Number">
+                <Form.Item
+                  name="phoneNumber"
+                  label="Phone Number"
+                  rules={[
+                    {
+                      pattern: /^\+?[0-9\s\-()]{7,20}$/, // simple international-ish pattern
+                      message: "Please enter a valid phone number",
+                    },
+                  ]}
+                >
                   <Input prefix={<PhoneOutlined />} placeholder="+63 (234) 567-8900" />
                 </Form.Item>
               </Col>

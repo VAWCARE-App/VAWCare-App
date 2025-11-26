@@ -633,8 +633,7 @@ export default function LandingPage() {
                         What is VAWCare?
                       </Title>
                       <Paragraph className="muted" style={{ fontSize: 17, lineHeight: 1.7, marginBottom: 28 }}>
-                        <b>VAWCare</b> is a community-first reporting and coordination system for barangays. It centralizes incident intake,
-                        secure case tracking, and rapid response—so survivors get help and officials work from the same, up-to-date picture.
+                        <b>VAWCare</b> is a secure, survivor-first platform that enables safe reporting, guided assistance, and coordinated response for Violence Against Women and Children. It empowers victims to seek help discreetly, provides real-time support, and helps barangay officials manage cases with accuracy, confidentiality, and care.
                       </Paragraph>
                       <Space size={[8, 8]} wrap style={{ marginBottom: 24 }}>
                         <Tag color="magenta" style={{ borderRadius: 8, padding: "4px 12px" }}>VAWCare Privacy</Tag>
@@ -1223,7 +1222,7 @@ export default function LandingPage() {
                                     EMAIL ADDRESS
                                   </Text>
                                   <a
-                                    href="mailto:barangayvawcdesk@email.com"
+                                    href="mailto:vawcaresystem@gmail.com"
                                     style={{
                                       color: BRAND.pink,
                                       fontWeight: 600,
@@ -1231,7 +1230,7 @@ export default function LandingPage() {
                                       fontSize: 14,
                                     }}
                                   >
-                                    barangayvawcdesk@email.com
+                                    vawcaresystem@gmail.com
                                   </a>
                                 </div>
                               </Space>

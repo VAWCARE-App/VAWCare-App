@@ -269,10 +269,12 @@ export default function ForgotPasswordModal({ open, onClose }) {
                     footer={null}
                     centered
                     destroyOnClose
-                    bodyStyle={{ padding: "12px 8px 24px" }}
+                    width={520}
+                    style={{ maxWidth: '92vw' }}
+                    bodyStyle={{ padding: "18px 18px 24px" }}
                 >
-                    <div style={{ textAlign: "center", marginBottom: 24 }}>
-                        <img src={logo} alt="VAWCare Logo" style={{ width: 60, marginBottom: 16 }} />
+                    <div style={{ textAlign: "center", marginBottom: 20 }}>
+                        <img src={logo} alt="VAWCare Logo" style={{ width: 48, marginBottom: 12 }} />
                         <Stepper
                             current={stepperCurrent}
                             onStepChange={(s) => {
@@ -283,7 +285,7 @@ export default function ForgotPasswordModal({ open, onClose }) {
                             footerClassName="no-footer"
                             stepCircleContainerClassName="custom-stepper-container"
                             contentClassName="custom-step-content"
-                            style={{ maxWidth: 360, margin: 'auto' }}
+                            style={{ maxWidth: 320, margin: 'auto' }}
                         >
                             <Step>{renderEmailStep()}</Step>
                             <Step>{renderOTPStep()}</Step>

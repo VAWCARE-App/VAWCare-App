@@ -683,18 +683,36 @@ export default function VictimSettings() {
             <Form layout="vertical" form={form} onFinish={onSave} onValuesChange={handleFormValuesChange}>
               <Row gutter={[16, 12]}>
                 <Col xs={24} md={12}>
-                  <Form.Item name="firstName" label="First Name">
+                  <Form.Item
+                    name="firstName"
+                    label="First Name"
+                    rules={[
+                      { required: true, message: "Please enter your first name" },
+                      { max: 60, message: "First name cannot exceed 60 characters" },
+                    ]}
+                  >
                     <Input prefix={<UserOutlined />} placeholder="First name" />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
-                  <Form.Item name="lastName" label="Last Name">
+                  <Form.Item
+                    name="lastName"
+                    label="Last Name"
+                    rules={[{ required: true, message: "Please enter your last name" }, { max: 60, message: "Last name cannot exceed 60 characters" }]}
+                  >
                     <Input prefix={<UserOutlined />} placeholder="Last name" />
                   </Form.Item>
                 </Col>
 
                 <Col xs={24} md={12}>
-                  <Form.Item name="contactNumber" label="Contact Number">
+                  <Form.Item
+                    name="contactNumber"
+                    label="Contact Number"
+                    rules={[
+                      { pattern: /^[+0-9()\s-]{7,20}$/, message: "Enter a valid phone number" },
+                      { max: 20, message: "Phone number is too long" },
+                    ]}
+                  >
                     <Input prefix={<PhoneOutlined />} placeholder="+639123456789" />
                   </Form.Item>
                 </Col>
@@ -711,29 +729,87 @@ export default function VictimSettings() {
                 </Col>
 
                 <Col xs={24} md={12}>
-                  <Form.Item label="Name" name="emergencyContactName">
+                  <Form.Item
+                    label="Name"
+                    name="emergencyContactName"
+                    rules={[
+                      { max: 80, message: "Name cannot exceed 80 characters" },
+                      // If an emergency contact method is provided, name becomes required
+                      {
+                        validator: (_, value) => {
+                          const email = form.getFieldValue("emergencyContactEmail");
+                          const number = form.getFieldValue("emergencyContactNumber");
+                          if ((email || number) && !value) {
+                            return Promise.reject(new Error("Provide the emergency contact's name"));
+                          }
+                          return Promise.resolve();
+                        },
+                      },
+                    ]}
+                  >
                     <Input prefix={<UserOutlined />} placeholder="Full name" />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
-                  <Form.Item label="Relationship" name="emergencyContactRelationship">
+                  <Form.Item
+                    label="Relationship"
+                    name="emergencyContactRelationship"
+                    rules={[{ max: 40, message: "Relationship text is too long" }]}
+                  >
                     <Input placeholder="e.g. Mother, Friend" />
                   </Form.Item>
                 </Col>
 
                 <Col xs={24} md={12}>
-                  <Form.Item label="Contact Number" name="emergencyContactNumber">
+                  <Form.Item
+                    label="Contact Number"
+                    name="emergencyContactNumber"
+                    rules={[
+                      { pattern: /^[+0-9()\s-]{7,20}$/, message: "Enter a valid phone number for emergency contact" },
+                      {
+                        validator: (_, value) => {
+                          const name = form.getFieldValue("emergencyContactName");
+                          const email = form.getFieldValue("emergencyContactEmail");
+                          // If name or email provided, number becomes required (at least one contact method recommended)
+                          if ((name || email) && !value) {
+                            return Promise.reject(new Error("Provide a contact number for the emergency contact"));
+                          }
+                          return Promise.resolve();
+                        },
+                      },
+                    ]}
+                  >
                     <Input prefix={<PhoneOutlined />} placeholder="09123456789" />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
-                  <Form.Item label="Email" name="emergencyContactEmail">
+                  <Form.Item
+                    label="Email"
+                    name="emergencyContactEmail"
+                    rules={[
+                      { type: "email", message: "Enter a valid email address" },
+                      {
+                        validator: (_, value) => {
+                          const name = form.getFieldValue("emergencyContactName");
+                          const number = form.getFieldValue("emergencyContactNumber");
+                          if ((name || number) && !value) {
+                            return Promise.reject(new Error("Provide an email for the emergency contact"));
+                          }
+                          return Promise.resolve();
+                        },
+                      },
+                    ]}
+                  >
                     <Input prefix={<MailOutlined />} placeholder="contact@example.com" />
                   </Form.Item>
                 </Col>
 
                 <Col xs={24}>
-                  <Form.Item label="Address" name="emergencyContactAddress">
+                  <Form.Item
+                    label="Address"
+                    name="emergencyContactAddress"
+                    rules={[{ max: 250, message: "Address cannot exceed 250 characters" }]}
+                  >
                     <Input.TextArea rows={2} placeholder="Address (optional)" />
                   </Form.Item>
                 </Col>

@@ -606,7 +606,7 @@ const InstallButton = forwardRef((props, ref) => {
 
                   <Alert
                     message="Mobile Recommended"
-                    description="For the best experience, install VAWCare on your mobile device using Chrome, Firefox, or Safari. Mobile installation is smoother and the app works offline better."
+                    description="For the best experience, install VAWCare on your mobile device using Chrome, Firefox, or Safari. Mobile installation is smoother and the app is optimized for mobile use."
                     type="warning"
                     showIcon
                     style={{

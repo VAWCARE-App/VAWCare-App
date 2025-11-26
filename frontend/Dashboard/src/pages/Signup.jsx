@@ -1017,7 +1017,7 @@ export default function Signup() {
             Your account was created successfully.
           </Typography.Paragraph>
           <Typography.Paragraph style={{ color: '#666', marginBottom: 0 }}>
-            We are finalizing your account. You will be redirected shortly — or click "Go to my dashboard" to continue now.
+            We are finalizing your account. You will be redirected shortly.
           </Typography.Paragraph>
         </div>
       </Modal>

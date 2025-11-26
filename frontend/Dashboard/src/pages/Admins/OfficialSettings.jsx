@@ -503,8 +503,7 @@
                 form.resetFields();
                 setIsFormDirty(false);
                 try {
-                  const userData = await getUserData();
-                  if (userData) setUser(userData);
+                  await loadProfile();
                 } catch {}
               }}
             >

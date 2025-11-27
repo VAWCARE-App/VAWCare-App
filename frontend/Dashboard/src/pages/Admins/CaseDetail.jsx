@@ -537,14 +537,21 @@ export default function CaseDetail() {
             </Form.Item>
 
             <Form.Item name="victimName" label="Victim Name">
-              <Input />
+              <Input 
+                onKeyPress={(e) => {
+                  if (/[0-9]/.test(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+              />
             </Form.Item>
 
             <Form.Item name="incidentType" label="Incident Type">
               <Select
                 options={[
+                  { value: "Sexual", label: "Sexual" },
                   { value: "Physical", label: "Physical" },
-                  { value: "Verbal", label: "Verbal" },
+                  { value: "Psychological", label: "Psychological" },
                   { value: "Economic", label: "Economic" },
                   { value: "Other", label: "Other" },
                 ]}
@@ -552,7 +559,13 @@ export default function CaseDetail() {
             </Form.Item>
 
             <Form.Item name="perpetrator" label="Perpetrator">
-              <Input />
+              <Input 
+                onKeyPress={(e) => {
+                  if (/[0-9]/.test(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+              />
             </Form.Item>
 
             <Form.Item name="location" label="Location">
@@ -589,7 +602,13 @@ export default function CaseDetail() {
             </Form.Item>
 
             <Form.Item name="assignedOfficer" label="Assigned Officer">
-              <Input />
+              <Input 
+                onKeyPress={(e) => {
+                  if (/[0-9]/.test(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+              />
             </Form.Item>
 
             <Form.Item

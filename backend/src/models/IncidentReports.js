@@ -30,7 +30,13 @@ const incidentReportSchema = new mongoose.Schema({
     perpetrator: {
         type: String,
         required: false,
-        trim: true
+        trim: true,
+        validate: {
+            validator: function(v) {
+                return !v || /^[a-zA-Z\s\-'\.]+$/.test(v);
+            },
+            message: 'Perpetrator name must contain only letters, spaces, hyphens, apostrophes, or periods'
+        }
     },
     location: {
         type: String,

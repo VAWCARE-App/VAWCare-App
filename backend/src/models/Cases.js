@@ -24,6 +24,12 @@ const CasesSchema = new mongoose.Schema({
 		type: String,
 		required: [true, 'Victim name is required'],
 		trim: true,
+		validate: {
+			validator: function(v) {
+				return !v || /^[a-zA-Z\s\-'\.]+$/.test(v);
+			},
+			message: 'Victim name must contain only letters, spaces, hyphens, apostrophes, or periods'
+		}
 	},
 	victimType: {
 		type: String,
@@ -46,6 +52,12 @@ const CasesSchema = new mongoose.Schema({
 	perpetrator: {
 		type: String,
 		trim: true,
+		validate: {
+			validator: function(v) {
+				return !v || /^[a-zA-Z\s\-'\.]+$/.test(v);
+			},
+			message: 'Perpetrator name must contain only letters, spaces, hyphens, apostrophes, or periods'
+		}
 	},
 	location: {
 		type: String,
@@ -66,6 +78,12 @@ const CasesSchema = new mongoose.Schema({
 	assignedOfficer: {
 		type: String,
 		trim: true,
+		validate: {
+			validator: function(v) {
+				return !v || /^[a-zA-Z\s\-'\.]+$/.test(v);
+			},
+			message: 'Assigned officer name must contain only letters, spaces, hyphens, apostrophes, or periods'
+		}
 	},
 	riskLevel: {
 		type: String,

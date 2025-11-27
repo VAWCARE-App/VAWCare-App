@@ -19,21 +19,59 @@ const barangayOfficialSchema = new mongoose.Schema({
     firstName: {
         type: String,
         required: [true, 'First name is required'],
-        trim: true
+        trim: true,
+        validate: {
+            validator: function(v) {
+                return !v || /^[a-zA-Z\s\-'\.]+$/.test(v);
+            },
+            message: 'First name must contain only letters, spaces, hyphens, apostrophes, or periods'
+        }
     },
     middleInitial: {
         type: String,
-        trim: true
+        trim: true,
+        validate: {
+            validator: function(v) {
+                return !v || /^[a-zA-Z\.]+$/.test(v);
+            },
+            message: 'Middle initial must contain only letters or periods'
+        }
     },
     lastName: {
         type: String,
         required: [true, 'Last name is required'],
-        trim: true
+        trim: true,
+        validate: {
+            validator: function(v) {
+                return !v || /^[a-zA-Z\s\-'\.]+$/.test(v);
+            },
+            message: 'Last name must contain only letters, spaces, hyphens, apostrophes, or periods'
+        }
     },
     position: {
         type: String,
         required: [true, 'Position is required'],
         trim: true,
+    },
+    city: {
+        type: String,
+        trim: true,
+        validate: {
+            validator: function(v) {
+                return !v || /^[a-zA-Z\s\-'\.]+$/.test(v);
+            },
+            message: 'City/Municipality must contain only letters, spaces, hyphens, apostrophes, or periods'
+        }
+    },
+    province: {
+        type: String,
+        trim: true,
+        validate: {
+            validator: function(v) {
+                return !v || /^[a-zA-Z\s\-'\.]+$/.test(v);
+            },
+            message: 'Province must contain only letters, spaces, hyphens, apostrophes, or periods'
+        }
     },
     isDeleted: {
         type: Boolean,

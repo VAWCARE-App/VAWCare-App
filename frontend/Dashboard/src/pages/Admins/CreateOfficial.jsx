@@ -362,12 +362,26 @@ export default function CreateOfficial() {
                     label="First name*"
                     rules={[{ required: true }]}
                   >
-                    <Input prefix={<UserOutlined />} />
+                    <Input 
+                      prefix={<UserOutlined />}
+                      onKeyPress={(e) => {
+                        if (/[0-9]/.test(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
+                    />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={8}>
                   <Form.Item name="middleInitial" label="Middle initial">
-                    <Input maxLength={1} />
+                    <Input 
+                      maxLength={1}
+                      onKeyPress={(e) => {
+                        if (/[0-9]/.test(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
+                    />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={8}>
@@ -376,23 +390,47 @@ export default function CreateOfficial() {
                     label="Last name*"
                     rules={[{ required: true }]}
                   >
-                    <Input />
+                    <Input 
+                      onKeyPress={(e) => {
+                        if (/[0-9]/.test(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
+                    />
                   </Form.Item>
                 </Col>
 
                 <Col xs={24} md={8}>
                   <Form.Item name="barangay" label="Barangay / Unit*" rules={[{ required: true }]}>
-                    <Input />
+                    <Input 
+                      onKeyPress={(e) => {
+                        if (/[0-9]/.test(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
+                    />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={8}>
                   <Form.Item name="city" label="City / Municipality">
-                    <Input />
+                    <Input 
+                      onKeyPress={(e) => {
+                        if (/[0-9]/.test(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
+                    />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={8}>
                   <Form.Item name="province" label="Province">
-                    <Input />
+                    <Input 
+                      onKeyPress={(e) => {
+                        if (/[0-9]/.test(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
+                    />
                   </Form.Item>
                 </Col>
 

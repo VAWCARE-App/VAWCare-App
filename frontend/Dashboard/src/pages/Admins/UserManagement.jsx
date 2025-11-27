@@ -359,7 +359,7 @@ export default function UserManagement() {
     filtered.sort((a, b) => {
       const dateA = new Date(a.createdAt).getTime();
       const dateB = new Date(b.createdAt).getTime();
-      return dateA - dateB;
+      return dateB - dateA;
     });
     setFilteredUsers(filtered);
   }, [allUsers, searchText, filterType, filterStatus, dateRange]);
@@ -577,6 +577,24 @@ export default function UserManagement() {
             )}
           </div>
         </div>
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={fetchAllUsers}
+            style={{ borderColor: BRAND.violet, color: BRAND.violet }}
+          >
+            {isMdUp ? "Refresh" : null}
+          </Button>
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={exportCsv}
+            type="primary"
+            style={{ background: BRAND.violet, borderColor: BRAND.violet }}
+          >
+            {isMdUp ? "Export" : null}
+          </Button>
+        </div>
       </Header>
 
       <Content
@@ -755,48 +773,6 @@ export default function UserManagement() {
                     gridColumn: isXs ? "span 1" : "auto",
                   }}
                 />
-              </div>
-
-              {/* Action Buttons */}
-              <div
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  justifyContent: isXs ? "stretch" : "flex-end",
-                  width: "100%",
-                }}
-              >
-                <Button
-                  icon={<ReloadOutlined />}
-                  onClick={fetchAllUsers}
-                  size={isXs ? "middle" : "large"}
-                  style={{
-                    flex: isXs ? 1 : "0 0 auto",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 6,
-                  }}
-                >
-                  {!isXs && "Refresh"}
-                </Button>
-                <Button
-                  icon={<DownloadOutlined />}
-                  onClick={exportCsv}
-                  size={isXs ? "middle" : "large"}
-                  type="primary"
-                  style={{
-                    flex: isXs ? 1 : "0 0 auto",
-                    background: BRAND.violet,
-                    borderColor: BRAND.violet,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 6,
-                  }}
-                >
-                  Export
-                </Button>
               </div>
             </div>
           </Card>

@@ -27,9 +27,9 @@ function normalizeVictimType(v) {
 
 // Calculate retraction probability based on cancelled cases and alerts
 async function calculateRetractionProbability(victimId) {
-  console.log('Calculating retraction probability for victim:', victimId);
+  if (process.env.DSS_DEBUG) console.log('Calculating retraction probability for victim:', victimId);
   if (!victimId) {
-    console.log('No victimId provided for retraction analysis');
+    if (process.env.DSS_DEBUG) console.log('No victimId provided for retraction analysis');
     return null;
   }
   

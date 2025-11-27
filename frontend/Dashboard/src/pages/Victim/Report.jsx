@@ -426,6 +426,11 @@ export default function Report() {
                   size="large"
                   prefix={<UserOutlined style={{ color: BRAND.textMuted }} />}
                   style={{ borderRadius: 12 }}
+                  onKeyPress={(e) => {
+                    if (/[0-9]/.test(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
                 />
               </Form.Item>
 

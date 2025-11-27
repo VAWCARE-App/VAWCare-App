@@ -116,6 +116,31 @@ function initEngine() {
       } catch (e) { rlog('victimType fact error:', e && e.message); return ''; }
     });
 
+    // anonymousRate: proportion of recent reports for the victim that are anonymous
+    engine.addFact('anonymousRate', async (params, almanac) => {
+      try {
+        let victimId = null;
+        try { victimId = await almanac.factValue('victimId'); } catch (e) { /* ignore */ }
+        if (!victimId) { try { victimId = await almanac.factValue('facts.victimId'); } catch (e) { /* ignore */ } }
+        if (!victimId) { try { victimId = await almanac.factValue('payload.victimId'); } catch (e) { /* ignore */ } }
+        if (!victimId || !CasesModel) return 0;
+
+        const since = new Date(); since.setMonth(since.getMonth() - 6);
+        const total = await CasesModel.countDocuments({ $or: [{ victim: victimId }, { victimId: victimId }], createdAt: { $gte: since } }) || 0;
+        if (!total) return 0;
+
+        const anonymousCount = await CasesModel.countDocuments({
+          $and: [
+            { $or: [{ victim: victimId }, { victimId: victimId }] },
+            { $or: [{ victimType: 'anonymous' }, { victim: null }, { victim: '' }] }
+          ],
+          createdAt: { $gte: since }
+        }) || 0;
+
+        return anonymousCount / total;
+      } catch (e) { rlog('anonymousRate fact error:', e && e.message); return 0; }
+    });
+
     return engine;
   } catch (e) {
     rlog('Failed to initialize rules engine', e && e.message);

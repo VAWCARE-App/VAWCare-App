@@ -18,6 +18,7 @@ import {
   Row,
   Col,
   Divider,
+  DatePicker,
 } from "antd";
 import {
   SearchOutlined,
@@ -31,6 +32,7 @@ import {
   FormOutlined,
   CloseCircleOutlined,
 } from "@ant-design/icons";
+import dayjs from "dayjs";
 import { api, getUserType } from "../../lib/api";
 import { useNavigate } from "react-router-dom";
 
@@ -92,6 +94,8 @@ export default function CaseManagement() {
           riskLevel: c.riskLevel,
           createdAt: c.createdAt,
         }));
+        // Sort by createdAt in descending order (most recent first)
+        formatted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setAllCases(formatted);
         setFilteredCases(formatted);
       }
@@ -211,6 +215,12 @@ export default function CaseManagement() {
   const handleCreateCase = async (vals) => {
     try {
       setLoading(true);
+      
+      // Convert dateReported from dayjs to ISO string if it exists
+      const dateReportedValue = vals.dateReported 
+        ? vals.dateReported.toISOString() 
+        : new Date().toISOString();
+      
       let payload;
       if (selectedReport) {
         payload = {
@@ -227,7 +237,7 @@ export default function CaseManagement() {
           description: selectedReport.description,
           perpetrator: selectedReport.perpetrator || "",
           location: selectedReport.location || "",
-          dateReported: selectedReport.dateReported || new Date().toISOString(),
+          dateReported: selectedReport.dateReported || dateReportedValue,
           status: vals.status || "Open",
           assignedOfficer: vals.assignedOfficer || "",
           riskLevel:
@@ -244,7 +254,7 @@ export default function CaseManagement() {
           description: vals.description,
           perpetrator: vals.perpetrator || "",
           location: vals.location || "",
-          dateReported: vals.dateReported || new Date().toISOString(),
+          dateReported: dateReportedValue,
           status: vals.status || "Open",
           assignedOfficer: vals.assignedOfficer || "",
           riskLevel:
@@ -690,7 +700,14 @@ export default function CaseManagement() {
                 label="Victim Name"
                 rules={[{ required: true, message: "Victim Name is required" }]}
               >
-                <Input disabled={isViewMode} />
+                <Input 
+                  disabled={isViewMode}
+                  onKeyPress={(e) => {
+                    if (/[0-9]/.test(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                />
               </Form.Item>
               <Form.Item
                 name="incidentType"
@@ -706,10 +723,24 @@ export default function CaseManagement() {
                 <Input.TextArea rows={3} disabled={isViewMode} />
               </Form.Item>
               <Form.Item name="perpetrator" label="Perpetrator">
-                <Input disabled={isViewMode} />
+                <Input 
+                  disabled={isViewMode}
+                  onKeyPress={(e) => {
+                    if (/[0-9]/.test(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                />
               </Form.Item>
               <Form.Item name="assignedOfficer" label="Assigned Officer">
-                <Input disabled={isViewMode} />
+                <Input 
+                  disabled={isViewMode}
+                  onKeyPress={(e) => {
+                    if (/[0-9]/.test(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                />
               </Form.Item>
               <Form.Item name="riskLevel" label="Risk Level">
                 <Select disabled={isViewMode}>
@@ -888,7 +919,15 @@ export default function CaseManagement() {
                     label={<Text strong>Victim Name</Text>}
                     rules={[{ required: true, message: "Victim name is required" }]}
                   >
-                    <Input placeholder="Enter victim's full name" size="large" />
+                    <Input 
+                      placeholder="Enter victim's full name" 
+                      size="large"
+                      onKeyPress={(e) => {
+                        if (/[0-9]/.test(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
+                    />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={8}>
@@ -934,6 +973,19 @@ export default function CaseManagement() {
                   </Form.Item>
                 </Col>
               </Row>
+
+              {/* Date Reported */}
+              <Form.Item 
+                name="dateReported" 
+                label={<Text strong>Date & Time Reported</Text>}
+              >
+                <DatePicker 
+                  showTime
+                  format="YYYY-MM-DD HH:mm:ss"
+                  size="large"
+                  placeholder="Select date and time"
+                />
+              </Form.Item>
 
               {/* Description */}
               <Form.Item

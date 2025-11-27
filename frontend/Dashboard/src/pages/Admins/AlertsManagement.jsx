@@ -426,6 +426,16 @@ export default function AlertsManagement() {
             )}
           </div>
         </div>
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={load}
+            style={{ borderColor: BRAND.violet, color: BRAND.violet }}
+          >
+            {isMdUp ? "Refresh" : null}
+          </Button>
+        </div>
       </Header>
 
       <Content
@@ -534,7 +544,7 @@ export default function AlertsManagement() {
                 : isSm 
                 ? "1fr 1fr" 
                 : isMdUp 
-                ? "repeat(auto-fit, minmax(180px, 1fr)) auto" 
+                ? "repeat(auto-fit, minmax(180px, 1fr))" 
                 : "1fr 1fr",
               gap: isXs ? 8 : 10,
               width: "100%",
@@ -562,19 +572,6 @@ export default function AlertsManagement() {
                 style={{ width: "100%" }}
                 onSearch={onSearch}
               />
-
-              <Select 
-                value={statusFilter}
-                onChange={onFilterStatus} 
-                size={isXs ? "middle" : "large"}
-                style={{ width: "100%" }}
-              >
-                <Option value="all">All Status</Option>
-                <Option value="Active">Active</Option>
-                <Option value="Resolved">Resolved</Option>
-                <Option value="Cancelled">Cancelled</Option>
-              </Select>
-
               <Select 
                 value={typeFilter}
                 onChange={onFilterType}
@@ -595,23 +592,9 @@ export default function AlertsManagement() {
                 size={isXs ? "middle" : "large"}
                 style={{ width: "100%" }}
               />
-
-              <Button 
-                icon={<ReloadOutlined />} 
-                onClick={load} 
-                size={isXs ? "middle" : "large"}
-                style={{ 
-                  width: isXs ? "100%" : "auto",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 6,
-                  gridColumn: isXs ? "span 1" : "auto",
-                }}
-              >
-                {!isXs && "Refresh"}
-              </Button>
             </div>
+
+            {/* Toolbar */}
           </Card>
 
           {/* Table */}

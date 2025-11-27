@@ -340,6 +340,13 @@ export default function ReportManagement() {
       );
     }
 
+    // Sort by most recent 
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.createdAt || a.createdAt).getTime();
+      const dateB = new Date(b.createdAt || b.createdAt).getTime();
+      return dateB - dateA; 
+    });
+
     setFilteredReports(filtered);
     setCurrentPage(1);
   }, [allReports, searchText, statusFilter, dateRange]);
@@ -594,6 +601,24 @@ export default function ReportManagement() {
             )}
           </div>
         </div>
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={fetchAllReports}
+            style={{ borderColor: BRAND.violet, color: BRAND.violet }}
+          >
+            {isMdUp ? "Refresh" : null}
+          </Button>
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={exportCsv}
+            type="primary"
+            style={{ background: BRAND.violet, borderColor: BRAND.violet }}
+          >
+            {isMdUp ? "Export" : null}
+          </Button>
+        </div>
       </Header>
 
       <Content
@@ -759,48 +784,6 @@ export default function ReportManagement() {
                     gridColumn: isXs ? "span 1" : "auto",
                   }}
                 />
-              </div>
-
-              {/* Action Buttons */}
-              <div
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  justifyContent: isXs ? "stretch" : "flex-end",
-                  width: "100%",
-                }}
-              >
-                <Button
-                  icon={<ReloadOutlined />}
-                  onClick={fetchAllReports}
-                  size={isXs ? "middle" : "large"}
-                  style={{
-                    flex: isXs ? 1 : "0 0 auto",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 6,
-                  }}
-                >
-                  {!isXs && "Refresh"}
-                </Button>
-                <Button
-                  icon={<DownloadOutlined />}
-                  onClick={exportCsv}
-                  size={isXs ? "middle" : "large"}
-                  type="primary"
-                  style={{
-                    flex: isXs ? 1 : "0 0 auto",
-                    background: BRAND.violet,
-                    borderColor: BRAND.violet,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 6,
-                  }}
-                >
-                  Export
-                </Button>
               </div>
             </div>
           </Card>
@@ -1117,7 +1100,13 @@ export default function ReportManagement() {
                     </Col>
                     <Col xs={24}>
                       <Form.Item name="perpetrator" label="Perpetrator">
-                        <Input />
+                        <Input 
+                          onKeyPress={(e) => {
+                            if (/[0-9]/.test(e.key)) {
+                              e.preventDefault();
+                            }
+                          }}
+                        />
                       </Form.Item>
                     </Col>
                     <Col xs={24}>

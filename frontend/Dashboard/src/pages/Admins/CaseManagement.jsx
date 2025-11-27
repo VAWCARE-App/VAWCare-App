@@ -190,6 +190,8 @@ export default function CaseManagement() {
         ? nameParts.join(" ").trim()
         : rep.victim?.victimID || "";
 
+      const dateReportedDayjs = rep.dateReported ? dayjs(rep.dateReported) : null;
+
       addForm.setFieldsValue({
         reportID: rep.reportID,
         incidentType: rep.incidentType,
@@ -198,6 +200,7 @@ export default function CaseManagement() {
         location: rep.location || "",
         victimName: composedName,
         victimType: rep.victim?.victimType || "anonymous",
+        dateReported: dateReportedDayjs,
         riskLevel: (function (it) {
           if (!it) return "Low";
           const l = String(it).toLowerCase();
@@ -431,9 +434,11 @@ export default function CaseManagement() {
     },
     {
       title: "Date",
-      dataIndex: "dateReported",
-      key: "dateReported",
+      dataIndex: "createdAt",
+      key: "createdAt",
       render: (d) => (d ? new Date(d).toLocaleString() : ""),
+      sorter: (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+      defaultSortOrder: "descend",
     },
     {
       title: "Actions",
@@ -981,9 +986,10 @@ export default function CaseManagement() {
               >
                 <DatePicker 
                   showTime
-                  format="YYYY-MM-DD HH:mm:ss"
+                  format="YYYY-MM-DD hh:mm:ss A"
                   size="large"
                   placeholder="Select date and time"
+                  inputReadOnly
                 />
               </Form.Item>
 
@@ -1007,7 +1013,15 @@ export default function CaseManagement() {
                     name="perpetrator" 
                     label={<Text strong>Perpetrator</Text>}
                   >
-                    <Input placeholder="Enter perpetrator's name (if known)" size="large" />
+                    <Input 
+                      placeholder="Enter perpetrator's name (if known)" 
+                      size="large"
+                      onKeyPress={(e) => {
+                        if (/[0-9]/.test(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
+                    />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
@@ -1016,7 +1030,15 @@ export default function CaseManagement() {
                     label={<Text strong>Assigned Officer</Text>}
                     rules={[{ required: true, message: "Assigned officer is required" }]}
                   >
-                    <Input placeholder="Enter officer's name" size="large" />
+                    <Input 
+                      placeholder="Enter officer's name" 
+                      size="large"
+                      onKeyPress={(e) => {
+                        if (/[0-9]/.test(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
+                    />
                   </Form.Item>
                 </Col>
               </Row>

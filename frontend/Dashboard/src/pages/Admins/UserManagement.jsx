@@ -450,12 +450,15 @@ export default function UserManagement() {
 
   // Metrics
   const userCounts = useMemo(
-    () => ({
-      total: allUsers.length,
-      admins: allUsers.filter((u) => u.userType === "admin").length,
-      officials: allUsers.filter((u) => u.userType === "official").length,
-      victims: allUsers.filter((u) => u.userType === "victim").length,
-    }),
+    () => {
+      const activeUsers = allUsers.filter((u) => !u.isDeleted);
+      return {
+        total: activeUsers.length,
+        admins: activeUsers.filter((u) => u.userType === "admin").length,
+        officials: activeUsers.filter((u) => u.userType === "official").length,
+        victims: activeUsers.filter((u) => u.userType === "victim").length,
+      };
+    },
     [allUsers]
   );
 

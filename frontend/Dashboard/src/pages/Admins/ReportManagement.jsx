@@ -463,16 +463,21 @@ export default function ReportManagement() {
 
   // === KPIs ===
   const reportCounts = useMemo(
-    () => ({
-      total: allReports.length,
-      open: allReports.filter((r) => normalizeStatus(r.status) === "Open")
-        .length,
-      inProgress: allReports.filter(
-        (r) => normalizeStatus(r.status) === "Under Investigation"
-      ).length,
-      closed: allReports.filter((r) => normalizeStatus(r.status) === "Closed")
-        .length,
-    }),
+    () => {
+      const activeReports = allReports.filter((r) => !r.deleted);
+      return {
+        total: activeReports.length,
+        pending: activeReports.filter((r) => normalizeStatus(r.status) === "Pending")
+          .length,
+        open: activeReports.filter((r) => normalizeStatus(r.status) === "Open")
+          .length,
+        inProgress: activeReports.filter(
+          (r) => normalizeStatus(r.status) === "Under Investigation"
+        ).length,
+        closed: activeReports.filter((r) => normalizeStatus(r.status) === "Closed")
+          .length,
+      };
+    },
     [allReports]
   );
 
@@ -647,19 +652,32 @@ export default function ReportManagement() {
           }}
         >
           {/* KPIs */}
-          <Row gutter={[isXs ? 8 : 10, isXs ? 8 : 10]}>
+          <div style={{ 
+            display: "flex", 
+            flexWrap: "wrap", 
+            gap: isXs ? 8 : 10,
+            width: "100%",
+          }}>
             {[
               ["Total Reports", reportCounts.total, BRAND.violet],
+              ["Pending", reportCounts.pending, "#faad14"],
               ["Open", reportCounts.open, "orange"],
               ["Under Investigation", reportCounts.inProgress, BRAND.blue],
               ["Closed", reportCounts.closed, BRAND.green],
             ].map(([label, value, color], i) => (
-              <Col xs={12} sm={12} md={6} key={i}>
+              <div 
+                key={i}
+                style={{
+                  flex: isXs || isSm ? "0 0 calc(50% - 4px)" : isMdUp ? "0 0 calc(20% - 8px)" : "0 0 calc(33.333% - 7px)",
+                  minWidth: 0,
+                }}
+              >
                 <Card
                   style={{
                     ...glassCard,
                     padding: isXs ? "8px 10px" : "10px 12px",
                     textAlign: isXs ? "center" : "left",
+                    height: "100%",
                   }}
                 >
                   <Typography.Text
@@ -686,9 +704,9 @@ export default function ReportManagement() {
                     {value}
                   </Typography.Title>
                 </Card>
-              </Col>
+              </div>
             ))}
-          </Row>
+          </div>
 
           {/* Toolbar */}
           <Card

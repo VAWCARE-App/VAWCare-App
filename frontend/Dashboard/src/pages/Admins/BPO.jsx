@@ -31,6 +31,7 @@ const BRAND_PAGE_BG = "#F6F3FF";
 
 export default function BPO() {
   const navigate = useNavigate();
+  const [messageApi, contextHolder] = message.useMessage();
   React.useEffect(() => {
     const checkUser = async () => {
       const type = await getUserType(); // wait for the Promise
@@ -74,9 +75,9 @@ export default function BPO() {
   const copyIdToClipboard = async (id) => {
     try {
       await navigator.clipboard.writeText(id);
-      message.success("BPO ID copied to clipboard");
+      messageApi.success("BPO ID copied to clipboard");
     } catch {
-      message.error("Could not copy to clipboard");
+      messageApi.error("Could not copy to clipboard");
     }
   };
   const openBpoDetail = (id) => navigate(`/admin/bpo/${id}`);
@@ -84,7 +85,7 @@ export default function BPO() {
   // -------- save --------
   const submit = async () => {
     if (!form.respondent || !form.applicant) {
-      message.error(
+      messageApi.error(
         "Please fill in at least the respondent and applicant fields."
       );
       return;
@@ -119,7 +120,7 @@ export default function BPO() {
       const created = res?.data?.data;
       const id = created?.bpoID || created?._id;
       setSavedId(id || null);
-      message.success(id ? `BPO saved (ID: ${id})` : "BPO saved successfully");
+      messageApi.success(id ? `BPO saved (ID: ${id})` : "BPO saved successfully");
       notification.success({
         message: "BPO Saved",
         description: id ? `Saved successfully (ID: ${id})` : "Saved successfully",
@@ -128,7 +129,7 @@ export default function BPO() {
     } catch (err) {
       const srvMsg =
         err?.response?.data?.message || err?.message || "Unknown error";
-      message.error(`Save failed: ${srvMsg}`);
+      messageApi.error(`Save failed: ${srvMsg}`);
       notification.error({
         message: "Save Failed",
         description: srvMsg,
@@ -322,6 +323,7 @@ export default function BPO() {
   /*** LAYOUT with header like BPODetail ***/
   return (
     <Layout style={{ width: "100%", background: BRAND_PAGE_BG, minHeight: "100vh" }}>
+      {contextHolder}
       <Content style={{ maxWidth: "100%", paddingTop: 32, paddingBottom: 32, paddingLeft: 16, paddingRight: 16 }}>
         {/* Header bar (like BPODetail) */}
         <Space align="center" style={{ marginBottom: 16, width: "100%", justifyContent: "space-between" }}>

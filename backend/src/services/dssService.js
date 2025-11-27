@@ -756,7 +756,6 @@ async function synthesizeProbabilities(incidentType, storedRisk, options = {}) {
     let canceledAlerts = 0;
 
     // Prefer victim-scoped counts when a victimId is provided. If not available,
-    // fallback to incidentType-scoped counts (still informative).
     if (options && (options.victimId || options.victimID)) {
       const vid = options.victimId || options.victimID;
       try {
@@ -855,7 +854,7 @@ function preprocessText(text) {
   Object.values(keywords).forEach(kwList => {
     const count = kwList.reduce((acc, kw) => 
       acc + (textLower.split(kw).length - 1), 0);
-    features.push(Math.min(count, 5) / 5); // Normalize to [0,1]
+    features.push(Math.min(count, 5) / 5); 
   });
 
   // Add text length feature
@@ -1119,9 +1118,6 @@ async function suggestForCase(payload = {}, modelObj = null) {
     }
   } else {
     // Calculate immediate probability in a way that depends on the incident type
-    // so an Economic case does not become immediate just because physical/sexual probabilities
-    // have non-zero base values. Use the probability for the reported incidentType and
-    // for special handling of Physical/Sexual/Emergency keep the original aggregation.
     const canonical = ['Economic', 'Psychological', 'Physical', 'Sexual'];
     const it = (payload.incidentType || '').toString();
     const itIndex = canonical.indexOf(it);
@@ -1139,7 +1135,6 @@ async function suggestForCase(payload = {}, modelObj = null) {
   }
   
   // Adjust for children, but respect manual override.
-  // Do NOT apply the child immediate-probability floor for Economic or Psychological incident types
   const incidentLower = (formattedIncidentType || '').toLowerCase();
   const childImmediateAllowed = victimType === 'child' && !isManualOverride && !['economic', 'psychological'].includes(incidentLower);
   const finalImmediateProb = childImmediateAllowed ? Math.max(immediateProb, 0.6) : immediateProb;

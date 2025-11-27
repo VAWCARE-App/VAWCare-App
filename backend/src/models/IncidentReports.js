@@ -87,6 +87,7 @@ incidentReportSchema.pre('findOneAndUpdate', function(next) {
 });
 
 // Indexes
+incidentReportSchema.index({ reportID: 1 });
 incidentReportSchema.index({ victimID: 1 });
 incidentReportSchema.index({ status: 1 });
 incidentReportSchema.index({ dateReported: -1 });

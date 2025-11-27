@@ -51,6 +51,7 @@ export default function VictimDashboard() {
   const [metrics, setMetrics] = useState({
     totalReports: 0,
     openCases: 0,
+    closedCases: 0,
     recentActivities: [],
   });
 
@@ -70,7 +71,7 @@ export default function VictimDashboard() {
   };
 
   const resolvedCount = useMemo(
-    () => Math.max(metrics.totalReports - metrics.openCases, 0),
+    () => metrics.closedCases ?? 0,
     [metrics]
   );
 
@@ -87,6 +88,7 @@ export default function VictimDashboard() {
         setMetrics({
           totalReports: m.totalReports ?? 0,
           openCases: m.openCases ?? 0,
+          closedCases: m.closedCases ?? 0,
           recentActivities: Array.isArray(m.recentActivities)
             ? m.recentActivities
             : [],
@@ -498,8 +500,8 @@ export default function VictimDashboard() {
     const list = Array.isArray(myReports) ? [...myReports] : [];
     return list.sort(
       (a, b) =>
-        new Date(b.dateReported || b.createdAt || 0) -
-        new Date(a.dateReported || a.createdAt || 0)
+        new Date(b.createdAt || b.dateReported || 0) -
+        new Date(a.createdAt || a.dateReported || 0)
     );
   }, [myReports]);
 
@@ -551,7 +553,7 @@ export default function VictimDashboard() {
                       </Col>
                       <Col xs={24} sm={8}>
                         <StatPill
-                          label="Open Cases"
+                          label="Open Reports"
                           value={metrics.openCases}
                           icon={
                             <ExclamationCircleTwoTone
@@ -563,7 +565,7 @@ export default function VictimDashboard() {
                       </Col>
                       <Col xs={24} sm={8}>
                         <StatPill
-                          label="Resolved"
+                          label="Resolved Reports"
                           value={resolvedCount}
                           icon={
                             <CheckCircleTwoTone
@@ -690,10 +692,10 @@ export default function VictimDashboard() {
                               <Text strong>{r.reportID || "Report"}</Text>
                               <div style={{ color: "#888", fontSize: 13 }}>
                                 {r.incidentType || "—"} •{" "}
-                                {r.dateReported
-                                  ? new Date(r.dateReported).toLocaleString()
-                                  : r.createdAt
-                                    ? new Date(r.createdAt).toLocaleString()
+                                {r.createdAt
+                                  ? new Date(r.createdAt).toLocaleString()
+                                  : r.dateReported
+                                    ? new Date(r.dateReported).toLocaleString()
                                     : ""}
                               </div>
                             </div>

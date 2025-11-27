@@ -880,6 +880,10 @@ const getMetrics = asyncHandler(async (req, res) => {
             victimID: victim._id,
             status: { $in: ['Open', 'Under Investigation'] },
         });
+        const closedCases = await IncidentReport.countDocuments({
+            victimID: victim._id,
+            status: 'Closed',
+        });
 
         // recentActivities: collect the victim's own actions (reports submitted, alerts sent, chatbot usage)
         const [reportDocs, alertDocs, chatDocs] = await Promise.all([
@@ -937,6 +941,7 @@ const getMetrics = asyncHandler(async (req, res) => {
             data: {
                 totalReports,
                 openCases,
+                closedCases,
                 recentActivities,
             },
         });

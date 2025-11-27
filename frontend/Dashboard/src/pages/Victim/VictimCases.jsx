@@ -97,6 +97,8 @@ export default function VictimCases() {
         description: r.description,
         location: r.location,
         perpetrator: r.perpetrator,
+        caseID: null,
+        caseStatus: null,
         raw: r,
       }));
 
@@ -115,11 +117,55 @@ export default function VictimCases() {
           description: c.description,
           location: c.location,
           perpetrator: c.perpetrator,
+          caseID: c.caseID || c.caseId,
+          caseStatus: c.status,
           raw: c,
         }));
 
-      const merged = [...mappedReports, ...mappedCases];
-      setCases(merged);
+      // Enhance reports with case info
+      const enhancedReports = mappedReports.map((report) => {
+        const linkedCase = mappedCases.find((c) => c.raw.reportID === report.reportID);
+        if (linkedCase) {
+          return {
+            ...report,
+            hasCase: true,
+            caseID: linkedCase.caseID,
+            caseStatus: linkedCase.caseStatus,
+          };
+        }
+        return report;
+      });
+
+      // For display, show unique records - if a report has a case, use the report record with case info
+      const uniqueRecords = [];
+      const reportIDs = new Set();
+
+      enhancedReports.forEach((r) => {
+        uniqueRecords.push(r);
+        reportIDs.add(r.reportID);
+      });
+
+      // Add cases that don't have corresponding reports
+      mappedCases.forEach((c) => {
+        if (!reportIDs.has(c.raw.reportID)) {
+          uniqueRecords.push({
+            _source: "case",
+            reportID: c.raw.reportID || c.caseID,
+            incidentType: c.incidentType,
+            status: c.status,
+            dateReported: c.dateReported,
+            description: c.description,
+            location: c.location,
+            perpetrator: c.perpetrator,
+            caseID: c.caseID,
+            caseStatus: c.caseStatus,
+            hasCase: true,
+            raw: c.raw,
+          });
+        }
+      });
+
+      setCases(uniqueRecords);
     } catch (e) {
       setError("Unable to load cases.");
       message.error("Unable to load cases. Please try again.");
@@ -433,8 +479,20 @@ export default function VictimCases() {
                                 style={{ color: BRAND.violet }}
                               />
                             </Tooltip>
+                            {r.hasCase && (
+                              <Tag color="blue">
+                                Case: {r.caseID}
+                              </Tag>
+                            )}
                           </Space>
-                          <div style={{ flexShrink: 0 }}>{statusTag(r.status)}</div>
+                          <div style={{ flexShrink: 0, display: "flex", gap: 8, alignItems: "center" }}>
+                            {r.hasCase && (
+                              <Tooltip title="Case Status">
+                                {statusTag(r.caseStatus)}
+                              </Tooltip>
+                            )}
+                            {statusTag(r.status)}
+                          </div>
                         </div>
                         <Space size={8} wrap style={{ fontSize: isMobile ? 13 : 14 }}>
                           <Text type="secondary">
@@ -442,6 +500,12 @@ export default function VictimCases() {
                           </Text>
                           <Text type="secondary">•</Text>
                           <Text type="secondary">{when}</Text>
+                          {r.hasCase && (
+                            <>
+                              <Text type="secondary">•</Text>
+                              <Text type="secondary" style={{ color: "#1890ff" }}>Made into case</Text>
+                            </>
+                          )}
                         </Space>
                       </div>
                     </List.Item>
@@ -551,10 +615,30 @@ export default function VictimCases() {
                   <Space direction="vertical" size={16} style={{ width: '100%' }}>
                     <div>
                       <Text type="secondary" style={{ fontSize: 12, fontWeight: 500, display: 'block', marginBottom: 8 }}>
-                        STATUS
+                        REPORT STATUS
                       </Text>
                       {statusTag(drawer.item.status)}
                     </div>
+                    {drawer.item.hasCase && (
+                      <>
+                        <Divider style={{ margin: 0 }} />
+                        <div>
+                          <Text type="secondary" style={{ fontSize: 12, fontWeight: 500, display: 'block', marginBottom: 8 }}>
+                            CASE ID
+                          </Text>
+                          <Text strong style={{ fontSize: 14, fontFamily: 'monospace', color: '#1890ff' }}>
+                            {drawer.item.caseID || "—"}
+                          </Text>
+                        </div>
+                        <Divider style={{ margin: 0 }} />
+                        <div>
+                          <Text type="secondary" style={{ fontSize: 12, fontWeight: 500, display: 'block', marginBottom: 8 }}>
+                            CASE STATUS
+                          </Text>
+                          {statusTag(drawer.item.caseStatus)}
+                        </div>
+                      </>
+                    )}
                     <Divider style={{ margin: 0 }} />
                     <div>
                       <Text type="secondary" style={{ fontSize: 12, fontWeight: 500, display: 'block', marginBottom: 8 }}>

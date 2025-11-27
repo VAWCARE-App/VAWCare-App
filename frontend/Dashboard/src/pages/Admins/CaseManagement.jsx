@@ -281,9 +281,9 @@ export default function CaseManagement() {
       if (resp) {
         if (resp.message && String(resp.message).toLowerCase().includes("duplicate")) {
           addForm.setFields([
-            { name: "caseID", errors: [resp.message || "Case ID already exists"] },
+            { name: "caseID", errors: ["Please enter a different Case ID as it was already used"] },
           ]);
-          message.error(resp.message || "Duplicate Case ID");
+          message.error("Please enter a different Case ID as it was already used");
         } else if (resp.errors && typeof resp.errors === "object") {
           const fields = Object.keys(resp.errors).map((k) => ({
             name: k,
@@ -373,6 +373,8 @@ export default function CaseManagement() {
           c.assignedOfficer?.toLowerCase().includes(s)
       );
     }
+    // Sort by createdAt in descending order (most recent first)
+    f.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     setFilteredCases(f);
   }, [allCases, searchText, filterType]);
 
@@ -438,7 +440,6 @@ export default function CaseManagement() {
       key: "createdAt",
       render: (d) => (d ? new Date(d).toLocaleString() : ""),
       sorter: (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
-      defaultSortOrder: "descend",
     },
     {
       title: "Actions",
@@ -670,6 +671,7 @@ export default function CaseManagement() {
             }}
             tableLayout={screens.xs ? 'auto' : 'fixed'}
             className="pretty-table"
+            sortDirections={['descend']}
           />
 
           {/* Edit / View Modal (kept functional behavior) */}

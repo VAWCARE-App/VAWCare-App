@@ -2,6 +2,7 @@ const Cases = require('../models/Cases');
 const mongoose = require('mongoose');
 const reportService = require('../services/reportService');
 const Victim = require('../models/Victims');
+const IncidentReport = require('../models/IncidentReports');
 const dssService = require('../services/dssService');
 const { recordLog, extractKeyFields } = require('../middleware/logger');
 
@@ -230,6 +231,28 @@ exports.updateCase = async (req, res, next) => {
 
     const item = await Cases.findOneAndUpdate(query, updates, { new: true }).lean();
     if (!item) return res.status(404).json({ success: false, message: 'Case not found or deleted' });
+    
+    // If case status is updated, sync the report status
+    if (updates.status && item.reportID) {
+      try {
+        let reportStatusUpdate = {};
+        if (updates.status === 'Open' || updates.status === 'Under Investigation') {
+          reportStatusUpdate.status = updates.status;
+        } else if (updates.status === 'Resolved' || updates.status === 'Cancelled') {
+          reportStatusUpdate.status = 'Closed';
+        }
+        
+        if (Object.keys(reportStatusUpdate).length > 0) {
+          await IncidentReport.findOneAndUpdate(
+            { reportID: item.reportID },
+            reportStatusUpdate
+          );
+        }
+      } catch (e) {
+        console.warn('Failed to sync report status with case', e && e.message);
+      }
+    }
+    
     try { await recordLog({ req, actorType: req.user?.role || 'official', actorId: req.user?.officialID || req.user?.adminID, action: 'edit_case', details: `Edited case ${item.caseID || item._id}: ${extractKeyFields(updates)}` }); } catch(e) { console.warn('Failed to record case edit log', e && e.message); }
     return res.json({ success: true, data: item });
   } catch (err) {

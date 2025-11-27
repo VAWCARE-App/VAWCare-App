@@ -27,7 +27,10 @@ export default function BPODetail() {
   }, [navigate]);
 
   const [form, setForm] = useState({});
+  const [originalForm, setOriginalForm] = useState({});
   const [loading, setLoading] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
 
   const handlePrint = () => {
     const el = document.querySelector('.bpo-printable');
@@ -147,7 +150,7 @@ export default function BPODetail() {
         const res = await api.get(`/api/bpo/${id}`);
         const data = res?.data?.data;
         if (data) {
-          setForm({
+          const formData = {
             controlNo: data.controlNO || '',
             respondent: data.nameofRespondent || '',
             address: data.address || '',
@@ -166,7 +169,9 @@ export default function BPODetail() {
             kagawadName: data.barangaykagawad || '',
             status: data.status || '',
             bpoID: data.bpoID || data._id || '',
-          });
+          };
+          setForm(formData);
+          setOriginalForm(formData);
         }
       } catch (err) {
         console.error('Failed to load BPO', err);
@@ -177,6 +182,48 @@ export default function BPODetail() {
     };
     if (id) fetchBPO();
   }, [id]);
+
+  const handleSaveChanges = async () => {
+    setSaveLoading(true);
+    try {
+      const updateData = {
+        nameofRespondent: form.respondent,
+        address: form.address,
+        applicationName: form.applicant,
+        orderDate: form.appliedOn,
+        statement: form.statement,
+        hisOrher: form.harmTo,
+        nameofChildren: form.children,
+        dateIssued: form.dateIssued,
+        copyReceivedBy: form.receivedBy,
+        dateReceived: form.dateReceived,
+        servedBy: form.servedBy,
+        punongBarangay: form.pbName,
+        unavailabledate: form.attestDate,
+        time: form.attestTime,
+        barangaykagawad: form.kagawadName,
+      };
+
+      await api.put(`/api/bpo/${form.bpoID}`, updateData);
+      message.success('BPO updated successfully');
+      setOriginalForm(form);
+      setIsEditMode(false);
+    } catch (err) {
+      console.error('Failed to update BPO', err);
+      message.error('Failed to update BPO');
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setForm(originalForm);
+    setIsEditMode(false);
+  };
+
+  const handleFieldChange = (key, value) => {
+    setForm(prev => ({ ...prev, [key]: value }));
+  };
 
   return (
     <Layout style={{ width: "100%", background: BRAND_PAGE_BG, minHeight: "100vh" }}>
@@ -224,6 +271,28 @@ export default function BPODetail() {
             Download PDF
           </Button>
 
+          {!isEditMode ? (
+            <Button
+              onClick={() => setIsEditMode(true)}
+              style={{ borderColor: BRAND_PRIMARY, color: BRAND_PRIMARY }}
+            >
+              Edit
+            </Button>
+          ) : (
+            <>
+              <Button
+                type="primary"
+                loading={saveLoading}
+                onClick={handleSaveChanges}
+                style={{ backgroundColor: BRAND_PRIMARY, borderColor: BRAND_PRIMARY }}
+              >
+                Save Changes
+              </Button>
+              <Button onClick={handleCancel}>
+                Cancel
+              </Button>
+            </>
+          )}
 
           {/* Title */}
           <Title level={3} style={{ margin: 0, color: BRAND_PRIMARY }}>
@@ -274,33 +343,70 @@ export default function BPODetail() {
         <div style={{ marginTop: 8 }}>
           <div style={{ marginBottom: 10 }}>
             <Text strong>Name of Respondent: </Text>
-            <Input value={form.respondent} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: '68%' }} />
+            <Input 
+              value={form.respondent} 
+              onChange={(e) => handleFieldChange('respondent', e.target.value)}
+              readOnly={!isEditMode}
+              style={{ border: 0, borderBottom: '1px solid #000', width: '68%', background: isEditMode ? '#fff' : 'transparent' }} 
+            />
           </div>
 
           <div style={{ marginBottom: 10 }}>
             <Text strong>Address: </Text>
-            <Input value={form.address} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: '75%' }} />
+            <Input 
+              value={form.address} 
+              onChange={(e) => handleFieldChange('address', e.target.value)}
+              readOnly={!isEditMode}
+              style={{ border: 0, borderBottom: '1px solid #000', width: '75%', background: isEditMode ? '#fff' : 'transparent' }} 
+            />
           </div>
 
           <Title level={3} style={{ textAlign: 'center', marginTop: 8, marginBottom: 6 }}>ORDER</Title>
 
           <div style={{ marginBottom: 12 }}>
             <Text strong>Applicant Name: </Text>
-            <Input value={form.applicant} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: 260 }} />
+            <Input 
+              value={form.applicant} 
+              onChange={(e) => handleFieldChange('applicant', e.target.value)}
+              readOnly={!isEditMode}
+              style={{ border: 0, borderBottom: '1px solid #000', width: 260, background: isEditMode ? '#fff' : 'transparent' }} 
+            />
             <span style={{ marginLeft: 12 }}>applied for a BPO on</span>
-            <Input value={form.appliedOn ? new Date(form.appliedOn).toLocaleDateString() : ''} readOnly style={{ border: 0, borderBottom: '1px solid #000', marginLeft: 8, width: 140 }} />
+            <Input 
+              value={form.appliedOn ? new Date(form.appliedOn).toLocaleDateString() : ''} 
+              onChange={(e) => handleFieldChange('appliedOn', new Date(e.target.value))}
+              readOnly={!isEditMode}
+              style={{ border: 0, borderBottom: '1px solid #000', marginLeft: 8, width: 140, background: isEditMode ? '#fff' : 'transparent' }} 
+            />
             <span style={{ marginLeft: 8 }}>under oath stating that:</span>
           </div>
 
           <div style={{ marginBottom: 12 }}>
-            <textarea rows={3} value={form.statement} readOnly placeholder="Statement / facts under oath…" style={{ width: '100%', padding: 8, fontFamily: "'Times New Roman', Times, serif", fontSize: 15, border: '1px solid #ccc', resize: 'none' }} />
+            <textarea 
+              rows={3} 
+              value={form.statement} 
+              onChange={(e) => handleFieldChange('statement', e.target.value)}
+              readOnly={!isEditMode}
+              placeholder="Statement / facts under oath…" 
+              style={{ width: '100%', padding: 8, fontFamily: "'Times New Roman', Times, serif", fontSize: 15, border: '1px solid #ccc', resize: 'none', background: isEditMode ? '#fff' : 'transparent' }} 
+            />
           </div>
 
           <div style={{ marginBottom: 8 }}>
             <span>After having heard the application and the witnesses and evidence, the undersigned hereby issues this BPO ordering you to immediately cease and desist from causing or threatening the cause physical harm to </span>
-            <Input value={form.harmTo} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: 120, marginLeft: 8, marginRight: 8 }} />
+            <Input 
+              value={form.harmTo} 
+              onChange={(e) => handleFieldChange('harmTo', e.target.value)}
+              readOnly={!isEditMode}
+              style={{ border: 0, borderBottom: '1px solid #000', width: 120, marginLeft: 8, marginRight: 8, background: isEditMode ? '#fff' : 'transparent' }} 
+            />
             <span>and/or her child/children namely:</span>
-            <Input value={form.children} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: 360, marginLeft: 8 }} />
+            <Input 
+              value={form.children} 
+              onChange={(e) => handleFieldChange('children', e.target.value)}
+              readOnly={!isEditMode}
+              style={{ border: 0, borderBottom: '1px solid #000', width: 360, marginLeft: 8, background: isEditMode ? '#fff' : 'transparent' }} 
+            />
           </div>
 
           <div style={{ marginTop: 12 }}>
@@ -314,11 +420,21 @@ export default function BPODetail() {
           <div style={{ marginTop: 18, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div />
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontWeight: 700 }}>{form.pbName}</div>
+              <Input 
+                value={form.pbName} 
+                onChange={(e) => handleFieldChange('pbName', e.target.value)}
+                readOnly={!isEditMode}
+                style={{ border: 0, borderBottom: isEditMode ? '1px solid #000' : 0, width: '100%', textAlign: 'center', fontWeight: 700, background: isEditMode ? '#fff' : 'transparent' }}
+              />
               <div>Punong Barangay</div>
               <div style={{ marginTop: 8 }}>
                 <Text>Date Issued: </Text>
-                <Input value={form.dateIssued ? new Date(form.dateIssued).toLocaleDateString() : ''} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: 160 }} />
+                <Input 
+                  value={form.dateIssued ? new Date(form.dateIssued).toLocaleDateString() : ''} 
+                  onChange={(e) => handleFieldChange('dateIssued', new Date(e.target.value))}
+                  readOnly={!isEditMode}
+                  style={{ border: 0, borderBottom: '1px solid #000', width: 160, background: isEditMode ? '#fff' : 'transparent' }} 
+                />
               </div>
             </div>
           </div>
@@ -328,19 +444,34 @@ export default function BPODetail() {
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
               <div style={{ minWidth: 320 }}>
                 <Text strong>Copy received by:</Text>
-                <Input value={form.receivedBy} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: '100%', marginTop: 8 }} />
+                <Input 
+                  value={form.receivedBy} 
+                  onChange={(e) => handleFieldChange('receivedBy', e.target.value)}
+                  readOnly={!isEditMode}
+                  style={{ border: 0, borderBottom: '1px solid #000', width: '100%', marginTop: 8, background: isEditMode ? '#fff' : 'transparent' }} 
+                />
                 <div style={{ fontSize: 12, marginTop: 6 }}>Signature over Printed Name</div>
 
                 <div style={{ marginTop: 10 }}>
                   <Text strong>Date received:</Text>
                   <div style={{ marginTop: 8 }}>
-                    <Input value={form.dateReceived ? new Date(form.dateReceived).toLocaleDateString() : ''} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: 160 }} />
+                    <Input 
+                      value={form.dateReceived ? new Date(form.dateReceived).toLocaleDateString() : ''} 
+                      onChange={(e) => handleFieldChange('dateReceived', new Date(e.target.value))}
+                      readOnly={!isEditMode}
+                      style={{ border: 0, borderBottom: '1px solid #000', width: 160, background: isEditMode ? '#fff' : 'transparent' }} 
+                    />
                   </div>
                 </div>
 
                 <div style={{ marginTop: 12 }}>
                   <Text strong>Served by:</Text>
-                  <Input value={form.servedBy} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: '100%', marginTop: 8 }} />
+                  <Input 
+                    value={form.servedBy} 
+                    onChange={(e) => handleFieldChange('servedBy', e.target.value)}
+                    readOnly={!isEditMode}
+                    style={{ border: 0, borderBottom: '1px solid #000', width: '100%', marginTop: 8, background: isEditMode ? '#fff' : 'transparent' }} 
+                  />
                   <div style={{ fontSize: 12, marginTop: 6 }}>Signature over Printed Name</div>
                 </div>
               </div>
@@ -356,18 +487,34 @@ export default function BPODetail() {
 
             <div style={{ marginTop: 12, textAlign: 'left', maxWidth: 760, marginLeft: 'auto', marginRight: 'auto' }}>
               <Text>I hereby attest that Punong Barangay </Text>
-              <Input value={form.pbName} readOnly style={{ border: 0, borderBottom: '1px solid #000', width: 260, marginLeft: 8, marginRight: 8 }} />
+              <Input 
+                value={form.pbName} 
+                onChange={(e) => handleFieldChange('pbName', e.target.value)}
+                readOnly={!isEditMode}
+                style={{ border: 0, borderBottom: '1px solid #000', width: 260, marginLeft: 8, marginRight: 8, background: isEditMode ? '#fff' : 'transparent' }} 
+              />
               was unavailable to act on
-              <Input value={form.attestDate ? new Date(form.attestDate).toLocaleDateString() : ''} readOnly style={{ border: 0, borderBottom: '1px solid #000', marginLeft: 8, width: 140 }} /> at
-              <Input value={form.attestTime || ''} readOnly style={{ border: 0, borderBottom: '1px solid #000', marginLeft: 8, width: 100 }} /> a.m./p.m. and issue such order.
+              <Input 
+                value={form.attestDate ? new Date(form.attestDate).toLocaleDateString() : ''} 
+                onChange={(e) => handleFieldChange('attestDate', new Date(e.target.value))}
+                readOnly={!isEditMode}
+                style={{ border: 0, borderBottom: '1px solid #000', marginLeft: 8, width: 140, background: isEditMode ? '#fff' : 'transparent' }} 
+              /> at
+              <Input 
+                value={form.attestTime || ''} 
+                onChange={(e) => handleFieldChange('attestTime', e.target.value)}
+                readOnly={!isEditMode}
+                style={{ border: 0, borderBottom: '1px solid #000', marginLeft: 8, width: 100, background: isEditMode ? '#fff' : 'transparent' }} 
+              /> a.m./p.m. and issue such order.
             </div>
 
             <div style={{ marginTop: 18, display: 'flex', justifyContent: 'flex-end' }}>
               <div style={{ width: 260, textAlign: 'center' }}>
                 <Input
                   value={form.kagawadName}
-                  readOnly
-                  style={{ border: 0, borderBottom: '1px solid #000', width: '100%', textAlign: 'center' }}
+                  onChange={(e) => handleFieldChange('kagawadName', e.target.value)}
+                  readOnly={!isEditMode}
+                  style={{ border: 0, borderBottom: '1px solid #000', width: '100%', textAlign: 'center', background: isEditMode ? '#fff' : 'transparent' }}
                   placeholder="Printed name"
                 />
                 <div style={{ marginTop: 6 }}>Barangay Kagawad</div>

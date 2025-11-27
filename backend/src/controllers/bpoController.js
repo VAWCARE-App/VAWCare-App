@@ -67,7 +67,7 @@ const updateBPO = asyncHandler(async (req, res) => {
     const payload = req.body && req.body.data ? req.body.data : req.body;
     if (!id) return res.status(400).json({ success: false, message: 'Missing id' });
     if (!payload) return res.status(400).json({ success: false, message: 'Missing payload' });
-    const allowed = ['status', 'copyReceivedBy', 'servedBy', 'dateReceived', 'punongBarangay', 'barangaykagawad', 'controlNO'];
+    const allowed = ['status', 'copyReceivedBy', 'servedBy', 'dateReceived', 'punongBarangay', 'barangaykagawad', 'controlNO', 'nameofRespondent', 'address', 'applicationName', 'orderDate', 'statement', 'hisOrher', 'nameofChildren', 'dateIssued', 'unavailabledate', 'time'];
     const updates = {};
     for (const k of allowed) if (Object.prototype.hasOwnProperty.call(payload, k)) updates[k] = payload[k];
     if (Object.keys(updates).length === 0) return res.status(400).json({ success: false, message: 'No updatable fields provided' });

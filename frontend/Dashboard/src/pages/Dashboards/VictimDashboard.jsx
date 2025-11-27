@@ -35,6 +35,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import Chatbot from "../../components/Chatbot";
+import { color } from "framer-motion";
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -173,30 +174,37 @@ export default function VictimDashboard() {
       {
         code: "RA 9262",
         name: "Anti-Violence Against Women and Their Children Act of 2004",
+        href: "https://www.officialgazette.gov.ph/2004/03/08/republic-act-no-9262/",
       },
-      { 
-        code: "RA 9710", 
-        name: "Magna Carta of Women (2009)" 
+      {
+        code: "RA 9710",
+        name: "Magna Carta of Women (2009)",
+        href: "https://www.officialgazette.gov.ph/2009/08/14/republic-act-no-9710/",
       },
-      { 
-        code: "RA 11313", 
-        name: "Safe Spaces Act (Bawal Bastos Law) - 2019" 
+      {
+        code: "RA 11313",
+        name: "Safe Spaces Act (Bawal Bastos Law) - 2019",
+        href: "https://www.officialgazette.gov.ph/2019/04/17/republic-act-no-11313/",
       },
       {
         code: "RA 9208",
         name: "Anti-Trafficking in Persons Act of 2003 (Expanded by RA 10364)",
+        href: "https://www.officialgazette.gov.ph/2003/05/26/republic-act-no-9208/",
       },
       {
         code: "RA 7877",
         name: "Anti-Sexual Harassment Act of 1995",
+        href: "https://www.officialgazette.gov.ph/1995/02/23/republic-act-no-7877/",
       },
       {
         code: "RA 8505",
         name: "Rape Victim Assistance and Protection Act of 1998",
+        href: "https://www.officialgazette.gov.ph/1998/02/12/republic-act-no-8505/",
       },
       {
         code: "RA 11648",
         name: "Act Providing Stronger Protection Against Rape and Sexual Exploitation (2022)",
+        href: "https://www.officialgazette.gov.ph/2022/05/06/republic-act-no-11648/",
       },
     ]);
 
@@ -462,7 +470,18 @@ export default function VictimDashboard() {
                 <Tag color="purple" style={{ marginRight: 8 }}>
                   {l.code}
                 </Tag>
-                {l.name}
+                {l.href ? (
+                  <a
+                    href={l.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: "#000", textDecoration: "none" }} // black text
+                  >
+                    {l.name}
+                  </a>
+                ) : (
+                  <span style={{ color: "#000" }}>{l.name}</span>
+                )}
               </div>
               <Text type="secondary" style={{ fontSize: 12 }}>
                 For guidance only. Contact your LGU/Barangay VAW Desk for help.
@@ -674,8 +693,8 @@ export default function VictimDashboard() {
                                 {r.dateReported
                                   ? new Date(r.dateReported).toLocaleString()
                                   : r.createdAt
-                                  ? new Date(r.createdAt).toLocaleString()
-                                  : ""}
+                                    ? new Date(r.createdAt).toLocaleString()
+                                    : ""}
                               </div>
                             </div>
                           </Space>
@@ -725,14 +744,14 @@ export default function VictimDashboard() {
                                 borderRadius: 999,
                                 ...(t.btn.primary
                                   ? {
-                                      background: BRAND.violet,
-                                      borderColor: BRAND.violet,
-                                      color: "#fff",
-                                    }
+                                    background: BRAND.violet,
+                                    borderColor: BRAND.violet,
+                                    color: "#fff",
+                                  }
                                   : {
-                                      borderColor: BRAND.violet,
-                                      color: BRAND.violet,
-                                    }),
+                                    borderColor: BRAND.violet,
+                                    color: BRAND.violet,
+                                  }),
                               }}
                             >
                               {t.btn.text}

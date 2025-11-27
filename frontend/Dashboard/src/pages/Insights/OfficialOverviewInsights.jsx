@@ -61,7 +61,7 @@ function Sparkline({ points = [], width = 420, height = 120, stroke = "#fff" }) 
   );
 }
 
-export default function OverviewInsights() {
+export default function OfficialOverviewInsights() {
   const { message } = AntApp.useApp();
   const screens = Grid.useBreakpoint();
   const loggedRef = React.useRef(false);
@@ -71,7 +71,7 @@ export default function OverviewInsights() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [metrics, setMetrics] = useState({
-    totalUsers: 0,
+    totalReports: 0,
     totalCases: 0,
     openCases: 0,
     recentActivities: [],
@@ -183,61 +183,33 @@ export default function OverviewInsights() {
           ? logsRes.data.data
           : logsRes.data?.items || [];
 
-      let totalUsers = 0;
-      if (Array.isArray(usersPayload)) {
-        totalUsers = usersPayload.length;
-      } else if (usersPayload && typeof usersPayload === "object") {
-        const d = usersPayload.data || usersPayload;
-        if (typeof d.total === "number") totalUsers = d.total;
-        else {
-          const adminsCount = Array.isArray(d.admins) ? d.admins.length : 0;
-          const victimsCount = Array.isArray(d.victims) ? d.victims.length : 0;
-          const officialsCount = Array.isArray(d.officials) ? d.officials.length : 0;
-          if (!adminsCount && !victimsCount && !officialsCount && Array.isArray(d.items)) {
-            totalUsers = d.items.length;
-          } else {
-            totalUsers = adminsCount + victimsCount + officialsCount;
-          }
-        }
-      }
+      // For officials: totalUsers becomes totalReports
+      const totalReports = Number(reports.length || 0);
 
       const totalCases = Number(cases.length || 0);
       const openCases = Number(
         cases.filter((c) => String(c.status || "Open") === "Open").length || 0
       );
 
+      // For officials: only show recent reports, not logs
       const recentActivities = [];
       
-      // Collect all logs and reports
-      const allActivities = [];
+      // Sort reports by createdAt in descending order (most recent first)
+      const sortedReports = [...reports].sort((a, b) => {
+        const dateA = new Date(a.createdAt || a.dateReported || 0);
+        const dateB = new Date(b.createdAt || b.dateReported || 0);
+        return dateB - dateA;
+      });
       
-      logs.forEach((l) =>
-        allActivities.push({
-          id: `log-${l._id || l.id}`,
-          title: l.action || "System event",
-          type: "log",
-          createdAt: l.createdAt || l.updatedAt,
-        })
-      );
-      
-      reports.forEach((r) =>
-        allActivities.push({
+      // Take only the 10 most recent reports
+      sortedReports.slice(0, 10).forEach((r) =>
+        recentActivities.push({
           id: `report-${r._id || r.reportID}`,
           title: r.title || `Report ${r.reportID || r._id}`,
           type: "report",
           createdAt: r.createdAt || r.dateReported,
         })
       );
-      
-      // Sort all activities by createdAt in descending order (most recent first)
-      allActivities.sort((a, b) => {
-        const dateA = new Date(a.createdAt || 0);
-        const dateB = new Date(b.createdAt || 0);
-        return dateB - dateA;
-      });
-      
-      // Take only the 10 most recent
-      recentActivities.push(...allActivities.slice(0, 10));
 
       // Calculate timeline data for the graph
       const today = new Date();
@@ -271,7 +243,7 @@ export default function OverviewInsights() {
       }));
 
       setMetrics({
-        totalUsers: Number(totalUsers || 0),
+        totalReports: Number(totalReports || 0),
         totalCases: Number(totalCases || 0),
         openCases: Number(openCases || 0),
         recentActivities: recentActivities.slice(0, 10),
@@ -279,7 +251,7 @@ export default function OverviewInsights() {
       });
     } catch (err) {
       message.error(err?.response?.data?.message || "Failed to load metrics");
-      setMetrics({ totalUsers: 0, totalCases: 0, openCases: 0, recentActivities: [] });
+      setMetrics({ totalReports: 0, totalCases: 0, openCases: 0, recentActivities: [] });
     } finally {
       if (withSpinner) setLoading(false);
     }
@@ -316,7 +288,7 @@ export default function OverviewInsights() {
   // Log page view when this insight tab is opened (with deduplication)
   useEffect(() => {
     try {
-      const path = '/admin/insights/overview';
+      const path = '/official/insights/overview';
       const lastPath = sessionStorage.getItem('__lastPageviewPath') || '';
       const lastAt = Number(sessionStorage.getItem('__lastPageviewAt') || '0');
       const now = Date.now();
@@ -503,9 +475,9 @@ export default function OverviewInsights() {
                         >
                           <div className="mini-stat">
                             <Text style={{ color: "#fff", opacity: 0.85, fontSize: 12 }}>
-                              Total Users
+                              Total Reports
                             </Text>
-                            <div className="mini-value">{metrics.totalUsers}</div>
+                            <div className="mini-value">{metrics.totalReports}</div>
                           </div>
                           <div className="mini-stat">
                             <Text style={{ color: "#fff", opacity: 0.85, fontSize: 12 }}>
@@ -598,7 +570,7 @@ export default function OverviewInsights() {
                       Daily Tasks
                     </Title>
                     <Button
-                      href="/admin/reports"
+                      href="/official/reports"
                       style={{
                         borderRadius: 12,
                         height: 40,
@@ -623,7 +595,7 @@ export default function OverviewInsights() {
                       My Actions
                     </Title>
                     <Button
-                      href="/admin/users"
+                      href="/official/cases"
                       style={{
                         borderRadius: 12,
                         height: 40,
@@ -633,7 +605,7 @@ export default function OverviewInsights() {
                         boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
                       }}
                     >
-                      Manage Users
+                      View Cases
                     </Button>
                   </Card>
                 </Col>
@@ -641,9 +613,9 @@ export default function OverviewInsights() {
                 {/* KPI chips row */}
                 <Col xs={24} md={8}>
                   <KpiChip
-                    icon={<UserOutlined style={{ color: BRAND.violet, fontSize: 18 }} />}
-                    label="Total Users"
-                    value={metrics.totalUsers}
+                    icon={<FileTextOutlined style={{ color: BRAND.violet, fontSize: 18 }} />}
+                    label="Total Reports"
+                    value={metrics.totalReports}
                     delay={100}
                   />
                 </Col>
@@ -666,11 +638,11 @@ export default function OverviewInsights() {
               </Row>
             </Col>
 
-            {/* Right “Activity” column */}
+            {/* Right "Activity" column */}
             <Col xs={24} xl={8}>
               <Card
                 className="fade-in-card"
-                title={<span style={{ color: BRAND.violet }}>Recent Activity</span>}
+                title={<span style={{ color: BRAND.violet }}>Recent Reports</span>}
                 variant="outlined"
                 style={glossyBase}
                 styles={{
@@ -690,7 +662,7 @@ export default function OverviewInsights() {
                   </div>
                 ) : metrics.recentActivities.length === 0 ? (
                   <Empty
-                    description={<span style={{ color: "#999" }}>No recent activity</span>}
+                    description={<span style={{ color: "#999" }}>No recent reports</span>}
                     style={{ padding: 24 }}
                   />
                 ) : (

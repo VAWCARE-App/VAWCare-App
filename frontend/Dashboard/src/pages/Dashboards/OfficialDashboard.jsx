@@ -17,7 +17,7 @@ import {
   MenuOutlined,
 } from "@ant-design/icons";
 
-import OverviewInsights from "../Insights/OverviewInsights";
+import OfficialOverviewInsights from "../Insights/OfficialOverviewInsights";
 import ReportsInsights from "../Insights/ReportsInsights";
 import CasesInsights from "../Insights/CasesInsights";
 import AlertsInsights from "../Insights/AlertsInsights";
@@ -213,7 +213,7 @@ export default function OfficialDashboard() {
                       padding: 16,
                     }}
                   >
-                    {t.key === "overview" && <OverviewInsights key={refreshKey} />}
+                    {t.key === "overview" && <OfficialOverviewInsights key={refreshKey} />}
                     {t.key === "reports" && <ReportsInsights key={refreshKey} />}
                     {t.key === "cases" && <CasesInsights key={refreshKey} />}
                     {t.key === "alerts" && <AlertsInsights key={refreshKey} />}
@@ -265,7 +265,7 @@ export default function OfficialDashboard() {
               </div>
 
               <div className="mobile-tab-content" style={{ background: "#F8F4FF", minHeight: "52vh", borderRadius: 12, padding: 10 }}>
-                {activeTab === "overview" && <OverviewInsights key={refreshKey} />}
+                {activeTab === "overview" && <OfficialOverviewInsights key={refreshKey} />}
                 {activeTab === "reports" && <ReportsInsights key={refreshKey} />}
                 {activeTab === "cases" && <CasesInsights key={refreshKey} />}
                 {activeTab === "alerts" && <AlertsInsights key={refreshKey} />}

@@ -748,9 +748,14 @@
                       { required: true, message: "Please enter first name" },
                       { min: 2, message: "First name must be at least 2 characters" },
                       { max: 60, message: "First name cannot exceed 60 characters" },
+                      { pattern: /^[a-zA-Z\s-]*$/, message: "First name can only contain letters, spaces, and hyphens" },
                     ]}
                   >
-                    <Input prefix={<UserOutlined />} placeholder="First name" />
+                    <Input prefix={<UserOutlined />} placeholder="First name" onKeyPress={(e) => {
+                      if (!/^[a-zA-Z\s-]$/.test(e.key)) {
+                        e.preventDefault();
+                      }
+                    }} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
@@ -761,9 +766,14 @@
                       { required: true, message: "Please enter last name" },
                       { min: 2, message: "Last name must be at least 2 characters" },
                       { max: 60, message: "Last name cannot exceed 60 characters" },
+                      { pattern: /^[a-zA-Z\s-]*$/, message: "Last name can only contain letters, spaces, and hyphens" },
                     ]}
                   >
-                    <Input prefix={<UserOutlined />} placeholder="Last name" />
+                    <Input prefix={<UserOutlined />} placeholder="Last name" onKeyPress={(e) => {
+                      if (!/^[a-zA-Z\s-]$/.test(e.key)) {
+                        e.preventDefault();
+                      }
+                    }} />
                   </Form.Item>
                 </Col>
 
@@ -773,7 +783,11 @@
                     label="Middle Initial"
                     rules={[{ pattern: /^[A-Za-z]$/, message: "Middle initial must be a single letter" }]}
                   >
-                    <Input maxLength={1} placeholder="M" />
+                    <Input maxLength={1} placeholder="M" onKeyPress={(e) => {
+                      if (!/^[a-zA-Z]$/.test(e.key)) {
+                        e.preventDefault();
+                      }
+                    }} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
@@ -785,7 +799,7 @@
                       { type: "email", message: "Please enter a valid email address" },
                     ]}
                   >
-                    <Input prefix={<MailOutlined />} placeholder="you@example.com" />
+                    <Input prefix={<MailOutlined />} placeholder="you@example.com" disabled />
                   </Form.Item>
                 </Col>
 
@@ -795,13 +809,25 @@
                     label="Contact Number"
                     rules={[
                       {
-                        pattern: /^\+?[0-9\s\-()]{7,20}$/, // simple international-ish pattern
-                        message: "Please enter a valid phone number",
+                        pattern: /^[+0-9\s\-()]*$/,
+                        message: "Phone number can only contain digits, spaces, +, (), and dashes",
                       },
-                      { max: 20, message: "Phone number is too long" },
+                      {
+                        validator: (_, value) => {
+                          if (!value) return Promise.resolve();
+                          const phPattern = /^(\+63|0)[0-9]{10}$/;
+                          return phPattern.test(value.replace(/[\s()-]/g, ''))
+                            ? Promise.resolve()
+                            : Promise.reject(new Error("Please enter a valid Philippine phone number (e.g., +639123456789 or 09123456789)"));
+                        },
+                      },
                     ]}
                   >
-                    <Input prefix={<PhoneOutlined />} placeholder="+63 (234) 567-8900" />
+                    <Input prefix={<PhoneOutlined />} placeholder="+63 (234) 567-8900" onKeyPress={(e) => {
+                      if (!/^[+0-9\s\-()]$/.test(e.key)) {
+                        e.preventDefault();
+                      }
+                    }} />
                   </Form.Item>
                 </Col>
               </Row>

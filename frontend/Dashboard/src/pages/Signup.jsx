@@ -662,18 +662,32 @@ export default function Signup() {
                         <Form.Item 
                           name="firstName" 
                           label={<span style={{ fontSize: 14, fontWeight: 500 }}>First Name</span>} 
-                          rules={[{ required: true, message: "Please enter your first name" }]}
+                          rules={[
+                            { required: true, message: "Please enter your first name" },
+                            { pattern: /^[a-zA-Z\s-]*$/, message: "First name can only contain letters, spaces, and hyphens" }
+                          ]}
                         >
-                          <Input placeholder="First name" size="large" />
+                          <Input placeholder="First name" size="large" onKeyPress={(e) => {
+                            if (!/^[a-zA-Z\s-]$/.test(e.key)) {
+                              e.preventDefault();
+                            }
+                          }} />
                         </Form.Item>
                       </Col>
                       <Col xs={24} sm={12}>
                         <Form.Item 
                           name="lastName" 
                           label={<span style={{ fontSize: 14, fontWeight: 500 }}>Last Name</span>} 
-                          rules={[{ required: true, message: "Please enter your last name" }]}
+                          rules={[
+                            { required: true, message: "Please enter your last name" },
+                            { pattern: /^[a-zA-Z\s-]*$/, message: "Last name can only contain letters, spaces, and hyphens" }
+                          ]}
                         >
-                          <Input placeholder="Last name" size="large" />
+                          <Input placeholder="Last name" size="large" onKeyPress={(e) => {
+                            if (!/^[a-zA-Z\s-]$/.test(e.key)) {
+                              e.preventDefault();
+                            }
+                          }} />
                         </Form.Item>
                       </Col>
                     </Row>
@@ -694,10 +708,23 @@ export default function Signup() {
                       label={<span style={{ fontSize: 14, fontWeight: 500 }}>Contact Number</span>}
                       rules={[
                         { required: true, message: "Please enter your contact number" },
-                        { pattern: /^(\+63|0)[0-9]{10}$/, message: "Enter a valid Philippine phone number" }
+                        { pattern: /^[+0-9\s(\)\-]*$/, message: "Contact number can only contain digits, spaces, +, (), and dashes" },
+                        {
+                          validator: (_, value) => {
+                            if (!value) return Promise.resolve();
+                            const phPattern = /^(\+63|0)[0-9]{10}$/;
+                            return phPattern.test(value.replace(/[\s()-]/g, ''))
+                              ? Promise.resolve()
+                              : Promise.reject(new Error("Please enter a valid Philippine phone number (e.g., +639123456789 or 09123456789)"));
+                          },
+                        },
                       ]}
                     >
-                      <Input placeholder="+639123456789 or 09123456789" size="large" />
+                      <Input placeholder="+639123456789 or 09123456789" size="large" onKeyPress={(e) => {
+                        if (!/^[+0-9\s\-()]$/.test(e.key)) {
+                          e.preventDefault();
+                        }
+                      }} />
                     </Form.Item>
                   </div>
                 </Step>
@@ -724,16 +751,26 @@ export default function Signup() {
                         <Form.Item 
                           name="emergencyContactName" 
                           label={<span style={{ fontSize: 14, fontWeight: 500 }}>Contact Name</span>}
+                          rules={[{ pattern: /^[a-zA-Z\s-]*$/, message: "Contact name can only contain letters, spaces, and hyphens" }]}
                         >
-                          <Input placeholder="Full name" size="large" />
+                          <Input placeholder="Full name" size="large" onKeyPress={(e) => {
+                            if (!/^[a-zA-Z\s-]$/.test(e.key)) {
+                              e.preventDefault();
+                            }
+                          }} />
                         </Form.Item>
                       </Col>
                       <Col xs={24} sm={12}>
                         <Form.Item 
                           name="emergencyContactRelationship" 
                           label={<span style={{ fontSize: 14, fontWeight: 500 }}>Relationship</span>}
+                          rules={[{ pattern: /^[a-zA-Z\s-]*$/, message: "Relationship can only contain letters, spaces, and hyphens" }]}
                         >
-                          <Input placeholder="e.g. Mother, Friend" size="large" />
+                          <Input placeholder="e.g. Mother, Friend" size="large" onKeyPress={(e) => {
+                            if (!/^[a-zA-Z\s-]$/.test(e.key)) {
+                              e.preventDefault();
+                            }
+                          }} />
                         </Form.Item>
                       </Col>
                     </Row>
@@ -741,9 +778,24 @@ export default function Signup() {
                     <Form.Item 
                       name="emergencyContactNumber" 
                       label={<span style={{ fontSize: 14, fontWeight: 500 }}>Contact Number</span>} 
-                      rules={[{ pattern: /^(\+63|0)[0-9]{10}$/, message: "Enter a valid Philippine phone number" }]}
+                      rules={[
+                        { pattern: /^[+0-9\s(\)\-]*$/, message: "Contact number can only contain digits, spaces, +, (), and dashes" },
+                        {
+                          validator: (_, value) => {
+                            if (!value) return Promise.resolve();
+                            const phPattern = /^(\+63|0)[0-9]{10}$/;
+                            return phPattern.test(value.replace(/[\s()-]/g, ''))
+                              ? Promise.resolve()
+                              : Promise.reject(new Error("Please enter a valid Philippine phone number (e.g., +639123456789 or 09123456789)"));
+                          },
+                        },
+                      ]}
                     >
-                      <Input placeholder="+639123456789 or 09123456789" size="large" />
+                      <Input placeholder="+639123456789 or 09123456789" size="large" onKeyPress={(e) => {
+                        if (!/^[+0-9\s\-()]$/.test(e.key)) {
+                          e.preventDefault();
+                        }
+                      }} />
                     </Form.Item>
                     
                     <Form.Item 

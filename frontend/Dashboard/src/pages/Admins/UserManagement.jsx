@@ -1002,7 +1002,21 @@ export default function UserManagement() {
                       </Form.Item>
                     </Col>
                     <Col xs={24}>
-                      <Form.Item name="phoneNumber" label="Phone Number">
+                      <Form.Item 
+                        name="phoneNumber" 
+                        label="Phone Number"
+                        rules={[
+                          {
+                            validator: (_, value) => {
+                              if (!value) return Promise.resolve();
+                              const phPattern = /^(\+63|0)[0-9]{10}$/;
+                              return phPattern.test(value.replace(/[\s()-]/g, ''))
+                                ? Promise.resolve()
+                                : Promise.reject(new Error("Please enter a valid Philippine phone number (e.g., +639123456789 or 09123456789)"));
+                            },
+                          },
+                        ]}
+                      >
                         <Input placeholder="+63 (234) 567-8900" />
                       </Form.Item>
                     </Col>

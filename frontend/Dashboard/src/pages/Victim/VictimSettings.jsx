@@ -689,18 +689,27 @@ export default function VictimSettings() {
                     rules={[
                       { required: true, message: "Please enter your first name" },
                       { max: 60, message: "First name cannot exceed 60 characters" },
+                      { pattern: /^[a-zA-Z\s-]*$/, message: "First name can only contain letters, spaces, and hyphens" },
                     ]}
                   >
-                    <Input prefix={<UserOutlined />} placeholder="First name" />
+                    <Input prefix={<UserOutlined />} placeholder="First name" onKeyPress={(e) => {
+                      if (!/^[a-zA-Z\s-]$/.test(e.key)) {
+                        e.preventDefault();
+                      }
+                    }} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
                   <Form.Item
                     name="lastName"
                     label="Last Name"
-                    rules={[{ required: true, message: "Please enter your last name" }, { max: 60, message: "Last name cannot exceed 60 characters" }]}
+                    rules={[{ required: true, message: "Please enter your last name" }, { max: 60, message: "Last name cannot exceed 60 characters" }, { pattern: /^[a-zA-Z\s-]*$/, message: "Last name can only contain letters, spaces, and hyphens" }]}
                   >
-                    <Input prefix={<UserOutlined />} placeholder="Last name" />
+                    <Input prefix={<UserOutlined />} placeholder="Last name" onKeyPress={(e) => {
+                      if (!/^[a-zA-Z\s-]$/.test(e.key)) {
+                        e.preventDefault();
+                      }
+                    }} />
                   </Form.Item>
                 </Col>
 
@@ -709,11 +718,23 @@ export default function VictimSettings() {
                     name="contactNumber"
                     label="Contact Number"
                     rules={[
-                      { pattern: /^[+0-9()\s-]{7,20}$/, message: "Enter a valid phone number" },
-                      { max: 20, message: "Phone number is too long" },
+                      { pattern: /^[+0-9\s(\)\-]*$/, message: "Phone number can only contain digits, spaces, +, (), and dashes" },
+                      {
+                        validator: (_, value) => {
+                          if (!value) return Promise.resolve();
+                          const phPattern = /^(\+63|0)[0-9]{10}$/;
+                          return phPattern.test(value.replace(/[\s()-]/g, ''))
+                            ? Promise.resolve()
+                            : Promise.reject(new Error("Please enter a valid Philippine phone number (e.g., +639123456789 or 09123456789)"));
+                        },
+                      },
                     ]}
                   >
-                    <Input prefix={<PhoneOutlined />} placeholder="+639123456789" />
+                    <Input prefix={<PhoneOutlined />} placeholder="+639123456789" onKeyPress={(e) => {
+                      if (!/^[+0-9\s(\)\-]$/.test(e.key)) {
+                        e.preventDefault();
+                      }
+                    }} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
@@ -734,6 +755,7 @@ export default function VictimSettings() {
                     name="emergencyContactName"
                     rules={[
                       { max: 80, message: "Name cannot exceed 80 characters" },
+                      { pattern: /^[a-zA-Z\s-]*$/, message: "Name can only contain letters, spaces, and hyphens" },
                       // If an emergency contact method is provided, name becomes required
                       {
                         validator: (_, value) => {
@@ -747,16 +769,27 @@ export default function VictimSettings() {
                       },
                     ]}
                   >
-                    <Input prefix={<UserOutlined />} placeholder="Full name" />
+                    <Input prefix={<UserOutlined />} placeholder="Full name" onKeyPress={(e) => {
+                      if (!/^[a-zA-Z\s-]$/.test(e.key)) {
+                        e.preventDefault();
+                      }
+                    }} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
                   <Form.Item
                     label="Relationship"
                     name="emergencyContactRelationship"
-                    rules={[{ max: 40, message: "Relationship text is too long" }]}
+                    rules={[
+                      { max: 40, message: "Relationship text is too long" },
+                      { pattern: /^[a-zA-Z\s-]*$/, message: "Relationship can only contain letters, spaces, and hyphens" }
+                    ]}
                   >
-                    <Input placeholder="e.g. Mother, Friend" />
+                    <Input placeholder="e.g. Mother, Friend" onKeyPress={(e) => {
+                      if (!/^[a-zA-Z\s-]$/.test(e.key)) {
+                        e.preventDefault();
+                      }
+                    }} />
                   </Form.Item>
                 </Col>
 
@@ -765,7 +798,7 @@ export default function VictimSettings() {
                     label="Contact Number"
                     name="emergencyContactNumber"
                     rules={[
-                      { pattern: /^[+0-9()\s-]{7,20}$/, message: "Enter a valid phone number for emergency contact" },
+                      { pattern: /^[+0-9\s\-()]*$/, message: "Contact number can only contain digits, spaces, +, (), and dashes" },
                       {
                         validator: (_, value) => {
                           const name = form.getFieldValue("emergencyContactName");
@@ -777,9 +810,22 @@ export default function VictimSettings() {
                           return Promise.resolve();
                         },
                       },
+                      {
+                        validator: (_, value) => {
+                          if (!value) return Promise.resolve();
+                          const phPattern = /^(\+63|0)[0-9]{10}$/;
+                          return phPattern.test(value.replace(/[\s()-]/g, ''))
+                            ? Promise.resolve()
+                            : Promise.reject(new Error("Please enter a valid Philippine phone number (e.g., +639123456789 or 09123456789)"));
+                        },
+                      },
                     ]}
                   >
-                    <Input prefix={<PhoneOutlined />} placeholder="09123456789" />
+                    <Input prefix={<PhoneOutlined />} placeholder="09123456789" onKeyPress={(e) => {
+                      if (!/^[+0-9\s\-()]$/.test(e.key)) {
+                        e.preventDefault();
+                      }
+                    }} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>

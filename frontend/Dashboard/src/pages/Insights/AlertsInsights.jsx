@@ -102,6 +102,7 @@ export default function AlertsInsights() {
     const [range, setRange] = useState('current'); // 'current' | 'previous' | 'last2' | 'all'
     const [dssLoading, setDssLoading] = useState(true);
     const [dssInsights, setDssInsights] = useState(null);
+    const [showTagalog, setShowTagalog] = useState(false);
 
     function formatRangeLabel(range) {
         const now = new Date();
@@ -267,7 +268,7 @@ export default function AlertsInsights() {
             durationData.reduce((a, b) => a + b.duration, 0) /
             (durationData.length || 1);
         insights.push({
-            label: "Avg. Response Time",
+            label: "Avg. Active Duration",
             value: avgDuration,
             type: avgDuration > 30 ? "error" : avgDuration > 15 ? "warning" : "success",
         });
@@ -533,7 +534,7 @@ export default function AlertsInsights() {
                     {/* Duration Bar */}
                     <Col xs={24} md={12}>
                         <Card
-                            title="Average Response Time (Minutes)"
+                            title="Alert Active Duration (Minutes)"
                             bordered
                             style={{ borderRadius: 16, borderColor: BRAND.soft }}
                         >
@@ -583,6 +584,17 @@ export default function AlertsInsights() {
                         <Card
                             title="Alerts Recommendations"
                             bordered
+                            extra={
+                                <Space>
+                                    <Button
+                                        type={showTagalog ? 'primary' : 'default'}
+                                        onClick={() => setShowTagalog(s => !s)}
+                                        size="small"
+                                    >
+                                        {showTagalog ? 'English' : 'Tagalog'}
+                                    </Button>
+                                </Space>
+                            }
                             style={{ borderRadius: 16, borderColor: BRAND.soft }}
                         >
                             {loading ? (
@@ -622,10 +634,10 @@ export default function AlertsInsights() {
                                                             <Tag style={{ marginLeft: 8 }} color="error">URGENT</Tag>
                                                         )}
                                                     <br />
-                                                        <Typography.Text>{i.message || ''}</Typography.Text>
-                                                            {(i.recommendations && i.recommendations.length > 0) && (
+                                                        <Typography.Text>{(showTagalog && i.message_tl) ? i.message_tl : i.message || ''}</Typography.Text>
+                                                            {((showTagalog && i.recommendations_tl && i.recommendations_tl.length) ? i.recommendations_tl : i.recommendations) && (((showTagalog && i.recommendations_tl && i.recommendations_tl.length) ? i.recommendations_tl : i.recommendations).length > 0) && (
                                                                 <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 18 }}>
-                                                                    {i.recommendations.map((r, ri) => (
+                                                                    {((showTagalog && i.recommendations_tl && i.recommendations_tl.length) ? i.recommendations_tl : i.recommendations).map((r, ri) => (
                                                                         <li key={ri}><Typography.Text>{r}</Typography.Text></li>
                                                                     ))}
                                                                 </ul>

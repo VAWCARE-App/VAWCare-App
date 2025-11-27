@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const fieldEncryption = require('mongoose-field-encryption').fieldEncryption;
 
 const incidentReportSchema = new mongoose.Schema({
     reportID: {
@@ -51,22 +52,20 @@ const incidentReportSchema = new mongoose.Schema({
         default: 'Pending',
         trim: true
     },
-
 }, {
-    timestamps: true // This will add createdAt and updatedAt timestamps
+    timestamps: true // createdAt and updatedAt
 });
 
-// Explicit createdAt field (kept for clarity; timestamps:true will also manage this value)
-incidentReportSchema.add({
-    createdAt: { type: Date, default: Date.now }
-});
+// Explicit createdAt (optional, timestamps:true already handles this)
+incidentReportSchema.add({ createdAt: { type: Date, default: Date.now } });
 
-// Soft-delete fields
+// Soft-delete
 incidentReportSchema.add({
     deleted: { type: Boolean, default: false },
     deletedAt: { type: Date, default: null }
 });
 
+// Default "not deleted" query
 function addNotDeletedConstraint() {
     const q = this.getQuery();
     if (q && Object.prototype.hasOwnProperty.call(q, 'deleted')) return;
@@ -81,22 +80,29 @@ incidentReportSchema.pre('findOneAndUpdate', function(next) {
     next();
 });
 
-// Create indexes for faster querying
-// reportID already has `unique: true` on the field definition; avoid duplicate index declaration
+// Indexes
 incidentReportSchema.index({ victimID: 1 });
 incidentReportSchema.index({ status: 1 });
 incidentReportSchema.index({ dateReported: -1 });
 
-// Method to get reports by status
+// Statics
 incidentReportSchema.statics.getReportsByStatus = function(status) {
     return this.find({ status }).populate('victimID');
 };
 
-// Virtual for getting time elapsed since report
+// Virtuals
 incidentReportSchema.virtual('timeElapsed').get(function() {
     return Date.now() - this.dateReported;
 });
 
-const IncidentReport = mongoose.model('IncidentReport', incidentReportSchema);
+// 🔒 Field-level encryption plugin
+incidentReportSchema.plugin(fieldEncryption, {
+    fields: ['description', 'perpetrator', 'location'],
+    secret: process.env.ENCRYPTION_SECRET,
+    saltGenerator: function(secret) {
+        return secret.slice(0, 16); // per-document salt
+    }
+});
 
+const IncidentReport = mongoose.model('IncidentReport', incidentReportSchema);
 module.exports = IncidentReport;

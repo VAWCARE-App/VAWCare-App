@@ -352,7 +352,16 @@ export default function CreateOfficial() {
                       },
                     ]}
                   >
-                    <Input prefix={<PhoneOutlined />} placeholder="09171234567 or +63917..." />
+                    <Input 
+                      prefix={<PhoneOutlined />} 
+                      placeholder="09171234567 or +63917..." 
+                      onKeyPress={(e) => {
+                        // Allow only digits and +
+                        if (!/[0-9+]/.test(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
+                    />
                   </Form.Item>
                 </Col>
 

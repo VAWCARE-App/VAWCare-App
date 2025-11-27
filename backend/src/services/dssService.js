@@ -1694,7 +1694,7 @@ async function suggestForReportsInsights(options = {}) {
     const Reports = require('../models/IncidentReports');
     const query = since ? { createdAt: { $gte: since } } : {};
     if (until) query.createdAt.$lt = until;
-    const docs = await Reports.find(query).lean().exec();
+    const docs = await Reports.find(query).exec(); //.lean()
 
   const insights = [];
   const total = docs.length;

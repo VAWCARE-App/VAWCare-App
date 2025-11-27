@@ -32,12 +32,12 @@ async function calculateRetractionProbability(victimId) {
     if (process.env.DSS_DEBUG) console.log('No victimId provided for retraction analysis');
     return null;
   }
-  
+
   try {
     // First try to find the victim to get their ObjectId
     const Victims = require('../models/Victims');
     let victim = null;
-    
+
     try {
       // Try finding by victimID string first
       victim = await Victims.findOne({ victimID: victimId }).exec();
@@ -52,7 +52,7 @@ async function calculateRetractionProbability(victimId) {
     const victimObjectId = victim?._id || victimId;
     const Cases = require('../models/Cases');
     const Alert = require('../models/Alert');
-    
+
     // Get counts of cancelled cases and alerts for this victim
     const cancelledCases = await Cases.countDocuments({
       $or: [
@@ -61,7 +61,7 @@ async function calculateRetractionProbability(victimId) {
       ],
       status: { $in: ['Cancelled', 'Canceled'] }
     });
-    
+
     const cancelledAlerts = await Alert.countDocuments({
       $or: [
         { victimID: victimObjectId },
@@ -72,7 +72,7 @@ async function calculateRetractionProbability(victimId) {
 
     // Calculate probability and generate suggestion
     console.log('Found cancelled counts:', { cancelledCases, cancelledAlerts });
-    
+
     const suggestion = {
       cancelledCases,
       cancelledAlerts,
@@ -185,7 +185,7 @@ const SEVERITY_KEYWORDS = {
   High: {
     Sexual: [
       // Tagalog
-      'ginahasa', 'nirape','rape', 'hinalay', 'hinipuan', 'pinagsamantalahan', 'sekswal na karahasan', 
+      'ginahasa', 'nirape', 'rape', 'hinalay', 'hinipuan', 'pinagsamantalahan', 'sekswal na karahasan',
       'inabuso', 'kinantot', 'tinira', 'pinilit makipagtalik', 'pinagsamantalahan', 'kinikilan',
       // English
       'rape', 'molested', 'sexual assault', 'forced sex', 'sexually abused', 'gang rape',
@@ -292,7 +292,7 @@ function detectSeverityFromKeywords(description, incidentType) {
   // --- Fuzzy matching helpers ---
   // Simple Levenshtein distance implementation
   function levenshtein(a, b) {
-    if (!a || !b) return (a || b) ? Math.max((a||'').length, (b||'').length) : 0;
+    if (!a || !b) return (a || b) ? Math.max((a || '').length, (b || '').length) : 0;
     const al = a.length;
     const bl = b.length;
     const dp = Array(al + 1).fill(null).map(() => Array(bl + 1).fill(0));
@@ -362,7 +362,7 @@ function detectSeverityFromKeywords(description, incidentType) {
   for (const kw of SEVERITY_KEYWORDS.Low[type] || []) {
     if (matchesKeywordFuzzy(kw)) return 'Low';
   }
-  
+
   // Default severities by type
   if (type === 'sexual') return 'High';
   if (type === 'physical') return 'Medium';
@@ -849,17 +849,17 @@ function preprocessText(text) {
 
   const textLower = text.toLowerCase();
   const features = [];
-  
+
   // Count keyword occurrences for each category
   Object.values(keywords).forEach(kwList => {
-    const count = kwList.reduce((acc, kw) => 
+    const count = kwList.reduce((acc, kw) =>
       acc + (textLower.split(kw).length - 1), 0);
-    features.push(Math.min(count, 5) / 5); 
+    features.push(Math.min(count, 5) / 5);
   });
 
   // Add text length feature
   features.push(Math.min(text.length / 1000, 1));
-  
+
   // Pad to fixed length
   while (features.length < 20) features.push(0);
   return features;
@@ -867,10 +867,10 @@ function preprocessText(text) {
 
 async function buildAndTrainModel(samples, labels) {
   if (!tf) throw new Error('TensorFlow is not available');
-  
+
   // More sophisticated model architecture
   const model = tf.sequential();
-  
+
   // Input layer with text features and categorical features
   model.add(tf.layers.dense({
     inputShape: [samples[0].length],
@@ -878,35 +878,35 @@ async function buildAndTrainModel(samples, labels) {
     activation: 'relu',
     kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
   }));
-  
+
   model.add(tf.layers.dropout({ rate: 0.3 }));
-  
+
   // Hidden layers
   model.add(tf.layers.dense({
     units: 32,
     activation: 'relu',
     kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
   }));
-  
+
   model.add(tf.layers.dropout({ rate: 0.2 }));
-  
+
   // Output layer for risk levels
   model.add(tf.layers.dense({
     units: 3, // Low, Medium, High
     activation: 'softmax'
   }));
-  
+
   // Compile with class weights to handle imbalanced data
   model.compile({
     optimizer: tf.train.adam(0.001),
     loss: 'categoricalCrossentropy',
     metrics: ['accuracy']
   });
-  
+
   // Convert data to tensors
   const xs = tf.tensor2d(samples);
   const ys = tf.oneHot(tf.tensor1d(labels, 'int32'), 3); // One-hot encode 3 risk levels
-  
+
   // Train with early stopping
   const history = await model.fit(xs, ys, {
     epochs: 50,
@@ -918,7 +918,7 @@ async function buildAndTrainModel(samples, labels) {
       patience: 5
     })
   });
-  
+
   return { model, history };
 }
 
@@ -928,7 +928,7 @@ async function trainModelFromCases(minSamples = 20) {
     riskLevel: { $exists: true },
     description: { $exists: true }
   }).limit(1000).lean();
-  
+
   if (!docs || docs.length < minSamples) {
     console.log(`Not enough samples for training (${docs?.length || 0} < ${minSamples})`);
     return null;
@@ -940,7 +940,7 @@ async function trainModelFromCases(minSamples = 20) {
   docs.forEach(d => {
     // Text features from description
     const textFeatures = preprocessText(d.description);
-    
+
     // Categorical and numerical features
     const incidentTypeVec = incidentTypeToOneHot(d.incidentType);
     const victimTypeVec = victimTypeToOneHot(d.victimType);
@@ -948,7 +948,7 @@ async function trainModelFromCases(minSamples = 20) {
     const hasLocation = d.location ? 1 : 0;
     const hasEvidence = d.evidenceUrls?.length > 0 ? 1 : 0;
     const timeOfDay = d.createdAt ? new Date(d.createdAt).getHours() / 24 : 0.5;
-    
+
     // Combine all features
     const features = [
       ...textFeatures,
@@ -959,9 +959,9 @@ async function trainModelFromCases(minSamples = 20) {
       hasEvidence,
       timeOfDay
     ];
-    
+
     samples.push(features);
-    
+
     // Convert risk level to numeric label
     const riskMap = { Low: 0, Medium: 1, High: 2 };
     labels.push(riskMap[d.riskLevel] || 0);
@@ -971,7 +971,7 @@ async function trainModelFromCases(minSamples = 20) {
     const { model, history } = await buildAndTrainModel(samples, labels);
     mlModel = model;
     lastTrainingTime = new Date().toISOString();
-    
+
     return {
       model: mlModel,
       sampleCount: samples.length,
@@ -1010,35 +1010,35 @@ async function suggestForCase(payload = {}, modelObj = null) {
 
   // Get retraction analysis if we have a victim ID
   const retractionAnalysis = await calculateRetractionProbability(payload.victimId);
-  
+
   const victimType = normalizeVictimType(payload.victimType || payload.victimCategory || payload.victim);
   dlog('Normalized victim type:', victimType);
-  
+
   // Keep track of original incident type
   const originalIncidentType = payload.incidentType;
-  
+
   // Detect severity from description keywords
   const severity = detectSeverityFromKeywords(payload.description, payload.incidentType);
   dlog('Detected severity:', severity);
-  
+
   // Check if this is a manual risk level override
   const isManualOverride = !!payload.riskLevel;
-  
+
   // Get base risk from incident type, considering manual override
   const baseRisk = mapIncidentToBaseRisk(payload.incidentType, severity, payload.riskLevel);
   dlog('Base risk:', baseRisk);
-  
+
   // Adjust for victim type (children get higher risk), respecting manual override
   // Use `let` because ML prediction logic below may update this value conditionally
   let adjustedRisk = adjustRiskForVictimType(baseRisk, victimType, payload.incidentType, isManualOverride);
   dlog('Adjusted risk:', adjustedRisk);
-  
+
   // (defer suggestion lookup until we've attempted to resolve victim type from DB)
-  
+
   // ML-enhanced risk assessment
   let mlPrediction = null;
   let confidence = 0;
-  
+
   if (mlModel && tf) {
     try {
       // Prepare features for ML model
@@ -1049,7 +1049,7 @@ async function suggestForCase(payload = {}, modelObj = null) {
       const hasLocation = payload.location ? 1 : 0;
       const hasEvidence = payload.evidenceUrls?.length > 0 ? 1 : 0;
       const timeOfDay = new Date().getHours() / 24;
-      
+
       const features = [
         ...textFeatures,
         ...incidentTypeVec,
@@ -1059,17 +1059,17 @@ async function suggestForCase(payload = {}, modelObj = null) {
         hasEvidence,
         timeOfDay
       ];
-      
+
       // Guard ML execution to avoid unexpected runtime errors
       try {
         const prediction = mlModel.predict(tf.tensor2d([features]));
         const probs = Array.from(prediction.dataSync());
-        
+
         // Map probabilities to risk levels
         const riskLevels = ['Low', 'Medium', 'High'];
         const maxProb = Math.max(...probs);
         const maxIndex = probs.indexOf(maxProb);
-        
+
         mlPrediction = riskLevels[maxIndex];
         confidence = maxProb;
 
@@ -1079,8 +1079,8 @@ async function suggestForCase(payload = {}, modelObj = null) {
           if (victimType === 'child') {
             // For children, take the higher risk level
             adjustedRisk = ['Low', 'Medium', 'High'].indexOf(mlPrediction) >
-                          ['Low', 'Medium', 'High'].indexOf(adjustedRisk) ?
-                          mlPrediction : adjustedRisk;
+              ['Low', 'Medium', 'High'].indexOf(adjustedRisk) ?
+              mlPrediction : adjustedRisk;
           } else {
             // For others, use ML prediction with high confidence
             adjustedRisk = mlPrediction;
@@ -1096,7 +1096,7 @@ async function suggestForCase(payload = {}, modelObj = null) {
       // Continue with rule-based assessment
     }
   }
-  
+
   // Calculate probabilities for the risk levels (DB-aware: include cancellation history)
   const probs = await synthesizeProbabilities(payload.incidentType, adjustedRisk, { victimId: payload.victimId || payload.victimID });
 
@@ -1104,13 +1104,13 @@ async function suggestForCase(payload = {}, modelObj = null) {
   const formattedIncidentType = payload.incidentType ? (
     payload.incidentType.split(/\s+/).map(s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()).join(' ')
   ) : '';
-  
+
   // Handle immediate assistance probability based on risk level and manual override
   let immediateProb = 0;
-  
+
   if (isManualOverride) {
     // For manual override, set probability based on the risk level
-    switch(adjustedRisk.toLowerCase()) {
+    switch (adjustedRisk.toLowerCase()) {
       case 'high': immediateProb = 1.0; break;
       case 'medium': immediateProb = 0.5; break;
       case 'low': immediateProb = 0.2; break;
@@ -1133,12 +1133,12 @@ async function suggestForCase(payload = {}, modelObj = null) {
       immediateProb = (probs[2] || 0) + (probs[3] || 0) + (adjustedRisk === 'High' ? 0.3 : 0);
     }
   }
-  
+
   // Adjust for children, but respect manual override.
   const incidentLower = (formattedIncidentType || '').toLowerCase();
   const childImmediateAllowed = victimType === 'child' && !isManualOverride && !['economic', 'psychological'].includes(incidentLower);
   const finalImmediateProb = childImmediateAllowed ? Math.max(immediateProb, 0.6) : immediateProb;
-  
+
   // Initialize rules engine and evaluate rules
   const { initEngine, evaluateRules } = require('./rulesEngine');
   initEngine(); // Make sure engine is initialized with current rules
@@ -1167,9 +1167,9 @@ async function suggestForCase(payload = {}, modelObj = null) {
     }
   }
 
-  const vtForRules = resolvedVictimType === 'child' ? 'Child' : 
-                    resolvedVictimType === 'woman' ? 'Woman' : 'Anonymous';
-  
+  const vtForRules = resolvedVictimType === 'child' ? 'Child' :
+    resolvedVictimType === 'woman' ? 'Woman' : 'Anonymous';
+
   // Create facts object with all necessary information
   const facts = {
     victimType: vtForRules,
@@ -1183,7 +1183,7 @@ async function suggestForCase(payload = {}, modelObj = null) {
   };
 
   dlog('Evaluating DSS rules with facts:', facts);
-  
+
   // Get appropriate suggestion based on risk level and incident type
   // Pass the flat facts object (rules engine expects top-level facts)
   const ruleResult = await evaluateRules(facts);
@@ -1212,7 +1212,7 @@ async function suggestForCase(payload = {}, modelObj = null) {
     dssImmediateAssistanceProbability: finalImmediateProb,
     dssSuggestion: finalSuggestion || 'Review the report and coordinate with MSWD or PNP-WCPD for proper intervention and documentation.',
     dssRuleMatched: ruleResult.matched,
-  // dssChosenRule will be set below after selecting an authoritative event
+    // dssChosenRule will be set below after selecting an authoritative event
     dssManualOverride: !!payload.riskLevel,
 
     // API-friendly fields
@@ -1282,9 +1282,9 @@ async function suggestForCase(payload = {}, modelObj = null) {
 // Retrain model periodically or on demand
 async function ensureModelTrained(force = false) {
   const TRAINING_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
-  
-  if (force || !mlModel || !lastTrainingTime || 
-      (new Date() - new Date(lastTrainingTime)) > TRAINING_INTERVAL) {
+
+  if (force || !mlModel || !lastTrainingTime ||
+    (new Date() - new Date(lastTrainingTime)) > TRAINING_INTERVAL) {
     return await trainModelFromCases();
   }
   return null;
@@ -1333,11 +1333,11 @@ async function suggestForCasesInsights(options = {}) {
     if (until) query.createdAt.$lt = until;
     const docs = await CasesModel.find(query).lean().exec();
 
-  const insights = [];
-  const total = docs.length;
-  const sampleSize = total;
-  const lowSample = sampleSize < 5; // consider small samples when <5 records
-  const sampleNote = lowSample ? ` (small sample: ${sampleSize} records — interpret with caution)` : '';
+    const insights = [];
+    const total = docs.length;
+    const sampleSize = total;
+    const lowSample = sampleSize < 5; // consider small samples when <5 records
+    const sampleNote = lowSample ? ` (small sample: ${sampleSize} records — interpret with caution)` : '';
     const open = docs.filter(d => d.status === 'Open').length;
     const resolved = docs.filter(d => d.status === 'Resolved').length;
     const cancelled = docs.filter(d => d.status === 'Cancelled' || d.status === 'Canceled').length;
@@ -1345,10 +1345,10 @@ async function suggestForCasesInsights(options = {}) {
     // Trend data by date
     const counts = {};
     docs.forEach(d => {
-      const date = new Date(d.createdAt).toISOString().slice(0,10);
+      const date = new Date(d.createdAt).toISOString().slice(0, 10);
       counts[date] = (counts[date] || 0) + 1;
     });
-    const trend = Object.entries(counts).map(([date,count]) => ({ date, count }));
+    const trend = Object.entries(counts).map(([date, count]) => ({ date, count }));
 
     // For the 'current' range, compute month-over-month counts directly and
     // emit an Increase in Cases insight when the current calendar month has
@@ -1406,7 +1406,7 @@ async function suggestForCasesInsights(options = {}) {
     }
 
 
-  // Active ratio
+    // Active ratio
     const activeRatio = (open / (total || 1)) * 100;
     if (lowSample) {
       insights.push({
@@ -1442,7 +1442,7 @@ async function suggestForCasesInsights(options = {}) {
       });
     }
 
-// High-risk cases proportion
+    // High-risk cases proportion
     const highRiskCount = docs.filter(d => (d.riskLevel || '').toString().toLowerCase() === 'high').length;
     const highRiskRate = highRiskCount / (total || 1);
     if (highRiskRate > 0.15) {
@@ -1468,7 +1468,7 @@ async function suggestForCasesInsights(options = {}) {
 
     // Stagnant cases (>14 days)
     const stagnant = docs.filter(d => {
-      const ageDays = (Date.now() - new Date(d.createdAt)) / (1000*60*60*24);
+      const ageDays = (Date.now() - new Date(d.createdAt)) / (1000 * 60 * 60 * 24);
       return (d.status === 'Open' || d.status === 'Under Investigation') && ageDays > 14;
     }).length;
     if (stagnant > 0) insights.push({
@@ -1513,7 +1513,7 @@ async function suggestForCasesInsights(options = {}) {
     // Incident type distribution
     const byType = {};
     docs.forEach(d => { const t = (d.incidentType || 'Other'); byType[t] = (byType[t] || 0) + 1; });
-    const typeEntries = Object.entries(byType).sort((a,b) => b[1] - a[1]);
+    const typeEntries = Object.entries(byType).sort((a, b) => b[1] - a[1]);
     if (typeEntries.length > 0) {
       const [topType, topCount] = typeEntries[0];
       const pct = (topCount / (total || 1)) * 100;
@@ -1557,7 +1557,7 @@ async function suggestForCasesInsights(options = {}) {
       }
     }
 
-// Anonymous cases: show count and proportion (focus on cases rather than 'reporting')
+    // Anonymous cases: show count and proportion (focus on cases rather than 'reporting')
     const anonCount = docs.filter(d => {
       try {
         if ((d.victimType || '').toString().toLowerCase() === 'anonymous') return true;
@@ -1691,11 +1691,11 @@ async function suggestForReportsInsights(options = {}) {
     if (until) query.createdAt.$lt = until;
     const docs = await Reports.find(query).exec(); //.lean()
 
-  const insights = [];
-  const total = docs.length;
-  const sampleSize = total;
-  const lowSample = sampleSize < 5;
-  const sampleNote = lowSample ? ` (small sample: ${sampleSize} records — interpret with caution)` : '';
+    const insights = [];
+    const total = docs.length;
+    const sampleSize = total;
+    const lowSample = sampleSize < 5;
+    const sampleNote = lowSample ? ` (small sample: ${sampleSize} records — interpret with caution)` : '';
     const open = docs.filter(d => d.status === 'Open').length;
     const pending = docs.filter(d => d.status === 'Pending').length;
     const closed = docs.filter(d => d.status === 'Closed').length;
@@ -1703,10 +1703,10 @@ async function suggestForReportsInsights(options = {}) {
     // Trend
     const counts = {};
     docs.forEach(d => {
-      const date = new Date(d.createdAt).toISOString().slice(0,10);
+      const date = new Date(d.createdAt).toISOString().slice(0, 10);
       counts[date] = (counts[date] || 0) + 1;
     });
-    const trend = Object.entries(counts).map(([date,count]) => ({ date, count }));
+    const trend = Object.entries(counts).map(([date, count]) => ({ date, count }));
 
     // Check for month-over-month increase in current range
     if (options.range === 'current') {
@@ -1717,7 +1717,7 @@ async function suggestForReportsInsights(options = {}) {
         const curMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
         const prevMonthCount = await ReportsModel.countDocuments({ createdAt: { $gte: prevMonthStart, $lt: curMonthStart } }).exec();
         const curMonthCount = await ReportsModel.countDocuments({ createdAt: { $gte: curMonthStart } }).exec();
-        
+
         if (curMonthCount > prevMonthCount) {
           let percent = null;
           let deltaCount = null;
@@ -1728,7 +1728,7 @@ async function suggestForReportsInsights(options = {}) {
             deltaCount = curMonthCount;
             percent = 100;
           }
-          
+
           if (deltaCount > 0) {
             insights.push({
               label: 'Increase in Reports',
@@ -1816,7 +1816,7 @@ async function suggestForReportsInsights(options = {}) {
 
     // Pending >7 days
     const oldPending = docs.filter(d => {
-      const age = (Date.now() - new Date(d.createdAt)) / (1000*60*60*24);
+      const age = (Date.now() - new Date(d.createdAt)) / (1000 * 60 * 60 * 24);
       return (d.status === 'Open' || d.status === 'Pending') && age > 7;
     }).length;
     if (oldPending > 0) insights.push({
@@ -1841,7 +1841,7 @@ async function suggestForReportsInsights(options = {}) {
     // Incident type distribution
     const rptByType = {};
     docs.forEach(d => { const t = (d.incidentType || 'Other'); rptByType[t] = (rptByType[t] || 0) + 1; });
-    const rptTypeEntries = Object.entries(rptByType).sort((a,b) => b[1] - a[1]);
+    const rptTypeEntries = Object.entries(rptByType).sort((a, b) => b[1] - a[1]);
     if (rptTypeEntries.length > 0) {
       const [topType, topCount] = rptTypeEntries[0];
       const pct = (topCount / (total || 1)) * 100;
@@ -1886,36 +1886,54 @@ async function suggestForReportsInsights(options = {}) {
     // Repeat reporters (same reporter submits multiple reports)
     try {
       const reporterCounts = {};
+
+      console.log("=== RAW REPORTER VALUES ===");
       docs.forEach(d => {
-        const r = (d.reporterId || d.reporter || 'unknown');
+        const raw = d.victimID || d.reporter || null;
+        console.log(raw);  // <-- SEE EXACT VALUES
+      });
+
+      docs.forEach(d => {
+        const r = String(d.victimID || d.reporter || "").trim();
+        if (!r) return; // skip unknown/null/empty
         reporterCounts[r] = (reporterCounts[r] || 0) + 1;
       });
+
+      console.log("=== COUNTED REPORTERS ===");
+      console.log(reporterCounts); // <-- SEE COUNTS
+
       const repeaters = Object.values(reporterCounts).filter(c => c > 1).length;
+      console.log("=== REPEATERS:", repeaters);
+
       if (repeaters > 0) {
         insights.push({
-          label: 'Repeat Reporters',
+          label: "Repeat Reporters",
           value: repeaters,
-          type: 'info',
-          message: `${repeaters} reporters submitted more than one report. Follow up to see if these indicate ongoing issues.`,
-          message_tl: `${repeaters} nag-ulat ang higit sa isang ulat. Makipag-ugnayan upang alamin kung ito ay nagpapahiwatig ng patuloy na isyu.`,
+          type: "info",
+          message: `${repeaters} reporters submitted more than one report.`,
+          message_tl: `${repeaters} nag-ulat ang higit sa isang ulat.`,
           recommendations: [
-            'Follow up with repeat reporters to gather more context.',
-            'Identify possible ongoing incidents that need urgent attention.'
+            "Follow up with repeat reporters to gather more context.",
+            "Identify possible ongoing incidents that need urgent attention."
           ],
           recommendations_tl: [
-            'Makipag-ugnayan sa mga paulit-ulit na nag-uulat upang makakuha ng higit na konteksto.',
-            'Tukuyin ang mga posibleng patuloy na insidente na nangangailangan ng agarang pansin.'
+            "Makipag-ugnayan sa mga paulit-ulit na nag-uulat upang makakuha ng higit na konteksto.",
+            "Tukuyin ang mga posibleng patuloy na insidente na nangangailangan ng agarang pansin."
           ]
         });
       }
-    } catch (e) { /* ignore */ }
+
+    } catch (e) {
+      console.error(e);
+    }
+
 
     // Time-of-day concentration for reports
     try {
       const hours = Array(24).fill(0);
       docs.forEach(d => { const h = new Date(d.createdAt).getHours(); hours[h] = (hours[h] || 0) + 1; });
       const max = Math.max(...hours);
-      const totalDocs = hours.reduce((a,b) => a + b, 0) || 1;
+      const totalDocs = hours.reduce((a, b) => a + b, 0) || 1;
       if (max / totalDocs > 0.4) {
         const hour = hours.indexOf(max);
         function formatHour(h) {
@@ -1929,16 +1947,16 @@ async function suggestForReportsInsights(options = {}) {
           label: 'Report Time Concentration',
           value: (max / totalDocs) * 100,
           type: 'info',
-            message: `Many reports are submitted around ${start} (${Math.round((max/totalDocs)*100)}%). Consider targeted monitoring.`,
-            message_tl: `Maraming ulat ang isinusumite bandang ${start} (${Math.round((max/totalDocs)*100)}%). Isaalang-alang ang nakatuong monitoring.`,
-            recommendations: [
-              `Increase monitoring around ${start}–${end}.`,
-              'Check correlation with local events or shifts.'
-            ],
-            recommendations_tl: [
-              `Dagdagan ang monitoring bandang ${start}–${end}.`,
-              'Suriin ang kaugnayan sa mga lokal na kaganapan o shift.'
-            ]
+          message: `Many reports are submitted around ${start} (${Math.round((max / totalDocs) * 100)}%). Consider targeted monitoring.`,
+          message_tl: `Maraming ulat ang isinusumite bandang ${start} (${Math.round((max / totalDocs) * 100)}%). Isaalang-alang ang nakatuong monitoring.`,
+          recommendations: [
+            `Increase monitoring around ${start}–${end}.`,
+            'Check correlation with local events or shifts.'
+          ],
+          recommendations_tl: [
+            `Dagdagan ang monitoring bandang ${start}–${end}.`,
+            'Suriin ang kaugnayan sa mga lokal na kaganapan o shift.'
+          ]
         });
       }
     } catch (e) { /* ignore */ }
@@ -1972,10 +1990,10 @@ async function suggestForAlertsInsights(options = {}) {
     // Trend
     const counts = {};
     docs.forEach(d => {
-      const date = new Date(d.createdAt).toISOString().slice(0,10);
+      const date = new Date(d.createdAt).toISOString().slice(0, 10);
       counts[date] = (counts[date] || 0) + 1;
     });
-    const trend = Object.entries(counts).map(([date,count]) => ({ date, count }));
+    const trend = Object.entries(counts).map(([date, count]) => ({ date, count }));
 
     // Alert spike detection
     const last7 = trend.slice(-7);
@@ -2106,7 +2124,7 @@ async function suggestForAlertsInsights(options = {}) {
 
     // Aged active alerts
     const oldActive = docs.filter(d => {
-      const age = (Date.now() - new Date(d.createdAt)) / (1000*60*60*24);
+      const age = (Date.now() - new Date(d.createdAt)) / (1000 * 60 * 60 * 24);
       return d.status === 'Active' && age > 3; // More than 3 days
     }).length;
     if (oldActive > 0) {
@@ -2199,7 +2217,7 @@ async function suggestForAlertsInsights(options = {}) {
         const avgDurationMs = resolvedWithDuration.reduce((sum, d) => sum + (d.durationMs || 0), 0) / resolvedWithDuration.length;
         const avgDurationMins = avgDurationMs / 1000 / 60;
         const avgDurationHours = avgDurationMins / 60;
-        
+
         if (avgDurationHours > 4) {
           insights.push({
             label: 'Average Response Time',

@@ -84,7 +84,7 @@ async function listReports(filters = {}) {
       path: "victimID",
       select: "-location"
     })
-    .lean();
+   // .lean();
 }
 
 async function updateReport(id, updates) {

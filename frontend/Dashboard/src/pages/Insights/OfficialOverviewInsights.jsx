@@ -22,7 +22,9 @@ import {
 import {
   UserOutlined,
   FileTextOutlined,
+  InboxOutlined,
   FolderOpenOutlined,
+  BellOutlined,
   ReloadOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
@@ -74,6 +76,7 @@ export default function OfficialOverviewInsights() {
     totalReports: 0,
     totalCases: 0,
     openCases: 0,
+    totalAlerts: 0,
     recentActivities: [],
   });
 
@@ -134,11 +137,12 @@ export default function OfficialOverviewInsights() {
   const donutSize =
     screens.xxl ? 220 : screens.xl ? 200 : screens.lg ? 180 : screens.md ? 160 : 140;
 
-  const resolvedCases = Math.max(metrics.totalCases - metrics.openCases, 0);
   const openPercent = useMemo(() => {
     const total = Math.max(metrics.totalCases, 1);
     return Math.round((metrics.openCases / total) * 100);
   }, [metrics]);
+
+  const resolvedCases = Math.max(metrics.totalCases - metrics.openCases, 0);
 
   const loadMetrics = async (withSpinner = true) => {
     try {
@@ -148,6 +152,7 @@ export default function OfficialOverviewInsights() {
       // This avoids noisy 401s in the browser console for unauthenticated/non-admin users
       const reportsPromise = api.get("/api/reports").catch(() => ({ data: [] }));
       const casesPromise = api.get("/api/cases").catch(() => ({ data: [] }));
+      const alertsPromise = api.get("/api/alerts").catch(() => ({ data: [] }));
       const logsPromise = api.get("/api/logs").catch(() => ({ data: [] }));
 
       const currentType = getUserType ? await getUserType() : null;
@@ -156,10 +161,11 @@ export default function OfficialOverviewInsights() {
         ? api.get("/api/admin/users").catch(() => ({ data: [] }))
         : Promise.resolve({ data: [] });
 
-      const [reportsRes, casesRes, usersRes, logsRes] = await Promise.all([
+      const [reportsRes, casesRes, usersRes, alertsRes, logsRes] = await Promise.all([
         reportsPromise,
         casesPromise,
         usersPromise,
+        alertsPromise,
         logsPromise,
       ]);
 
@@ -190,6 +196,14 @@ export default function OfficialOverviewInsights() {
       const openCases = Number(
         cases.filter((c) => String(c.status || "Open") === "Open").length || 0
       );
+      const totalAlerts = (() => {
+        const alerts = Array.isArray(alertsRes.data)
+          ? alertsRes.data
+          : Array.isArray(alertsRes.data?.data)
+            ? alertsRes.data.data
+            : alertsRes.data?.items || [];
+        return Number(alerts.length || 0);
+      })();
 
       // For officials: only show recent reports, not logs
       const recentActivities = [];
@@ -246,12 +260,13 @@ export default function OfficialOverviewInsights() {
         totalReports: Number(totalReports || 0),
         totalCases: Number(totalCases || 0),
         openCases: Number(openCases || 0),
+        totalAlerts: Number(totalAlerts || 0),
         recentActivities: recentActivities.slice(0, 10),
         caseTimeline,
       });
     } catch (err) {
       message.error(err?.response?.data?.message || "Failed to load metrics");
-      setMetrics({ totalReports: 0, totalCases: 0, openCases: 0, recentActivities: [] });
+      setMetrics({ totalReports: 0, totalCases: 0, openCases: 0, totalAlerts: 0, recentActivities: [] });
     } finally {
       if (withSpinner) setLoading(false);
     }
@@ -487,9 +502,9 @@ export default function OfficialOverviewInsights() {
                           </div>
                           <div className="mini-stat">
                             <Text style={{ color: "#fff", opacity: 0.85, fontSize: 12 }}>
-                              Open Cases
+                              Total Alerts
                             </Text>
-                            <div className="mini-value">{metrics.openCases}</div>
+                            <div className="mini-value">{metrics.totalAlerts}</div>
                           </div>
                         </div>
                       </div>
@@ -545,7 +560,7 @@ export default function OfficialOverviewInsights() {
                               }}
                             >
                               <Tag color="#ffffff33" style={{ color: "#fff", borderColor: "#fff3" }}>
-                                Open: {metrics.openCases}
+                                Open Cases: {metrics.openCases}
                               </Tag>
                               <Tag color="#ffffff33" style={{ color: "#fff", borderColor: "#fff3" }}>
                                 Total: {metrics.totalCases}
@@ -613,7 +628,7 @@ export default function OfficialOverviewInsights() {
                 {/* KPI chips row */}
                 <Col xs={24} md={8}>
                   <KpiChip
-                    icon={<FileTextOutlined style={{ color: BRAND.violet, fontSize: 18 }} />}
+                    icon={<InboxOutlined style={{ color: BRAND.violet, fontSize: 18 }} />}
                     label="Total Reports"
                     value={metrics.totalReports}
                     delay={100}
@@ -629,9 +644,9 @@ export default function OfficialOverviewInsights() {
                 </Col>
                 <Col xs={24} md={8}>
                   <KpiChip
-                    icon={<FolderOpenOutlined style={{ color: BRAND.violet, fontSize: 18 }} />}
-                    label="Open Cases"
-                    value={metrics.openCases}
+                    icon={<BellOutlined style={{ color: BRAND.violet, fontSize: 18 }} />}
+                    label="Total Alerts"
+                    value={metrics.totalAlerts}
                     delay={300}
                   />
                 </Col>

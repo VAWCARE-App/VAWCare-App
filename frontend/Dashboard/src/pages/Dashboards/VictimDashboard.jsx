@@ -116,8 +116,8 @@ export default function VictimDashboard() {
       {
         name: "PNP Women & Children Protection Center",
         desc: "Philippine National Police - WCPC Hotline for VAWC cases.",
-        number: "(02) 8723-0401 to 20",
-        cta: { href: "tel:0287230401", text: "Call WCPC" },
+        number: "0920 907 1717",
+        cta: { href: "num:0920 907 1717", text: "Call WCPC" },
       },
       {
         name: "DSWD Crisis Intervention Unit",

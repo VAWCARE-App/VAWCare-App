@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react"; 
 import {
     App as AntApp,
     Layout,
@@ -160,8 +160,9 @@ export default function ReportsInsights() {
 
     // Derived stats (filtered by selected range)
     const totalReports = filteredReports.length;
-    const openReports = filteredReports.filter((r) => r.status === "Open").length;
     const pendingReports = filteredReports.filter((r) => r.status === "Pending").length;
+    const openReports = filteredReports.filter((r) => r.status === "Open").length;
+    const underInvestigationReports = filteredReports.filter((r) => r.status === "Under Investigation").length;
     const closedReports = filteredReports.filter((r) => r.status === "Closed").length;
 
     const COLORS = ["#7A5AF8", "#FF6EA9", "#5AD8A6", "#FFB347", "#69C0FF"];
@@ -250,54 +251,108 @@ export default function ReportsInsights() {
         <Layout style={{ background: "#fff", minHeight: "100vh", padding: 16 }}>
             <Content>
                 <Row gutter={[16, 16]}>
-                    <Col xs={24} style={{ display: 'flex', justifyContent: screens.md ? 'flex-end' : 'center', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Col
+                        xs={24}
+                        style={{
+                            display: "flex",
+                            justifyContent: screens.md ? "flex-end" : "center",
+                            gap: 8,
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                        }}
+                    >
                         <Space wrap size={screens.xs ? 4 : 8}>
                             {screens.md && (
-                                <div style={{ textAlign: 'right', marginRight: 8 }}>
-                                    <Text type="secondary" style={{ display: 'block', fontSize: 11 }}>Based on</Text>
-                                    <Text type="secondary" style={{ display: 'block', fontSize: 12 }}>{formatRangeLabel(range)}</Text>
+                                <div style={{ textAlign: "right", marginRight: 8 }}>
+                                    <Text type="secondary" style={{ display: "block", fontSize: 11 }}>
+                                        Based on
+                                    </Text>
+                                    <Text type="secondary" style={{ display: "block", fontSize: 12 }}>
+                                        {formatRangeLabel(range)}
+                                    </Text>
                                 </div>
                             )}
-                            <Button.Group size={screens.xs ? 'small' : 'middle'}>
-                                <Button type={range === 'current' ? 'primary' : 'default'} onClick={() => { setRange('current'); setDssLoading(true); }}>Current</Button>
-                                <Button type={range === 'previous' ? 'primary' : 'default'} onClick={() => { setRange('previous'); setDssLoading(true); }}>Previous</Button>
-                                <Button type={range === 'all' ? 'primary' : 'default'} onClick={() => { setRange('all'); setDssLoading(true); }}>All</Button>
+                            <Button.Group size={screens.xs ? "small" : "middle"}>
+                                <Button
+                                    type={range === "current" ? "primary" : "default"}
+                                    onClick={() => {
+                                        setRange("current");
+                                        setDssLoading(true);
+                                    }}
+                                >
+                                    Current
+                                </Button>
+                                <Button
+                                    type={range === "previous" ? "primary" : "default"}
+                                    onClick={() => {
+                                        setRange("previous");
+                                        setDssLoading(true);
+                                    }}
+                                >
+                                    Previous
+                                </Button>
+                                <Button
+                                    type={range === "all" ? "primary" : "default"}
+                                    onClick={() => {
+                                        setRange("all");
+                                        setDssLoading(true);
+                                    }}
+                                >
+                                    All
+                                </Button>
                             </Button.Group>
-                            <Button size={screens.xs ? 'small' : 'middle'} icon={<ReloadOutlined spin={refreshing} />} onClick={handleRefresh}>{screens.md && 'Refresh'}</Button>
+                            <Button
+                                size={screens.xs ? "small" : "middle"}
+                                icon={<ReloadOutlined spin={refreshing} />}
+                                onClick={handleRefresh}
+                            >
+                                {screens.md && "Refresh"}
+                            </Button>
                         </Space>
                     </Col>
-                    {/* KPIs */}
-                    <Col xs={24} md={6}>
-                        <KpiCard
-                            title="Total Reports"
-                            value={totalReports}
-                            icon={<FileTextOutlined style={{ color: BRAND.violet }} />}
-                            color={BRAND.violet}
-                        />
-                    </Col>
-                    <Col xs={24} md={6}>
-                        <KpiCard
-                            title="Pending Reports"
-                            value={pendingReports}
-                            icon={<ClockCircleOutlined style={{ color: "#FFB347" }} />}
-                            color="#FFB347"
-                        />
-                    </Col>
-                    <Col xs={24} md={6}>
-                        <KpiCard
-                            title="Open Reports"
-                            value={openReports}
-                            icon={<AlertOutlined style={{ color: BRAND.pink }} />}
-                            color={BRAND.pink}
-                        />
-                    </Col>
-                    <Col xs={24} md={6}>
-                        <KpiCard
-                            title="Closed Reports"
-                            value={closedReports}
-                            icon={<CheckCircleOutlined style={{ color: BRAND.green }} />}
-                            color={BRAND.green}
-                        />
+
+                    {/* KPIs - compressed one line layout */}
+                    <Col xs={24} style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                        <div style={{ flex: screens.xs ? '0 0 100%' : '0 0 calc(20% - 9.6px)', minWidth: 0 }}>
+                            <KpiCard
+                                title="Total Reports"
+                                value={totalReports}
+                                icon={<FileTextOutlined style={{ color: BRAND.violet }} />}
+                                color={BRAND.violet}
+                            />
+                        </div>
+                        <div style={{ flex: screens.xs ? '0 0 100%' : '0 0 calc(20% - 9.6px)', minWidth: 0 }}>
+                            <KpiCard
+                                title="Pending Reports"
+                                value={pendingReports}
+                                icon={<ClockCircleOutlined style={{ color: "#FFB347" }} />}
+                                color="#FFB347"
+                            />
+                        </div>
+                        <div style={{ flex: screens.xs ? '0 0 100%' : '0 0 calc(20% - 9.6px)', minWidth: 0 }}>
+                            <KpiCard
+                                title="Open Reports"
+                                value={openReports}
+                                icon={<AlertOutlined style={{ color: BRAND.pink }} />}
+                                color={BRAND.pink}
+                            />
+                        </div>
+                        <div style={{ flex: screens.xs ? '0 0 100%' : '0 0 calc(20% - 9.6px)', minWidth: 0 }}>
+                            <KpiCard
+                                title="Under Investigation"
+                                value={underInvestigationReports}
+                                icon={<AlertOutlined style={{ color: "#1890ff" }} />}
+                                color="#1890ff"
+                            />
+                        </div>
+                        <div style={{ flex: screens.xs ? '0 0 100%' : '0 0 calc(20% - 9.6px)', minWidth: 0 }}>
+                            <KpiCard
+                                title="Closed Reports"
+                                value={closedReports}
+                                icon={<CheckCircleOutlined style={{ color: BRAND.green }} />}
+                                color={BRAND.green}
+                            />
+                        </div>
                     </Col>
 
                     {/* Pie chart: Incident Type Distribution */}
@@ -484,34 +539,83 @@ export default function ReportsInsights() {
                                                     key={idx}
                                                     size="small"
                                                     style={{
-                                                            background:
-                                                                i.type === "error"
-                                                                    ? "#fff2f0"
-                                                                    : i.type === "warning"
-                                                                    ? "#fffbe6"
-                                                                    : i.type === "info"
-                                                                    ? "#e6f4ff"
-                                                                    : "#f6ffed",
-                                                            borderLeft: `4px solid ${i.urgent ? '#d32029' : (i.type === "error" ? "#ff4d4f" : i.type === "warning" ? "#faad14" : i.type === "info" ? "#1677ff" : "#52c41a")}`,
-                                                            boxShadow: i.urgent ? '0 6px 18px rgba(211,32,41,0.08)' : undefined
+                                                        background:
+                                                            i.type === "error"
+                                                                ? "#fff2f0"
+                                                                : i.type === "warning"
+                                                                ? "#fffbe6"
+                                                                : i.type === "info"
+                                                                ? "#e6f4ff"
+                                                                : "#f6ffed",
+                                                        borderLeft: `4px solid ${
+                                                            i.urgent
+                                                                ? "#d32029"
+                                                                : i.type === "error"
+                                                                ? "#ff4d4f"
+                                                                : i.type === "warning"
+                                                                ? "#faad14"
+                                                                : i.type === "info"
+                                                                ? "#1677ff"
+                                                                : "#52c41a"
+                                                        }`,
+                                                        boxShadow: i.urgent
+                                                            ? "0 6px 18px rgba(211,32,41,0.08)"
+                                                            : undefined,
                                                     }}
                                                 >
                                                     <Typography.Text strong>
                                                         {i.label}
-                                                        {i.value !== undefined ? ` — ${typeof i.value === 'number' ? (i.value.toFixed ? i.value.toFixed(1) : i.value) : i.value}` : ''}
+                                                        {i.value !== undefined
+                                                            ? ` — ${
+                                                                  typeof i.value === "number"
+                                                                      ? i.value.toFixed
+                                                                          ? i.value.toFixed(1)
+                                                                          : i.value
+                                                                      : i.value
+                                                              }`
+                                                            : ""}
                                                     </Typography.Text>
-                                                        {i.urgent && (
-                                                            <Tag style={{ marginLeft: 8 }} color="error">URGENT</Tag>
-                                                        )}
+                                                    {i.urgent && (
+                                                        <Tag style={{ marginLeft: 8 }} color="error">
+                                                            URGENT
+                                                        </Tag>
+                                                    )}
                                                     <br />
-                                                        <Typography.Text>{(showTagalog && i.message_tl) ? i.message_tl : i.message || ''}</Typography.Text>
-                                                            {((showTagalog && i.recommendations_tl && i.recommendations_tl.length) ? i.recommendations_tl : i.recommendations) && (((showTagalog && i.recommendations_tl && i.recommendations_tl.length) ? i.recommendations_tl : i.recommendations).length > 0) && (
-                                                                <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 18 }}>
-                                                                    {((showTagalog && i.recommendations_tl && i.recommendations_tl.length) ? i.recommendations_tl : i.recommendations).map((r, ri) => (
-                                                                        <li key={ri}><Typography.Text>{r}</Typography.Text></li>
-                                                                    ))}
-                                                                </ul>
-                                                            )}
+                                                    <Typography.Text>
+                                                        {(showTagalog && i.message_tl)
+                                                            ? i.message_tl
+                                                            : i.message || ""}
+                                                    </Typography.Text>
+                                                    {((showTagalog &&
+                                                        i.recommendations_tl &&
+                                                        i.recommendations_tl.length)
+                                                        ? i.recommendations_tl
+                                                        : i.recommendations) &&
+                                                        (((showTagalog &&
+                                                            i.recommendations_tl &&
+                                                            i.recommendations_tl.length)
+                                                            ? i.recommendations_tl
+                                                            : i.recommendations
+                                                        ).length > 0) && (
+                                                            <ul
+                                                                style={{
+                                                                    marginTop: 8,
+                                                                    marginBottom: 0,
+                                                                    paddingLeft: 18,
+                                                                }}
+                                                            >
+                                                                {((showTagalog &&
+                                                                    i.recommendations_tl &&
+                                                                    i.recommendations_tl.length)
+                                                                    ? i.recommendations_tl
+                                                                    : i.recommendations
+                                                                ).map((r, ri) => (
+                                                                    <li key={ri}>
+                                                                        <Typography.Text>{r}</Typography.Text>
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        )}
                                                 </Card>
                                             ))}
                                         </Space>
@@ -520,7 +624,6 @@ export default function ReportsInsights() {
                             )}
                         </Card>
                     </Col>
-
                 </Row>
             </Content>
         </Layout>

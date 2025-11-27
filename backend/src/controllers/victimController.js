@@ -960,7 +960,7 @@ const getReports = asyncHandler(async (req, res) => {
         const reports = await IncidentReport.find({ victimID: victim._id })
             .sort({ dateReported: -1 })
             .select('-__v')
-            .lean();
+           // .lean();
 
         res.status(200).json({
             success: true,

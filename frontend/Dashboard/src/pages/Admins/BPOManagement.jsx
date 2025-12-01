@@ -115,6 +115,7 @@ export default function BPOManagement() {
   const [statusCardVisible, setStatusCardVisible] = useState(false);
   const [statusEditing, setStatusEditing] = useState(null);
   const [statusNew, setStatusNew] = useState("Active");
+  const [statusSaving, setStatusSaving] = useState(false);
 
   // Case selection modal
   const [caseModalVisible, setCaseModalVisible] = useState(false);
@@ -312,7 +313,7 @@ export default function BPOManagement() {
   };
   const handleStatusSave = async () => {
     if (!statusEditing) return;
-    setLoading(true);
+    setStatusSaving(true);
     try {
       const id = statusEditing.bpoID || statusEditing._id;
       const res = await api.put(`/api/bpo/${id}`, {
@@ -330,7 +331,7 @@ export default function BPOManagement() {
       console.error("Status update error", err);
       message.error("Update failed");
     } finally {
-      setLoading(false);
+      setStatusSaving(false);
     }
   };
 
@@ -1062,7 +1063,7 @@ export default function BPOManagement() {
                 </Button>
                 <Button
                   type="primary"
-                  loading={loading}
+                  loading={statusSaving}
                   onClick={handleStatusSave}
                   style={{ background: BRAND.violet, borderColor: BRAND.violet }}
                 >

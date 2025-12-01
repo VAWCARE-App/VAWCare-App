@@ -45,6 +45,7 @@ export default function LandingPage() {
   const screens = Grid.useBreakpoint();
   const prefersReduced = useReducedMotion();
   const installButtonRef = useRef(null);
+  const [loading, setLoading] = useState(false);
 
   // ── Stats
   const [reportCount, setReportCount] = useState(0);
@@ -514,8 +515,12 @@ export default function LandingPage() {
 
                     <CTAButton
                       primary
+                      loading={loading}
+                      disabled={loading}
                       icon={<SafetyCertificateOutlined />}
                       onClick={async () => {
+                        setLoading(true);
+
                         try {
                           message.loading({ content: "Preparing anonymous report...", key: "anon" });
                           const { data } = await api.post("/api/victims/register", { victimAccount: "anonymous" });
@@ -533,6 +538,8 @@ export default function LandingPage() {
                         } catch (err) {
                           message.error(err?.response?.data?.message || err.message || "Unable to create anonymous account");
                           navigate("/login");
+                        } finally {
+                          setLoading(false);
                         }
                       }}
                     >

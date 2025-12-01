@@ -117,6 +117,11 @@ export default function UserManagement() {
   // Delete confirmation modal
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
+  // Quick Update Box state
+  const [quickUpdateModalOpen, setQuickUpdateModalOpen] = useState(false);
+  const [quickUpdateRole, setQuickUpdateRole] = useState(""); // "Barangay Captain" or "VAWC Chairman"
+  const [quickUpdateForm] = Form.useForm();
+
   // Fetch users
   const fetchAllUsers = async () => {
     try {
@@ -462,6 +467,58 @@ export default function UserManagement() {
     [allUsers]
   );
 
+  // Get current role holders
+  const getCurrentRoleHolder = (role) => {
+    return allUsers.find(
+      (u) => u.userType === "official" && u.role === role && !u.isDeleted
+    );
+  };
+
+  // Quick Update Handler
+  const handleQuickUpdate = async (values) => {
+    try {
+      const newOfficialId = values.newOfficial;
+      const newOfficial = allUsers.find((u) => u.id === newOfficialId);
+      
+      if (!newOfficial) {
+        message.error("Selected official not found");
+        return;
+      }
+
+      // Update the official's position
+      const payload = {
+        firstName: newOfficial.firstName,
+        middleInitial: newOfficial.middleInitial,
+        lastName: newOfficial.lastName,
+        officialEmail: newOfficial.email,
+        phoneNumber: newOfficial.phoneNumber,
+        position: quickUpdateRole,
+        status: newOfficial.status,
+      };
+
+      const response = await api.put(
+        `/api/admin/officials/${newOfficial.id}`,
+        payload
+      );
+
+      if (response.data.success) {
+        message.success(`${quickUpdateRole} updated successfully!`);
+        setQuickUpdateModalOpen(false);
+        quickUpdateForm.resetFields();
+        fetchAllUsers();
+      }
+    } catch (err) {
+      console.error("Error updating role:", err);
+      message.error(err.response?.data?.message || "Failed to update role");
+    }
+  };
+
+  const openQuickUpdate = (role) => {
+    setQuickUpdateRole(role);
+    quickUpdateForm.resetFields();
+    setQuickUpdateModalOpen(true);
+  };
+
   // Export CSV
   const exportCsv = () => {
     const rows = filteredUsers.map((u) => ({
@@ -668,6 +725,157 @@ export default function UserManagement() {
               </Col>
             ))}
           </Row>
+
+          {/* Quick Role Update */}
+          <Card
+            style={{
+              ...glassCard,
+              padding: isXs ? "16px 14px" : "20px 24px",
+              background: "linear-gradient(135deg, rgba(122,90,248,0.06) 0%, rgba(122,90,248,0.02) 100%)",
+              border: `1.5px solid ${BRAND.softBorder}`,
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            {/* Decorative background elements */}
+            <div
+              style={{
+                position: "absolute",
+                top: -20,
+                right: -20,
+                width: 120,
+                height: 120,
+                background: `radial-gradient(circle, ${BRAND.violet}15, transparent 70%)`,
+                borderRadius: "50%",
+                pointerEvents: "none",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                bottom: -30,
+                left: -30,
+                width: 100,
+                height: 100,
+                background: `radial-gradient(circle, ${BRAND.green}12, transparent 70%)`,
+                borderRadius: "50%",
+                pointerEvents: "none",
+              }}
+            />
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: isXs ? "column" : "row",
+                justifyContent: "space-between",
+                alignItems: isXs ? "flex-start" : "center",
+                gap: isXs ? 14 : 20,
+                position: "relative",
+                zIndex: 1,
+              }}
+            >
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                  <div
+                    style={{
+                      width: 4,
+                      height: 24,
+                      background: `linear-gradient(180deg, ${BRAND.violet}, ${BRAND.pink})`,
+                      borderRadius: 999,
+                    }}
+                  />
+                  <Typography.Title
+                    level={5}
+                    style={{
+                      margin: 0,
+                      color: BRAND.violet,
+                      fontWeight: 700,
+                      fontSize: isXs ? 15 : 16,
+                    }}
+                  >
+                    Quick Role Update
+                  </Typography.Title>
+                </div>
+                <Typography.Text
+                  type="secondary"
+                  style={{
+                    fontSize: isXs ? 12 : 13,
+                    display: "block",
+                    marginLeft: 12,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Quickly reassign Barangay Captain or VAWC Chairman positions
+                </Typography.Text>
+              </div>
+
+              <Space
+                size={isXs ? 10 : 12}
+                wrap
+                style={{
+                  width: isXs ? "100%" : "auto",
+                  justifyContent: isXs ? "stretch" : "flex-end",
+                }}
+              >
+                <Button
+                  type="primary"
+                  size="large"
+                  onClick={() => openQuickUpdate("Barangay Captain")}
+                  style={{
+                    background: `linear-gradient(135deg, ${BRAND.violet} 0%, #9b7dff 100%)`,
+                    borderColor: "transparent",
+                    height: isXs ? 42 : 44,
+                    fontWeight: 600,
+                    fontSize: isXs ? 13 : 14,
+                    boxShadow: `0 4px 12px ${BRAND.violet}30`,
+                    width: isXs ? "calc(50% - 5px)" : "auto",
+                    minWidth: isXs ? 0 : 140,
+                    borderRadius: 10,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                  icon={
+                    <EditOutlined
+                      style={{
+                        fontSize: isXs ? 14 : 15,
+                      }}
+                    />
+                  }
+                >
+                  {isXs ? "Captain" : "Update Captain"}
+                </Button>
+                <Button
+                  type="primary"
+                  size="large"
+                  onClick={() => openQuickUpdate("VAWC Chairman")}
+                  style={{
+                    background: `linear-gradient(135deg, ${BRAND.green} 0%, #73d13d 100%)`,
+                    borderColor: "transparent",
+                    height: isXs ? 42 : 44,
+                    fontWeight: 600,
+                    fontSize: isXs ? 13 : 14,
+                    boxShadow: `0 4px 12px ${BRAND.green}30`,
+                    width: isXs ? "calc(50% - 5px)" : "auto",
+                    minWidth: isXs ? 0 : 140,
+                    borderRadius: 10,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                  icon={
+                    <EditOutlined
+                      style={{
+                        fontSize: isXs ? 14 : 15,
+                      }}
+                    />
+                  }
+                >
+                  {isXs ? "Chairman" : "Update Chairman"}
+                </Button>
+              </Space>
+            </div>
+          </Card>
 
           {/* Toolbar - Sticky card */}
           <Card
@@ -993,7 +1201,23 @@ export default function UserManagement() {
                     </Col>
                     <Col xs={24} md={12}>
                       <Form.Item name="role" label="Role / Position">
-                        <Input />
+                        {activeUser?.userType === "official" ? (
+                          <Select placeholder="Select position">
+                            <Select.Option value="Barangay Captain">Barangay Captain</Select.Option>
+                            <Select.Option value="Kagawad">Kagawad</Select.Option>
+                            <Select.Option value="Secretary">Secretary</Select.Option>
+                            <Select.Option value="Treasurer">Treasurer</Select.Option>
+                            <Select.Option value="SK Chairman">SK Chairman</Select.Option>
+                            <Select.Option value="Chief Tanod">Chief Tanod</Select.Option>
+                          </Select>
+                        ) : activeUser?.userType === "admin" ? (
+                          <Select placeholder="Select role">
+                            <Select.Option value="Super Admin">Super Admin</Select.Option>
+                            <Select.Option value="Admin">Admin</Select.Option>
+                          </Select>
+                        ) : (
+                          <Input disabled />
+                        )}
                       </Form.Item>
                     </Col>
                     <Col xs={24}>
@@ -1109,6 +1333,120 @@ export default function UserManagement() {
               This action will soft-delete the user.
             </p>
           </div>
+        </Modal>
+
+        {/* QUICK UPDATE MODAL */}
+        <Modal
+          open={quickUpdateModalOpen}
+          onCancel={() => {
+            setQuickUpdateModalOpen(false);
+            quickUpdateForm.resetFields();
+          }}
+          title={
+            <Space>
+              <EditOutlined style={{ color: BRAND.violet }} />
+              <span>Update {quickUpdateRole}</span>
+            </Space>
+          }
+          footer={null}
+          centered
+          width={500}
+          zIndex={1002}
+        >
+          <Form
+            form={quickUpdateForm}
+            onFinish={handleQuickUpdate}
+            layout="vertical"
+            style={{ marginTop: 16 }}
+          >
+            <div style={{ marginBottom: 16 }}>
+              <Typography.Text strong>Current {quickUpdateRole}:</Typography.Text>
+              <div style={{ marginTop: 8, padding: 12, background: "#f5f5f5", borderRadius: 8 }}>
+                {(() => {
+                  const current = getCurrentRoleHolder(quickUpdateRole);
+                  return current ? (
+                    <Space>
+                      <Avatar style={{ background: typePillBg("official"), color: "#444" }}>
+                        {current.avatar}
+                      </Avatar>
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{current.name}</div>
+                        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                          @{current.username}
+                        </Typography.Text>
+                      </div>
+                    </Space>
+                  ) : (
+                    <Typography.Text type="secondary">No official currently assigned</Typography.Text>
+                  );
+                })()}
+              </div>
+            </div>
+
+            <Form.Item
+              name="newOfficial"
+              label={`Select New ${quickUpdateRole}`}
+              rules={[{ required: true, message: "Please select an official" }]}
+            >
+              <Select
+                placeholder="Choose an official"
+                showSearch
+                optionFilterProp="children"
+                size="large"
+                filterOption={(input, option) =>
+                  option.children.props.children[1].props.children[0].toLowerCase().includes(input.toLowerCase())
+                }
+              >
+                {allUsers
+                  .filter(
+                    (u) =>
+                      u.userType === "official" &&
+                      !u.isDeleted &&
+                      u.status === "approved"
+                  )
+                  .map((official) => (
+                    <Select.Option key={official.id} value={official.id}>
+                      <Space>
+                        <Avatar size="small" style={{ background: typePillBg("official"), color: "#444" }}>
+                          {official.avatar}
+                        </Avatar>
+                        <span>
+                          {official.name}
+                          {official.role && official.role !== quickUpdateRole && (
+                            <Tag style={{ marginLeft: 8 }} color="blue">
+                              {official.role}
+                            </Tag>
+                          )}
+                        </span>
+                      </Space>
+                    </Select.Option>
+                  ))}
+              </Select>
+            </Form.Item>
+
+            <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
+              <Space style={{ width: "100%", justifyContent: "flex-end" }}>
+                <Button
+                  onClick={() => {
+                    setQuickUpdateModalOpen(false);
+                    quickUpdateForm.resetFields();
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  style={{
+                    background: BRAND.violet,
+                    borderColor: BRAND.violet,
+                  }}
+                >
+                  Update Role
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
         </Modal>
       </Content>
 

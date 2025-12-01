@@ -185,8 +185,8 @@ export default function BPOManagement() {
   };
 
   // Handle case selection and redirect
-  const handleCaseSelect = () => {
-    if (selectedCaseId) {
+  const handleCaseSelect = (useCase = true) => {
+    if (useCase && selectedCaseId) {
       navigate(`/admin/bpo?caseId=${selectedCaseId}`);
     } else {
       navigate("/admin/bpo");
@@ -851,16 +851,13 @@ export default function BPOManagement() {
           centered
           width={screens.lg ? 700 : "96vw"}
           footer={[
-            <Button key="skip" onClick={() => {
-              setSelectedCaseId(null);
-              handleCaseSelect();
-            }}>
+            <Button key="skip" onClick={() => handleCaseSelect(false)}>
               Skip & Create Blank BPO
             </Button>,
             <Button
               key="select"
               type="primary"
-              onClick={handleCaseSelect}
+              onClick={() => handleCaseSelect(true)}
               disabled={!selectedCaseId}
               style={{ background: BRAND.violet, borderColor: BRAND.violet }}
             >

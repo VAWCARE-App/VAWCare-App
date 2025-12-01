@@ -77,6 +77,7 @@ export default function BPO() {
   // -------- Fetch cases on mount --------
   useEffect(() => {
     fetchCases();
+    generateControlNumber();
   }, []);
 
   // -------- Auto-select case from URL parameter --------
@@ -101,6 +102,42 @@ export default function BPO() {
       messageApi.error("Failed to load cases");
     } finally {
       setLoadingCases(false);
+    }
+  };
+
+  // -------- Generate Control Number --------
+  const generateControlNumber = async () => {
+    try {
+      const res = await api.get("/api/bpo", {
+        headers: { "Cache-Control": "no-cache" },
+      });
+      const bpos = res?.data?.data || [];
+      
+      if (bpos.length === 0) {
+        // First BPO - start with BPO-0001
+        setForm((s) => ({ ...s, controlNo: "BPO-0001" }));
+      } else {
+        // Extract numeric parts from existing control numbers
+        const numbers = bpos
+          .map((bpo) => {
+            const controlNo = bpo.controlNO || "";
+            const match = controlNo.match(/BPO-(\d+)/i);
+            return match ? parseInt(match[1], 10) : 0;
+          })
+          .filter((num) => !isNaN(num));
+        
+        // Get the highest number and increment
+        const maxNum = numbers.length > 0 ? Math.max(...numbers) : 0;
+        const newNum = maxNum + 1;
+        const controlNo = `BPO-${String(newNum).padStart(4, "0")}`;
+        
+        setForm((s) => ({ ...s, controlNo }));
+      }
+    } catch (err) {
+      console.error("Failed to generate control number", err);
+      // Fallback to timestamp-based control number
+      const timestamp = Date.now().toString().slice(-4);
+      setForm((s) => ({ ...s, controlNo: `BPO-${timestamp}` }));
     }
   };
 
@@ -568,6 +605,8 @@ export default function BPO() {
                 onChange={update("controlNo")}
                 style={{ ...underlineStyle, width: 160 }}
                 placeholder="CONTROL NO."
+                readOnly
+                disabled
               />
             </div>
           </div>

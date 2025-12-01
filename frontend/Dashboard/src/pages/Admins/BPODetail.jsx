@@ -228,76 +228,80 @@ export default function BPODetail() {
   return (
     <Layout style={{ width: "100%", background: BRAND_PAGE_BG, minHeight: "100vh" }}>
       <Content style={{ maxWidth: "100%", paddingTop: 32, paddingBottom: 32, paddingLeft: 16, paddingRight: 16 }}>
-        <Space align="center" style={{ marginBottom: 16 }}>
-          {/* Back button */}
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={() => navigate(-1)}
-            style={{ borderColor: BRAND_PRIMARY, color: BRAND_PRIMARY }}
-          >
-            Back
-          </Button>
-
-          {/* Download PDF button */}
-          <Button
-            type="primary"
-            onClick={async () => {
-              const downloadUrl = `${import.meta.env.VITE_API_URL}/api/bpo/${form.bpoID}/pdf`;
-
-              try {
-                const response = await fetch(downloadUrl, {
-                  headers: {
-                    "x-internal-key": import.meta.env.VITE_INTERNAL_API_KEY, // your custom header
-                  },
-                });
-
-                if (!response.ok) throw new Error("Failed to fetch PDF");
-
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-
-                const link = document.createElement("a");
-                link.href = url;
-                link.download = `bpo_${form.bpoID}.pdf`;
-                link.click();
-
-                window.URL.revokeObjectURL(url);
-              } catch (err) {
-                console.error(err);
-              }
-            }}
-            style={{ backgroundColor: BRAND_PRIMARY, borderColor: BRAND_PRIMARY }}
-          >
-            Download PDF
-          </Button>
-
-          {!isEditMode ? (
+        <Space align="center" style={{ marginBottom: 16, width: "100%", justifyContent: "space-between" }}>
+          <Space align="center">
+            {/* Back button */}
             <Button
-              onClick={() => setIsEditMode(true)}
+              icon={<ArrowLeftOutlined />}
+              onClick={() => navigate(-1)}
               style={{ borderColor: BRAND_PRIMARY, color: BRAND_PRIMARY }}
             >
-              Edit
+              Back
             </Button>
-          ) : (
-            <>
-              <Button
-                type="primary"
-                loading={saveLoading}
-                onClick={handleSaveChanges}
-                style={{ backgroundColor: BRAND_PRIMARY, borderColor: BRAND_PRIMARY }}
-              >
-                Save Changes
-              </Button>
-              <Button onClick={handleCancel}>
-                Cancel
-              </Button>
-            </>
-          )}
 
-          {/* Title */}
-          <Title level={3} style={{ margin: 0, color: BRAND_PRIMARY }}>
-            BPO Details
-          </Title>
+            {/* Title */}
+            <Title level={3} style={{ margin: 0, color: BRAND_PRIMARY }}>
+              BPO Details
+            </Title>
+          </Space>
+
+          <Space>
+            {/* Download PDF button */}
+            <Button
+              type="primary"
+              onClick={async () => {
+                const downloadUrl = `${import.meta.env.VITE_API_URL}/api/bpo/${form.bpoID}/pdf`;
+
+                try {
+                  const response = await fetch(downloadUrl, {
+                    headers: {
+                      "x-internal-key": import.meta.env.VITE_INTERNAL_API_KEY, // your custom header
+                    },
+                  });
+
+                  if (!response.ok) throw new Error("Failed to fetch PDF");
+
+                  const blob = await response.blob();
+                  const url = window.URL.createObjectURL(blob);
+
+                  const link = document.createElement("a");
+                  link.href = url;
+                  link.download = `bpo_${form.bpoID}.pdf`;
+                  link.click();
+
+                  window.URL.revokeObjectURL(url);
+                } catch (err) {
+                  console.error(err);
+                }
+              }}
+              style={{ backgroundColor: BRAND_PRIMARY, borderColor: BRAND_PRIMARY }}
+            >
+              Download PDF
+            </Button>
+
+            {!isEditMode ? (
+              <Button
+                onClick={() => setIsEditMode(true)}
+                style={{ borderColor: BRAND_PRIMARY, color: BRAND_PRIMARY }}
+              >
+                Edit
+              </Button>
+            ) : (
+              <>
+                <Button
+                  type="primary"
+                  loading={saveLoading}
+                  onClick={handleSaveChanges}
+                  style={{ backgroundColor: BRAND_PRIMARY, borderColor: BRAND_PRIMARY }}
+                >
+                  Save Changes
+                </Button>
+                <Button onClick={handleCancel}>
+                  Cancel
+                </Button>
+              </>
+            )}
+          </Space>
         </Space>
 
         <Divider />

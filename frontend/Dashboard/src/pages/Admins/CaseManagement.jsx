@@ -73,12 +73,15 @@ export default function CaseManagement() {
   // Combined Export modal
   const [exportModalVisible, setExportModalVisible] = useState(false);
   const [exportType, setExportType] = useState("csv"); // "csv" or "pdf"
+  const [exportMode, setExportMode] = useState("officer"); // "officer" or "victim"
   const [selectedOfficer, setSelectedOfficer] = useState("");
+  const [selectedVictim, setSelectedVictim] = useState("");
   const [exportFilters, setExportFilters] = useState({
     purok: "",
     status: "",
     riskLevel: "",
-    incidentType: ""
+    incidentType: "",
+    victimType: ""
   });
   const [selectedCases, setSelectedCases] = useState([]);
   const [exportLoading, setExportLoading] = useState(false);
@@ -105,6 +108,8 @@ export default function CaseManagement() {
           caseID: c.caseID,
           reportID: c.reportID,
           victimID: c.victimID,
+          victimName: c.victimName,
+          victimType: c.victimType,
           incidentType: c.incidentType,
           description: c.description,
           perpetrator: c.perpetrator,
@@ -444,6 +449,38 @@ export default function CaseManagement() {
     return [...new Set(officers)].sort();
   };
 
+  // Get unique victims from all cases (optionally filtered by officer)
+  const getUniqueVictims = (officerName = null) => {
+    let casesToFilter = allCases;
+    
+    // If officer is selected, only get victims from that officer's cases
+    if (officerName) {
+      casesToFilter = allCases.filter(
+        c => c.assignedOfficer && c.assignedOfficer.toLowerCase() === officerName.toLowerCase()
+      );
+    }
+    
+    const victims = casesToFilter
+      .map(c => ({
+        id: c.victimID,
+        name: c.victimName || 'Unknown'
+      }))
+      .filter(v => v.name && v.name.trim() !== '' && v.name !== 'Unknown');
+    
+    // Remove duplicates based on victim name
+    const uniqueMap = new Map();
+    victims.forEach(v => {
+      const key = v.name.toLowerCase().trim();
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, v);
+      }
+    });
+    
+    return Array.from(uniqueMap.values()).sort((a, b) => 
+      a.name.localeCompare(b.name)
+    );
+  };
+
   // Get unique puroks from all cases (extracted from location)
   const getUniquePuroks = () => {
     const puroks = allCases
@@ -540,6 +577,13 @@ export default function CaseManagement() {
       c => c.assignedOfficer && c.assignedOfficer.toLowerCase() === officerName.toLowerCase()
     );
 
+    // If victim is also selected, filter by victim
+    if (selectedVictim) {
+      officerCases = officerCases.filter(
+        c => c.victimName && c.victimName.toLowerCase() === selectedVictim.toLowerCase()
+      );
+    }
+
     // Apply additional filters
     if (exportFilters.purok) {
       officerCases = officerCases.filter(c => 
@@ -562,6 +606,12 @@ export default function CaseManagement() {
     if (exportFilters.incidentType) {
       officerCases = officerCases.filter(c => 
         c.incidentType && c.incidentType.toLowerCase() === exportFilters.incidentType.toLowerCase()
+      );
+    }
+
+    if (exportFilters.victimType) {
+      officerCases = officerCases.filter(c => 
+        c.victimType && c.victimType.toLowerCase() === exportFilters.victimType.toLowerCase()
       );
     }
 
@@ -611,27 +661,166 @@ export default function CaseManagement() {
     
     const sanitizedOfficerName = officerName.replace(/[^a-zA-Z0-9]/g, "_");
     const timestamp = new Date().toISOString().split('T')[0];
+    
+    // Create filename based on whether victim is also selected
+    let filename;
+    if (selectedVictim) {
+      const sanitizedVictimName = selectedVictim.replace(/[^a-zA-Z0-9]/g, "_");
+      filename = `Cases_${sanitizedOfficerName}_Victim_${sanitizedVictimName}_${timestamp}.csv`;
+    } else {
+      filename = `Cases_${sanitizedOfficerName}_${timestamp}.csv`;
+    }
+    
     link.setAttribute("href", url);
-    link.setAttribute("download", `Cases_${sanitizedOfficerName}_${timestamp}.csv`);
+    link.setAttribute("download", filename);
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
-    message.success(`Exported ${officerCases.length} case(s) for ${officerName}`);
+    const exportMessage = selectedVictim 
+      ? `Exported ${officerCases.length} case(s) for ${officerName} handling ${selectedVictim}'s cases`
+      : `Exported ${officerCases.length} case(s) for ${officerName}`;
+    message.success(exportMessage);
     setExportModalVisible(false);
     setSelectedOfficer("");
-    setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "" });
+    setSelectedVictim("");
+    setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "", victimType: "" });
     setExportType("csv");
+    setExportMode("officer");
+  };
+
+  // Export cases for a specific victim with filters
+  const handleExportVictimCases = (victimName) => {
+    if (!victimName || victimName.trim() === "") {
+      message.warning("Please select a victim");
+      return;
+    }
+
+    let victimCases = allCases.filter(
+      c => c.victimName && c.victimName.toLowerCase() === victimName.toLowerCase()
+    );
+
+    // Apply additional filters
+    if (exportFilters.purok) {
+      victimCases = victimCases.filter(c => 
+        c.location && c.location.toLowerCase().includes(exportFilters.purok.toLowerCase())
+      );
+    }
+
+    if (exportFilters.status) {
+      victimCases = victimCases.filter(c => 
+        c.status && c.status.toLowerCase() === exportFilters.status.toLowerCase()
+      );
+    }
+
+    if (exportFilters.riskLevel) {
+      victimCases = victimCases.filter(c => 
+        c.riskLevel && c.riskLevel.toLowerCase() === exportFilters.riskLevel.toLowerCase()
+      );
+    }
+
+    if (exportFilters.incidentType) {
+      victimCases = victimCases.filter(c => 
+        c.incidentType && c.incidentType.toLowerCase() === exportFilters.incidentType.toLowerCase()
+      );
+    }
+
+    if (exportFilters.victimType) {
+      victimCases = victimCases.filter(c => 
+        c.victimType && c.victimType.toLowerCase() === exportFilters.victimType.toLowerCase()
+      );
+    }
+
+    if (victimCases.length === 0) {
+      message.warning(`No cases found matching the selected criteria`);
+      return;
+    }
+
+    // Convert to CSV
+    const headers = [
+      "Case ID",
+      "Report ID",
+      "Victim Name",
+      "Victim Type",
+      "Incident Type",
+      "Description",
+      "Perpetrator",
+      "Location",
+      "Date Reported",
+      "Status",
+      "Assigned Officer",
+      "Risk Level",
+      "Created At"
+    ];
+
+    const csvRows = [headers.join(",")];
+
+    victimCases.forEach(c => {
+      const row = [
+        c.caseID || "",
+        c.reportID || "",
+        `"${(c.victimName || "").replace(/"/g, '""')}"`,
+        c.victimType || "",
+        c.incidentType || "",
+        `"${(c.description || "").replace(/"/g, '""')}"`,
+        `"${(c.perpetrator || "").replace(/"/g, '""')}"`,
+        `"${(c.location || "").replace(/"/g, '""')}"`,
+        c.dateReported ? new Date(c.dateReported).toLocaleString() : "",
+        c.status || "",
+        `"${(c.assignedOfficer || "").replace(/"/g, '""')}"`,
+        c.riskLevel || "",
+        c.createdAt ? new Date(c.createdAt).toLocaleString() : ""
+      ];
+      csvRows.push(row.join(","));
+    });
+
+    const csvContent = csvRows.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    
+    const sanitizedVictimName = victimName.replace(/[^a-zA-Z0-9]/g, "_");
+    const timestamp = new Date().toISOString().split('T')[0];
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Cases_Victim_${sanitizedVictimName}_${timestamp}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    message.success(`Exported ${victimCases.length} case(s) for victim: ${victimName}`);
+    setExportModalVisible(false);
+    setSelectedOfficer("");
+    setSelectedVictim("");
+    setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "", victimType: "" });
+    setExportType("csv");
+    setExportMode("officer");
   };
 
   // Get filtered case count for preview
   const getFilteredCaseCount = () => {
-    if (!selectedOfficer) return 0;
+    let cases = [];
     
-    let cases = allCases.filter(
-      c => c.assignedOfficer && c.assignedOfficer.toLowerCase() === selectedOfficer.toLowerCase()
-    );
+    if (exportMode === "officer") {
+      if (!selectedOfficer) return 0;
+      cases = allCases.filter(
+        c => c.assignedOfficer && c.assignedOfficer.toLowerCase() === selectedOfficer.toLowerCase()
+      );
+      // If victim is also selected in officer mode, further filter by victim
+      if (selectedVictim) {
+        cases = cases.filter(
+          c => c.victimName && c.victimName.toLowerCase() === selectedVictim.toLowerCase()
+        );
+      }
+    } else if (exportMode === "victim") {
+      if (!selectedVictim) return 0;
+      cases = allCases.filter(
+        c => c.victimName && c.victimName.toLowerCase() === selectedVictim.toLowerCase()
+      );
+    } else {
+      return 0;
+    }
 
     if (exportFilters.purok) {
       cases = cases.filter(c => 
@@ -654,6 +843,12 @@ export default function CaseManagement() {
     if (exportFilters.incidentType) {
       cases = cases.filter(c => 
         c.incidentType && c.incidentType.toLowerCase() === exportFilters.incidentType.toLowerCase()
+      );
+    }
+
+    if (exportFilters.victimType) {
+      cases = cases.filter(c => 
+        c.victimType && c.victimType.toLowerCase() === exportFilters.victimType.toLowerCase()
       );
     }
 
@@ -1798,24 +1993,26 @@ export default function CaseManagement() {
               onClick={() => {
                 setExportModalVisible(false);
                 setSelectedOfficer("");
-                setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "" });
+                setSelectedVictim("");
+                setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "", victimType: "" });
                 setSelectedCases([]);
                 setExportType("csv");
+                setExportMode("officer");
               }}
             >
               Cancel
             </Button>,
-            selectedOfficer && (
+            (selectedOfficer || selectedVictim) && (
               <Button
                 key="export-csv"
                 icon={<DownloadOutlined />}
-                onClick={() => handleExportOfficerCases(selectedOfficer)}
+                onClick={() => exportMode === "officer" ? handleExportOfficerCases(selectedOfficer) : handleExportVictimCases(selectedVictim)}
                 style={{ background: BRAND.violet, borderColor: BRAND.violet, color: '#fff' }}
               >
                 CSV ({getFilteredCaseCount()})
               </Button>
             ),
-            selectedOfficer && (
+            (selectedOfficer || selectedVictim) && (
               <Button
                 key="export-pdf"
                 type="primary"
@@ -1829,7 +2026,7 @@ export default function CaseManagement() {
               </Button>
             ),
           ]}
-          width={screens.xs ? "80vw" : screens.sm ? "65vw" : screens.md ? (selectedOfficer ? 850 : 450) : (selectedOfficer ? 950 : 500)}
+          width={screens.xs ? "80vw" : screens.sm ? "65vw" : screens.md ? ((selectedOfficer || selectedVictim) ? 850 : 450) : ((selectedOfficer || selectedVictim) ? 950 : 500)}
           centered={true}
           style={{
             top: screens.xs ? 20 : 0,
@@ -1838,9 +2035,9 @@ export default function CaseManagement() {
           styles={{
             body: { 
               padding: 0,
-              height: selectedOfficer ? (screens.xs ? 'auto' : screens.sm ? '65vh' : '62vh') : 'auto',
-              maxHeight: selectedOfficer ? (screens.xs ? '80vh' : screens.sm ? '65vh' : '62vh') : '40vh',
-              overflow: screens.xs && selectedOfficer ? 'auto' : 'hidden'
+              height: (selectedOfficer || selectedVictim) ? (screens.xs ? 'auto' : screens.sm ? '65vh' : '62vh') : 'auto',
+              maxHeight: (selectedOfficer || selectedVictim) ? (screens.xs ? '80vh' : screens.sm ? '65vh' : '62vh') : '40vh',
+              overflow: screens.xs && (selectedOfficer || selectedVictim) ? 'auto' : 'hidden'
             },
             mask: {
               backdropFilter: 'blur(4px)'
@@ -1851,53 +2048,169 @@ export default function CaseManagement() {
           <div style={{ 
             display: 'flex',
             flexDirection: 'column',
-            height: selectedOfficer ? (screens.xs ? 'auto' : screens.sm ? '65vh' : '62vh') : 'auto',
-            maxHeight: selectedOfficer ? (screens.xs ? 'none' : screens.sm ? '65vh' : '62vh') : '40vh'
+            height: (selectedOfficer || selectedVictim) ? (screens.xs ? 'auto' : screens.sm ? '65vh' : '62vh') : 'auto',
+            maxHeight: (selectedOfficer || selectedVictim) ? (screens.xs ? 'none' : screens.sm ? '65vh' : '62vh') : '40vh'
           }}>
             {/* Side-by-side layout */}
             <Row gutter={screens.xs ? 0 : 16} style={{ 
               flex: 1,
               overflow: 'hidden',
               margin: 0,
-              flexDirection: screens.xs && selectedOfficer ? 'column' : 'row'
+              flexDirection: screens.xs && (selectedOfficer || selectedVictim) ? 'column' : 'row'
             }}>
-              {/* Left side - Officer Selection & Filters */}
-              <Col xs={24} md={selectedOfficer ? 10 : 24} style={{
+              {/* Left side - Selection & Filters */}
+              <Col xs={24} md={(selectedOfficer || selectedVictim) ? 10 : 24} style={{
                 height: 'auto',
                 overflowY: screens.xs ? 'visible' : 'auto',
                 padding: screens.xs ? '12px 16px' : screens.sm ? '14px 12px' : '18px 20px',
                 maxHeight: screens.xs ? 'none' : '100%',
-                borderRight: screens.xs ? 'none' : selectedOfficer ? `1px solid ${BRAND.soft}` : 'none',
+                borderRight: screens.xs ? 'none' : (selectedOfficer || selectedVictim) ? `1px solid ${BRAND.soft}` : 'none',
                 flexShrink: 0
               }}>
                 <Form layout="vertical">
-                <Form.Item
-                label={<Text strong style={{ fontSize: 15 }}>Select Assigned Officer</Text>}
-                help={
-                  <Text type="secondary" style={{ fontSize: 13 }}>
-                    Choose an officer to export their assigned cases
-                  </Text>
-                }
-                style={{ marginBottom: 10}}
-              >
-                <Select
-                  showSearch
-                  placeholder="Search and select an officer..."
-                  value={selectedOfficer}
-                  onChange={setSelectedOfficer}
-                  size="middle"
-                  style={{ width: "100%" }}
-                  filterOption={(input, option) =>
-                    (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-                  }
-                  options={getUniqueOfficers().map(officer => ({
-                    value: officer,
-                    label: officer,
-                  }))}
-                />
-              </Form.Item>
+                {/* Export Mode Radio Selection - Show all options initially, only selected when officer/victim is chosen */}
+                {!(selectedOfficer || selectedVictim) ? (
+                  <Form.Item
+                    label={<Text strong style={{ fontSize: 15 }}>Export Cases By</Text>}
+                    style={{ marginBottom: 16 }}
+                  >
+                    <Radio.Group 
+                      value={exportMode} 
+                      onChange={(e) => {
+                        setExportMode(e.target.value);
+                        setSelectedOfficer("");
+                        setSelectedVictim("");
+                        setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "", victimType: "" });
+                        setSelectedCases([]);
+                      }}
+                      style={{ width: '100%' }}
+                    >
+                      <Space direction="vertical" style={{ width: '100%' }}>
+                        <Radio value="officer" style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: exportMode === 'officer' ? `2px solid ${BRAND.violet}` : '1px solid #d9d9d9', background: exportMode === 'officer' ? BRAND.soft : '#fff' }}>
+                          <Text strong>Assigned Officer</Text>
+                          <br />
+                          <Text type="secondary" style={{ fontSize: 12 }}>Export cases assigned to a specific officer</Text>
+                        </Radio>
+                        <Radio value="victim" style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: exportMode === 'victim' ? `2px solid ${BRAND.violet}` : '1px solid #d9d9d9', background: exportMode === 'victim' ? BRAND.soft : '#fff' }}>
+                          <Text strong>Victim Name</Text>
+                          <br />
+                          <Text type="secondary" style={{ fontSize: 12 }}>Export all cases for a specific victim</Text>
+                        </Radio>
+                      </Space>
+                    </Radio.Group>
+                  </Form.Item>
+                ) : (
+                  <div style={{ marginBottom: 16 }}>
+                    <Text strong style={{ fontSize: 15, display: 'block', marginBottom: 8 }}>Export Cases By</Text>
+                    <div style={{
+                      padding: '12px 16px',
+                      borderRadius: 8,
+                      border: `2px solid ${BRAND.violet}`,
+                      background: BRAND.soft
+                    }}>
+                      <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{
+                            width: 16,
+                            height: 16,
+                            borderRadius: '50%',
+                            border: `2px solid ${BRAND.violet}`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            <div style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: '50%',
+                              background: BRAND.violet
+                            }} />
+                          </div>
+                          <Text strong style={{ fontSize: 15 }}>
+                            {exportMode === 'officer' ? 'Assigned Officer' : 'Victim Name'}
+                          </Text>
+                        </div>
+                        <Text type="secondary" style={{ fontSize: 12, paddingLeft: 24 }}>
+                          {exportMode === 'officer' 
+                            ? 'Export cases assigned to a specific officer'
+                            : 'Export all cases for a specific victim'
+                          }
+                        </Text>
+                      </Space>
+                    </div>
+                  </div>
+                )}
 
-              {selectedOfficer && (
+                {/* Officer Selection */}
+                {exportMode === "officer" && (
+                  <Form.Item
+                    label={<Text strong style={{ fontSize: 15 }}>Select Assigned Officer</Text>}
+                    help={
+                      <Text type="secondary" style={{ fontSize: 13 }}>
+                        Choose an officer to export their assigned cases
+                      </Text>
+                    }
+                    style={{ marginBottom: 10}}
+                  >
+                    <Select
+                      showSearch
+                      placeholder="Search and select an officer..."
+                      value={selectedOfficer}
+                      onChange={(value) => {
+                        setSelectedOfficer(value);
+                        // Reset victim selection when officer changes
+                        setSelectedVictim("");
+                      }}
+                      size="middle"
+                      style={{ width: "100%" }}
+                      filterOption={(input, option) =>
+                        (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                      }
+                      options={getUniqueOfficers().map(officer => ({
+                        value: officer,
+                        label: officer,
+                      }))}
+                    />
+                  </Form.Item>
+                )}
+
+                {/* Victim Selection - shows in both modes but filtered by officer when in officer mode */}
+                {((exportMode === "officer" && selectedOfficer) || exportMode === "victim") && (
+                  <Form.Item
+                    label={<Text strong style={{ fontSize: 15 }}>
+                      {exportMode === "officer" ? "Filter by Victim (Optional)" : "Select Victim"}
+                    </Text>}
+                    help={
+                      <Text type="secondary" style={{ fontSize: 13 }}>
+                        {exportMode === "officer" 
+                          ? "Narrow down to specific victim's cases handled by this officer"
+                          : "Choose a victim to export all their cases"
+                        }
+                      </Text>
+                    }
+                    style={{ marginBottom: 10}}
+                  >
+                    <Select
+                      showSearch
+                      placeholder="Search and select a victim..."
+                      value={selectedVictim}
+                      onChange={setSelectedVictim}
+                      size="middle"
+                      style={{ width: "100%" }}
+                      allowClear
+                      filterOption={(input, option) =>
+                        (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                      }
+                      options={getUniqueVictims(exportMode === "officer" ? selectedOfficer : null).map(victim => ({
+                        value: victim.name,
+                        label: victim.name,
+                      }))}
+                    />
+                  </Form.Item>
+                )}
+
+              {(selectedOfficer || selectedVictim) && (
                 <>
                   <Divider orientation="left" style={{ 
                     color: BRAND.violet,
@@ -2006,9 +2319,31 @@ export default function CaseManagement() {
                     />
                   </Form.Item>
                 </Col>
+
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    label={<Text strong style={{ fontSize: 13 }}>Victim Type</Text>}
+                    style={{ marginBottom: 8 }}
+                  >
+                    <Select
+                      placeholder="All Victim Types"
+                      value={exportFilters.victimType}
+                      onChange={(val) => setExportFilters({ ...exportFilters, victimType: val })}
+                      allowClear
+                      size="middle"
+                      style={{ width: "100%" }}
+                      options={[
+                        { value: "", label: "All Victim Types" },
+                        { value: "child", label: "Child" },
+                        { value: "woman", label: "Woman" },
+                        { value: "anonymous", label: "Anonymous" },
+                      ]}
+                    />
+                  </Form.Item>
+                </Col>
               </Row>
 
-              {selectedOfficer && (
+              {(selectedOfficer || selectedVictim) && (
                 <div style={{
                   background: "#f9f7ff",
                   border: `1px solid ${BRAND.soft}`,
@@ -2021,14 +2356,44 @@ export default function CaseManagement() {
                       Export Preview
                     </Text>
                     <Row gutter={[8, 4]}>
-                      <Col span={12}>
-                        <Text type="secondary" style={{ fontSize: 13 }}>
-                          Officer:
-                        </Text>
-                      </Col>
-                      <Col span={12}>
-                        <Text strong style={{ fontSize: 13 }}>{selectedOfficer}</Text>
-                      </Col>
+                      {exportMode === "officer" && (
+                        <>
+                          <Col span={12}>
+                            <Text type="secondary" style={{ fontSize: 13 }}>
+                              Officer:
+                            </Text>
+                          </Col>
+                          <Col span={12}>
+                            <Text strong style={{ fontSize: 13 }}>{selectedOfficer}</Text>
+                          </Col>
+                        </>
+                      )}
+
+                      {selectedVictim && (
+                        <>
+                          <Col span={12}>
+                            <Text type="secondary" style={{ fontSize: 13 }}>
+                              Victim:
+                            </Text>
+                          </Col>
+                          <Col span={12}>
+                            <Text strong style={{ fontSize: 13 }}>{selectedVictim}</Text>
+                          </Col>
+                        </>
+                      )}
+
+                      {exportMode === "victim" && !selectedVictim && (
+                        <>
+                          <Col span={12}>
+                            <Text type="secondary" style={{ fontSize: 13 }}>
+                              Victim:
+                            </Text>
+                          </Col>
+                          <Col span={12}>
+                            <Text strong style={{ fontSize: 13 }}>Not selected</Text>
+                          </Col>
+                        </>
+                      )}
 
                       {exportFilters.purok && (
                         <>
@@ -2086,6 +2451,21 @@ export default function CaseManagement() {
                         </>
                       )}
 
+                      {exportFilters.victimType && (
+                        <>
+                          <Col span={12}>
+                            <Text type="secondary" style={{ fontSize: 13 }}>
+                              Victim Type:
+                            </Text>
+                          </Col>
+                          <Col span={12}>
+                            <Text strong style={{ fontSize: 13 }}>
+                              {exportFilters.victimType.charAt(0).toUpperCase() + exportFilters.victimType.slice(1)}
+                            </Text>
+                          </Col>
+                        </>
+                      )}
+
                       <Col span={24}>
                         <Divider style={{ margin: "6px 0" }} />
                       </Col>
@@ -2109,8 +2489,8 @@ export default function CaseManagement() {
                 </Form>
               </Col>
 
-              {/* Right side - Case List (shown when officer selected) */}
-              {selectedOfficer && (
+              {/* Right side - Case List (shown when officer or victim selected) */}
+              {(selectedOfficer || selectedVictim) && (
                 <Col xs={24} md={14} style={{
                   height: screens.xs ? 'auto' : '100%',
                   display: 'flex',
@@ -2145,7 +2525,9 @@ export default function CaseManagement() {
                     }}>
                       <Space size={screens.xs ? 4 : 8}>
                         <FileTextOutlined style={{ fontSize: screens.xs ? 16 : 18, color: BRAND.violet }} />
-                        <Text strong style={{ fontSize: screens.xs ? 13 : 15 }}>Officer's Cases</Text>
+                        <Text strong style={{ fontSize: screens.xs ? 13 : 15 }}>
+                          {exportMode === "officer" ? "Officer's Cases" : "Victim's Cases"}
+                        </Text>
                         {!screens.xs && (
                           <Tag color={BRAND.violet} style={{ borderRadius: 999 }}>
                             {selectedCases.length} of {getFilteredCaseCount()} selected
@@ -2162,32 +2544,51 @@ export default function CaseManagement() {
                           size={screens.xs ? "small" : "small"}
                           icon={!screens.xs ? <CheckSquareOutlined /> : null}
                           onClick={() => {
-                            const officerCases = allCases.filter(
-                              c => c.assignedOfficer && c.assignedOfficer.toLowerCase() === selectedOfficer.toLowerCase()
-                            );
+                            let casesToSelect = [];
+                            
+                            if (exportMode === "officer") {
+                              casesToSelect = allCases.filter(
+                                c => c.assignedOfficer && c.assignedOfficer.toLowerCase() === selectedOfficer.toLowerCase()
+                              );
+                              // If victim is also selected, further filter by victim
+                              if (selectedVictim) {
+                                casesToSelect = casesToSelect.filter(
+                                  c => c.victimName && c.victimName.toLowerCase() === selectedVictim.toLowerCase()
+                                );
+                              }
+                            } else if (exportMode === "victim") {
+                              casesToSelect = allCases.filter(
+                                c => c.victimName && c.victimName.toLowerCase() === selectedVictim.toLowerCase()
+                              );
+                            }
+                            
                             // Apply filters
-                            let filtered = officerCases;
                             if (exportFilters.purok) {
-                              filtered = filtered.filter(c => 
+                              casesToSelect = casesToSelect.filter(c => 
                                 c.location && c.location.toLowerCase().includes(exportFilters.purok.toLowerCase())
                               );
                             }
                             if (exportFilters.status) {
-                              filtered = filtered.filter(c => 
+                              casesToSelect = casesToSelect.filter(c => 
                                 c.status && c.status.toLowerCase() === exportFilters.status.toLowerCase()
                               );
                             }
                             if (exportFilters.riskLevel) {
-                              filtered = filtered.filter(c => 
+                              casesToSelect = casesToSelect.filter(c => 
                                 c.riskLevel && c.riskLevel.toLowerCase() === exportFilters.riskLevel.toLowerCase()
                               );
                             }
                             if (exportFilters.incidentType) {
-                              filtered = filtered.filter(c => 
+                              casesToSelect = casesToSelect.filter(c => 
                                 c.incidentType && c.incidentType.toLowerCase() === exportFilters.incidentType.toLowerCase()
                               );
                             }
-                            setSelectedCases(filtered.map(c => c.caseID));
+                            if (exportFilters.victimType) {
+                              casesToSelect = casesToSelect.filter(c => 
+                                c.victimType && c.victimType.toLowerCase() === exportFilters.victimType.toLowerCase()
+                              );
+                            }
+                            setSelectedCases(casesToSelect.map(c => c.caseID));
                           }}
                           style={{ borderRadius: 8, fontSize: screens.xs ? 11 : 13 }}
                         >
@@ -2233,34 +2634,53 @@ export default function CaseManagement() {
                         </div>
                       ) : (
                         (() => {
-                          // Get officer's cases with filters applied
-                          let officerCases = allCases.filter(
-                            c => c.assignedOfficer && c.assignedOfficer.toLowerCase() === selectedOfficer.toLowerCase()
-                          );
+                          // Get cases with filters applied based on export mode
+                          let casesToShow = [];
+                          
+                          if (exportMode === "officer") {
+                            casesToShow = allCases.filter(
+                              c => c.assignedOfficer && c.assignedOfficer.toLowerCase() === selectedOfficer.toLowerCase()
+                            );
+                            // If victim is also selected, further filter by victim
+                            if (selectedVictim) {
+                              casesToShow = casesToShow.filter(
+                                c => c.victimName && c.victimName.toLowerCase() === selectedVictim.toLowerCase()
+                              );
+                            }
+                          } else if (exportMode === "victim") {
+                            casesToShow = allCases.filter(
+                              c => c.victimName && c.victimName.toLowerCase() === selectedVictim.toLowerCase()
+                            );
+                          }
                           
                           // Apply filters
                           if (exportFilters.purok) {
-                            officerCases = officerCases.filter(c => 
+                            casesToShow = casesToShow.filter(c => 
                               c.location && c.location.toLowerCase().includes(exportFilters.purok.toLowerCase())
                             );
                           }
                           if (exportFilters.status) {
-                            officerCases = officerCases.filter(c => 
+                            casesToShow = casesToShow.filter(c => 
                               c.status && c.status.toLowerCase() === exportFilters.status.toLowerCase()
                             );
                           }
                           if (exportFilters.riskLevel) {
-                            officerCases = officerCases.filter(c => 
+                            casesToShow = casesToShow.filter(c => 
                               c.riskLevel && c.riskLevel.toLowerCase() === exportFilters.riskLevel.toLowerCase()
                             );
                           }
                           if (exportFilters.incidentType) {
-                            officerCases = officerCases.filter(c => 
+                            casesToShow = casesToShow.filter(c => 
                               c.incidentType && c.incidentType.toLowerCase() === exportFilters.incidentType.toLowerCase()
                             );
                           }
+                          if (exportFilters.victimType) {
+                            casesToShow = casesToShow.filter(c => 
+                              c.victimType && c.victimType.toLowerCase() === exportFilters.victimType.toLowerCase()
+                            );
+                          }
 
-                          return officerCases.map((caseItem) => {
+                          return casesToShow.map((caseItem) => {
                             const isSelected = selectedCases.includes(caseItem.caseID);
                             return (
                               <div

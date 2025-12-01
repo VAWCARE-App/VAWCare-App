@@ -474,209 +474,243 @@ export default function CaseDetail() {
           </Card>
         </div>
 
-        {/* PRINT AREA — only this renders in print */}
-        <div ref={printRef} className="print-area">
-          <Card
-            style={{
-              borderRadius: 16,
-              border: `1px solid ${BRAND.soft}`,
-              background:
-                "linear-gradient(145deg, rgba(255,255,255,.98), rgba(255,255,255,.94))",
-            }}
-            bodyStyle={{ padding: 0 }}
-          >
-            <Descriptions
-              bordered
-              size="middle"
-              column={1}
-              labelStyle={{ width: 220, background: "#fafafa" }}
+        {/* Case Details and History Side by Side */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: screens.lg ? "1fr 1fr" : "1fr",
+            gap: 14,
+            alignItems: "stretch",
+          }}
+        >
+          {/* PRINT AREA — only this renders in print */}
+          <div ref={printRef} className="print-area">
+            <Card
+              className="hover-lift"
+              style={{
+                borderRadius: 16,
+                border: `1px solid ${BRAND.soft}`,
+                background:
+                  "linear-gradient(145deg, rgba(255,255,255,.98), rgba(255,255,255,.94))",
+                height: "100%",
+              }}
+              bodyStyle={{ 
+                padding: 0,
+                height: "100%",
+                display: "flex",
+                flexDirection: "column"
+              }}
             >
-              <Descriptions.Item label="Victim Type">
-                {caseData.victimType
-                  ? caseData.victimType.charAt(0).toUpperCase() +
-                  caseData.victimType.slice(1)
-                  : ""}
-              </Descriptions.Item>
-              <Descriptions.Item label="Victim">
-                {caseData.victimName}
-              </Descriptions.Item>
-              <Descriptions.Item label="Incident Type">
-                {caseData.incidentType}
-              </Descriptions.Item>
-              <Descriptions.Item label="Perpetrator">
-                {caseData.perpetrator}
-              </Descriptions.Item>
-              <Descriptions.Item label="Location">
-                {caseData.location}
-              </Descriptions.Item>
-              <Descriptions.Item label="Description">
-                {caseData.description}
-              </Descriptions.Item>
-              <Descriptions.Item label="Status">
-                <StatusPill value={caseData.status} />
-              </Descriptions.Item>
-              <Descriptions.Item label="Assigned Officer">
-                {caseData.assignedOfficer}
-              </Descriptions.Item>
-              <Descriptions.Item label="Risk Level">
-                <RiskPill value={caseData.riskLevel} />
-              </Descriptions.Item>
-            </Descriptions>
-          </Card>
-        </div>
-
-        {/* History of Remarks — hidden in print */}
-        {(userType === "admin" || userType === "official") && (
-          <Card
-            className="no-print hover-lift"
-            style={{
-              borderRadius: 16,
-              border: `1px solid ${BRAND.soft}`,
-              background:
-                "linear-gradient(145deg, rgba(255,255,255,.98), rgba(255,255,255,.94))",
-            }}
-            bodyStyle={{ padding: screens.xs ? 12 : 16 }}
-          >
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              marginBottom: 16
-            }}>
-              <Space>
-                <HistoryOutlined style={{ fontSize: 20, color: BRAND.violet }} />
-                <Title level={5} style={{ margin: 0, color: BRAND.violet }}>
-                  History of Remarks
-                </Title>
-              </Space>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => setAddRemarkOpen(true)}
-                style={{ 
-                  background: BRAND.violet, 
-                  borderColor: BRAND.violet,
-                  borderRadius: 8
-                }}
+              <Descriptions
+                bordered
                 size={screens.xs ? "small" : "middle"}
+                column={1}
+                labelStyle={{ 
+                  width: screens.xs ? 120 : 180, 
+                  background: "#fafafa",
+                  padding: screens.xs ? "8px" : "12px"
+                }}
+                contentStyle={{
+                  padding: screens.xs ? "8px" : "12px"
+                }}
               >
-                {screens.md ? "Add Remark" : "Add"}
-              </Button>
-            </div>
+                <Descriptions.Item label="Victim Type">
+                  {caseData.victimType
+                    ? caseData.victimType.charAt(0).toUpperCase() +
+                    caseData.victimType.slice(1)
+                    : ""}
+                </Descriptions.Item>
+                <Descriptions.Item label="Victim">
+                  {caseData.victimName}
+                </Descriptions.Item>
+                <Descriptions.Item label="Incident Type">
+                  {caseData.incidentType}
+                </Descriptions.Item>
+                <Descriptions.Item label="Perpetrator">
+                  {caseData.perpetrator}
+                </Descriptions.Item>
+                <Descriptions.Item label="Location">
+                  {caseData.location}
+                </Descriptions.Item>
+                <Descriptions.Item label="Description">
+                  {caseData.description}
+                </Descriptions.Item>
+                <Descriptions.Item label="Status">
+                  <StatusPill value={caseData.status} />
+                </Descriptions.Item>
+                <Descriptions.Item label="Assigned Officer">
+                  {caseData.assignedOfficer}
+                </Descriptions.Item>
+                <Descriptions.Item label="Risk Level">
+                  <RiskPill value={caseData.riskLevel} />
+                </Descriptions.Item>
+              </Descriptions>
+            </Card>
+          </div>
 
-            {historyLoading ? (
-              <div style={{ textAlign: 'center', padding: 40 }}>
-                <Spin tip="Loading history..." />
-              </div>
-            ) : historyData.length === 0 ? (
-              <Empty
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                description={
-                  <Text type="secondary">No history records found for this case</Text>
-                }
-                style={{ padding: 20 }}
-              />
-            ) : (
+          {/* History of Remarks — hidden in print */}
+          {(userType === "admin" || userType === "official") && (
+            <Card
+              className="no-print hover-lift"
+              style={{
+                borderRadius: 16,
+                border: `1px solid ${BRAND.soft}`,
+                background:
+                  "linear-gradient(145deg, rgba(255,255,255,.98), rgba(255,255,255,.94))",
+                height: "100%",
+              }}
+              bodyStyle={{ 
+                padding: screens.xs ? 12 : 16,
+                height: "100%",
+                display: "flex",
+                flexDirection: "column"
+              }}
+            >
               <div style={{ 
-                maxHeight: 400, 
-                overflowY: 'auto',
-                padding: '8px 4px',
-                borderRadius: 8,
-                background: '#fafafa'
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                marginBottom: 16,
+                flexShrink: 0
               }}>
-                <Timeline
-                  mode={screens.md ? "left" : "right"}
-                  items={historyData.map((log, idx) => {
-                    const actionColors = {
-                      'edit_case': 'blue',
-                      'view_case': 'green',
-                      'delete_case': 'red',
-                      'case_remark': 'purple',
-                    };
-                    
-                    const actionLabels = {
-                      'edit_case': 'Case Updated',
-                      'view_case': 'Case Viewed',
-                      'delete_case': 'Case Deleted',
-                      'case_remark': 'Remark Added',
-                    };
+                <Space>
+                  <HistoryOutlined style={{ fontSize: 20, color: BRAND.violet }} />
+                  <Title level={5} style={{ margin: 0, color: BRAND.violet }}>
+                    History of Remarks
+                  </Title>
+                </Space>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => setAddRemarkOpen(true)}
+                  style={{ 
+                    background: BRAND.violet, 
+                    borderColor: BRAND.violet,
+                    borderRadius: 8
+                  }}
+                  size={screens.xs ? "small" : "middle"}
+                >
+                  {screens.md ? "Add Remark" : "Add"}
+                </Button>
+              </div>
 
-                    return {
-                      color: actionColors[log.action] || 'gray',
-                      dot: log.action === 'case_remark' ? (
-                        <CommentOutlined style={{ fontSize: 16 }} />
-                      ) : (
-                        <ClockCircleOutlined style={{ fontSize: 16 }} />
-                      ),
-                      children: (
-                        <Card
-                          size="small"
-                          style={{
-                            background: '#fff',
-                            borderRadius: 8,
-                            border: `1px solid ${BRAND.soft}`,
-                            marginBottom: idx < historyData.length - 1 ? 12 : 0
-                          }}
-                          bodyStyle={{ padding: screens.xs ? 10 : 12 }}
-                        >
-                          <Space direction="vertical" size={4} style={{ width: '100%' }}>
-                            <div style={{ 
-                              display: 'flex', 
-                              justifyContent: 'space-between',
-                              alignItems: 'flex-start',
-                              flexWrap: 'wrap',
-                              gap: 8
-                            }}>
-                              <Tag 
-                                color={actionColors[log.action] || 'default'}
-                                style={{ 
-                                  borderRadius: 999,
-                                  fontWeight: 600,
-                                  fontSize: screens.xs ? 11 : 12
-                                }}
-                              >
-                                {actionLabels[log.action] || log.action}
-                              </Tag>
-                              <Text type="secondary" style={{ fontSize: screens.xs ? 11 : 12 }}>
-                                {new Date(log.timestamp).toLocaleString()}
-                              </Text>
-                            </div>
-                            
-                            <div style={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: 6,
-                              marginTop: 4
-                            }}>
-                              <UserOutlined style={{ color: BRAND.violet, fontSize: 14 }} />
-                              <Text strong style={{ fontSize: screens.xs ? 12 : 13 }}>
-                                {log.actorName || log.actorBusinessId || 'Unknown User'}
-                              </Text>
-                            </div>
+              {historyLoading ? (
+                <div style={{ textAlign: 'center', padding: 40, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Spin tip="Loading history..." />
+                </div>
+              ) : historyData.length === 0 ? (
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description={
+                      <Text type="secondary">No history records found for this case</Text>
+                    }
+                    style={{ padding: 20 }}
+                  />
+                </div>
+              ) : (
+                <div style={{ 
+                  flex: 1,
+                  maxHeight: screens.lg ? 490 : 400, 
+                  overflowY: 'auto',
+                  padding: '8px 4px',
+                  borderRadius: 8,
+                  background: '#fafafa'
+                }}>
+                  <Timeline
+                    mode="right"
+                    items={historyData.map((log, idx) => {
+                      const actionColors = {
+                        'edit_case': 'blue',
+                        'view_case': 'green',
+                        'delete_case': 'red',
+                        'case_remark': 'purple',
+                      };
+                      
+                      const actionLabels = {
+                        'edit_case': 'Case Updated',
+                        'view_case': 'Case Viewed',
+                        'delete_case': 'Case Deleted',
+                        'case_remark': 'Remark Added',
+                      };
 
-                            {log.details && (
+                      return {
+                        color: actionColors[log.action] || 'gray',
+                        dot: log.action === 'case_remark' ? (
+                          <CommentOutlined style={{ fontSize: 16 }} />
+                        ) : (
+                          <ClockCircleOutlined style={{ fontSize: 16 }} />
+                        ),
+                        children: (
+                          <Card
+                            size="small"
+                            style={{
+                              background: '#fff',
+                              borderRadius: 8,
+                              border: `1px solid ${BRAND.soft}`,
+                              marginBottom: idx < historyData.length - 1 ? 12 : 0
+                            }}
+                            bodyStyle={{ padding: screens.xs ? 10 : 12 }}
+                          >
+                            <Space direction="vertical" size={4} style={{ width: '100%' }}>
                               <div style={{ 
-                                marginTop: 8,
-                                padding: 10,
-                                background: '#f9f9f9',
-                                borderRadius: 6,
-                                borderLeft: `3px solid ${actionColors[log.action] || '#d9d9d9'}`
+                                display: 'flex', 
+                                justifyContent: 'space-between',
+                                alignItems: 'flex-start',
+                                flexWrap: 'wrap',
+                                gap: 8
                               }}>
-                                <Text style={{ fontSize: screens.xs ? 12 : 13 }}>
-                                  {log.details}
+                                <Tag 
+                                  color={actionColors[log.action] || 'default'}
+                                  style={{ 
+                                    borderRadius: 999,
+                                    fontWeight: 600,
+                                    fontSize: screens.xs ? 11 : 12
+                                  }}
+                                >
+                                  {actionLabels[log.action] || log.action}
+                                </Tag>
+                                <Text type="secondary" style={{ fontSize: screens.xs ? 11 : 12 }}>
+                                  {new Date(log.timestamp).toLocaleString()}
                                 </Text>
                               </div>
-                            )}
-                          </Space>
-                        </Card>
-                      )
-                    };
-                  })}
-                />
-              </div>
-            )}
-          </Card>
-        )}
+                              
+                              <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: 6,
+                                marginTop: 4
+                              }}>
+                                <UserOutlined style={{ color: BRAND.violet, fontSize: 14 }} />
+                                <Text strong style={{ fontSize: screens.xs ? 12 : 13 }}>
+                                  {log.actorName || log.actorBusinessId || 'Unknown User'}
+                                </Text>
+                              </div>
+
+                              {log.details && (
+                                <div style={{ 
+                                  marginTop: 8,
+                                  padding: 10,
+                                  background: '#f9f9f9',
+                                  borderRadius: 6,
+                                  borderLeft: `3px solid ${actionColors[log.action] || '#d9d9d9'}`
+                                }}>
+                                  <Text style={{ fontSize: screens.xs ? 12 : 13 }}>
+                                    {log.details}
+                                  </Text>
+                                </div>
+                              )}
+                            </Space>
+                          </Card>
+                        )
+                      };
+                    })}
+                  />
+                </div>
+              )}
+            </Card>
+          )}
+        </div>
 
         {/* DSS Suggestion — hidden in print */}
         {(userType === "admin" || userType === "official") && (

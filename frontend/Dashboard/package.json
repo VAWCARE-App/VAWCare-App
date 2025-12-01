@@ -17,6 +17,8 @@
     "framer-motion": "^12.23.22",
     "gsap": "^3.13.0",
     "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.4",
+    "jspdf-autotable": "^5.0.2",
     "leaflet": "^1.9.4",
     "motion": "^12.23.24",
     "react": "^19.1.1",

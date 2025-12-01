@@ -213,11 +213,21 @@ export default function CaseManagement() {
 
       const dateReportedDayjs = rep.dateReported ? dayjs(rep.dateReported) : null;
 
+      // Parse location into purok and address components
+      let locationPurok = "";
+      const location = rep.location || "";
+      if (location.startsWith("Purok")) {
+        const parts = location.split(", ");
+        locationPurok = parts[0]; // e.g., "Purok 1"
+      }
+
       addForm.setFieldsValue({
         reportID: rep.reportID,
         incidentType: rep.incidentType,
         description: rep.description,
         perpetrator: rep.perpetrator || "",
+        locationPurok: locationPurok,
+        locationAddress: "Bonfal Proper, Bayombong, Nueva Vizcaya",
         location: rep.location || "",
         victimName: composedName,
         victimType: rep.victim?.victimType || "anonymous",
@@ -245,6 +255,11 @@ export default function CaseManagement() {
         ? vals.dateReported.toISOString() 
         : new Date().toISOString();
       
+      // Combine location fields: if purok selected, prepend to default address
+      const location = vals.locationPurok
+        ? `${vals.locationPurok}, Bonfal Proper, Bayombong, Nueva Vizcaya`
+        : "Bonfal Proper, Bayombong, Nueva Vizcaya";
+      
       let payload;
       if (selectedReport) {
         payload = {
@@ -260,7 +275,7 @@ export default function CaseManagement() {
           incidentType: selectedReport.incidentType,
           description: selectedReport.description,
           perpetrator: selectedReport.perpetrator || "",
-          location: selectedReport.location || "",
+          location: location,
           dateReported: selectedReport.dateReported || dateReportedValue,
           status: vals.status || "Open",
           assignedOfficer: vals.assignedOfficer || "",
@@ -277,7 +292,7 @@ export default function CaseManagement() {
           incidentType: vals.incidentType,
           description: vals.description,
           perpetrator: vals.perpetrator || "",
-          location: vals.location || "",
+          location: location,
           dateReported: dateReportedValue,
           status: vals.status || "Open",
           assignedOfficer: vals.assignedOfficer || "",
@@ -360,8 +375,14 @@ export default function CaseManagement() {
     try {
       setLoading(true);
       const id = editingCase.caseID || editingCase._id;
+      // Combine location fields: if purok selected, prepend to default address
+      const location = vals.locationPurok
+        ? `${vals.locationPurok}, Bonfal Proper, Bayombong, Nueva Vizcaya`
+        : "Bonfal Proper, Bayombong, Nueva Vizcaya";
+      
       const payload = {
         ...vals,
+        location: location,
         perpetrator: vals.perpetrator || "",
         victimName: vals.victimName || editingCase.victimName || "",
       };
@@ -1284,9 +1305,44 @@ export default function CaseManagement() {
               >
                 <Input disabled={isViewMode} />
               </Form.Item>
-              <Form.Item name="location" label="Location">
-                <Input disabled={isViewMode} />
-              </Form.Item>
+              <Row gutter={12} style={{ width: "100%" }}>
+                <Col xs={24} md={12}>
+                  <Form.Item 
+                    name="locationPurok" 
+                    label="Purok"
+                    rules={[
+                      {
+                        required: true,
+                        message: "Please select a purok",
+                      },
+                    ]}
+                  >
+                    <Select 
+                      placeholder="Select purok"
+                      allowClear
+                      disabled={isViewMode}
+                    >
+                      <Option value="Purok 1">Purok 1</Option>
+                      <Option value="Purok 2">Purok 2</Option>
+                      <Option value="Purok 3">Purok 3</Option>
+                      <Option value="Purok 4">Purok 4</Option>
+                      <Option value="Purok 5">Purok 5</Option>
+                      <Option value="Purok 6">Purok 6</Option>
+                      <Option value="Purok 7">Purok 7</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item 
+                    name="locationAddress" 
+                    label="Barangay/Municipality/Province"
+                    initialValue="Bonfal Proper, Bayombong, Nueva Vizcaya"
+                  >
+                    <Input disabled />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Form.Item name="location" hidden><Input type="hidden" /></Form.Item>
               <Form.Item name="description" label="Description">
                 <Input.TextArea rows={3} disabled={isViewMode} />
               </Form.Item>
@@ -1534,13 +1590,41 @@ export default function CaseManagement() {
                 </Col>
                 <Col xs={24} md={12}>
                   <Form.Item 
-                    name="location" 
-                    label={<Text strong>Location</Text>}
+                    name="locationPurok" 
+                    label={<Text strong>Purok</Text>}
+                    rules={[
+                      {
+                        required: true,
+                        message: "Please select a purok",
+                      },
+                    ]}
                   >
-                    <Input placeholder="Enter incident location" size="large" />
+                    <Select 
+                      placeholder="Select purok"
+                      allowClear
+                      size="large"
+                    >
+                      <Option value="Purok 1">Purok 1</Option>
+                      <Option value="Purok 2">Purok 2</Option>
+                      <Option value="Purok 3">Purok 3</Option>
+                      <Option value="Purok 4">Purok 4</Option>
+                      <Option value="Purok 5">Purok 5</Option>
+                      <Option value="Purok 6">Purok 6</Option>
+                      <Option value="Purok 7">Purok 7</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item 
+                    name="locationAddress" 
+                    label={<Text strong>Barangay/Municipality/Province</Text>}
+                    initialValue="Bonfal Proper, Bayombong, Nueva Vizcaya"
+                  >
+                    <Input disabled size="large" />
                   </Form.Item>
                 </Col>
               </Row>
+              <Form.Item name="location" hidden><Input type="hidden" /></Form.Item>
 
               {/* Date Reported */}
               <Form.Item 

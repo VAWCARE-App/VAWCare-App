@@ -192,8 +192,19 @@ export default function ReportManagement() {
   const openModalFor = (record, m = "view") => {
     setActiveReport(record);
     setMode(m);
+    
+    // Parse location into purok and address components
+    let locationPurok = "";
+    const location = record.location || "";
+    if (location.startsWith("Purok")) {
+      const parts = location.split(", ");
+      locationPurok = parts[0]; // e.g., "Purok 1"
+    }
+    
     form.setFieldsValue({
       incidentType: record.incidentType || "",
+      locationPurok: locationPurok,
+      locationAddress: "Bonfal Proper, Bayombong, Nueva Vizcaya",
       location: record.location || "",
       description: record.description || "",
       perpetrator: record.perpetrator || "",
@@ -245,9 +256,14 @@ export default function ReportManagement() {
     if (!activeReport) return;
     try {
       setLoading(true);
+      // Combine location fields: if purok selected, prepend to default address
+      const location = values.locationPurok
+        ? `${values.locationPurok}, Bonfal Proper, Bayombong, Nueva Vizcaya`
+        : "Bonfal Proper, Bayombong, Nueva Vizcaya";
+      
       const payload = {
         incidentType: values.incidentType,
-        location: values.location,
+        location: location,
         description: values.description,
         perpetrator: values.perpetrator || "",
         status: values.status,
@@ -1107,15 +1123,47 @@ export default function ReportManagement() {
                         />
                       </Form.Item>
                     </Col>
-                    <Col xs={24}>
+                    <Col xs={24} md={12}>
                       <Form.Item
-                        name="location"
-                        label="Location"
-                        rules={[{ required: true }]}
+                        name="locationPurok"
+                        label="Purok"
+                        rules={[
+                          {
+                            validator: (_, value) => {
+                              if (!value) {
+                                return Promise.reject(new Error('Purok is required'));
+                              }
+                              return Promise.resolve();
+                            },
+                          },
+                        ]}
                       >
-                        <Input prefix={<EnvironmentOutlined />} />
+                        <Select placeholder="Select purok">
+                          <Select.Option value="Purok 1">Purok 1</Select.Option>
+                          <Select.Option value="Purok 2">Purok 2</Select.Option>
+                          <Select.Option value="Purok 3">Purok 3</Select.Option>
+                          <Select.Option value="Purok 4">Purok 4</Select.Option>
+                          <Select.Option value="Purok 5">Purok 5</Select.Option>
+                          <Select.Option value="Purok 6">Purok 6</Select.Option>
+                          <Select.Option value="Purok 7">Purok 7</Select.Option>
+                        </Select>
                       </Form.Item>
                     </Col>
+                    <Col xs={24} md={12}>
+                      <Form.Item
+                        name="locationAddress"
+                        label="Barangay/Municipality/Province"
+                      >
+                        <Input
+                          disabled
+                          value="Bonfal Proper, Bayombong, Nueva Vizcaya"
+                          placeholder="Bonfal Proper, Bayombong, Nueva Vizcaya"
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Form.Item name="location" hidden>
+                      <Input type="hidden" />
+                    </Form.Item>
                     <Col xs={24}>
                       <Form.Item name="perpetrator" label="Perpetrator">
                         <Input 

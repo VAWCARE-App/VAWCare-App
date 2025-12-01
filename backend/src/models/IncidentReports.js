@@ -1,6 +1,73 @@
 const mongoose = require('mongoose');
 const fieldEncryption = require('mongoose-field-encryption').fieldEncryption;
 
+// Validation function to check for gibberish
+const validateNoGibberish = (value, fieldName) => {
+  if (!value) return true;
+  
+  const strValue = String(value).trim();
+  
+  // Check for repeated characters (4+ in a row)
+  if (/(.)\1{3,}/.test(strValue)) {
+    throw new Error(`${fieldName} cannot contain repeated characters`);
+  }
+  
+  return true;
+};
+
+// Validation function for perpetrator (optional field)
+const validatePerpetrator = function(v) {
+  if (!v) return true; // optional field
+  
+  const strValue = String(v).trim();
+  
+  // Check for repeated characters (4+ in a row)
+  if (/(.)\1{3,}/.test(strValue)) {
+    return false;
+  }
+  
+  // Check for repeating patterns (gibberish like 'sdasdasda')
+  if (/(.{2,3})\1{2,}/.test(strValue)) {
+    return false;
+  }
+  
+  // Only allow letters, spaces, hyphens, apostrophes, and periods
+  if (!/^[a-zA-Z\s\-'\.]+$/.test(strValue)) {
+    return false;
+  }
+  
+  return true;
+};
+
+// Validation function for description (required field)
+const validateDescription = function(v) {
+  if (!v) return false; // required
+  
+  const strValue = String(v).trim();
+  
+  // Check for repeated characters (4+ in a row)
+  if (/(.)\1{3,}/.test(strValue)) {
+    return false;
+  }
+  
+  // Check for repeating patterns (gibberish like 'sdasdasda')
+  if (/(.{2,3})\1{2,}/.test(strValue)) {
+    return false;
+  }
+  
+  // Minimum 10 characters
+  if (strValue.length < 10) {
+    return false;
+  }
+  
+  // Must contain at least some letters
+  if (!/[a-zA-Z]/.test(strValue)) {
+    return false;
+  }
+  
+  return true;
+};
+
 const incidentReportSchema = new mongoose.Schema({
     reportID: {
         type: String,
@@ -25,23 +92,36 @@ const incidentReportSchema = new mongoose.Schema({
     description: {
         type: String,
         required: [true, 'Description is required'],
-        trim: true
+        trim: true,
+        validate: {
+            validator: validateDescription,
+            message: 'Description must be at least 10 characters, contain letters, and not have repeated characters'
+        }
     },
     perpetrator: {
         type: String,
         required: false,
         trim: true,
         validate: {
-            validator: function(v) {
-                return !v || /^[a-zA-Z\s\-'\.]+$/.test(v);
-            },
-            message: 'Perpetrator name must contain only letters, spaces, hyphens, apostrophes, or periods'
+            validator: validatePerpetrator,
+            message: 'Perpetrator name can only contain letters, spaces, hyphens, apostrophes, periods, and cannot have repeated characters'
         }
     },
     location: {
         type: String,
         required: [true, 'Location is required'],
-        trim: true
+        trim: true,
+        validate: {
+            validator: function(v) {
+                if (!v) return false;
+                // Check for repeated characters
+                if (/(.)\1{3,}/.test(v)) {
+                  return false;
+                }
+                return true;
+            },
+            message: 'Location cannot contain repeated characters'
+        }
     },
     dateReported: {
         type: Date,

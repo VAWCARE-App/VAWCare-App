@@ -17,6 +17,8 @@ import {
   Card,
   Tooltip,
   Segmented,
+  Row,
+  Col,
 } from "antd";
 import {
   PrinterOutlined,
@@ -211,7 +213,16 @@ export default function CaseDetail() {
     try {
       const values = await form.validateFields();
       setLoading(true);
-      const res = await api.put(`/api/cases/${id}`, values);
+      // Combine location fields: if purok selected, prepend to default address
+      const location = values.locationPurok
+        ? `${values.locationPurok}, Bonfal Proper, Bayombong, Nueva Vizcaya`
+        : "Bonfal Proper, Bayombong, Nueva Vizcaya";
+      
+      const payload = {
+        ...values,
+        location: location,
+      };
+      const res = await api.put(`/api/cases/${id}`, payload);
       const updated = res?.data?.data;
       setCaseData(updated);
       setEditOpen(false);
@@ -306,7 +317,19 @@ export default function CaseDetail() {
               type="primary"
               icon={<EditOutlined />}
               onClick={() => {
-                form.setFieldsValue(caseData);
+                // Parse location into purok and address components
+                let locationPurok = "";
+                const location = caseData.location || "";
+                if (location.startsWith("Purok")) {
+                  const parts = location.split(", ");
+                  locationPurok = parts[0]; // e.g., "Purok 1"
+                }
+                
+                form.setFieldsValue({
+                  ...caseData,
+                  locationPurok: locationPurok,
+                  locationAddress: "Bonfal Proper, Bayombong, Nueva Vizcaya",
+                });
                 setEditOpen(true);
               }}
               style={{ background: BRAND.violet, borderColor: BRAND.violet }}
@@ -517,6 +540,7 @@ export default function CaseDetail() {
           initialValues={{
             status: caseData?.status,
             riskLevel: caseData?.riskLevel,
+            locationAddress: "Bonfal Proper, Bayombong, Nueva Vizcaya",
           }}
         >
           <div
@@ -567,9 +591,42 @@ export default function CaseDetail() {
               />
             </Form.Item>
 
-            <Form.Item name="location" label="Location">
-              <Input />
-            </Form.Item>
+            <Row gutter={12} style={{ width: "100%" }}>
+              <Col xs={24} md={12}>
+                <Form.Item 
+                  name="locationPurok" 
+                  label="Purok"
+                  rules={[
+                    {
+                      required: true,
+                      message: "Please select a purok",
+                    },
+                  ]}
+                >
+                  <Select 
+                    placeholder="Select purok"
+                    allowClear
+                  >
+                    <Select.Option value="Purok 1">Purok 1</Select.Option>
+                    <Select.Option value="Purok 2">Purok 2</Select.Option>
+                    <Select.Option value="Purok 3">Purok 3</Select.Option>
+                    <Select.Option value="Purok 4">Purok 4</Select.Option>
+                    <Select.Option value="Purok 5">Purok 5</Select.Option>
+                    <Select.Option value="Purok 6">Purok 6</Select.Option>
+                    <Select.Option value="Purok 7">Purok 7</Select.Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={12}>
+                <Form.Item 
+                  name="locationAddress" 
+                  label="Barangay/Municipality/Province"
+                >
+                  <Input disabled />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Form.Item name="location" hidden><Input type="hidden" /></Form.Item>
 
             {/* Status with full text + hover color */}
             <Form.Item name="status" label="Status">

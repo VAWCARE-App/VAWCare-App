@@ -89,11 +89,17 @@ export default function Report() {
           ? values.dateReported.toDate()
           : undefined;
 
+      // If purok is selected, combine it with the default address
+      // Otherwise, just use the default address
+      const combinedLocation = values.locationPurok 
+        ? `${values.locationPurok}, Bonfal Proper, Bayombong, Nueva Vizcaya` 
+        : "Bonfal Proper, Bayombong, Nueva Vizcaya";
+
       const payload = {
         incidentType: values.incidentType,
         description: values.description,
         perpetrator: values.perpetrator,
-        location: values.location,
+        location: combinedLocation,
         dateReported,
         victimID,
       };
@@ -356,7 +362,6 @@ export default function Report() {
               form={form}
               layout="vertical"
               onFinish={handleFinish}
-              requiredMark="optional"
             >
               <Row gutter={[16, 0]}>
                 <Col xs={24} md={12}>
@@ -382,19 +387,45 @@ export default function Report() {
               <Row gutter={[16, 0]}>
                 <Col xs={24} md={12}>
                   <Form.Item
-                    name="location"
-                    label={<Text strong>Location</Text>}
-                    rules={[{ required: true, message: "Please enter the location" }]}
+                    name="locationPurok"
+                    label={<Text strong>Purok</Text>}
                   >
-                    <Input 
-                      placeholder="Where did it happen?" 
-                      allowClear 
+                    <Select 
+                      placeholder="Select purok (optional)" 
                       size="large"
-                      prefix={<EnvironmentOutlined style={{ color: BRAND.textMuted }} />}
+                      style={{ borderRadius: 12 }}
+                      allowClear
+                    >
+                      <Option value="Purok 1">Purok 1</Option>
+                      <Option value="Purok 2">Purok 2</Option>
+                      <Option value="Purok 3">Purok 3</Option>
+                      <Option value="Purok 4">Purok 4</Option>
+                      <Option value="Purok 5">Purok 5</Option>
+                      <Option value="Purok 6">Purok 6</Option>
+                      <Option value="Purok 7">Purok 7</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    name="locationAddress"
+                    label={<Text strong>Barangay/Municipality/Province</Text>}
+                  >
+                    <Input
+                      disabled
+                      value="Bonfal Proper, Bayombong, Nueva Vizcaya"
+                      placeholder="Bonfal Proper, Bayombong, Nueva Vizcaya"
+                      size="large"
                       style={{ borderRadius: 12 }}
                     />
                   </Form.Item>
                 </Col>
+              </Row>
+              <Form.Item name="location" hidden>
+                <Input type="hidden" />
+              </Form.Item>
+
+              <Row gutter={[16, 0]}>
                 <Col xs={24} md={12}>
                   <Form.Item
                     name="dateReported"
@@ -419,6 +450,27 @@ export default function Report() {
               <Form.Item 
                 name="perpetrator" 
                 label={<Text strong>Perpetrator (optional)</Text>}
+                rules={[
+                  {
+                    validator: (_, value) => {
+                      if (!value) return Promise.resolve();
+                      const strValue = String(value).trim();
+                      // Check for repeated characters (4+ in a row)
+                      if (/(.)\1{3,}/.test(strValue)) {
+                        return Promise.reject(new Error('Perpetrator name cannot contain repeated characters'));
+                      }
+                      // Check for repeating patterns (gibberish like 'sdasdasda')
+                      if (/(.{2,3})\1{2,}/.test(strValue)) {
+                        return Promise.reject(new Error('Perpetrator name appears to be gibberish'));
+                      }
+                      // Only allow letters, spaces, hyphens, apostrophes, and periods
+                      if (!/^[a-zA-Z\s\-'\.]*$/.test(strValue)) {
+                        return Promise.reject(new Error('Perpetrator name can only contain letters, spaces, hyphens, apostrophes, and periods'));
+                      }
+                      return Promise.resolve();
+                    },
+                  },
+                ]}
               >
                 <Input 
                   placeholder="Name or description (if known)" 
@@ -426,6 +478,7 @@ export default function Report() {
                   size="large"
                   prefix={<UserOutlined style={{ color: BRAND.textMuted }} />}
                   style={{ borderRadius: 12 }}
+                  maxLength={80}
                   onKeyPress={(e) => {
                     if (/[0-9]/.test(e.key)) {
                       e.preventDefault();
@@ -437,7 +490,32 @@ export default function Report() {
               <Form.Item
                 name="description"
                 label={<Text strong>Description</Text>}
-                rules={[{ required: true, message: "Please describe the incident" }]}
+                rules={[
+                  { required: true, message: "Please describe the incident" },
+                  {
+                    validator: (_, value) => {
+                      if (!value) return Promise.resolve();
+                      const strValue = String(value).trim();
+                      // Check for repeated characters (4+ in a row)
+                      if (/(.)\1{3,}/.test(strValue)) {
+                        return Promise.reject(new Error('Description cannot contain repeated characters'));
+                      }
+                      // Check for repeating patterns (gibberish like 'sdasdasda')
+                      if (/(.{2,3})\1{2,}/.test(strValue)) {
+                        return Promise.reject(new Error('Description appears to be gibberish'));
+                      }
+                      // Check for minimum meaningful content (at least 10 characters with some letters)
+                      if (strValue.length < 10) {
+                        return Promise.reject(new Error('Description must be at least 10 characters long'));
+                      }
+                      // Must contain at least some letters
+                      if (!/[a-zA-Z]/.test(strValue)) {
+                        return Promise.reject(new Error('Description must contain letters'));
+                      }
+                      return Promise.resolve();
+                    },
+                  },
+                ]}
               >
                 <Input.TextArea 
                   rows={5} 

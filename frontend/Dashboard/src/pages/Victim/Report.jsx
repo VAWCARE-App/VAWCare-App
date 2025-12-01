@@ -455,18 +455,35 @@ export default function Report() {
                     validator: (_, value) => {
                       if (!value) return Promise.resolve();
                       const strValue = String(value).trim();
+                      
                       // Check for repeated characters (4+ in a row)
                       if (/(.)\1{3,}/.test(strValue)) {
                         return Promise.reject(new Error('Perpetrator name cannot contain repeated characters'));
                       }
+                      
                       // Check for repeating patterns (gibberish like 'sdasdasda')
                       if (/(.{2,3})\1{2,}/.test(strValue)) {
                         return Promise.reject(new Error('Perpetrator name appears to be gibberish'));
                       }
+                      
                       // Only allow letters, spaces, hyphens, apostrophes, and periods
                       if (!/^[a-zA-Z\s\-'\.]*$/.test(strValue)) {
                         return Promise.reject(new Error('Perpetrator name can only contain letters, spaces, hyphens, apostrophes, and periods'));
                       }
+                      
+                      // Check for gibberish patterns: too many consonants in a row
+                      if (/[bcdfghjklmnpqrstvwxyz]{5,}/i.test(strValue)) {
+                        return Promise.reject(new Error('Perpetrator name appears to contain an unusual pattern of characters'));
+                      }
+                      
+                      // Check vowel ratio: count vowels vs total letters
+                      const letters = strValue.replace(/[^a-zA-Z]/g, '');
+                      const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+                      // If less than 25% vowels in the text, likely gibberish
+                      if (letters.length > 3 && vowels.length / letters.length < 0.25) {
+                        return Promise.reject(new Error('Perpetrator name appears to be gibberish'));
+                      }
+                      
                       return Promise.resolve();
                     },
                   },
@@ -496,22 +513,40 @@ export default function Report() {
                     validator: (_, value) => {
                       if (!value) return Promise.resolve();
                       const strValue = String(value).trim();
+                      
                       // Check for repeated characters (4+ in a row)
                       if (/(.)\1{3,}/.test(strValue)) {
                         return Promise.reject(new Error('Description cannot contain repeated characters'));
                       }
+                      
                       // Check for repeating patterns (gibberish like 'sdasdasda')
                       if (/(.{2,3})\1{2,}/.test(strValue)) {
                         return Promise.reject(new Error('Description appears to be gibberish'));
                       }
+                      
                       // Check for minimum meaningful content (at least 10 characters with some letters)
                       if (strValue.length < 10) {
                         return Promise.reject(new Error('Description must be at least 10 characters long'));
                       }
+                      
                       // Must contain at least some letters
                       if (!/[a-zA-Z]/.test(strValue)) {
                         return Promise.reject(new Error('Description must contain letters'));
                       }
+                      
+                      // Check for gibberish patterns: too many consonants in a row
+                      if (/[bcdfghjklmnpqrstvwxyz]{5,}/i.test(strValue)) {
+                        return Promise.reject(new Error('Description appears to contain an unusual pattern of characters'));
+                      }
+                      
+                      // Check vowel ratio: count vowels vs total letters
+                      const letters = strValue.replace(/[^a-zA-Z]/g, '');
+                      const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+                      // If less than 25% vowels in the text, likely gibberish
+                      if (letters.length > 10 && vowels.length / letters.length < 0.25) {
+                        return Promise.reject(new Error('Description appears to be gibberish'));
+                      }
+                      
                       return Promise.resolve();
                     },
                   },

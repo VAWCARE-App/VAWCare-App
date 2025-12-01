@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Input,
   DatePicker,
@@ -10,6 +10,9 @@ import {
   Layout,
   Space,
   Divider,
+  Select,
+  Card,
+  Spin,
 } from "antd";
 import {
   CheckCircleOutlined,
@@ -18,12 +21,15 @@ import {
   DownloadOutlined,
   SaveOutlined,
   ArrowLeftOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import { api, getUserType } from "../../lib/api";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
 const { Content } = Layout;
+const { Option } = Select;
 
 // Brand (matches the rest of your pages)
 const BRAND_PRIMARY = "#7A5AF8";
@@ -31,6 +37,7 @@ const BRAND_PAGE_BG = "#F6F3FF";
 
 export default function BPO() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [messageApi, contextHolder] = message.useMessage();
   React.useEffect(() => {
     const checkUser = async () => {
@@ -63,6 +70,75 @@ export default function BPO() {
   });
   const [loading, setLoading] = useState(false);
   const [savedId, setSavedId] = useState(null);
+  const [cases, setCases] = useState([]);
+  const [loadingCases, setLoadingCases] = useState(false);
+  const [selectedCase, setSelectedCase] = useState(null);
+
+  // -------- Fetch cases on mount --------
+  useEffect(() => {
+    fetchCases();
+  }, []);
+
+  // -------- Auto-select case from URL parameter --------
+  useEffect(() => {
+    const caseIdParam = searchParams.get("caseId");
+    if (caseIdParam && cases.length > 0) {
+      // Auto-select the case from URL
+      handleCaseSelect(caseIdParam);
+    }
+  }, [searchParams, cases]);
+
+  const fetchCases = async () => {
+    setLoadingCases(true);
+    try {
+      const res = await api.get("/api/cases", {
+        headers: { "Cache-Control": "no-cache" },
+      });
+      const data = res?.data?.data || [];
+      setCases(data);
+    } catch (err) {
+      console.error("Failed to fetch cases", err);
+      messageApi.error("Failed to load cases");
+    } finally {
+      setLoadingCases(false);
+    }
+  };
+
+  // -------- Handle case selection and autofill --------
+  const handleCaseSelect = (caseId) => {
+    if (!caseId) {
+      // Clear selection
+      setSelectedCase(null);
+      return;
+    }
+    
+    const selectedCaseData = cases.find((c) => (c.caseID || c._id) === caseId);
+    if (!selectedCaseData) {
+      setSelectedCase(null);
+      return;
+    }
+    
+    setSelectedCase(selectedCaseData);
+    
+    // Autofill form fields based on case data
+    setForm((prevForm) => ({
+      ...prevForm,
+      // Applicant is the victim from the case
+      applicant: selectedCaseData.victimName || "",
+      // Respondent is the perpetrator from the case
+      respondent: selectedCaseData.perpetrator || "",
+      // Statement/description from the case
+      statement: selectedCaseData.description || "",
+      // Use incident type and other details to build more context
+      harmTo: selectedCaseData.victimName ? selectedCaseData.victimName.split(" ")[0] : "",
+      // Set applied on date to the date reported if available (use dayjs for Ant Design DatePicker)
+      appliedOn: selectedCaseData.dateReported ? dayjs(selectedCaseData.dateReported) : null,
+      // Set date issued to today
+      dateIssued: dayjs(),
+    }));
+    
+    messageApi.success(`Case ${selectedCaseData.caseID || caseId} selected and form autofilled`);
+  };
 
   // -------- helpers --------
   const update = (k) => (e) => {
@@ -362,6 +438,90 @@ export default function BPO() {
         </Space>
 
         <Divider />
+
+        {/* Case Selection Card */}
+        <Card
+          style={{
+            maxWidth: 900,
+            margin: "0 auto 24px",
+            background: "#fff",
+            borderRadius: 12,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+          }}
+        >
+          <Space direction="vertical" style={{ width: "100%" }} size="middle">
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <FileTextOutlined style={{ fontSize: 18, color: BRAND_PRIMARY }} />
+              <Title level={5} style={{ margin: 0, color: BRAND_PRIMARY }}>
+                Select a Case (Optional)
+              </Title>
+            </div>
+            <Text type="secondary">
+              Choose an existing case to automatically fill in the BPO details, or leave blank to create a new BPO manually.
+            </Text>
+            <Select
+              showSearch
+              allowClear
+              placeholder="Search and select a case..."
+              style={{ width: "100%" }}
+              loading={loadingCases}
+              onChange={handleCaseSelect}
+              value={selectedCase ? (selectedCase.caseID || selectedCase._id) : undefined}
+              filterOption={(input, option) => {
+                const searchText = input.toLowerCase();
+                return (
+                  option.children.toLowerCase().includes(searchText) ||
+                  option.value.toLowerCase().includes(searchText)
+                );
+              }}
+              notFoundContent={loadingCases ? <Spin size="small" /> : "No cases available"}
+            >
+              {cases.map((caseItem) => (
+                <Option
+                  key={caseItem._id || caseItem.caseID}
+                  value={caseItem.caseID || caseItem._id}
+                >
+                  {`${caseItem.caseID || caseItem._id} - ${caseItem.victimName || "Unknown"} (${caseItem.incidentType || "N/A"})`}
+                </Option>
+              ))}
+            </Select>
+            {selectedCase && (
+              <Card
+                size="small"
+                style={{
+                  background: "#f6ffed",
+                  border: "1px solid #b7eb8f",
+                }}
+              >
+                <Space direction="vertical" size="small" style={{ width: "100%" }}>
+                  <Text strong style={{ color: "#237804" }}>
+                    Selected Case Details:
+                  </Text>
+                  <div>
+                    <Text type="secondary">Case ID: </Text>
+                    <Text strong>{selectedCase.caseID || selectedCase._id}</Text>
+                  </div>
+                  <div>
+                    <Text type="secondary">Victim: </Text>
+                    <Text>{selectedCase.victimName || "N/A"}</Text>
+                  </div>
+                  <div>
+                    <Text type="secondary">Perpetrator: </Text>
+                    <Text>{selectedCase.perpetrator || "N/A"}</Text>
+                  </div>
+                  <div>
+                    <Text type="secondary">Incident Type: </Text>
+                    <Text>{selectedCase.incidentType || "N/A"}</Text>
+                  </div>
+                  <div>
+                    <Text type="secondary">Status: </Text>
+                    <Text>{selectedCase.status || "N/A"}</Text>
+                  </div>
+                </Space>
+              </Card>
+            )}
+          </Space>
+        </Card>
 
         {/* FORM CONTENT (unchanged) */}
         <div

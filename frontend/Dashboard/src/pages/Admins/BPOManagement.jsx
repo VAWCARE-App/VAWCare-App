@@ -22,6 +22,7 @@ import {
   Empty,
   Avatar,
   Segmented,
+  Spin,
 } from "antd";
 import {
   ReloadOutlined,
@@ -42,6 +43,7 @@ import {
   MenuOutlined,
   FormOutlined,
   CloseCircleOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { api, getUserType } from "../../lib/api";
@@ -114,6 +116,13 @@ export default function BPOManagement() {
   const [statusEditing, setStatusEditing] = useState(null);
   const [statusNew, setStatusNew] = useState("Active");
 
+  // Case selection modal
+  const [caseModalVisible, setCaseModalVisible] = useState(false);
+  const [cases, setCases] = useState([]);
+  const [loadingCases, setLoadingCases] = useState(false);
+  const [selectedCaseId, setSelectedCaseId] = useState(null);
+  const [caseSearchText, setCaseSearchText] = useState("");
+
   // Dynamic table height (fit to screen, avoid overlap)
   const tableWrapRef = useRef(null);
   const [tableY, setTableY] = useState(420);
@@ -149,6 +158,59 @@ export default function BPOManagement() {
     list.forEach((r) => r?.servedBy && s.add(r.servedBy));
     return ["all", ...Array.from(s)];
   }, [list]);
+
+  // Fetch cases for modal
+  const fetchCases = async () => {
+    setLoadingCases(true);
+    try {
+      const res = await api.get("/api/cases", {
+        headers: { "Cache-Control": "no-cache" },
+      });
+      const data = res?.data?.data || [];
+      setCases(data);
+    } catch (err) {
+      console.error("Failed to fetch cases", err);
+      message.error("Failed to load cases");
+    } finally {
+      setLoadingCases(false);
+    }
+  };
+
+  // Open case selection modal
+  const openCaseModal = () => {
+    setCaseModalVisible(true);
+    setSelectedCaseId(null);
+    setCaseSearchText("");
+    fetchCases();
+  };
+
+  // Handle case selection and redirect
+  const handleCaseSelect = () => {
+    if (selectedCaseId) {
+      navigate(`/admin/bpo?caseId=${selectedCaseId}`);
+    } else {
+      navigate("/admin/bpo");
+    }
+    setCaseModalVisible(false);
+  };
+
+  // Filter cases based on search
+  const filteredCases = useMemo(() => {
+    const searchLower = caseSearchText.toLowerCase();
+    if (!searchLower) return cases;
+    return cases.filter((c) => {
+      const caseId = (c.caseID || c._id || "").toLowerCase();
+      const victimName = (c.victimName || "").toLowerCase();
+      const incidentType = (c.incidentType || "").toLowerCase();
+      const perpetrator = (c.perpetrator || "").toLowerCase();
+      return (
+        caseId.includes(searchLower) ||
+        victimName.includes(searchLower) ||
+        incidentType.includes(searchLower) ||
+        perpetrator.includes(searchLower)
+      );
+    });
+  }, [cases, caseSearchText]);
 
   // Debounced search typing -> value
   useEffect(() => {
@@ -533,7 +595,7 @@ export default function BPOManagement() {
           <Button
             type="primary"
             icon={<PlusOutlined />}
-            onClick={() => navigate("/admin/bpo")}
+            onClick={openCaseModal}
             style={{ background: BRAND.violet, borderColor: BRAND.violet }}
           >
             {screens.md ? "Add BPO" : null}
@@ -615,68 +677,71 @@ export default function BPOManagement() {
           </Row>
 
           {/* Toolbar */}
-          <Card style={{ ...glassCard, padding: isXs ? "12px 8px" : "14px 16px" }}>
+          <Card style={{ ...glassCard, padding: isXs ? "12px 10px" : "14px 16px" }}>
             <div style={{
-              display: "grid",
-              gridTemplateColumns: isXs 
-                ? "1fr" 
-                : screens.sm && !screens.md
-                ? "1fr 1fr" 
-                : screens.md 
-                ? "minmax(240px, 320px) repeat(auto-fit, minmax(140px, 1fr))" 
-                : "1fr 1fr",
-              gap: isXs ? 8 : 10,
+              display: "flex",
+              flexDirection: "column",
+              gap: isXs ? 10 : 12,
               width: "100%",
-              alignItems: "center",
             }}>
-              <Input
-                placeholder={isXs ? "Search BPO..." : "Search BPO ID, Control No, Applicant, Served By…"}
-                allowClear
-                prefix={<SearchOutlined />}
-                style={{ width: "100%" }}
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                size={isXs ? "middle" : "large"}
-              />
-              <Select
-                value={statusFilter}
-                onChange={setStatusFilter}
-                style={{ width: "100%" }}
-                suffixIcon={<FilterOutlined />}
-                size={isXs ? "middle" : "large"}
-              >
-                <Option value="all">All Status</Option>
-                <Option value="Active">Active</Option>
-                <Option value="Expired">Expired</Option>
-                <Option value="Revoked">Revoked</Option>
-              </Select>
-              <Select
-                value={servedByFilter}
-                onChange={setServedByFilter}
-                style={{ width: "100%" }}
-                suffixIcon={<FilterOutlined />}
-                size={isXs ? "middle" : "large"}
-              >
-                {servedByOptions.map((v) => (
-                  <Option key={v} value={v}>
-                    {v === "all" ? "All Served By" : v}
-                  </Option>
-                ))}
-              </Select>
+              {/* Search Input - Full Width on Mobile */}
+              <div style={{ width: "100%" }}>
+                <Input
+                  placeholder={isXs ? "Search BPO..." : "Search BPO ID, Control No, Applicant, Served By…"}
+                  allowClear
+                  prefix={<SearchOutlined />}
+                  style={{ width: "100%" }}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  size={isXs ? "middle" : "large"}
+                />
+              </div>
 
+              {/* Filter Row */}
               <div style={{
-                display: "flex",
-                gap: 8,
+                display: "grid",
+                gridTemplateColumns: isXs 
+                  ? "1fr 1fr" 
+                  : screens.sm && !screens.md 
+                  ? "1fr 1fr 1fr 1fr"
+                  : "repeat(4, 1fr)",
+                gap: isXs ? 8 : 10,
                 width: "100%",
-                gridColumn: isXs ? "span 1" : "auto",
               }}>
+                <Select
+                  value={statusFilter}
+                  onChange={setStatusFilter}
+                  style={{ width: "100%" }}
+                  suffixIcon={<FilterOutlined />}
+                  size={isXs ? "middle" : "large"}
+                >
+                  <Option value="all">{isXs ? "Status" : "All Status"}</Option>
+                  <Option value="Active">Active</Option>
+                  <Option value="Expired">Expired</Option>
+                  <Option value="Revoked">Revoked</Option>
+                </Select>
+
+                <Select
+                  value={servedByFilter}
+                  onChange={setServedByFilter}
+                  style={{ width: "100%" }}
+                  suffixIcon={<FilterOutlined />}
+                  size={isXs ? "middle" : "large"}
+                >
+                  {servedByOptions.map((v) => (
+                    <Option key={v} value={v}>
+                      {v === "all" ? (isXs ? "Served By" : "All Served By") : v}
+                    </Option>
+                  ))}
+                </Select>
+
                 <Dropdown overlay={colMenu} trigger={["click"]}>
                   <Button 
                     icon={<SettingOutlined />} 
-                    style={{ flex: 1 }}
+                    style={{ width: "100%" }}
                     size={isXs ? "middle" : "large"}
                   >
-                    {screens.md ? "Columns" : ""}
+                    {!isXs && "Columns"}
                   </Button>
                 </Dropdown>
 
@@ -685,27 +750,34 @@ export default function BPOManagement() {
                   onClick={() =>
                     setDensity((d) => (d === "middle" ? "small" : "middle"))
                   }
-                  style={{ flex: 1 }}
+                  style={{ width: "100%" }}
                   size={isXs ? "middle" : "large"}
                 >
-                  {screens.md ? (density === "middle" ? "Compact" : "Comfortable") : ""}
+                  {screens.md && (density === "middle" ? "Compact" : "Comfortable")}
                 </Button>
               </div>
             </div>
           </Card>
 
           {/* Bulk actions */}
-          <Card style={{ ...glassCard, padding: 10 }}>
-            <Space wrap>
-              <Text type="secondary">
+          <Card style={{ ...glassCard, padding: isXs ? "10px 12px" : "12px 16px" }}>
+            <div style={{
+              display: "flex",
+              flexDirection: isXs ? "column" : "row",
+              alignItems: isXs ? "stretch" : "center",
+              gap: isXs ? 10 : 12,
+              flexWrap: "wrap",
+            }}>
+              <Text type="secondary" style={{ whiteSpace: "nowrap" }}>
                 Selected: <strong>{selectedRowKeys.length}</strong>
               </Text>
               <Select
                 placeholder="Bulk: Update Status"
-                style={{ width: 220 }}
+                style={{ width: isXs ? "100%" : 200, minWidth: isXs ? "auto" : 180 }}
                 onChange={(v) => bulkUpdateStatus(v)}
                 value={null}
                 disabled={!selectedRowKeys.length}
+                size={isXs ? "middle" : "default"}
               >
                 <Option value="Active">Set Active</Option>
                 <Option value="Expired">Set Expired</Option>
@@ -722,11 +794,13 @@ export default function BPOManagement() {
                   danger
                   icon={<CloseCircleOutlined />}
                   disabled={!selectedRowKeys.length}
+                  style={{ width: isXs ? "100%" : "auto" }}
+                  size={isXs ? "middle" : "default"}
                 >
                   Bulk Delete
                 </Button>
               </Popconfirm>
-            </Space>
+            </div>
           </Card>
 
           {/* Table (auto-fits viewport; rows clickable) */}
@@ -769,6 +843,136 @@ export default function BPOManagement() {
             />
           </Card>
         </div>
+
+        {/* Case Selection Modal */}
+        <Modal
+          open={caseModalVisible}
+          onCancel={() => setCaseModalVisible(false)}
+          centered
+          width={screens.lg ? 700 : "96vw"}
+          footer={[
+            <Button key="skip" onClick={() => {
+              setSelectedCaseId(null);
+              handleCaseSelect();
+            }}>
+              Skip & Create Blank BPO
+            </Button>,
+            <Button
+              key="select"
+              type="primary"
+              onClick={handleCaseSelect}
+              disabled={!selectedCaseId}
+              style={{ background: BRAND.violet, borderColor: BRAND.violet }}
+            >
+              Continue with Selected Case
+            </Button>,
+          ]}
+          title={
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Avatar
+                style={{ background: "#fff", color: BRAND.violet }}
+                icon={<FileTextOutlined />}
+              />
+              <div>
+                <div style={{ fontWeight: 800, lineHeight: 1 }}>
+                  Select a Case for BPO
+                </div>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  Choose a case to auto-fill BPO details, or skip to create manually.
+                </Text>
+              </div>
+            </div>
+          }
+        >
+          <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+            <Input
+              placeholder="Search by case ID, victim name, incident type, or perpetrator..."
+              prefix={<SearchOutlined />}
+              allowClear
+              value={caseSearchText}
+              onChange={(e) => setCaseSearchText(e.target.value)}
+              size="large"
+            />
+            
+            {loadingCases ? (
+              <div style={{ textAlign: "center", padding: "40px 0" }}>
+                <Spin size="large" />
+                <div style={{ marginTop: 12, color: "#999" }}>Loading cases...</div>
+              </div>
+            ) : filteredCases.length === 0 ? (
+              <Empty
+                description={
+                  caseSearchText
+                    ? "No cases match your search"
+                    : "No cases available"
+                }
+                style={{ padding: "40px 0" }}
+              />
+            ) : (
+              <div style={{ maxHeight: 400, overflowY: "auto" }}>
+                <Space direction="vertical" size="small" style={{ width: "100%" }}>
+                  {filteredCases.map((caseItem) => {
+                    const caseId = caseItem.caseID || caseItem._id;
+                    const isSelected = selectedCaseId === caseId;
+                    return (
+                      <Card
+                        key={caseId}
+                        size="small"
+                        hoverable
+                        onClick={() => setSelectedCaseId(caseId)}
+                        style={{
+                          border: isSelected
+                            ? `2px solid ${BRAND.violet}`
+                            : "1px solid #d9d9d9",
+                          background: isSelected ? "#f6f3ff" : "#fff",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <Space direction="vertical" size={4} style={{ width: "100%" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <Text strong style={{ color: BRAND.violet }}>
+                              {caseId}
+                            </Text>
+                            {isSelected && (
+                              <Tag color="purple" icon={<CheckSquareOutlined />}>
+                                Selected
+                              </Tag>
+                            )}
+                          </div>
+                          <div>
+                            <Text type="secondary" style={{ fontSize: 12 }}>Victim: </Text>
+                            <Text style={{ fontSize: 13 }}>{caseItem.victimName || "N/A"}</Text>
+                          </div>
+                          <div>
+                            <Text type="secondary" style={{ fontSize: 12 }}>Perpetrator: </Text>
+                            <Text style={{ fontSize: 13 }}>{caseItem.perpetrator || "N/A"}</Text>
+                          </div>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                            <Tag color="blue" style={{ margin: 0 }}>
+                              {caseItem.incidentType || "N/A"}
+                            </Tag>
+                            <Tag
+                              color={
+                                caseItem.status === "Open"
+                                  ? "green"
+                                  : caseItem.status === "Resolved"
+                                  ? "gray"
+                                  : "orange"
+                              }
+                              style={{ margin: 0 }}
+                            >
+                              {caseItem.status || "N/A"}
+                            </Tag>
+                          </div>
+                        </Space>
+                      </Card>
+                    );
+                  })}
+                </Space>
+              </div>
+            )}
+          </Space>
+        </Modal>
 
         {/* Status Editor Modal — polished */}
         <Modal

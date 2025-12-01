@@ -61,6 +61,7 @@ const systemLogSchema = new mongoose.Schema({
                     'view_case',
                     'edit_case',
                     'delete_case',
+                    'case_remark',
                     'edit_user',
                     'view_user',
                     'delete_user',

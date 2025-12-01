@@ -17,6 +17,9 @@ import {
   Card,
   Tooltip,
   Segmented,
+  Timeline,
+  Empty,
+  Spin,
 } from "antd";
 import {
   PrinterOutlined,
@@ -24,6 +27,11 @@ import {
   SaveOutlined,
   ArrowLeftOutlined,
   SafetyCertificateTwoTone,
+  HistoryOutlined,
+  UserOutlined,
+  ClockCircleOutlined,
+  CommentOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
 import { api, getUserType } from "../../lib/api";
 import DssSuggestion from "../../components/DssSuggestion";
@@ -50,6 +58,12 @@ export default function CaseDetail() {
   const [loading, setLoading] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [form] = Form.useForm();
+  
+  // History/Remarks state
+  const [historyData, setHistoryData] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [addRemarkOpen, setAddRemarkOpen] = useState(false);
+  const [remarkForm] = Form.useForm();
 
   // PRINT TARGET
   const printRef = useRef(null);
@@ -173,6 +187,20 @@ export default function CaseDetail() {
     }
   };
 
+  // --- fetch history ---
+  const fetchHistory = async () => {
+    try {
+      setHistoryLoading(true);
+      const res = await api.get(`/api/cases/${id}/history`);
+      const logs = res?.data?.data || [];
+      setHistoryData(logs);
+    } catch (err) {
+      console.error("Failed to load case history", err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
   // --- load case ---
   useEffect(() => {
     const fetchUserType = async () => {
@@ -197,6 +225,7 @@ export default function CaseDetail() {
       }
     };
     fetchCase();
+    fetchHistory();
 
     // URL ?edit=true opens the modal
     try {
@@ -216,8 +245,30 @@ export default function CaseDetail() {
       setCaseData(updated);
       setEditOpen(false);
       message.success("Case updated successfully");
+      fetchHistory(); // Refresh history after update
     } catch {
       message.error("Update failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- add remark ---
+  const handleAddRemark = async () => {
+    try {
+      const values = await remarkForm.validateFields();
+      setLoading(true);
+      const res = await api.post(`/api/cases/${id}/remark`, {
+        remark: values.remark
+      });
+      if (res?.data?.success) {
+        message.success("Remark added successfully");
+        setAddRemarkOpen(false);
+        remarkForm.resetFields();
+        fetchHistory(); // Refresh history
+      }
+    } catch (err) {
+      message.error(err?.response?.data?.message || "Failed to add remark");
     } finally {
       setLoading(false);
     }
@@ -451,6 +502,159 @@ export default function CaseDetail() {
           </Card>
         </div>
 
+        {/* History of Remarks — hidden in print */}
+        {(userType === "admin" || userType === "official") && (
+          <Card
+            className="no-print hover-lift"
+            style={{
+              borderRadius: 16,
+              border: `1px solid ${BRAND.soft}`,
+              background:
+                "linear-gradient(145deg, rgba(255,255,255,.98), rgba(255,255,255,.94))",
+            }}
+            bodyStyle={{ padding: screens.xs ? 12 : 16 }}
+          >
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginBottom: 16
+            }}>
+              <Space>
+                <HistoryOutlined style={{ fontSize: 20, color: BRAND.violet }} />
+                <Title level={5} style={{ margin: 0, color: BRAND.violet }}>
+                  History of Remarks
+                </Title>
+              </Space>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => setAddRemarkOpen(true)}
+                style={{ 
+                  background: BRAND.violet, 
+                  borderColor: BRAND.violet,
+                  borderRadius: 8
+                }}
+                size={screens.xs ? "small" : "middle"}
+              >
+                {screens.md ? "Add Remark" : "Add"}
+              </Button>
+            </div>
+
+            {historyLoading ? (
+              <div style={{ textAlign: 'center', padding: 40 }}>
+                <Spin tip="Loading history..." />
+              </div>
+            ) : historyData.length === 0 ? (
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description={
+                  <Text type="secondary">No history records found for this case</Text>
+                }
+                style={{ padding: 20 }}
+              />
+            ) : (
+              <div style={{ 
+                maxHeight: 400, 
+                overflowY: 'auto',
+                padding: '8px 4px',
+                borderRadius: 8,
+                background: '#fafafa'
+              }}>
+                <Timeline
+                  mode={screens.md ? "left" : "right"}
+                  items={historyData.map((log, idx) => {
+                    const actionColors = {
+                      'edit_case': 'blue',
+                      'view_case': 'green',
+                      'delete_case': 'red',
+                      'case_remark': 'purple',
+                    };
+                    
+                    const actionLabels = {
+                      'edit_case': 'Case Updated',
+                      'view_case': 'Case Viewed',
+                      'delete_case': 'Case Deleted',
+                      'case_remark': 'Remark Added',
+                    };
+
+                    return {
+                      color: actionColors[log.action] || 'gray',
+                      dot: log.action === 'case_remark' ? (
+                        <CommentOutlined style={{ fontSize: 16 }} />
+                      ) : (
+                        <ClockCircleOutlined style={{ fontSize: 16 }} />
+                      ),
+                      children: (
+                        <Card
+                          size="small"
+                          style={{
+                            background: '#fff',
+                            borderRadius: 8,
+                            border: `1px solid ${BRAND.soft}`,
+                            marginBottom: idx < historyData.length - 1 ? 12 : 0
+                          }}
+                          bodyStyle={{ padding: screens.xs ? 10 : 12 }}
+                        >
+                          <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                            <div style={{ 
+                              display: 'flex', 
+                              justifyContent: 'space-between',
+                              alignItems: 'flex-start',
+                              flexWrap: 'wrap',
+                              gap: 8
+                            }}>
+                              <Tag 
+                                color={actionColors[log.action] || 'default'}
+                                style={{ 
+                                  borderRadius: 999,
+                                  fontWeight: 600,
+                                  fontSize: screens.xs ? 11 : 12
+                                }}
+                              >
+                                {actionLabels[log.action] || log.action}
+                              </Tag>
+                              <Text type="secondary" style={{ fontSize: screens.xs ? 11 : 12 }}>
+                                {new Date(log.timestamp).toLocaleString()}
+                              </Text>
+                            </div>
+                            
+                            <div style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: 6,
+                              marginTop: 4
+                            }}>
+                              <UserOutlined style={{ color: BRAND.violet, fontSize: 14 }} />
+                              <Text strong style={{ fontSize: screens.xs ? 12 : 13 }}>
+                                {log.actorName || log.actorBusinessId || 'Unknown User'}
+                              </Text>
+                            </div>
+
+                            {log.details && (
+                              <div style={{ 
+                                marginTop: 8,
+                                padding: 10,
+                                background: '#f9f9f9',
+                                borderRadius: 6,
+                                borderLeft: `3px solid ${actionColors[log.action] || '#d9d9d9'}`
+                              }}>
+                                <Text style={{ fontSize: screens.xs ? 12 : 13 }}>
+                                  {log.details}
+                                </Text>
+                              </div>
+                            )}
+                          </Space>
+                        </Card>
+                      )
+                    };
+                  })}
+                />
+              </div>
+            )}
+          </Card>
+        )}
+
         {/* DSS Suggestion — hidden in print */}
         {(userType === "admin" || userType === "official") && (
           <Card
@@ -467,6 +671,71 @@ export default function CaseDetail() {
           </Card>
         )}
       </Content>
+
+      {/* ADD REMARK MODAL */}
+      <Modal
+        open={addRemarkOpen}
+        onCancel={() => {
+          setAddRemarkOpen(false);
+          remarkForm.resetFields();
+        }}
+        footer={
+          <Space>
+            <Button onClick={() => {
+              setAddRemarkOpen(false);
+              remarkForm.resetFields();
+            }}>
+              Cancel
+            </Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleAddRemark}
+              loading={loading}
+              style={{ background: BRAND.violet, borderColor: BRAND.violet }}
+            >
+              Add Remark
+            </Button>
+          </Space>
+        }
+        width={screens.md ? 600 : "96vw"}
+        centered
+        destroyOnClose
+        maskStyle={{ backdropFilter: "blur(2px)" }}
+        wrapClassName="case-edit-modal"
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <CommentOutlined style={{ fontSize: 22, color: BRAND.violet }} />
+            <div style={{ lineHeight: 1 }}>
+              <div style={{ fontWeight: 800 }}>Add Remark</div>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Add a note or comment about this case
+              </Text>
+            </div>
+          </div>
+        }
+      >
+        <Form
+          form={remarkForm}
+          layout="vertical"
+          style={{ marginTop: 16 }}
+        >
+          <Form.Item
+            name="remark"
+            label="Remark"
+            rules={[
+              { required: true, message: "Please enter a remark" },
+              { min: 10, message: "Remark must be at least 10 characters" }
+            ]}
+          >
+            <Input.TextArea
+              rows={6}
+              placeholder="Enter your remark or note about this case..."
+              style={{ borderRadius: 8 }}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
 
       {/* EDIT MODAL */}
       <Modal
@@ -636,6 +905,22 @@ export default function CaseDetail() {
 
         .hover-lift { transition: transform .18s ease, box-shadow .18s ease; }
         .hover-lift:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(16,24,40,.12); }
+
+        /* Custom scrollbar for history section */
+        .ant-card .ant-card-body > div[style*="overflowY: auto"]::-webkit-scrollbar {
+          width: 8px;
+        }
+        .ant-card .ant-card-body > div[style*="overflowY: auto"]::-webkit-scrollbar-track {
+          background: rgba(0, 0, 0, 0.03);
+          border-radius: 10px;
+        }
+        .ant-card .ant-card-body > div[style*="overflowY: auto"]::-webkit-scrollbar-thumb {
+          background: ${BRAND.violet};
+          border-radius: 10px;
+        }
+        .ant-card .ant-card-body > div[style*="overflowY: auto"]::-webkit-scrollbar-thumb:hover {
+          background: #6a4ae0;
+        }
 
         @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: translateY(0) } }

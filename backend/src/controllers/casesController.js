@@ -275,3 +275,113 @@ exports.deleteCase = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getCaseHistory = async (req, res, next) => {
+  try {
+    const SystemLog = require('../models/SystemLogs');
+    const Admin = require('../models/Admin');
+    const BarangayOfficial = require('../models/BarangayOfficials');
+    
+    const id = req.params.id;
+    
+    // First, get the case to ensure it exists
+    const query = mongoose.Types.ObjectId.isValid(id)
+      ? { $or: [{ caseID: id }, { _id: id }], deleted: { $ne: true } }
+      : { caseID: id, deleted: { $ne: true } };
+    const caseItem = await Cases.findOne(query).lean();
+    if (!caseItem) {
+      return res.status(404).json({ success: false, message: 'Case not found' });
+    }
+    
+    // Get all logs related to this case (view, edit, delete actions)
+    // Search by case ID in the details field
+    const caseIdPattern = new RegExp(caseItem.caseID || id, 'i');
+    const logs = await SystemLog.find({
+      action: { $in: ['view_case', 'edit_case', 'delete_case', 'case_remark'] },
+      details: caseIdPattern
+    })
+    .sort({ timestamp: -1 })
+    .lean();
+    
+    // Enrich logs with actor names
+    const enrichedLogs = await Promise.all(logs.map(async (log) => {
+      let actorName = log.actorBusinessId || 'Unknown User';
+      
+      try {
+        if (log.adminID) {
+          const admin = await Admin.findById(log.adminID).lean();
+          if (admin) {
+            actorName = `${admin.firstName || ''} ${admin.lastName || ''}`.trim() || admin.adminID || actorName;
+          }
+        } else if (log.officialID) {
+          const official = await BarangayOfficial.findById(log.officialID).lean();
+          if (official) {
+            actorName = `${official.firstName || ''} ${official.lastName || ''}`.trim() || official.officialID || actorName;
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to enrich actor name for log', log._id, e?.message);
+      }
+      
+      return {
+        ...log,
+        actorName
+      };
+    }));
+    
+    return res.json({ success: true, data: enrichedLogs });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.addCaseRemark = async (req, res, next) => {
+  try {
+    const SystemLog = require('../models/SystemLogs');
+    const id = req.params.id;
+    const { remark } = req.body;
+    
+    if (!remark || remark.trim() === '') {
+      return res.status(400).json({ success: false, message: 'Remark is required' });
+    }
+    
+    // Verify case exists
+    const query = mongoose.Types.ObjectId.isValid(id)
+      ? { $or: [{ caseID: id }, { _id: id }], deleted: { $ne: true } }
+      : { caseID: id, deleted: { $ne: true } };
+    const caseItem = await Cases.findOne(query).lean();
+    if (!caseItem) {
+      return res.status(404).json({ success: false, message: 'Case not found' });
+    }
+    
+    // Generate a unique log ID
+    const logID = `LOG-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Determine actor info
+    const actorType = req.user?.role || 'official';
+    const actorId = req.user?.officialID || req.user?.adminID || null;
+    const actorBusinessId = req.user?.officialID || req.user?.adminID || 'Unknown';
+    
+    // Create log entry
+    const logPayload = {
+      logID,
+      action: 'case_remark',
+      details: `Remark on case ${caseItem.caseID || id}: ${remark}`,
+      timestamp: new Date(),
+      ipAddress: req.ip || req.connection?.remoteAddress || '0.0.0.0',
+      actorBusinessId
+    };
+    
+    if (actorType === 'admin' && actorId) {
+      logPayload.adminID = actorId;
+    } else if (actorType === 'official' && actorId) {
+      logPayload.officialID = actorId;
+    }
+    
+    await SystemLog.create(logPayload);
+    
+    return res.json({ success: true, message: 'Remark added successfully' });
+  } catch (err) {
+    next(err);
+  }
+};

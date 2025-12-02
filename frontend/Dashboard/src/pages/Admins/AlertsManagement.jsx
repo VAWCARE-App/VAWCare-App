@@ -23,6 +23,10 @@ import {
   SearchOutlined,
   ExclamationCircleOutlined,
   MenuOutlined,
+  FileTextOutlined,
+  BellOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 
@@ -462,65 +466,74 @@ export default function AlertsManagement() {
             minHeight: "100%",
           }}
         >
-          {/* KPIs */}
-          <Row gutter={[isXs ? 8 : 10, isXs ? 8 : 10]}>
-            <Col xs={12} sm={12} md={6}>
-              <Card style={{ 
-                borderRadius: 12, 
-                textAlign: isXs ? "center" : "left",
-                padding: isXs ? "8px 10px" : "10px 12px",
-              }}>
-                <Text type="secondary" style={{ fontSize: isXs ? 11 : 13, display: "block", marginBottom: 4 }}>
-                  Total
-                </Text>
-                <Title level={isXs ? 4 : 3} style={{ margin: 0, color: BRAND.pink, fontSize: isXs ? 20 : 24, fontWeight: 700 }}>
-                  {stats.total}
+          {/* Quick Insights - Alert KPIs */}
+          <Card
+            bordered
+            style={{
+              marginBottom: screens.xs ? 12 : 16,
+              borderRadius: screens.xs ? 12 : 18,
+              borderColor: BRAND.soft,
+              boxShadow: "0 20px 46px rgba(122,90,248,0.06)",
+              background: "linear-gradient(145deg, rgba(255,255,255,0.92), rgba(250,247,255,0.88))",
+            }}
+            bodyStyle={{ padding: screens.xs ? 12 : 20 }}
+          >
+            <div style={{ marginBottom: 16 }}>
+              <Space direction="vertical" size={2}>
+                <Title level={5} style={{ margin: 0, color: BRAND.violet }}>
+                  <FileTextOutlined style={{ marginRight: 8 }} />
+                  Quick Insights
                 </Title>
-              </Card>
-            </Col>
-            <Col xs={12} sm={12} md={6}>
-              <Card style={{ 
-                borderRadius: 12, 
-                textAlign: isXs ? "center" : "left",
-                padding: isXs ? "8px 10px" : "10px 12px",
-              }}>
-                <Text type="secondary" style={{ fontSize: isXs ? 11 : 13, display: "block", marginBottom: 4 }}>
-                  Active
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  Alert status overview and key metrics
                 </Text>
-                <Title level={isXs ? 4 : 3} style={{ margin: 0, color: "#f50", fontSize: isXs ? 20 : 24, fontWeight: 700 }}>
-                  {stats.active}
-                </Title>
-              </Card>
-            </Col>
-            <Col xs={12} sm={12} md={6}>
-              <Card style={{ 
-                borderRadius: 12, 
-                textAlign: isXs ? "center" : "left",
-                padding: isXs ? "8px 10px" : "10px 12px",
-              }}>
-                <Text type="secondary" style={{ fontSize: isXs ? 11 : 13, display: "block", marginBottom: 4 }}>
-                  {isXs ? "Resolved" : "Under/Resolved"}
-                </Text>
-                <Title level={isXs ? 4 : 3} style={{ margin: 0, color: "#52c41a", fontSize: isXs ? 20 : 24, fontWeight: 700 }}>
-                  {stats.resolved}
-                </Title>
-              </Card>
-            </Col>
-            <Col xs={12} sm={12} md={6}>
-              <Card style={{ 
-                borderRadius: 12, 
-                textAlign: isXs ? "center" : "left",
-                padding: isXs ? "8px 10px" : "10px 12px",
-              }}>
-                <Text type="secondary" style={{ fontSize: isXs ? 11 : 13, display: "block", marginBottom: 4 }}>
-                  Cancelled
-                </Text>
-                <Title level={isXs ? 4 : 3} style={{ margin: 0, fontSize: isXs ? 20 : 24, fontWeight: 700 }}>
-                  {stats.cancelled}
-                </Title>
-              </Card>
-            </Col>
-          </Row>
+              </Space>
+            </div>
+            
+            <Row gutter={[screens.xs ? 8 : 16, screens.xs ? 8 : 16]}>
+              {[
+                ["Total", stats.total, BRAND.pink, <BellOutlined key="i" />, "#fff0f7", "#ffffff"],
+                ["Active", stats.active, "#ff4d4f", <ExclamationCircleOutlined key="i" />, "#fff1f0", "#ffffff"],
+                ["Resolved", stats.resolved, "#52c41a", <CheckCircleOutlined key="i" />, "#f6ffed", "#ffffff"],
+                ["Cancelled", stats.cancelled, "#8c8c8c", <CloseCircleOutlined key="i" />, "#fafafa", "#ffffff"],
+              ].map(([label, value, color, icon, gradStart, gradEnd], i) => (
+                <Col xs={12} sm={6} md={6} lg={6} key={i}>
+                  <Card 
+                    size="small" 
+                    style={{ 
+                      borderRadius: 12,
+                      border: `1px solid ${color === BRAND.pink ? BRAND.soft : `${color}33`}`,
+                      background: `linear-gradient(135deg, ${gradStart}, ${gradEnd})`,
+                      textAlign: "center",
+                      height: "100%",
+                      minHeight: screens.xs ? 100 : 110
+                    }}
+                    bodyStyle={{ 
+                      padding: screens.xs ? "12px 8px" : "16px 12px",
+                      height: "100%",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center"
+                    }}
+                  >
+                    <div style={{ padding: screens.xs ? "4px 0" : "8px 0" }}>
+                      {React.cloneElement(icon, { style: { fontSize: screens.xs ? 20 : 24, color, marginBottom: 4 } })}
+                      <div style={{ fontSize: screens.xs ? 11 : 12, color: "#666", marginBottom: 4 }}>
+                        {label}
+                      </div>
+                      <div style={{ 
+                        fontSize: screens.xs ? 20 : 24, 
+                        fontWeight: 700, 
+                        color
+                      }}>
+                        {value}
+                      </div>
+                    </div>
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          </Card>
 
           {/* Toolbar - Sticky */}
           <Card 

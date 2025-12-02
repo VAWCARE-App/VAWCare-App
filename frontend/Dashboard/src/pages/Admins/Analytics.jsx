@@ -51,7 +51,7 @@ const ABUSE_COLORS = {
   "Others": "#e91e63"
 };
 
-const Test = () => {
+const Analytics = () => {
   const navigate = useNavigate();
   const screens = Grid.useBreakpoint();
   const isXs = !!screens.xs && !screens.sm;
@@ -492,4 +492,4 @@ const Test = () => {
   );
 };
 
-export default Test;
+export default Analytics;

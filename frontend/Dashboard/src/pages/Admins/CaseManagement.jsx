@@ -22,6 +22,7 @@ import {
   Checkbox,
   Tabs,
   Radio,
+  Statistic,
 } from "antd";
 import {
   SearchOutlined,
@@ -37,6 +38,11 @@ import {
   DownloadOutlined,
   FilePdfOutlined,
   CheckSquareOutlined,
+  FolderOpenOutlined,
+  CheckCircleOutlined,
+  WarningOutlined,
+  EnvironmentOutlined,
+  FireOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { api, getUserType } from "../../lib/api";
@@ -65,6 +71,16 @@ export default function CaseManagement() {
   const [reportsList, setReportsList] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
   const [userType, setUserType] = useState(null);
+  
+  // Analytics/Insights state
+  const [analyticsData, setAnalyticsData] = useState({
+    totalCases: 0,
+    openCases: 0,
+    resolvedCases: 0,
+    highRiskCases: 0,
+    mostCommonIncident: "",
+    mostCommonLocation: ""
+  });
   
   // Delete confirmation modal
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -423,7 +439,56 @@ export default function CaseManagement() {
     // Sort by createdAt in descending order (most recent first)
     f.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     setFilteredCases(f);
+    
+    // Calculate analytics data whenever cases change
+    calculateAnalytics(allCases);
   }, [allCases, searchText, filterType]);
+  
+  const calculateAnalytics = (cases) => {
+    const totalCases = cases.length;
+    const openCases = cases.filter(c => c.status?.toLowerCase() === "open").length;
+    const resolvedCases = cases.filter(c => c.status?.toLowerCase() === "resolved").length;
+    const highRiskCases = cases.filter(c => c.riskLevel?.toLowerCase() === "high").length;
+    
+    // Find most common incident type
+    const incidentCounts = {};
+    cases.forEach(c => {
+      if (c.incidentType) {
+        incidentCounts[c.incidentType] = (incidentCounts[c.incidentType] || 0) + 1;
+      }
+    });
+    const mostCommonIncident = Object.keys(incidentCounts).length > 0
+      ? Object.keys(incidentCounts).reduce((a, b) => 
+          incidentCounts[a] > incidentCounts[b] ? a : b
+        )
+      : "N/A";
+    
+    // Find most common location (purok)
+    const locationCounts = {};
+    cases.forEach(c => {
+      if (c.location) {
+        const match = c.location.match(/purok\s*(\d+[a-zA-Z]?)/i);
+        if (match) {
+          const purok = `Purok ${match[1]}`;
+          locationCounts[purok] = (locationCounts[purok] || 0) + 1;
+        }
+      }
+    });
+    const mostCommonLocation = Object.keys(locationCounts).length > 0
+      ? Object.keys(locationCounts).reduce((a, b) => 
+          locationCounts[a] > locationCounts[b] ? a : b
+        )
+      : "N/A";
+    
+    setAnalyticsData({
+      totalCases,
+      openCases,
+      resolvedCases,
+      highRiskCases,
+      mostCommonIncident,
+      mostCommonLocation
+    });
+  };
 
   const statusColor = (s) => {
     const v = String(s || "").toLowerCase();
@@ -1381,6 +1446,284 @@ export default function CaseManagement() {
           paddingBottom: "max(16px, env(safe-area-inset-bottom))",
         }}
       >
+        <div style={{ width: "100%", maxWidth: 1320 }}>
+          {/* Insights Card */}
+          <Card
+            bordered
+            style={{
+              marginBottom: screens.xs ? 12 : 16,
+              borderRadius: screens.xs ? 12 : 18,
+              borderColor: BRAND.soft,
+              boxShadow: "0 20px 46px rgba(122,90,248,0.06)",
+              background: "linear-gradient(145deg, rgba(255,255,255,0.92), rgba(250,247,255,0.88))",
+              cursor: "pointer",
+              transition: "all 0.3s ease",
+              position: "relative",
+              overflow: "hidden"
+            }}
+            bodyStyle={{ padding: screens.xs ? 12 : 20 }}
+            onClick={() => navigate("/admin/analytics")}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.boxShadow = "0 24px 52px rgba(122,90,248,0.12)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "0 20px 46px rgba(122,90,248,0.06)";
+            }}
+          >
+            <div style={{ 
+              position: "absolute", 
+              top: screens.xs ? 8 : 12, 
+              right: screens.xs ? 8 : 12,
+              background: "#fff",
+              color: BRAND.violet,
+              padding: screens.xs ? "4px 10px" : "6px 14px",
+              borderRadius: 999,
+              fontSize: screens.xs ? 11 : 12,
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              border: `1.5px solid ${BRAND.violet}`,
+              zIndex: 1
+            }}>
+              View Full Analytics
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <Space direction="vertical" size={2}>
+                <Title level={5} style={{ margin: 0, color: BRAND.violet }}>
+                  <FileTextOutlined style={{ marginRight: 8 }} />
+                  Quick Insights
+                </Title>
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  Key metrics and analytics overview • Click to explore more
+                </Text>
+              </Space>
+            </div>
+            
+            <Row gutter={[screens.xs ? 8 : 16, screens.xs ? 8 : 16]}>
+              <Col xs={12} sm={8} md={8} lg={4}>
+                <Card 
+                  size="small" 
+                  style={{ 
+                    borderRadius: 12,
+                    border: `1px solid ${BRAND.soft}`,
+                    background: "linear-gradient(135deg, #f6f3ff, #ffffff)",
+                    textAlign: "center",
+                    height: "100%",
+                    minHeight: screens.xs ? 100 : 110
+                  }}
+                  bodyStyle={{ 
+                    padding: screens.xs ? "12px 8px" : "16px 12px",
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center"
+                  }}
+                >
+                  <div style={{ padding: screens.xs ? "4px 0" : "8px 0" }}>
+                    <FolderOpenOutlined style={{ fontSize: screens.xs ? 20 : 24, color: BRAND.violet, marginBottom: 4 }} />
+                    <div style={{ fontSize: screens.xs ? 11 : 12, color: "#666", marginBottom: 4 }}>
+                      Total Cases
+                    </div>
+                    <div style={{ 
+                      fontSize: screens.xs ? 20 : 24, 
+                      fontWeight: 700, 
+                      color: BRAND.violet
+                    }}>
+                      {analyticsData.totalCases}
+                    </div>
+                  </div>
+                </Card>
+              </Col>
+              
+              <Col xs={12} sm={8} md={8} lg={4}>
+                <Card 
+                  size="small" 
+                  style={{ 
+                    borderRadius: 12,
+                    border: "1px solid rgba(250,173,20,0.2)",
+                    background: "linear-gradient(135deg, #fffbf0, #ffffff)",
+                    textAlign: "center",
+                    height: "100%",
+                    minHeight: screens.xs ? 100 : 110
+                  }}
+                  bodyStyle={{ 
+                    padding: screens.xs ? "12px 8px" : "16px 12px",
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center"
+                  }}
+                >
+                  <div style={{ padding: screens.xs ? "4px 0" : "8px 0" }}>
+                    <FolderOpenOutlined style={{ fontSize: screens.xs ? 20 : 24, color: "#faad14", marginBottom: 4 }} />
+                    <div style={{ fontSize: screens.xs ? 11 : 12, color: "#666", marginBottom: 4 }}>
+                      Open Cases
+                    </div>
+                    <div style={{ 
+                      fontSize: screens.xs ? 20 : 24, 
+                      fontWeight: 700, 
+                      color: "#faad14"
+                    }}>
+                      {analyticsData.openCases}
+                    </div>
+                  </div>
+                </Card>
+              </Col>
+              
+              <Col xs={12} sm={8} md={8} lg={4}>
+                <Card 
+                  size="small" 
+                  style={{ 
+                    borderRadius: 12,
+                    border: "1px solid rgba(82,196,26,0.2)",
+                    background: "linear-gradient(135deg, #f6ffed, #ffffff)",
+                    textAlign: "center",
+                    height: "100%",
+                    minHeight: screens.xs ? 100 : 110
+                  }}
+                  bodyStyle={{ 
+                    padding: screens.xs ? "12px 8px" : "16px 12px",
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center"
+                  }}
+                >
+                  <div style={{ padding: screens.xs ? "4px 0" : "8px 0" }}>
+                    <CheckCircleOutlined style={{ fontSize: screens.xs ? 20 : 24, color: "#52c41a", marginBottom: 4 }} />
+                    <div style={{ fontSize: screens.xs ? 11 : 12, color: "#666", marginBottom: 4 }}>
+                      Resolved
+                    </div>
+                    <div style={{ 
+                      fontSize: screens.xs ? 20 : 24, 
+                      fontWeight: 700, 
+                      color: "#52c41a"
+                    }}>
+                      {analyticsData.resolvedCases}
+                    </div>
+                  </div>
+                </Card>
+              </Col>
+              
+              <Col xs={12} sm={8} md={8} lg={4}>
+                <Card 
+                  size="small" 
+                  style={{ 
+                    borderRadius: 12,
+                    border: "1px solid rgba(255,77,79,0.2)",
+                    background: "linear-gradient(135deg, #fff1f0, #ffffff)",
+                    textAlign: "center",
+                    height: "100%",
+                    minHeight: screens.xs ? 100 : 110
+                  }}
+                  bodyStyle={{ 
+                    padding: screens.xs ? "12px 8px" : "16px 12px",
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center"
+                  }}
+                >
+                  <div style={{ padding: screens.xs ? "4px 0" : "8px 0" }}>
+                    <WarningOutlined style={{ fontSize: screens.xs ? 20 : 24, color: "#ff4d4f", marginBottom: 4 }} />
+                    <div style={{ fontSize: screens.xs ? 11 : 12, color: "#666", marginBottom: 4 }}>
+                      High Risk
+                    </div>
+                    <div style={{ 
+                      fontSize: screens.xs ? 20 : 24, 
+                      fontWeight: 700, 
+                      color: "#ff4d4f"
+                    }}>
+                      {analyticsData.highRiskCases}
+                    </div>
+                  </div>
+                </Card>
+              </Col>
+              
+              <Col xs={12} sm={8} md={8} lg={4}>
+                <Card 
+                  size="small" 
+                  style={{ 
+                    borderRadius: 12,
+                    border: `1px solid ${BRAND.soft}`,
+                    background: "linear-gradient(135deg, #fff0f7, #ffffff)",
+                    textAlign: "center",
+                    height: "100%",
+                    minHeight: screens.xs ? 100 : 110
+                  }}
+                  bodyStyle={{ 
+                    padding: screens.xs ? "12px 8px" : "16px 12px",
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center"
+                  }}
+                >
+                  <div style={{ padding: screens.xs ? "4px 0" : "8px 0" }}>
+                    <FireOutlined style={{ fontSize: screens.xs ? 20 : 24, color: BRAND.pink, marginBottom: 4 }} />
+                    <div style={{ fontSize: screens.xs ? 11 : 12, color: "#666", marginBottom: 4 }}>
+                      Most Common
+                    </div>
+                    <div style={{ 
+                      fontSize: screens.xs ? 12 : 14, 
+                      fontWeight: 700, 
+                      color: BRAND.pink,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      padding: "0 4px"
+                    }}>
+                      {analyticsData.mostCommonIncident}
+                    </div>
+                  </div>
+                </Card>
+              </Col>
+              
+              <Col xs={12} sm={8} md={8} lg={4}>
+                <Card 
+                  size="small" 
+                  style={{ 
+                    borderRadius: 12,
+                    border: `1px solid ${BRAND.soft}`,
+                    background: "linear-gradient(135deg, #f0f9ff, #ffffff)",
+                    textAlign: "center",
+                    height: "100%",
+                    minHeight: screens.xs ? 100 : 110
+                  }}
+                  bodyStyle={{ 
+                    padding: screens.xs ? "12px 8px" : "16px 12px",
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center"
+                  }}
+                >
+                  <div style={{ padding: screens.xs ? "4px 0" : "8px 0" }}>
+                    <EnvironmentOutlined style={{ fontSize: screens.xs ? 20 : 24, color: "#1890ff", marginBottom: 4 }} />
+                    <div style={{ fontSize: screens.xs ? 11 : 12, color: "#666", marginBottom: 4 }}>
+                      Hotspot Area
+                    </div>
+                    <div style={{ 
+                      fontSize: screens.xs ? 12 : 14, 
+                      fontWeight: 700, 
+                      color: "#1890ff",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      padding: "0 4px"
+                    }}>
+                      {analyticsData.mostCommonLocation}
+                    </div>
+                  </div>
+                </Card>
+              </Col>
+            </Row>
+          </Card>
+
         <Card
           bordered
           style={{
@@ -2789,6 +3132,7 @@ export default function CaseManagement() {
           </div>
         </Modal>
         </Card>
+        </div>
       </Content>
 
       {/* Polish (rounded controls, violet focus, glassy table) */}

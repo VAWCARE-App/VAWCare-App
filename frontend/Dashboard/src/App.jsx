@@ -34,6 +34,7 @@ import VictimBarangay from "./pages/Victim/VictimBarangay";
 import VictimCases from "./pages/Victim/VictimCases";
 
 import Test from "./pages/Test";
+import Analytics from "./pages/Admins/Analytics";
 import ReportCase from "./pages/Victim/Report";
 import EmergencyButton from "./pages/Victim/EmergencyButton";
 import LogManagement from "./pages/Admins/LogManagement";
@@ -561,6 +562,14 @@ export default function App() {
                 element={
                   <Protected roles={["admin"]}>
                     <LogManagement />
+                  </Protected>
+                }
+              />
+              <Route
+                path="analytics"
+                element={
+                  <Protected roles={["admin", "official"]}>
+                    <Analytics />
                   </Protected>
                 }
               />

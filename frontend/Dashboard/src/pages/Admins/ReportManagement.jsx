@@ -20,6 +20,7 @@ import {
   DatePicker,
   Descriptions,
 } from "antd";
+import { useNavigate } from "react-router-dom";
 import {
   SearchOutlined,
   ReloadOutlined,
@@ -31,6 +32,9 @@ import {
   MenuOutlined,
   ExclamationCircleOutlined,
   DeleteOutlined,
+  ClockCircleOutlined,
+  FolderOpenOutlined,
+  CheckCircleOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 
@@ -667,62 +671,276 @@ export default function ReportManagement() {
             minHeight: "100%",
           }}
         >
-          {/* KPIs */}
-          <div style={{ 
-            display: "flex", 
-            flexWrap: "wrap", 
-            gap: isXs ? 8 : 10,
-            width: "100%",
-          }}>
-            {[
-              ["Total Reports", reportCounts.total, BRAND.violet],
-              ["Pending", reportCounts.pending, "#faad14"],
-              ["Open", reportCounts.open, "orange"],
-              ["Under Investigation", reportCounts.inProgress, BRAND.blue],
-              ["Closed", reportCounts.closed, BRAND.green],
-            ].map(([label, value, color], i) => (
-              <div 
-                key={i}
-                style={{
-                  flex: isXs || isSm ? "0 0 calc(50% - 4px)" : isMdUp ? "0 0 calc(20% - 8px)" : "0 0 calc(33.333% - 7px)",
-                  minWidth: 0,
-                }}
-              >
+          {/* Quick Insights Card */}
+          <Card
+            bordered
+            style={{
+              marginBottom: isXs ? 12 : 16,
+              borderRadius: isXs ? 12 : 18,
+              borderColor: BRAND.softBorder,
+              boxShadow: "0 20px 46px rgba(122,90,248,0.06)",
+              background: "linear-gradient(145deg, rgba(255,255,255,0.92), rgba(250,247,255,0.88))",
+              position: "relative",
+              overflow: "hidden",
+            }}
+            bodyStyle={{ padding: isXs ? 12 : 20 }}
+          >
+            <div style={{ marginBottom: 16 }}>
+              <Space direction="vertical" size={2}>
+                <Typography.Title level={5} style={{ margin: 0, color: BRAND.violet }}>
+                  <AlertOutlined style={{ marginRight: 8 }} />
+                  Quick Insights
+                </Typography.Title>
+                <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+                  Key metrics and analytics overview
+                </Typography.Text>
+              </Space>
+            </div>
+
+            <Row gutter={[isXs ? 8 : 16, isXs ? 8 : 16]}>
+              <Col xs={24} sm={24} md={24} lg={24} xl={24} style={{ display: 'flex', gap: isXs ? 8 : 16, flexWrap: isXs ? 'wrap' : 'nowrap', justifyContent: 'space-between' }}>
                 <Card
+                  size="small"
                   style={{
-                    ...glassCard,
-                    padding: isXs ? "8px 10px" : "10px 12px",
-                    textAlign: isXs ? "center" : "left",
+                    borderRadius: 12,
+                    border: `1px solid ${BRAND.softBorder}`,
+                    background: "linear-gradient(135deg, #f6f3ff, #ffffff)",
+                    textAlign: "center",
+                    flex: 1,
+                    minWidth: isXs ? 'calc(50% - 4px)' : 'auto',
+                    minHeight: isXs ? 100 : 110,
+                  }}
+                  bodyStyle={{
+                    padding: isXs ? "12px 8px" : "16px 12px",
                     height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
                   }}
                 >
-                  <Typography.Text
-                    type="secondary"
-                    style={{
-                      fontSize: isXs ? 11 : 13,
-                      display: "block",
-                      marginBottom: 4,
-                    }}
-                  >
-                    {isXs && label.includes("Under Investigation")
-                      ? "Investigating"
-                      : label}
-                  </Typography.Text>
-                  <Typography.Title
-                    level={isXs ? 4 : 3}
-                    style={{
-                      margin: 0,
-                      color,
-                      fontSize: isXs ? 20 : isSm ? 22 : 24,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {value}
-                  </Typography.Title>
+                  <div style={{ padding: isXs ? "4px 0" : "8px 0" }}>
+                    <AlertOutlined
+                      style={{
+                        fontSize: isXs ? 20 : 24,
+                        color: BRAND.violet,
+                        marginBottom: 4,
+                      }}
+                    />
+                    <div
+                      style={{
+                        fontSize: isXs ? 11 : 12,
+                        color: "#666",
+                        marginBottom: 4,
+                      }}
+                    >
+                      Total Reports
+                    </div>
+                    <div
+                      style={{
+                        fontSize: isXs ? 20 : 24,
+                        fontWeight: 700,
+                        color: BRAND.violet,
+                      }}
+                    >
+                      {reportCounts.total}
+                    </div>
+                  </div>
                 </Card>
-              </div>
-            ))}
-          </div>
+
+                <Card
+                  size="small"
+                  style={{
+                    borderRadius: 12,
+                    border: "1px solid rgba(250,173,20,0.2)",
+                    background: "linear-gradient(135deg, #fffbf0, #ffffff)",
+                    textAlign: "center",
+                    flex: 1,
+                    minWidth: isXs ? 'calc(50% - 4px)' : 'auto',
+                    minHeight: isXs ? 100 : 110,
+                  }}
+                  bodyStyle={{
+                    padding: isXs ? "12px 8px" : "16px 12px",
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                  }}
+                >
+                  <div style={{ padding: isXs ? "4px 0" : "8px 0" }}>
+                    <ClockCircleOutlined
+                      style={{
+                        fontSize: isXs ? 20 : 24,
+                        color: "#faad14",
+                        marginBottom: 4,
+                      }}
+                    />
+                    <div
+                      style={{
+                        fontSize: isXs ? 11 : 12,
+                        color: "#666",
+                        marginBottom: 4,
+                      }}
+                    >
+                      Pending
+                    </div>
+                    <div
+                      style={{
+                        fontSize: isXs ? 20 : 24,
+                        fontWeight: 700,
+                        color: "#faad14",
+                      }}
+                    >
+                      {reportCounts.pending}
+                    </div>
+                  </div>
+                </Card>
+
+                <Card
+                  size="small"
+                  style={{
+                    borderRadius: 12,
+                    border: "1px solid rgba(250,140,22,0.2)",
+                    background: "linear-gradient(135deg, #fff7e6, #ffffff)",
+                    textAlign: "center",
+                    flex: 1,
+                    minWidth: isXs ? 'calc(50% - 4px)' : 'auto',
+                    minHeight: isXs ? 100 : 110,
+                  }}
+                  bodyStyle={{
+                    padding: isXs ? "12px 8px" : "16px 12px",
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                  }}
+                >
+                  <div style={{ padding: isXs ? "4px 0" : "8px 0" }}>
+                    <FolderOpenOutlined
+                      style={{
+                        fontSize: isXs ? 20 : 24,
+                        color: "#fa8c16",
+                        marginBottom: 4,
+                      }}
+                    />
+                    <div
+                      style={{
+                        fontSize: isXs ? 11 : 12,
+                        color: "#666",
+                        marginBottom: 4,
+                      }}
+                    >
+                      Open
+                    </div>
+                    <div
+                      style={{
+                        fontSize: isXs ? 20 : 24,
+                        fontWeight: 700,
+                        color: "#fa8c16",
+                      }}
+                    >
+                      {reportCounts.open}
+                    </div>
+                  </div>
+                </Card>
+
+                <Card
+                  size="small"
+                  style={{
+                    borderRadius: 12,
+                    border: "1px solid rgba(24,144,255,0.2)",
+                    background: "linear-gradient(135deg, #e6f7ff, #ffffff)",
+                    textAlign: "center",
+                    flex: 1,
+                    minWidth: isXs ? 'calc(50% - 4px)' : 'auto',
+                    minHeight: isXs ? 100 : 110,
+                  }}
+                  bodyStyle={{
+                    padding: isXs ? "12px 8px" : "16px 12px",
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                  }}
+                >
+                  <div style={{ padding: isXs ? "4px 0" : "8px 0" }}>
+                    <SearchOutlined
+                      style={{
+                        fontSize: isXs ? 20 : 24,
+                        color: BRAND.blue,
+                        marginBottom: 4,
+                      }}
+                    />
+                    <div
+                      style={{
+                        fontSize: isXs ? 11 : 12,
+                        color: "#666",
+                        marginBottom: 4,
+                      }}
+                    >
+                      {isXs ? "Investigating" : "Under Investigation"}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: isXs ? 20 : 24,
+                        fontWeight: 700,
+                        color: BRAND.blue,
+                      }}
+                    >
+                      {reportCounts.inProgress}
+                    </div>
+                  </div>
+                </Card>
+
+                <Card
+                  size="small"
+                  style={{
+                    borderRadius: 12,
+                    border: "1px solid rgba(82,196,26,0.2)",
+                    background: "linear-gradient(135deg, #f6ffed, #ffffff)",
+                    textAlign: "center",
+                    flex: 1,
+                    minWidth: isXs ? 'calc(50% - 4px)' : 'auto',
+                    minHeight: isXs ? 100 : 110,
+                  }}
+                  bodyStyle={{
+                    padding: isXs ? "12px 8px" : "16px 12px",
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                  }}
+                >
+                  <div style={{ padding: isXs ? "4px 0" : "8px 0" }}>
+                    <CheckCircleOutlined
+                      style={{
+                        fontSize: isXs ? 20 : 24,
+                        color: BRAND.green,
+                        marginBottom: 4,
+                      }}
+                    />
+                    <div
+                      style={{
+                        fontSize: isXs ? 11 : 12,
+                        color: "#666",
+                        marginBottom: 4,
+                      }}
+                    >
+                      Closed
+                    </div>
+                    <div
+                      style={{
+                        fontSize: isXs ? 20 : 24,
+                        fontWeight: 700,
+                        color: BRAND.green,
+                      }}
+                    >
+                      {reportCounts.closed}
+                    </div>
+                  </div>
+                </Card>
+              </Col>
+            </Row>
+          </Card>
 
           {/* Toolbar */}
           <Card

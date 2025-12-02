@@ -33,6 +33,10 @@ import {
   ExclamationCircleOutlined,
   DeleteOutlined,
   PhoneOutlined,
+  TeamOutlined,
+  SafetyOutlined,
+  CrownOutlined,
+  HeartOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 
@@ -682,49 +686,228 @@ export default function UserManagement() {
             minHeight: "100%",
           }}
         >
-          {/* KPIs */}
-          <Row gutter={[isXs ? 8 : 10, isXs ? 8 : 10]}>
-            {[
-              ["Total Users", userCounts.total, BRAND.violet],
-              ["Administrators", userCounts.admins, BRAND.blue],
-              ["Officials", userCounts.officials, BRAND.green],
-              ["Victims", userCounts.victims, BRAND.pink],
-            ].map(([label, value, color], i) => (
-              <Col xs={12} sm={12} md={6} key={i}>
+          {/* Quick Insights Card */}
+          <Card
+            bordered
+            style={{
+              marginBottom: isXs ? 12 : 16,
+              borderRadius: isXs ? 12 : 18,
+              borderColor: BRAND.softBorder,
+              boxShadow: "0 20px 46px rgba(122,90,248,0.06)",
+              background: "linear-gradient(145deg, rgba(255,255,255,0.92), rgba(250,247,255,0.88))",
+              position: "relative",
+              overflow: "hidden",
+            }}
+            bodyStyle={{ padding: isXs ? 12 : 20 }}
+          >
+            <div style={{ marginBottom: 16 }}>
+              <Space direction="vertical" size={2}>
+                <Typography.Title level={5} style={{ margin: 0, color: BRAND.violet }}>
+                  <TeamOutlined style={{ marginRight: 8 }} />
+                  Quick Insights
+                </Typography.Title>
+                <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+                  Key metrics and analytics overview
+                </Typography.Text>
+              </Space>
+            </div>
+
+            <Row gutter={[isXs ? 8 : 16, isXs ? 8 : 16]}>
+              <Col xs={24} sm={24} md={24} lg={24} xl={24} style={{ display: 'flex', gap: isXs ? 8 : 16, flexWrap: isXs ? 'wrap' : 'nowrap', justifyContent: 'space-between' }}>
                 <Card
+                  size="small"
                   style={{
-                    ...glassCard,
-                    padding: isXs ? "8px 10px" : "10px 12px",
-                    textAlign: isXs ? "center" : "left",
+                    borderRadius: 12,
+                    border: `1px solid ${BRAND.softBorder}`,
+                    background: "linear-gradient(135deg, #f6f3ff, #ffffff)",
+                    textAlign: "center",
+                    flex: 1,
+                    minWidth: isXs ? 'calc(50% - 4px)' : 'auto',
+                    minHeight: isXs ? 100 : 110,
+                  }}
+                  bodyStyle={{
+                    padding: isXs ? "12px 8px" : "16px 12px",
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
                   }}
                 >
-                  <Typography.Text
-                    type="secondary"
-                    style={{
-                      fontSize: isXs ? 11 : 13,
-                      display: "block",
-                      marginBottom: 4,
-                    }}
-                  >
-                    {isXs && label.includes("Administrators")
-                      ? "Admins"
-                      : label}
-                  </Typography.Text>
-                  <Typography.Title
-                    level={isXs ? 4 : 3}
-                    style={{
-                      margin: 0,
-                      color,
-                      fontSize: isXs ? 20 : isSm ? 22 : 24,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {value}
-                  </Typography.Title>
+                  <div style={{ padding: isXs ? "4px 0" : "8px 0" }}>
+                    <TeamOutlined
+                      style={{
+                        fontSize: isXs ? 20 : 24,
+                        color: BRAND.violet,
+                        marginBottom: 4,
+                      }}
+                    />
+                    <div
+                      style={{
+                        fontSize: isXs ? 11 : 12,
+                        color: "#666",
+                        marginBottom: 4,
+                      }}
+                    >
+                      Total Users
+                    </div>
+                    <div
+                      style={{
+                        fontSize: isXs ? 20 : 24,
+                        fontWeight: 700,
+                        color: BRAND.violet,
+                      }}
+                    >
+                      {userCounts.total}
+                    </div>
+                  </div>
+                </Card>
+
+                <Card
+                  size="small"
+                  style={{
+                    borderRadius: 12,
+                    border: "1px solid rgba(24,144,255,0.2)",
+                    background: "linear-gradient(135deg, #e6f7ff, #ffffff)",
+                    textAlign: "center",
+                    flex: 1,
+                    minWidth: isXs ? 'calc(50% - 4px)' : 'auto',
+                    minHeight: isXs ? 100 : 110,
+                  }}
+                  bodyStyle={{
+                    padding: isXs ? "12px 8px" : "16px 12px",
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                  }}
+                >
+                  <div style={{ padding: isXs ? "4px 0" : "8px 0" }}>
+                    <SafetyOutlined
+                      style={{
+                        fontSize: isXs ? 20 : 24,
+                        color: BRAND.blue,
+                        marginBottom: 4,
+                      }}
+                    />
+                    <div
+                      style={{
+                        fontSize: isXs ? 11 : 12,
+                        color: "#666",
+                        marginBottom: 4,
+                      }}
+                    >
+                      {isXs ? "Admins" : "Administrators"}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: isXs ? 20 : 24,
+                        fontWeight: 700,
+                        color: BRAND.blue,
+                      }}
+                    >
+                      {userCounts.admins}
+                    </div>
+                  </div>
+                </Card>
+
+                <Card
+                  size="small"
+                  style={{
+                    borderRadius: 12,
+                    border: "1px solid rgba(82,196,26,0.2)",
+                    background: "linear-gradient(135deg, #f6ffed, #ffffff)",
+                    textAlign: "center",
+                    flex: 1,
+                    minWidth: isXs ? 'calc(50% - 4px)' : 'auto',
+                    minHeight: isXs ? 100 : 110,
+                  }}
+                  bodyStyle={{
+                    padding: isXs ? "12px 8px" : "16px 12px",
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                  }}
+                >
+                  <div style={{ padding: isXs ? "4px 0" : "8px 0" }}>
+                    <CrownOutlined
+                      style={{
+                        fontSize: isXs ? 20 : 24,
+                        color: BRAND.green,
+                        marginBottom: 4,
+                      }}
+                    />
+                    <div
+                      style={{
+                        fontSize: isXs ? 11 : 12,
+                        color: "#666",
+                        marginBottom: 4,
+                      }}
+                    >
+                      Officials
+                    </div>
+                    <div
+                      style={{
+                        fontSize: isXs ? 20 : 24,
+                        fontWeight: 700,
+                        color: BRAND.green,
+                      }}
+                    >
+                      {userCounts.officials}
+                    </div>
+                  </div>
+                </Card>
+
+                <Card
+                  size="small"
+                  style={{
+                    borderRadius: 12,
+                    border: "1px solid rgba(233,30,99,0.2)",
+                    background: "linear-gradient(135deg, #fff0f7, #ffffff)",
+                    textAlign: "center",
+                    flex: 1,
+                    minWidth: isXs ? 'calc(50% - 4px)' : 'auto',
+                    minHeight: isXs ? 100 : 110,
+                  }}
+                  bodyStyle={{
+                    padding: isXs ? "12px 8px" : "16px 12px",
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                  }}
+                >
+                  <div style={{ padding: isXs ? "4px 0" : "8px 0" }}>
+                    <HeartOutlined
+                      style={{
+                        fontSize: isXs ? 20 : 24,
+                        color: BRAND.pink,
+                        marginBottom: 4,
+                      }}
+                    />
+                    <div
+                      style={{
+                        fontSize: isXs ? 11 : 12,
+                        color: "#666",
+                        marginBottom: 4,
+                      }}
+                    >
+                      Victims
+                    </div>
+                    <div
+                      style={{
+                        fontSize: isXs ? 20 : 24,
+                        fontWeight: 700,
+                        color: BRAND.pink,
+                      }}
+                    >
+                      {userCounts.victims}
+                    </div>
+                  </div>
                 </Card>
               </Col>
-            ))}
-          </Row>
+            </Row>
+          </Card>
 
           {/* Quick Role Update */}
           <Card

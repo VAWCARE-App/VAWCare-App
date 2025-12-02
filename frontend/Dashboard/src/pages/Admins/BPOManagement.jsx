@@ -635,47 +635,74 @@ export default function BPOManagement() {
             boxSizing: "border-box",
           }}
         >
-          {/* KPIs */}
-          <Row gutter={[10, 10]}>
-            {[
-              ["Total", kpis.total, BRAND.violet, <AppstoreOutlined key="i" />],
-              ["Active", kpis.active, "green", <CheckSquareOutlined key="i" />],
-              ["Expired", kpis.expired, "volcano", <StopOutlined key="i" />],
-              ["Revoked", kpis.revoked, "magenta", <ExclamationCircleOutlined key="i" />],
-            ].map(([label, value, color, icon], i) => (
-              <Col xs={12} md={6} key={i}>
-                <Card style={{ ...glassCard, padding: isXs ? 8 : 10, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 90 }}>
-                  <div style={{
-                    width: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 2,
-                  }}>
-                    <span style={{
-                      color: '#888',
-                      fontWeight: 500,
-                      fontSize: isXs ? 12 : 13,
-                      display: 'block',
-                      marginBottom: 0,
-                      letterSpacing: 0.1,
-                      lineHeight: 1.1,
-                      wordBreak: 'break-word',
-                    }}>{label}</span>
-                    <span style={{
-                      color,
-                      fontWeight: 700,
-                      fontSize: isXs ? 20 : 24,
-                      lineHeight: 1.1,
-                      display: 'block',
-                      marginTop: 0,
-                    }}>{value}</span>
-                  </div>
-                </Card>
-              </Col>
-            ))}
-          </Row>
+          {/* Quick Insights - BPO KPIs */}
+          <Card
+            bordered
+            style={{
+              marginBottom: screens.xs ? 12 : 16,
+              borderRadius: screens.xs ? 12 : 18,
+              borderColor: BRAND.softBorder,
+              boxShadow: "0 20px 46px rgba(122,90,248,0.06)",
+              background: "linear-gradient(145deg, rgba(255,255,255,0.92), rgba(250,247,255,0.88))",
+            }}
+            bodyStyle={{ padding: screens.xs ? 12 : 20 }}
+          >
+            <div style={{ marginBottom: 16 }}>
+              <Space direction="vertical" size={2}>
+                <Title level={5} style={{ margin: 0, color: BRAND.violet }}>
+                  <FileTextOutlined style={{ marginRight: 8 }} />
+                  Quick Insights
+                </Title>
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  BPO status overview and key metrics
+                </Text>
+              </Space>
+            </div>
+            
+            <Row gutter={[screens.xs ? 8 : 16, screens.xs ? 8 : 16]}>
+              {[
+                ["Total", kpis.total, BRAND.violet, <AppstoreOutlined key="i" />, "#f6f3ff", "#ffffff"],
+                ["Active", kpis.active, "#52c41a", <CheckSquareOutlined key="i" />, "#f6ffed", "#ffffff"],
+                ["Expired", kpis.expired, "#ff7a45", <StopOutlined key="i" />, "#fff7e6", "#ffffff"],
+                ["Revoked", kpis.revoked, "#eb2f96", <ExclamationCircleOutlined key="i" />, "#fff0f6", "#ffffff"],
+              ].map(([label, value, color, icon, gradStart, gradEnd], i) => (
+                <Col xs={12} sm={6} md={6} lg={6} key={i}>
+                  <Card 
+                    size="small" 
+                    style={{ 
+                      borderRadius: 12,
+                      border: `1px solid ${color === BRAND.violet ? BRAND.softBorder : `${color}33`}`,
+                      background: `linear-gradient(135deg, ${gradStart}, ${gradEnd})`,
+                      textAlign: "center",
+                      height: "100%",
+                      minHeight: screens.xs ? 100 : 110
+                    }}
+                    bodyStyle={{ 
+                      padding: screens.xs ? "12px 8px" : "16px 12px",
+                      height: "100%",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center"
+                    }}
+                  >
+                    <div style={{ padding: screens.xs ? "4px 0" : "8px 0" }}>
+                      {React.cloneElement(icon, { style: { fontSize: screens.xs ? 20 : 24, color, marginBottom: 4 } })}
+                      <div style={{ fontSize: screens.xs ? 11 : 12, color: "#666", marginBottom: 4 }}>
+                        {label}
+                      </div>
+                      <div style={{ 
+                        fontSize: screens.xs ? 20 : 24, 
+                        fontWeight: 700, 
+                        color
+                      }}>
+                        {value}
+                      </div>
+                    </div>
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          </Card>
 
           {/* Toolbar */}
           <Card style={{ ...glassCard, padding: isXs ? "12px 10px" : "14px 16px" }}>

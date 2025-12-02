@@ -179,20 +179,22 @@ module.exports = {
             console.log("Description hash:", descriptionHash);
 
             // Generate AI response
-            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
             const aiResponse = await model.generateContent([
                 {
                     text: `
 You are analyzing case descriptions of abuse for a social services report. 
 For the incident type "${incidentType}" in ${purok}, summarize 3-5 key reasons why this incident type occurs, **in terms of risk factors, patterns, or social context**:
 - Generalize all information; do not include victim names, quotes, or specific identifiers.
-- Use plain, professional, and actionable language suitable for social services reporting.
+- Use simple words that are easy to understand.
+- Each bullet must be a **full sentence**.
+- Do **not** use headings, colons, or extra labels.
 - Keep each reason short (1-2 sentences max) and use bullet points only.
-- Only respond with bullet points.
+- Only respond with bullet points no introduction message.
+- If there is insufficient information, respond with: "Information is lacking. No insights available."
+
 Case descriptions:
 ${descriptionsText}
-
-If the descriptions are too limited to generate meaningful insights, respond exactly: "Information is lacking. No insights available."
 `
                 }
             ]);
@@ -201,10 +203,9 @@ If the descriptions are too limited to generate meaningful insights, respond exa
             const outputText = aiResponse.response?.text?.() || "";
             let reasons = outputText
                 .split(/\n|•|-/)
+                .map(line => line.replace(/^\s*\*\s*/, "").trim())
                 .map(r => r.trim())
                 .filter(Boolean);
-
-            if (!reasons.length) reasons = ["Information is lacking. No insights available."];
 
             // Cache/update AIInsights
             await AIInsights.findOneAndUpdate(

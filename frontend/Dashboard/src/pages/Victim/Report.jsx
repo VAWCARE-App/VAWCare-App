@@ -457,8 +457,8 @@ export default function Report() {
                       if (!value) return Promise.resolve();
                       const strValue = String(value).trim();
                       
-                      // Check for repeated characters (4+ in a row)
-                      if (/(.)\1{3,}/.test(strValue)) {
+                      // Check for repeated characters (3+ in a row)
+                      if (/(.)\1{2,}/.test(strValue)) {
                         return Promise.reject(new Error('Perpetrator name cannot contain repeated characters'));
                       }
                       
@@ -515,8 +515,8 @@ export default function Report() {
                       if (!value) return Promise.resolve();
                       const strValue = String(value).trim();
                       
-                      // Check for repeated characters (4+ in a row)
-                      if (/(.)\1{3,}/.test(strValue)) {
+                      // Check for repeated characters (3+ in a row)
+                      if (/(.)\1{2,}/.test(strValue)) {
                         return Promise.reject(new Error('Description cannot contain repeated characters'));
                       }
                       

@@ -216,6 +216,34 @@ export default function VictimSettings() {
   const onSave = async (values) => {
     setLoading(true);
     try {
+      // Defensive validation - ensure no gibberish data gets saved
+      const validationErrors = [];
+      
+      const checkGibberish = (fieldName, value) => {
+        if (!value) return;
+        const strValue = String(value).trim();
+        if (/(.)\1\1/.test(strValue)) {
+          validationErrors.push(`${fieldName}: repeated characters detected`);
+        }
+        if ((/(.{2,3})\1{2,}/.test(strValue))) {
+          validationErrors.push(`${fieldName}: repeating pattern detected`);
+        }
+        const letters = strValue.replace(/[^a-zA-Z]/g, '');
+        const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+        if (letters.length > 3 && vowels.length / letters.length < 0.25) {
+          validationErrors.push(`${fieldName}: appears to be gibberish`);
+        }
+      };
+      
+      checkGibberish('firstName', values.firstName);
+      checkGibberish('lastName', values.lastName);
+      checkGibberish('emergencyContactName', values.emergencyContactName);
+      checkGibberish('emergencyContactRelationship', values.emergencyContactRelationship);
+      
+      if (validationErrors.length > 0) {
+        throw new Error('Validation failed: ' + validationErrors.join(', '));
+      }
+      
       const payload = { ...values };
 
       if (
@@ -690,6 +718,24 @@ export default function VictimSettings() {
                       { required: true, message: "Please enter your first name" },
                       { max: 60, message: "First name cannot exceed 60 characters" },
                       { pattern: /^[a-zA-Z\s-]*$/, message: "First name can only contain letters, spaces, and hyphens" },
+                      {
+                        validator: (_, value) => {
+                          if (!value) return Promise.resolve();
+                          const strValue = String(value).trim();
+                          if (/(.)\1\1/.test(strValue)) {
+                            return Promise.reject(new Error('First name cannot contain repeated characters'));
+                          }
+                          if ((/(.{2,3})\1{2,}/.test(strValue))) {
+                            return Promise.reject(new Error('First name appears to be gibberish'));
+                          }
+                          const letters = strValue.replace(/[^a-zA-Z]/g, '');
+                          const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+                          if (letters.length > 3 && vowels.length / letters.length < 0.25) {
+                            return Promise.reject(new Error('First name appears to be gibberish'));
+                          }
+                          return Promise.resolve();
+                        }
+                      }
                     ]}
                   >
                     <Input prefix={<UserOutlined />} placeholder="First name" onKeyPress={(e) => {
@@ -703,7 +749,29 @@ export default function VictimSettings() {
                   <Form.Item
                     name="lastName"
                     label="Last Name"
-                    rules={[{ required: true, message: "Please enter your last name" }, { max: 60, message: "Last name cannot exceed 60 characters" }, { pattern: /^[a-zA-Z\s-]*$/, message: "Last name can only contain letters, spaces, and hyphens" }]}
+                    rules={[
+                      { required: true, message: "Please enter your last name" },
+                      { max: 60, message: "Last name cannot exceed 60 characters" },
+                      { pattern: /^[a-zA-Z\s-]*$/, message: "Last name can only contain letters, spaces, and hyphens" },
+                      {
+                        validator: (_, value) => {
+                          if (!value) return Promise.resolve();
+                          const strValue = String(value).trim();
+                          if (/(.)\1\1/.test(strValue)) {
+                            return Promise.reject(new Error('Last name cannot contain repeated characters'));
+                          }
+                          if ((/(.{2,3})\1{2,}/.test(strValue))) {
+                            return Promise.reject(new Error('Last name appears to be gibberish'));
+                          }
+                          const letters = strValue.replace(/[^a-zA-Z]/g, '');
+                          const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+                          if (letters.length > 3 && vowels.length / letters.length < 0.25) {
+                            return Promise.reject(new Error('Last name appears to be gibberish'));
+                          }
+                          return Promise.resolve();
+                        }
+                      }
+                    ]}
                   >
                     <Input prefix={<UserOutlined />} placeholder="Last name" onKeyPress={(e) => {
                       if (!/^[a-zA-Z\s-]$/.test(e.key)) {
@@ -755,8 +823,25 @@ export default function VictimSettings() {
                     name="emergencyContactName"
                     rules={[
                       { max: 80, message: "Name cannot exceed 80 characters" },
-                      { pattern: /^[a-zA-Z\s-]*$/, message: "Name can only contain letters, spaces, and hyphens" },
-                      // If an emergency contact method is provided, name becomes required
+                      { pattern: /^[a-zA-Z\s.-]*$/, message: "Name can only contain letters, spaces, hyphens, and periods" },
+                      {
+                        validator: (_, value) => {
+                          if (!value) return Promise.resolve();
+                          const strValue = String(value).trim();
+                          if (/(.)\1\1/.test(strValue)) {
+                            return Promise.reject(new Error('Contact name cannot contain repeated characters'));
+                          }
+                          if ((/(.{2,3})\1{2,}/.test(strValue))) {
+                            return Promise.reject(new Error('Contact name appears to be gibberish'));
+                          }
+                          const letters = strValue.replace(/[^a-zA-Z]/g, '');
+                          const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+                          if (letters.length > 3 && vowels.length / letters.length < 0.25) {
+                            return Promise.reject(new Error('Contact name appears to be gibberish'));
+                          }
+                          return Promise.resolve();
+                        }
+                      },
                       {
                         validator: (_, value) => {
                           const email = form.getFieldValue("emergencyContactEmail");
@@ -770,7 +855,7 @@ export default function VictimSettings() {
                     ]}
                   >
                     <Input prefix={<UserOutlined />} placeholder="Full name" onKeyPress={(e) => {
-                      if (!/^[a-zA-Z\s-]$/.test(e.key)) {
+                      if (!/^[a-zA-Z\s.-]$/.test(e.key)) {
                         e.preventDefault();
                       }
                     }} />
@@ -782,7 +867,25 @@ export default function VictimSettings() {
                     name="emergencyContactRelationship"
                     rules={[
                       { max: 40, message: "Relationship text is too long" },
-                      { pattern: /^[a-zA-Z\s-]*$/, message: "Relationship can only contain letters, spaces, and hyphens" }
+                      { pattern: /^[a-zA-Z\s-]*$/, message: "Relationship can only contain letters, spaces, and hyphens" },
+                      {
+                        validator: (_, value) => {
+                          if (!value) return Promise.resolve();
+                          const strValue = String(value).trim();
+                          if (/(.)\1\1/.test(strValue)) {
+                            return Promise.reject(new Error('Relationship cannot contain repeated characters'));
+                          }
+                          if ((/(.{2,3})\1{2,}/.test(strValue))) {
+                            return Promise.reject(new Error('Relationship appears to be gibberish'));
+                          }
+                          const letters = strValue.replace(/[^a-zA-Z]/g, '');
+                          const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+                          if (letters.length > 3 && vowels.length / letters.length < 0.25) {
+                            return Promise.reject(new Error('Relationship appears to be gibberish'));
+                          }
+                          return Promise.resolve();
+                        }
+                      }
                     ]}
                   >
                     <Input placeholder="e.g. Mother, Friend" onKeyPress={(e) => {

@@ -12,7 +12,7 @@ const AIInsightSchema = new mongoose.Schema({
 
     // Expiration (e.g., refresh every 7 days)
     lastUpdated: { type: Date, default: Date.now }
-});
+}, { timestamps: true });
 
 AIInsightSchema.index({ location: 1, incidentType: 1 }, { unique: true });
 

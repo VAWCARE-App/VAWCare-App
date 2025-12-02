@@ -1,28 +1,8 @@
 const Cases = require("../models/Cases");
-
-// Helper: generate possible reasons for most common incident
-function generateReasons(type) {
-    const reasons = {
-        "Physical": [
-            "High-stress household environments.",
-            "Limited awareness of support services."
-        ],
-        "Emotional": [
-            "Family conflict or relationship stress.",
-            "Underreporting due to social stigma."
-        ],
-        "Sexual": [
-            "Low reporting due to fear or shame.",
-            "Lack of secure environments for minors."
-        ],
-        "Economic": [
-            "Financial instability in the community.",
-            "Unemployment or underemployment issues."
-        ],
-        "Others": ["No specific insights available."]
-    };
-    return reasons[type] || ["No insights available yet."];
-}
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const crypto = require("crypto");
+const AIInsights = require("../models/AIInsights");
 
 module.exports = {
     // Overall distribution of abuse types
@@ -72,6 +52,7 @@ module.exports = {
     },
 
     // Most common abuse per purok
+    // Most common abuse per purok (without AI)
     getMostCommonPerLocation: async (req, res) => {
         try {
             const data = await Cases.aggregate([
@@ -97,20 +78,19 @@ module.exports = {
                 }
             ]);
 
-            const enhanced = data.map((p) => ({
+            // Return WITHOUT AI reasons
+            const response = data.map(p => ({
                 location: p._id,
                 mostCommon: p.mostCommon,
-                count: p.count,
-                reasons: generateReasons(p.mostCommon)
+                count: p.count
             }));
 
-            res.json({ success: true, data: enhanced });
+            res.json({ success: true, data: response });
         } catch (err) {
             console.error("Error in getMostCommonPerLocation:", err);
             res.status(500).json({ success: false, message: err.message });
         }
     },
-
     // Get all cases in a purok with its most prevalent incident
     getCasesByPurokMostCommon: async (req, res) => {
         try {
@@ -120,15 +100,9 @@ module.exports = {
             // Step 1: find most common incident type in this purok
             const mostCommonAgg = await Cases.aggregate([
                 { $match: { deleted: { $ne: true } } },
-                {
-                    $addFields: {
-                        purok: { $arrayElemAt: [{ $split: ["$location", ","] }, 0] }
-                    }
-                },
+                { $addFields: { purok: { $arrayElemAt: [{ $split: ["$location", ","] }, 0] } } },
                 { $match: { purok } },
-                {
-                    $group: { _id: "$incidentType", count: { $sum: 1 } }
-                },
+                { $group: { _id: "$incidentType", count: { $sum: 1 } } },
                 { $sort: { count: -1 } },
                 { $limit: 1 }
             ]);
@@ -142,19 +116,123 @@ module.exports = {
             // Step 2: fetch all cases with this incident type
             const cases = await Cases.find({
                 deleted: { $ne: true },
-                location: { $regex: `^${purok},` }, // match purok at start
+                location: { $regex: `^${purok},` },
                 incidentType: mostCommonType
             }).sort({ dateReported: -1 });
+
+            // Step 3: check AI insights cache
+            const descriptionsText = cases.map(c => c.description || "").join("\n");
+            const descriptionHash = crypto.createHash("sha256").update(descriptionsText).digest("hex");
+
+            let aiInsight = await AIInsights.findOne({ location: purok, incidentType: mostCommonType });
+
+            let aiReasons = aiInsight?.reasons || null;
+
+            // Only generate AI reasons if user explicitly requested and cache is missing/stale
+            if (!aiInsight || aiInsight.descriptionHash !== descriptionHash) {
+                aiReasons = null; // won't generate automatically
+            }
 
             res.json({
                 success: true,
                 data: cases,
                 mostCommonType,
-                purok
+                purok,
+                aiReasons // null unless generated manually
             });
+
         } catch (err) {
             console.error("Error in getCasesByPurokMostCommon:", err);
             res.status(500).json({ success: false, message: err.message });
         }
-    }
+    },
+    generateAIReasons: async (req, res) => {
+        try {
+            const { purok, incidentType } = req.body;
+            if (!purok || !incidentType)
+                return res.status(400).json({ success: false, message: "Purok and incidentType are required" });
+
+            // Fetch relevant cases
+            const cases = await Cases.find({
+                deleted: { $ne: true },
+                location: { $regex: `^${purok},` },
+                incidentType
+            });
+
+            if (!cases.length)
+                return res.status(404).json({ success: false, message: "No cases found" });
+
+            const descriptionsText = cases.map(c => c.description || "").join("\n").trim();
+
+            if (!descriptionsText || descriptionsText.split(/\s+/).length < 5) {
+                // Too little info to generate meaningful insights
+                const fallbackReason = ["Information is lacking. No insights available."];
+                await AIInsights.findOneAndUpdate(
+                    { location: purok, incidentType },
+                    { reasons: fallbackReason, descriptionHash: "" },
+                    { upsert: true, new: true }
+                );
+                return res.json({ success: true, reasons: fallbackReason });
+            }
+
+            const descriptionHash = crypto.createHash("sha256").update(descriptionsText).digest("hex");
+            console.log("Description hash:", descriptionHash);
+
+            // Generate AI response
+            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+            const aiResponse = await model.generateContent([
+                {
+                    text: `
+You are analyzing case descriptions of abuse for a social services report. 
+For the incident type "${incidentType}" in ${purok}, summarize 3-5 key reasons why this incident type occurs, **in terms of risk factors, patterns, or social context**:
+- Generalize all information; do not include victim names, quotes, or specific identifiers.
+- Use plain, professional, and actionable language suitable for social services reporting.
+- Keep each reason short (1-2 sentences max) and use bullet points only.
+- Only respond with bullet points.
+Case descriptions:
+${descriptionsText}
+
+If the descriptions are too limited to generate meaningful insights, respond exactly: "Information is lacking. No insights available."
+`
+                }
+            ]);
+
+            // Extract text from response
+            const outputText = aiResponse.response?.text?.() || "";
+            let reasons = outputText
+                .split(/\n|•|-/)
+                .map(r => r.trim())
+                .filter(Boolean);
+
+            if (!reasons.length) reasons = ["Information is lacking. No insights available."];
+
+            // Cache/update AIInsights
+            await AIInsights.findOneAndUpdate(
+                { location: purok, incidentType },
+                { reasons, descriptionHash },
+                { upsert: true, new: true }
+            );
+
+            res.json({ success: true, reasons });
+
+        } catch (err) {
+            console.error("Error in generateAIReasons:", err);
+            res.status(500).json({ success: false, message: err.message });
+        }
+    },
+    getAIInsights: async (req, res) => {
+        try {
+            const { purok, incidentType } = req.query;
+            if (!purok || !incidentType)
+                return res.status(400).json({ success: false, message: "Purok and incidentType are required" });
+
+            const aiInsight = await AIInsights.findOne({ location: purok, incidentType });
+
+            res.json({ success: true, reasons: aiInsight?.reasons || [] });
+
+        } catch (err) {
+            console.error("Error in getAIInsights:", err);
+            res.status(500).json({ success: false, message: err.message });
+        }
+    },
 };

@@ -8,8 +8,13 @@ module.exports = {
     // Overall distribution of abuse types
     getAbuseDistribution: async (req, res) => {
         try {
+            const { victimType } = req.query;
+            const matchStage = { deleted: { $ne: true } };
+            if (victimType && victimType !== "all") {
+                matchStage.victimType = victimType;
+            }
             const data = await Cases.aggregate([
-                { $match: { deleted: { $ne: true } } },
+                { $match: matchStage },
                 { $group: { _id: "$incidentType", count: { $sum: 1 } } },
                 { $sort: { count: -1 } }
             ]);
@@ -23,8 +28,13 @@ module.exports = {
     // Distribution per purok
     getAbusePerLocation: async (req, res) => {
         try {
+            const { victimType } = req.query;
+            const matchStage = { deleted: { $ne: true } };
+            if (victimType && victimType !== "all") {
+                matchStage.victimType = victimType;
+            }
             const data = await Cases.aggregate([
-                { $match: { deleted: { $ne: true } } },
+                { $match: matchStage },
                 {
                     $addFields: {
                         purok: { $arrayElemAt: [{ $split: ["$location", ","] }, 0] }
@@ -55,8 +65,13 @@ module.exports = {
     // Most common abuse per purok (without AI)
     getMostCommonPerLocation: async (req, res) => {
         try {
+            const { victimType } = req.query;
+            const matchStage = { deleted: { $ne: true } };
+            if (victimType && victimType !== "all") {
+                matchStage.victimType = victimType;
+            }
             const data = await Cases.aggregate([
-                { $match: { deleted: { $ne: true } } },
+                { $match: matchStage },
                 {
                     $addFields: {
                         purok: { $arrayElemAt: [{ $split: ["$location", ","] }, 0] }
@@ -94,12 +109,17 @@ module.exports = {
     // Get all cases in a purok with its most prevalent incident
     getCasesByPurokMostCommon: async (req, res) => {
         try {
-            const { purok } = req.query;
+            const { purok, victimType } = req.query;
             if (!purok) return res.status(400).json({ success: false, message: "Purok is required" });
 
             // Step 1: find most common incident type in this purok
+            const matchStage = { deleted: { $ne: true } };
+            if (victimType && victimType !== "all") {
+                matchStage.victimType = victimType;
+            }
+            
             const mostCommonAgg = await Cases.aggregate([
-                { $match: { deleted: { $ne: true } } },
+                { $match: matchStage },
                 { $addFields: { purok: { $arrayElemAt: [{ $split: ["$location", ","] }, 0] } } },
                 { $match: { purok } },
                 { $group: { _id: "$incidentType", count: { $sum: 1 } } },
@@ -114,11 +134,16 @@ module.exports = {
             const mostCommonType = mostCommonAgg[0]._id;
 
             // Step 2: fetch all cases with this incident type
-            const cases = await Cases.find({
+            const caseQuery = {
                 deleted: { $ne: true },
                 location: { $regex: `^${purok},` },
                 incidentType: mostCommonType
-            }).sort({ dateReported: -1 });
+            };
+            if (victimType && victimType !== "all") {
+                caseQuery.victimType = victimType;
+            }
+            
+            const cases = await Cases.find(caseQuery).sort({ dateReported: -1 });
 
             // Step 3: check AI insights cache
             const descriptionsText = cases.map(c => c.description || "").join("\n");

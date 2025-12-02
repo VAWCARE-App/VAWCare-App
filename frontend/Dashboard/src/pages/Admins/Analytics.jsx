@@ -390,26 +390,29 @@ const Analytics = () => {
               }
               bordered={false}
             >
-              <Table
-                dataSource={mostCommonData.map((item, idx) => ({ key: idx, ...item }))}
-                columns={tableColumns}
-                pagination={{
-                  pageSize: 10,
-                  showSizeChanger: false,
-                  style: { marginTop: 16 }
-                }}
-                expandable={{
-                  expandedRowRender: record => (
-                    <div style={{ padding: "8px 12px", background: "#faf9ff", borderRadius: 8 }}>
-                      <Text type="secondary" strong>Possible reasons: </Text>
-                      <Text>{record.reasons?.join(", ") || "No data available"}</Text>
-                    </div>
-                  ),
-                  rowExpandable: record => record.reasons && record.reasons.length > 0
-                }}
-                rowClassName={() => "clickable-row"}
-                size={isXs ? "small" : "middle"}
-              />
+              <Row gutter={[16, 16]}>
+                {mostCommonData.map(d => (
+                  <Col xs={24} sm={12} md={8} lg={6} key={d.location}>
+                    <Card
+                      hoverable
+                      onClick={() => fetchCasesByPurok(d.location)}
+                      style={{
+                        textAlign: "center",
+                        borderLeft: `6px solid ${ABUSE_COLORS[d.mostCommon]}`,
+                        cursor: "pointer"
+                      }}
+                    >
+                      <Text strong style={{ fontSize: 16 }}>{d.location}</Text>
+                      <div style={{ marginTop: 8 }}>
+                        <Text>{d.mostCommon}</Text>
+                      </div>
+                      <div style={{ fontSize: 20, fontWeight: 700, marginTop: 4 }}>
+                        {d.count}
+                      </div>
+                    </Card>
+                  </Col>
+                ))}
+              </Row>
             </Card>
           </Col>
         </Row>

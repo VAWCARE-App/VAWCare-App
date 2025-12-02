@@ -56,7 +56,7 @@ const Analytics = () => {
   const screens = Grid.useBreakpoint();
   const isXs = !!screens.xs && !screens.sm;
   const isMdUp = !!screens.md;
-  
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [overallData, setOverallData] = useState([]);
@@ -67,6 +67,10 @@ const Analytics = () => {
   const [casesData, setCasesData] = useState([]);
   const [selectedPurok, setSelectedPurok] = useState("");
   const [selectedIncident, setSelectedIncident] = useState("");
+
+  const [descriptions, setDescriptions] = useState([]);
+  const [descLoading, setDescLoading] = useState(false);
+
 
   const internalKey = import.meta.env.VITE_INTERNAL_API_KEY;
   const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
@@ -98,6 +102,26 @@ const Analytics = () => {
     fetchData();
   }, []);
 
+  const fetchDescriptions = async (incidentType, purok) => {
+    try {
+      setDescLoading(true);
+
+      const res = await axios.post(
+        `${API_BASE}/api/analytics/ai`,
+        { incidentType, purok },
+        { headers: { "x-internal-key": internalKey } }
+      );
+
+      setDescriptions(res.data.reasons || []); // update frontend with new AI reasons
+
+    } catch (err) {
+      console.error("Failed to fetch AI insights", err);
+      setDescriptions([]);
+    } finally {
+      setDescLoading(false);
+    }
+  };
+
   const formatPerLocation = (data) => {
     const allTypes = new Set();
     data.forEach(loc => loc.abuses.forEach(a => allTypes.add(a.type)));
@@ -118,10 +142,20 @@ const Analytics = () => {
         headers: { "x-internal-key": internalKey },
         params: { purok }
       });
+
       setCasesData(res.data.data || []);
       setSelectedPurok(res.data.purok || purok);
       setSelectedIncident(res.data.mostCommonType || "N/A");
       setCasesModalVisible(true);
+
+      // Fetch cached AI insights for display
+      if (res.data.mostCommonType) {
+        const cached = await axios.get(`${API_BASE}/api/analytics/insights`, {
+          headers: { "x-internal-key": internalKey },
+          params: { purok, incidentType: res.data.mostCommonType }
+        });
+        setDescriptions(cached.data.reasons || []);
+      }
     } catch (err) {
       console.error(err);
       setError("Failed to fetch cases for this purok.");
@@ -129,9 +163,9 @@ const Analytics = () => {
   };
 
   const tableColumns = [
-    { 
-      title: "Location", 
-      dataIndex: "location", 
+    {
+      title: "Location",
+      dataIndex: "location",
       key: "location",
       render: (text) => <Text strong>{text}</Text>
     },
@@ -140,9 +174,11 @@ const Analytics = () => {
       dataIndex: "mostCommon",
       key: "mostCommon",
       render: (text, record) => (
-        <Button 
-          type="link" 
-          onClick={() => fetchCasesByPurok(record.location)}
+        <Button
+          type="link"
+          onClick={async () => {
+            await fetchCasesByPurok(record.location);
+          }}
           style={{ color: BRAND.violet, fontWeight: 600 }}
           icon={<EyeOutlined />}
         >
@@ -150,9 +186,9 @@ const Analytics = () => {
         </Button>
       )
     },
-    { 
-      title: "Count", 
-      dataIndex: "count", 
+    {
+      title: "Count",
+      dataIndex: "count",
       key: "count",
       render: (text) => <Text style={{ fontWeight: 700, color: BRAND.violet }}>{text}</Text>
     }
@@ -202,7 +238,7 @@ const Analytics = () => {
           >
             {isMdUp ? "Back" : null}
           </Button>
-          
+
           <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
             <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
               <BarChartOutlined style={{ marginRight: 8 }} />
@@ -255,7 +291,7 @@ const Analytics = () => {
         {/* Charts */}
         <Row gutter={[16, 16]}>
           <Col xs={24} lg={12}>
-            <Card 
+            <Card
               style={glassCard}
               title={
                 <Space>
@@ -281,12 +317,12 @@ const Analytics = () => {
                       <Cell key={entry.name} fill={ABUSE_COLORS[entry.name] || "#8884d8"} />
                     ))}
                   </Pie>
-                  <Tooltip 
+                  <Tooltip
                     formatter={(value, name) => [`${value} cases`, name]}
                     contentStyle={{ borderRadius: 8, border: `1px solid ${BRAND.softBorder}` }}
                   />
-                  <Legend 
-                    verticalAlign="bottom" 
+                  <Legend
+                    verticalAlign="bottom"
                     height={36}
                     wrapperStyle={{ fontSize: 12 }}
                   />
@@ -296,7 +332,7 @@ const Analytics = () => {
           </Col>
 
           <Col xs={24} lg={12}>
-            <Card 
+            <Card
               style={glassCard}
               title={
                 <Space>
@@ -309,28 +345,28 @@ const Analytics = () => {
               <ResponsiveContainer width="100%" height={isXs ? 250 : 320}>
                 <BarChart data={perLocationData}>
                   <CartesianGrid strokeDasharray="3 3" stroke={BRAND.softBorder} />
-                  <XAxis 
-                    dataKey="location" 
+                  <XAxis
+                    dataKey="location"
                     tick={{ fontSize: 12 }}
                     angle={isXs ? -45 : 0}
                     textAnchor={isXs ? "end" : "middle"}
                     height={isXs ? 60 : 30}
                   />
                   <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{ borderRadius: 8, border: `1px solid ${BRAND.softBorder}` }}
                   />
-                  <Legend 
+                  <Legend
                     wrapperStyle={{ fontSize: 11 }}
                     iconType="circle"
                   />
                   {Object.keys(perLocationData[0] || {})
                     .filter(k => k !== "location")
                     .map((key) => (
-                      <Bar 
-                        key={key} 
-                        dataKey={key} 
-                        stackId="a" 
+                      <Bar
+                        key={key}
+                        dataKey={key}
+                        stackId="a"
                         fill={ABUSE_COLORS[key] || "#8884d8"}
                         radius={[4, 4, 0, 0]}
                       />
@@ -344,7 +380,7 @@ const Analytics = () => {
         {/* Table */}
         <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
           <Col xs={24}>
-            <Card 
+            <Card
               style={glassCard}
               title={
                 <Space>
@@ -357,7 +393,7 @@ const Analytics = () => {
               <Table
                 dataSource={mostCommonData.map((item, idx) => ({ key: idx, ...item }))}
                 columns={tableColumns}
-                pagination={{ 
+                pagination={{
                   pageSize: 10,
                   showSizeChanger: false,
                   style: { marginTop: 16 }
@@ -427,8 +463,8 @@ const Analytics = () => {
               dataIndex: "incidentType",
               key: "incidentType",
               render: text => (
-                <span 
-                  style={{ 
+                <span
+                  style={{
                     color: ABUSE_COLORS[text] || "#000",
                     fontWeight: 600,
                     padding: "4px 8px",
@@ -440,15 +476,15 @@ const Analytics = () => {
                 </span>
               )
             },
-            { 
-              title: "Location", 
-              dataIndex: "location", 
+            {
+              title: "Location",
+              dataIndex: "location",
               key: "location",
               render: (text) => <Text>{text}</Text>
             },
-            { 
-              title: "Remarks", 
-              dataIndex: "remarks", 
+            {
+              title: "Remarks",
+              dataIndex: "remarks",
               key: "remarks",
               render: (text) => <Text type="secondary">{text || "—"}</Text>
             }
@@ -457,6 +493,35 @@ const Analytics = () => {
           size={isXs ? "small" : "middle"}
           scroll={{ x: "max-content" }}
         />
+
+        <div style={{ marginTop: 24 }}>
+          <Title level={5} style={{ color: BRAND.violet }}>
+            Description Insights
+          </Title>
+
+          {descLoading ? (
+            <Spin tip="Analyzing descriptions..." />
+          ) : descriptions.length > 0 ? (
+            <ul style={{ paddingLeft: 20 }}>
+              {descriptions.map((d, idx) => (
+                <li key={idx} style={{ marginBottom: 6 }}>
+                  <Text>{d}</Text>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Text type="secondary">No descriptions found.</Text>
+          )}
+        </div>
+        <Button
+          type="primary"
+          style={{ marginTop: 16 }}
+          loading={descLoading}
+          onClick={() => fetchDescriptions(selectedIncident, selectedPurok)}
+        >
+          Generate AI Insights
+        </Button>
+
       </Modal>
 
       {/* Styles */}

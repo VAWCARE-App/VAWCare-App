@@ -15,7 +15,7 @@ import UserInsights from "../Insights/UserInsights";
 import ReportsInsights from "../Insights/ReportsInsights";
 import CasesInsights from "../Insights/CasesInsights";
 import AlertsInsights from "../Insights/AlertsInsights";
-import OverviewInsights from "../Insights/OverviewInsights_redesigned";
+
 
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;

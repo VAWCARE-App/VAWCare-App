@@ -214,7 +214,7 @@ ${descriptionsText}
                 { upsert: true, new: true }
             );
 
-            res.json({ success: true, reasons });
+            res.json({ success: true, reasons, updatedAt: AIInsights?.updatedAt || new Date() });
 
         } catch (err) {
             console.error("Error in generateAIReasons:", err);

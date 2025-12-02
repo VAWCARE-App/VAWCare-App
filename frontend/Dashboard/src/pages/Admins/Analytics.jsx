@@ -1253,8 +1253,7 @@ const Analytics = () => {
                     block
                     type="default"
                     icon={<EyeOutlined />}
-                    href={`/admin/cases/${selectedCase.caseID}`}
-                    target="_blank"
+                    onClick={() => navigate(`/admin/cases/${selectedCase.caseID}`)}
                     style={{
                       borderColor: BRAND.violet,
                       color: BRAND.violet,

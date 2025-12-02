@@ -162,16 +162,20 @@ export default function BPO() {
       ...prevForm,
       // Applicant is the victim from the case
       applicant: selectedCaseData.victimName || "",
-      // Respondent is the perpetrator from the case
-      respondent: selectedCaseData.perpetrator || "",
+      // Respondent is the victim from the case
+      respondent: selectedCaseData.victimName || "",
       // Statement/description from the case
       statement: selectedCaseData.description || "",
       // Use incident type and other details to build more context
       harmTo: selectedCaseData.victimName ? selectedCaseData.victimName.split(" ")[0] : "",
-      // Set applied on date to the date reported if available (use dayjs for Ant Design DatePicker)
-      appliedOn: selectedCaseData.dateReported ? dayjs(selectedCaseData.dateReported) : null,
+      // Set applied on date to current date
+      appliedOn: dayjs(),
       // Set date issued to today
       dateIssued: dayjs(),
+      // Set receivedBy to the victim's name
+      receivedBy: selectedCaseData.victimName || "",
+      // Set servedBy assigned officer
+      servedBy: selectedCaseData.assignedOfficer || "",
     }));
     
     messageApi.success(`Case ${selectedCaseData.caseID || caseId} selected and form autofilled`);

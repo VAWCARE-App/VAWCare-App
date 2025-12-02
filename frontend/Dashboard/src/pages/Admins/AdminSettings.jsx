@@ -254,6 +254,32 @@ export default function AdminSettings() {
   const onSave = async (values) => {
     setLoading(true);
     try {
+      // Defensive validation - ensure no gibberish data gets saved
+      const validationErrors = [];
+      
+      const checkGibberish = (fieldName, value) => {
+        if (!value) return;
+        const strValue = String(value).trim();
+        if (/(.)\1\1/.test(strValue)) {
+          validationErrors.push(`${fieldName}: repeated characters detected`);
+        }
+        if ((/(.{2,3})\1{2,}/.test(strValue))) {
+          validationErrors.push(`${fieldName}: repeating pattern detected`);
+        }
+        const letters = strValue.replace(/[^a-zA-Z]/g, '');
+        const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+        if (letters.length > 3 && vowels.length / letters.length < 0.25) {
+          validationErrors.push(`${fieldName}: appears to be gibberish`);
+        }
+      };
+      
+      checkGibberish('firstName', values.firstName);
+      checkGibberish('lastName', values.lastName);
+      
+      if (validationErrors.length > 0) {
+        throw new Error('Validation failed: ' + validationErrors.join(', '));
+      }
+      
       const payload = { ...values };
       if (payload.email && !payload.adminEmail) payload.adminEmail = payload.email;
 
@@ -663,6 +689,24 @@ export default function AdminSettings() {
                     { required: true, message: "Please enter first name" },
                     { min: 2, message: "First name must be at least 2 characters" },
                     { pattern: /^[a-zA-Z\s-]*$/, message: "First name can only contain letters, spaces, and hyphens" },
+                    {
+                      validator: (_, value) => {
+                        if (!value) return Promise.resolve();
+                        const strValue = String(value).trim();
+                        if (/(.)\1\1/.test(strValue)) {
+                          return Promise.reject(new Error('First name cannot contain repeated characters'));
+                        }
+                        if ((/(.{2,3})\1{2,}/.test(strValue))) {
+                          return Promise.reject(new Error('First name appears to be gibberish'));
+                        }
+                        const letters = strValue.replace(/[^a-zA-Z]/g, '');
+                        const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+                        if (letters.length > 3 && vowels.length / letters.length < 0.25) {
+                          return Promise.reject(new Error('First name appears to be gibberish'));
+                        }
+                        return Promise.resolve();
+                      }
+                    }
                   ]}
                 >
                   <Input prefix={<UserOutlined />} placeholder="First name" onKeyPress={(e) => {
@@ -680,6 +724,24 @@ export default function AdminSettings() {
                     { required: true, message: "Please enter last name" },
                     { min: 2, message: "Last name must be at least 2 characters" },
                     { pattern: /^[a-zA-Z\s-]*$/, message: "Last name can only contain letters, spaces, and hyphens" },
+                    {
+                      validator: (_, value) => {
+                        if (!value) return Promise.resolve();
+                        const strValue = String(value).trim();
+                        if (/(.)\1\1/.test(strValue)) {
+                          return Promise.reject(new Error('Last name cannot contain repeated characters'));
+                        }
+                        if ((/(.{2,3})\1{2,}/.test(strValue))) {
+                          return Promise.reject(new Error('Last name appears to be gibberish'));
+                        }
+                        const letters = strValue.replace(/[^a-zA-Z]/g, '');
+                        const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+                        if (letters.length > 3 && vowels.length / letters.length < 0.25) {
+                          return Promise.reject(new Error('Last name appears to be gibberish'));
+                        }
+                        return Promise.resolve();
+                      }
+                    }
                   ]}
                 >
                   <Input prefix={<UserOutlined />} placeholder="Last name" onKeyPress={(e) => {

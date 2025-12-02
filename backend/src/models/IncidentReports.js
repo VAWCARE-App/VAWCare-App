@@ -7,8 +7,8 @@ const validateNoGibberish = (value, fieldName) => {
   
   const strValue = String(value).trim();
   
-  // Check for repeated characters (4+ in a row)
-  if (/(.)\1{3,}/.test(strValue)) {
+  // Check for repeated characters (3+ in a row)
+  if (/(.)\1{2,}/.test(strValue)) {
     throw new Error(`${fieldName} cannot contain repeated characters`);
   }
   
@@ -20,8 +20,8 @@ const validatePerpetrator = function(v) {
   if (!v) return true; 
   const strValue = String(v).trim();
   
-  // Check for repeated characters (4+ in a row)
-  if (/(.)\1{3,}/.test(strValue)) {
+  // Check for repeated characters (3+ in a row)
+  if (/(.)\1{2,}/.test(strValue)) {
     throw new Error('Perpetrator name cannot contain repeated characters');
   }
   
@@ -58,8 +58,8 @@ const validateDescription = function(v) {
   
   const strValue = String(v).trim();
   
-  // Check for repeated characters (4+ in a row)
-  if (/(.)\1{3,}/.test(strValue)) {
+  // Check for repeated characters (3+ in a row)
+  if (/(.)\1{2,}/.test(strValue)) {
     throw new Error('Description cannot contain repeated characters');
   }
   
@@ -140,7 +140,7 @@ const incidentReportSchema = new mongoose.Schema({
             validator: function(v) {
                 if (!v) return false;
                 // Check for repeated characters
-                if (/(.)\1{3,}/.test(v)) {
+                if (/(.)\1{2,}/.test(v)) {
                   return false;
                 }
                 return true;

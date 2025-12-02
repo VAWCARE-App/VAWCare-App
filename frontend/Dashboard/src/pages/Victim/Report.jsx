@@ -379,6 +379,7 @@ export default function Report() {
                       <Option value="Sexual">💔 Sexual</Option>
                       <Option value="Psychological">🧠 Psychological</Option>
                       <Option value="Economic">💰 Economic</Option>
+                      <Option value="Others">⚠️ Others</Option>
                     </Select>
                   </Form.Item>
                 </Col>

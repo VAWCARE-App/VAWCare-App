@@ -879,7 +879,8 @@ export default function CaseDetail() {
                   { value: "Sexual", label: "Sexual" },
                   { value: "Physical", label: "Physical" },
                   { value: "Psychological", label: "Psychological" },
-                  { value: "Economic", label: "Economic" }
+                  { value: "Economic", label: "Economic" },
+                  { value: "Others", label: "Others" }
                 ]}
               />
             </Form.Item>

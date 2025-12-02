@@ -1780,6 +1780,7 @@ export default function CaseManagement() {
                       <Option value="Psychological">Psychological Abuse</Option>
                       <Option value="Physical">Physical Abuse</Option>
                       <Option value="Sexual">Sexual Abuse</Option>
+                      <Option value="Others">Others</Option>
                     </Select>
                   </Form.Item>
                 </Col>

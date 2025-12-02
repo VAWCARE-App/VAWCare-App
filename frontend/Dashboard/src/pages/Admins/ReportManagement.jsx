@@ -1098,12 +1098,9 @@ export default function ReportManagement() {
                           options={[
                             { value: "Physical", label: "Physical" },
                             { value: "Sexual", label: "Sexual" },
-                            {
-                              value: "Psychological",
-                              label: "Psychological",
-                            },
+                            { value: "Psychological", label: "Psychological"},
                             { value: "Economic", label: "Economic" },
-                            { value: "Emergency", label: "Emergency" },
+                            { value: "Others", label: "Others" },
                           ]}
                         />
                       </Form.Item>

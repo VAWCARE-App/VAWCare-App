@@ -70,6 +70,7 @@ const Analytics = () => {
 
   const [descriptions, setDescriptions] = useState([]);
   const [descLoading, setDescLoading] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
 
   const internalKey = import.meta.env.VITE_INTERNAL_API_KEY;
@@ -113,6 +114,7 @@ const Analytics = () => {
       );
 
       setDescriptions(res.data.reasons || []); // update frontend with new AI reasons
+      setLastUpdated(res.data.updatedAt ? new Date(res.data.updatedAt) : null);
 
     } catch (err) {
       console.error("Failed to fetch AI insights", err);
@@ -502,6 +504,11 @@ const Analytics = () => {
             Description Insights
           </Title>
 
+          {lastUpdated && (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Last Updated: {lastUpdated.toLocaleString()}
+            </Text>
+          )}
           {descLoading ? (
             <Spin tip="Analyzing descriptions..." />
           ) : descriptions.length > 0 ? (

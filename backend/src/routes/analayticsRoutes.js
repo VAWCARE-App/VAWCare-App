@@ -6,5 +6,7 @@ router.get("/abuse-distribution", analyticsController.getAbuseDistribution);
 router.get("/abuse-per-location", analyticsController.getAbusePerLocation);
 router.get("/most-common-per-location", analyticsController.getMostCommonPerLocation);
 router.get("/cases-by-purok", analyticsController.getCasesByPurokMostCommon);
+router.post("/ai", analyticsController.generateAIReasons);
+router.get("/insights", analyticsController.getAIInsights);
 
 module.exports = router;

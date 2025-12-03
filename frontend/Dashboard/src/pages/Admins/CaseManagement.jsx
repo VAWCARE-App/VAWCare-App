@@ -1480,7 +1480,14 @@ export default function CaseManagement() {
           backdropFilter: "blur(6px)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+        <div style={{ 
+          display: "flex", 
+          alignItems: "center", 
+          gap: isXs ? 8 : 12, 
+          minWidth: 0,
+          flex: 1,
+          overflow: "hidden"
+        }}>
           {/* sidebar toggle (visible on small screens) */}
           {!isMdUp && (
             <Button
@@ -1492,6 +1499,7 @@ export default function CaseManagement() {
                 width: isXs ? 36 : 40,
                 height: isXs ? 36 : 40,
                 minWidth: isXs ? 36 : 40,
+                flexShrink: 0,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -1504,8 +1512,19 @@ export default function CaseManagement() {
             />
           )}
 
-          <Space direction="vertical" size={0}>
-            <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
+          <Space direction="vertical" size={0} style={{ minWidth: 0, overflow: "hidden" }}>
+            <Title 
+              level={isXs ? 5 : 4} 
+              style={{ 
+                margin: 0, 
+                color: BRAND.violet,
+                fontSize: isXs ? 14 : undefined,
+                lineHeight: isXs ? 1.3 : 1.4,
+                whiteSpace: isXs ? "nowrap" : "normal",
+                overflow: "hidden",
+                textOverflow: "ellipsis"
+              }}
+            >
               Case Management
             </Title>
             {isMdUp && (
@@ -1516,15 +1535,23 @@ export default function CaseManagement() {
           </Space>
         </div>
 
-        <Space wrap>
+        <Space 
+          wrap 
+          size={isXs ? 4 : 8}
+          style={{ flexShrink: 0 }}
+        >
           <Button
             type="primary"
             onClick={openAddModal}
+            size={isXs ? "middle" : "middle"}
             style={{
               background: BRAND.violet,
               borderColor: BRAND.violet,
-              borderRadius: 12,
+              borderRadius: isXs ? 8 : 12,
               fontWeight: 700,
+              fontSize: isXs ? 13 : 14,
+              height: isXs ? 32 : 36,
+              padding: isXs ? "0 12px" : "4px 15px"
             }}
             icon={!isMdUp ? undefined : undefined}
           >
@@ -1533,7 +1560,16 @@ export default function CaseManagement() {
           <Button
             icon={<DownloadOutlined />}
             onClick={() => setExportModalVisible(true)}
-            style={{ borderColor: BRAND.violet, color: BRAND.violet, borderRadius: 12, fontWeight: 700 }}
+            size={isXs ? "middle" : "middle"}
+            style={{ 
+              borderColor: BRAND.violet, 
+              color: BRAND.violet, 
+              borderRadius: isXs ? 8 : 12, 
+              fontWeight: 700,
+              fontSize: isXs ? 13 : 14,
+              height: isXs ? 32 : 36,
+              padding: isXs ? "0 8px" : "4px 15px"
+            }}
             title="Export Cases"
           >
             {isMdUp ? "Export" : null}
@@ -1541,7 +1577,16 @@ export default function CaseManagement() {
           <Button
             icon={<ReloadOutlined />}
             onClick={fetchAllCases}
-            style={{ borderColor: BRAND.violet, color: BRAND.violet, borderRadius: 12, fontWeight: 700 }}
+            size={isXs ? "middle" : "middle"}
+            style={{ 
+              borderColor: BRAND.violet, 
+              color: BRAND.violet, 
+              borderRadius: isXs ? 8 : 12, 
+              fontWeight: 700,
+              fontSize: isXs ? 13 : 14,
+              height: isXs ? 32 : 36,
+              padding: isXs ? "0 8px" : "4px 15px"
+            }}
             title="Refresh"
           >
             {isMdUp ? "Refresh" : null}
@@ -1845,19 +1890,25 @@ export default function CaseManagement() {
             boxShadow: "0 20px 46px rgba(122,90,248,0.06)",
           }}
           bodyStyle={{ padding: screens.xs ? 8 : screens.sm ? 12 : 16 }}
-          title={
-            <div
-              style={{ display: "flex", alignItems: "center", gap: 8 }}
+        >
+          {/* Custom header that stacks on mobile */}
+          <div style={{
+            marginBottom: screens.xs ? 12 : 16,
+            display: "flex",
+            flexDirection: screens.xs ? "column" : "row",
+            justifyContent: "space-between",
+            alignItems: screens.xs ? "flex-start" : "center",
+            gap: screens.xs ? 12 : 16
+          }}>
+            <Text strong style={{ color: "#000000ff", fontSize: screens.xs ? 16 : 18 }}>
+              All Cases
+            </Text>
+            
+            <Space 
+              wrap 
+              size={screens.xs ? 6 : 8}
+              style={{ width: screens.xs ? "100%" : "auto" }}
             >
-              <Space direction="vertical" size={10}>
-                <Text strong style={{ color: "#000000ff" }}>
-                  All Cases
-                </Text>
-              </Space>
-            </div>
-          }
-          extra={
-            <Space wrap size={screens.xs ? 4 : 8}>
               <Input
                 allowClear
                 value={searchText}
@@ -1865,14 +1916,18 @@ export default function CaseManagement() {
                 placeholder={screens.xs ? "Search…" : "Search cases…"}
                 prefix={<SearchOutlined />}
                 style={{ 
-                  width: screens.xs ? 140 : screens.sm ? 180 : 260, 
+                  width: screens.xs ? "100%" : screens.sm ? 180 : 260, 
+                  minWidth: screens.xs ? "100%" : 140,
                   borderRadius: 999 
                 }}
               />
               <Select
                 value={filterType}
                 onChange={setFilterType}
-                style={{ width: screens.xs ? 120 : screens.sm ? 160 : 200 }}
+                style={{ 
+                  width: screens.xs ? "100%" : screens.sm ? 160 : 200,
+                  minWidth: screens.xs ? "100%" : 120
+                }}
                 dropdownMatchSelectWidth={220}
               >
                 <Option value="all">All Cases</Option>
@@ -1882,8 +1937,7 @@ export default function CaseManagement() {
                 <Option value="Cancelled">Cancelled</Option>
               </Select>
             </Space>
-          }
-        >
+          </div>
           <Table
             rowKey="caseID"
             columns={screens.xs ? columnsMobile : columns}

@@ -101,6 +101,7 @@ export default function CaseManagement() {
   });
   const [selectedCases, setSelectedCases] = useState([]);
   const [exportLoading, setExportLoading] = useState(false);
+  const [barangayOfficials, setBarangayOfficials] = useState([]);
   
   const [form] = Form.useForm();
   const [addForm] = Form.useForm();
@@ -154,8 +155,29 @@ export default function CaseManagement() {
     }
   };
 
+  const fetchBarangayOfficials = async () => {
+    try {
+      const { data } = await api.get("/api/admin/users");
+      if (data.success && data.data.officials) {
+        const officials = data.data.officials.map((o) => ({
+          id: o._id,
+          name: `${o.firstName} ${o.middleInitial ? o.middleInitial + " " : ""}${o.lastName}`,
+          firstName: o.firstName,
+          middleInitial: o.middleInitial,
+          lastName: o.lastName,
+          position: o.position,
+          status: o.status,
+        }));
+        setBarangayOfficials(officials);
+      }
+    } catch (err) {
+      console.error("Error fetching barangay officials", err);
+    }
+  };
+
   useEffect(() => {
     fetchAllCases();
+    fetchBarangayOfficials();
     
     const fetchUserType = async () => {
       try {
@@ -221,6 +243,7 @@ export default function CaseManagement() {
     // ensure status defaults to Open for new cases
     addForm.setFieldsValue({ status: 'Open' });
     await fetchReports();
+    await fetchBarangayOfficials();
   };
 
   const handleReportSelect = (reportID) => {
@@ -286,6 +309,11 @@ export default function CaseManagement() {
         ? `${vals.locationPurok}, Bonfal Proper, Bayombong, Nueva Vizcaya`
         : "Bonfal Proper, Bayombong, Nueva Vizcaya";
       
+      // Get officer name from ID - convert ID to name
+      const assignedOfficerId = vals.assignedOfficer;
+      const selectedOfficer = barangayOfficials.find(o => o.id === assignedOfficerId);
+      const assignedOfficerName = selectedOfficer ? selectedOfficer.name : "";
+      
       let payload;
       if (selectedReport) {
         payload = {
@@ -304,7 +332,7 @@ export default function CaseManagement() {
           location: location,
           dateReported: selectedReport.dateReported || dateReportedValue,
           status: vals.status || "Open",
-          assignedOfficer: vals.assignedOfficer || "",
+          assignedOfficer: assignedOfficerName,
           riskLevel:
             typeof vals.riskLevel === "undefined" ? undefined : vals.riskLevel || "Low",
           victimType: vals.victimType || selectedReport.victim?.victimType || "anonymous",
@@ -321,7 +349,7 @@ export default function CaseManagement() {
           location: location,
           dateReported: dateReportedValue,
           status: vals.status || "Open",
-          assignedOfficer: vals.assignedOfficer || "",
+          assignedOfficer: assignedOfficerName,
           riskLevel:
             typeof vals.riskLevel === "undefined" ? undefined : vals.riskLevel || "Low",
           victimType: vals.victimType || "anonymous",
@@ -406,11 +434,17 @@ export default function CaseManagement() {
         ? `${vals.locationPurok}, Bonfal Proper, Bayombong, Nueva Vizcaya`
         : "Bonfal Proper, Bayombong, Nueva Vizcaya";
       
+      // Get officer name from ID - convert ID to name
+      const assignedOfficerId = vals.assignedOfficer;
+      const selectedOfficer = barangayOfficials.find(o => o.id === assignedOfficerId);
+      const assignedOfficerName = selectedOfficer ? selectedOfficer.name : vals.assignedOfficer;
+      
       const payload = {
         ...vals,
         location: location,
         perpetrator: vals.perpetrator || "",
         victimName: vals.victimName || editingCase.victimName || "",
+        assignedOfficer: assignedOfficerName,
       };
       const res = await api.put(`/api/cases/${id}`, payload);
       if (res?.data?.success) {
@@ -1975,34 +2009,33 @@ export default function CaseManagement() {
                 name="assignedOfficer" 
                 label="Assigned Officer"
                 rules={[
+                  { required: true, message: "Assigned officer is required" },
                   {
                     validator: (_, value) => {
                       if (!value) return Promise.resolve();
-                      const strValue = String(value).trim();
-                      if (/(.)\1{2}/.test(strValue)) {
-                        return Promise.reject(new Error('Officer name cannot contain repeated characters'));
-                      }
-                      if (/(.{2,3})\1{2,}/.test(strValue)) {
-                        return Promise.reject(new Error('Officer name appears to be gibberish'));
-                      }
-                      const letters = strValue.replace(/[^a-zA-Z]/g, '');
-                      const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
-                      if (letters.length > 3 && vowels.length / letters.length < 0.25) {
-                        return Promise.reject(new Error('Officer name appears to be gibberish'));
+                      const selectedOfficer = barangayOfficials.find(o => o.id === value);
+                      if (!selectedOfficer) return Promise.resolve();
+                      const officerName = selectedOfficer.name;
+                      if (!/^[a-zA-Z\s\-'\.]+$/.test(officerName)) {
+                        return Promise.reject(new Error('Assigned officer name must contain only letters, spaces, hyphens, apostrophes, or periods'));
                       }
                       return Promise.resolve();
                     }
                   }
                 ]}
               >
-                <Input 
+                <Select 
                   disabled={isViewMode}
-                  onChange={() => form.validateFields(['assignedOfficer'])}
-                  onKeyPress={(e) => {
-                    if (/[0-9]/.test(e.key)) {
-                      e.preventDefault();
-                    }
-                  }}
+                  placeholder="Select assigned officer"
+                  size="large"
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                  }
+                  options={barangayOfficials.map((officer) => ({
+                    value: officer.id,
+                    label: officer.name,
+                  }))}
                 />
               </Form.Item>
               <Form.Item name="riskLevel" label="Risk Level">
@@ -2392,32 +2425,28 @@ export default function CaseManagement() {
                       {
                         validator: (_, value) => {
                           if (!value) return Promise.resolve();
-                          const strValue = String(value).trim();
-                          if (/(.)\1{2}/.test(strValue)) {
-                            return Promise.reject(new Error('Officer name cannot contain repeated characters'));
-                          }
-                          if (/(.{2,3})\1{2,}/.test(strValue)) {
-                            return Promise.reject(new Error('Officer name appears to be gibberish'));
-                          }
-                          const letters = strValue.replace(/[^a-zA-Z]/g, '');
-                          const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
-                          if (letters.length > 3 && vowels.length / letters.length < 0.25) {
-                            return Promise.reject(new Error('Officer name appears to be gibberish'));
+                          const selectedOfficer = barangayOfficials.find(o => o.id === value);
+                          if (!selectedOfficer) return Promise.resolve();
+                          const officerName = selectedOfficer.name;
+                          if (!/^[a-zA-Z\s\-'\.]+$/.test(officerName)) {
+                            return Promise.reject(new Error('Assigned officer name must contain only letters, spaces, hyphens, apostrophes, or periods'));
                           }
                           return Promise.resolve();
                         }
                       }
                     ]}
                   >
-                    <Input 
-                      placeholder="Enter officer's name" 
+                    <Select 
+                      placeholder="Select assigned officer"
                       size="large"
-                      onChange={() => addForm.validateFields(['assignedOfficer'])}
-                      onKeyPress={(e) => {
-                        if (/[0-9]/.test(e.key)) {
-                          e.preventDefault();
-                        }
-                      }}
+                      optionFilterProp="children"
+                      filterOption={(input, option) =>
+                        (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                      }
+                      options={barangayOfficials.map((officer) => ({
+                        value: officer.id,
+                        label: officer.name,
+                      }))}
                     />
                   </Form.Item>
                 </Col>

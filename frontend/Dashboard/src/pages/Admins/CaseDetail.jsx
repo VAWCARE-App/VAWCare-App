@@ -60,6 +60,7 @@ export default function CaseDetail() {
   const [loading, setLoading] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [form] = Form.useForm();
+  const [barangayOfficials, setBarangayOfficials] = useState([]);
   
   // History/Remarks state
   const [historyData, setHistoryData] = useState([]);
@@ -189,6 +190,27 @@ export default function CaseDetail() {
     }
   };
 
+  // --- fetch barangay officials ---
+  const fetchBarangayOfficials = async () => {
+    try {
+      const { data } = await api.get("/api/admin/users");
+      if (data.success && data.data.officials) {
+        const officials = data.data.officials.map((o) => ({
+          id: o._id,
+          name: `${o.firstName} ${o.middleInitial ? o.middleInitial + " " : ""}${o.lastName}`,
+          firstName: o.firstName,
+          middleInitial: o.middleInitial,
+          lastName: o.lastName,
+          position: o.position,
+          status: o.status,
+        }));
+        setBarangayOfficials(officials);
+      }
+    } catch (err) {
+      console.error("Error fetching barangay officials", err);
+    }
+  };
+
   // --- fetch history ---
   const fetchHistory = async () => {
     try {
@@ -228,6 +250,7 @@ export default function CaseDetail() {
     };
     fetchCase();
     fetchHistory();
+    fetchBarangayOfficials();
 
     // URL ?edit=true opens the modal
     try {
@@ -247,9 +270,15 @@ export default function CaseDetail() {
         ? `${values.locationPurok}, Bonfal Proper, Bayombong, Nueva Vizcaya`
         : "Bonfal Proper, Bayombong, Nueva Vizcaya";
       
+      // Get officer name from ID - convert ID to name
+      const assignedOfficerId = values.assignedOfficer;
+      const selectedOfficer = barangayOfficials.find(o => o.id === assignedOfficerId);
+      const assignedOfficerName = selectedOfficer ? selectedOfficer.name : values.assignedOfficer;
+      
       const payload = {
         ...values,
         location: location,
+        assignedOfficer: assignedOfficerName,
       };
       const res = await api.put(`/api/cases/${id}`, payload);
       const updated = res?.data?.data;
@@ -1014,33 +1043,33 @@ export default function CaseDetail() {
               name="assignedOfficer" 
               label="Assigned Officer"
               rules={[
+                { required: true, message: "Assigned officer is required" },
                 {
                   validator: (_, value) => {
                     if (!value) return Promise.resolve();
-                    const strValue = String(value).trim();
-                    if (/(.)\1{2}/.test(strValue)) {
-                      return Promise.reject(new Error('Officer name cannot contain repeated characters'));
-                    }
-                    if (/(.{2,3})\1{2,}/.test(strValue)) {
-                      return Promise.reject(new Error('Officer name appears to be gibberish'));
-                    }
-                    const letters = strValue.replace(/[^a-zA-Z]/g, '');
-                    const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
-                    if (letters.length > 3 && vowels.length / letters.length < 0.25) {
-                      return Promise.reject(new Error('Officer name appears to be gibberish'));
+                    const selectedOfficer = barangayOfficials.find(o => o.id === value);
+                    if (!selectedOfficer) return Promise.resolve();
+                    const officerName = selectedOfficer.name;
+                    if (!/^[a-zA-Z\s\-'\.]+$/.test(officerName)) {
+                      return Promise.reject(new Error('Assigned officer name must contain only letters, spaces, hyphens, apostrophes, or periods'));
                     }
                     return Promise.resolve();
                   }
                 }
               ]}
             >
-              <Input 
-                onChange={() => form.validateFields(['assignedOfficer'])}
-                onKeyPress={(e) => {
-                  if (/[0-9]/.test(e.key)) {
-                    e.preventDefault();
-                  }
-                }}
+              <Select 
+                disabled={!editOpen}
+                placeholder="Select assigned officer"
+                size="large"
+                optionFilterProp="children"
+                filterOption={(input, option) =>
+                  (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                }
+                options={barangayOfficials.map((officer) => ({
+                  value: officer.id,
+                  label: officer.name,
+                }))}
               />
             </Form.Item>
 

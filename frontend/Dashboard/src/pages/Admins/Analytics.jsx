@@ -1386,6 +1386,37 @@ const Analytics = () => {
 
       {/* Styles */}
       <style>{`
+        /* Custom scrollbar styling */
+        .ant-layout-content::-webkit-scrollbar,
+        .ant-table-body::-webkit-scrollbar,
+        .ant-modal-body::-webkit-scrollbar {
+          width: 6px;
+        }
+        .ant-layout-content::-webkit-scrollbar-track,
+        .ant-table-body::-webkit-scrollbar-track,
+        .ant-modal-body::-webkit-scrollbar-track {
+          background: #f1eeff;
+          border-radius: 3px;
+        }
+        .ant-layout-content::-webkit-scrollbar-thumb,
+        .ant-table-body::-webkit-scrollbar-thumb,
+        .ant-modal-body::-webkit-scrollbar-thumb {
+          background: #a78bfa;
+          border-radius: 3px;
+        }
+        .ant-layout-content::-webkit-scrollbar-thumb:hover,
+        .ant-table-body::-webkit-scrollbar-thumb:hover,
+        .ant-modal-body::-webkit-scrollbar-thumb:hover {
+          background: #8b5cf6;
+        }
+        /* Firefox */
+        .ant-layout-content,
+        .ant-table-body,
+        .ant-modal-body {
+          scrollbar-width: thin;
+          scrollbar-color: #a78bfa #f1eeff;
+        }
+
         /* Remove button outlines */
         .ant-btn:focus,
         .ant-btn:active,

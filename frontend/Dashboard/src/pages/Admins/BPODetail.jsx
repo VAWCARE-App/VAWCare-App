@@ -1,20 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { Input, Typography, Button, message, Layout, Space, Divider } from 'antd';
-import { PrinterOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+import { Input, Typography, Button, message, Layout, Space, Divider, Grid } from 'antd';
+import { PrinterOutlined, ArrowLeftOutlined, MenuOutlined, DownloadOutlined, EditOutlined, SaveOutlined } from '@ant-design/icons';
 import { api, getUserType } from '../../lib/api';
 import { useNavigate } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
 
 const { Title, Text } = Typography;
-const { Content } = Layout;
+const { Header, Content } = Layout;
 
-// ==== brand colors (only change) ====
-const BRAND_PRIMARY = '#7A5AF8';     // violet
-const BRAND_PAGE_BG = '#F6F3FF';     // soft violet background
+// ==== brand colors ====
+const BRAND = {
+  violet: '#7A5AF8',
+  pink: '#e91e63',
+  pageBg: 'linear-gradient(180deg, #faf9ff 0%, #f6f3ff 60%, #ffffff 100%)',
+  softBorder: 'rgba(122,90,248,0.18)',
+};
 
 export default function BPODetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const screens = Grid.useBreakpoint();
+  const isXs = !!screens.xs && !screens.sm;
 
   React.useEffect(() => {
     const checkUser = async () => {
@@ -226,98 +232,181 @@ export default function BPODetail() {
   };
 
   return (
-    <Layout style={{ width: "100%", background: BRAND_PAGE_BG, minHeight: "100vh" }}>
-      <Content style={{ maxWidth: "100%", paddingTop: 32, paddingBottom: 32, paddingLeft: 16, paddingRight: 16 }}>
-        <Space align="center" style={{ marginBottom: 16, width: "100%", justifyContent: "space-between" }}>
-          <Space align="center">
-            {/* Back button */}
+    <Layout
+      style={{
+        minHeight: "100vh",
+        width: "100%",
+        background: BRAND.pageBg,
+        overflow: "visible",
+      }}
+    >
+      {/* Sticky header */}
+      <Header
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
+          background: BRAND.pageBg,
+          borderBottom: `1px solid ${BRAND.softBorder}`,
+          display: "flex",
+          alignItems: "center",
+          paddingInline: screens.md ? 20 : 12,
+          height: screens.xs && !screens.sm ? 64 : 72,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
+          {/* sidebar toggle (visible only on small screens) */}
+          {!screens.md && (
+            <Button
+              type="text"
+              icon={<MenuOutlined />}
+              onClick={() => window.dispatchEvent(new Event("toggle-sider"))}
+              aria-label="Toggle sidebar"
+              style={{
+                width: screens.md ? 40 : 36,
+                height: screens.md ? 40 : 36,
+                minWidth: screens.md ? 40 : 36,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 10,
+                background: "#ffffffcc",
+                boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
+                padding: 0,
+                fontSize: 18,
+              }}
+            />
+          )}
+
+          {/* Back button for desktop */}
+          {screens.md && (
             <Button
               icon={<ArrowLeftOutlined />}
               onClick={() => navigate(-1)}
-              style={{ borderColor: BRAND_PRIMARY, color: BRAND_PRIMARY }}
+              style={{
+                borderColor: BRAND.violet,
+                color: BRAND.violet,
+                borderRadius: 10,
+              }}
             >
               Back
             </Button>
+          )}
 
-            {/* Title */}
-            <Title level={3} style={{ margin: 0, color: BRAND_PRIMARY }}>
-              BPO Details
+          <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+            <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
+              {isXs ? "BPO Details" : "Barangay Protection Order Details"}
             </Title>
-          </Space>
-
-          <Space>
-            {/* Download PDF button */}
-            <Button
-              type="primary"
-              onClick={async () => {
-                const downloadUrl = `${import.meta.env.VITE_API_URL}/api/bpo/${form.bpoID}/pdf`;
-
-                try {
-                  const response = await fetch(downloadUrl, {
-                    headers: {
-                      "x-internal-key": import.meta.env.VITE_INTERNAL_API_KEY, // your custom header
-                    },
-                  });
-
-                  if (!response.ok) throw new Error("Failed to fetch PDF");
-
-                  const blob = await response.blob();
-                  const url = window.URL.createObjectURL(blob);
-
-                  const link = document.createElement("a");
-                  link.href = url;
-                  link.download = `bpo_${form.bpoID}.pdf`;
-                  link.click();
-
-                  window.URL.revokeObjectURL(url);
-                } catch (err) {
-                  console.error(err);
-                }
-              }}
-              style={{ backgroundColor: BRAND_PRIMARY, borderColor: BRAND_PRIMARY }}
-            >
-              Download PDF
-            </Button>
-
-            {!isEditMode ? (
-              <Button
-                onClick={() => setIsEditMode(true)}
-                style={{ borderColor: BRAND_PRIMARY, color: BRAND_PRIMARY }}
-              >
-                Edit
-              </Button>
-            ) : (
-              <>
-                <Button
-                  type="primary"
-                  loading={saveLoading}
-                  onClick={handleSaveChanges}
-                  style={{ backgroundColor: BRAND_PRIMARY, borderColor: BRAND_PRIMARY }}
-                >
-                  Save Changes
-                </Button>
-                <Button onClick={handleCancel}>
-                  Cancel
-                </Button>
-              </>
+            {screens.md && (
+              <Text type="secondary" style={{ fontSize: 13 }}>
+                View and edit BPO information.
+              </Text>
             )}
-          </Space>
-        </Space>
+          </div>
+        </div>
 
-        <Divider />
-      </Content>
+        <div style={{ display: "flex", gap: 8 }}>
+          {!screens.md && (
+            <Button
+              icon={<ArrowLeftOutlined />}
+              onClick={() => navigate(-1)}
+              style={{ borderColor: BRAND.violet, color: BRAND.violet }}
+            />
+          )}
+          <Button
+            type="primary"
+            icon={<DownloadOutlined />}
+            onClick={async () => {
+              const downloadUrl = `${import.meta.env.VITE_API_URL}/api/bpo/${form.bpoID}/pdf`;
 
-      <div
-        className="bpo-printable"
+              try {
+                const response = await fetch(downloadUrl, {
+                  headers: {
+                    "x-internal-key": import.meta.env.VITE_INTERNAL_API_KEY,
+                  },
+                });
+
+                if (!response.ok) throw new Error("Failed to fetch PDF");
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = `bpo_${form.bpoID}.pdf`;
+                link.click();
+
+                window.URL.revokeObjectURL(url);
+              } catch (err) {
+                console.error(err);
+              }
+            }}
+            style={{ background: BRAND.violet, borderColor: BRAND.violet }}
+          >
+            {screens.md ? "Download PDF" : null}
+          </Button>
+
+          {!isEditMode ? (
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => setIsEditMode(true)}
+              style={{ borderColor: BRAND.violet, color: BRAND.violet }}
+            >
+              {screens.md ? "Edit" : null}
+            </Button>
+          ) : (
+            <>
+              <Button
+                type="primary"
+                icon={<SaveOutlined />}
+                loading={saveLoading}
+                onClick={handleSaveChanges}
+                style={{ background: BRAND.violet, borderColor: BRAND.violet }}
+              >
+                {screens.md ? "Save" : null}
+              </Button>
+              <Button onClick={handleCancel}>
+                {screens.md ? "Cancel" : null}
+              </Button>
+            </>
+          )}
+        </div>
+      </Header>
+
+      <Content
         style={{
-          maxWidth: 900,
-          margin: '18px auto',
-          padding: 28,
-          background: '#fff',
-          fontFamily: "'Times New Roman', Times, serif",
-          color: '#000'
+          padding: 12,
+          paddingTop: 12,
+          width: "100%",
+          minWidth: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          boxSizing: "border-box",
         }}
       >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "100%",
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+            paddingInline: screens.xs ? 6 : 12,
+            boxSizing: "border-box",
+          }}
+        >
+          <div
+            className="bpo-printable"
+            style={{
+              maxWidth: 900,
+              margin: '18px auto',
+              padding: 28,
+              background: '#fff',
+              fontFamily: "'Times New Roman', Times, serif",
+              color: '#000'
+            }}
+          >
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 14 }}>Republic of the Philippines</div>
           <div style={{ fontSize: 14 }}>Province of Nueva Vizcaya</div>
@@ -329,7 +418,7 @@ export default function BPODetail() {
         <Title level={3} style={{ textAlign: 'center', marginTop: 10, marginBottom: 6 }}>BARANGAY PROTECTION ORDER</Title>
 
         {!loading && !form.bpoID && (
-          <div style={{ textAlign: 'center', margin: '8px 0', color: BRAND_PRIMARY }}>
+          <div style={{ textAlign: 'center', margin: '8px 0', color: BRAND.violet }}>
             <Text>No BPO data loaded — check the browser console and ensure the URL contains the correct bpo id.</Text>
           </div>
         )}
@@ -530,11 +619,55 @@ export default function BPODetail() {
             <Button icon={<PrinterOutlined />} onClick={handlePrint}>Print</Button>
           </div>
         </div>
+          </div>
+        </div>
 
         <style>{`
+        /* Custom scrollbar styling */
+        .ant-layout-content::-webkit-scrollbar,
+        .ant-table-body::-webkit-scrollbar,
+        .ant-modal-body::-webkit-scrollbar {
+          width: 6px;
+        }
+        .ant-layout-content::-webkit-scrollbar-track,
+        .ant-table-body::-webkit-scrollbar-track,
+        .ant-modal-body::-webkit-scrollbar-track {
+          background: #f1eeff;
+          border-radius: 3px;
+        }
+        .ant-layout-content::-webkit-scrollbar-thumb,
+        .ant-table-body::-webkit-scrollbar-thumb,
+        .ant-modal-body::-webkit-scrollbar-thumb {
+          background: #a78bfa;
+          border-radius: 3px;
+        }
+        .ant-layout-content::-webkit-scrollbar-thumb:hover,
+        .ant-table-body::-webkit-scrollbar-thumb:hover,
+        .ant-modal-body::-webkit-scrollbar-thumb:hover {
+          background: #8b5cf6;
+        }
+        /* Firefox */
+        .ant-layout-content,
+        .ant-table-body,
+        .ant-modal-body {
+          scrollbar-width: thin;
+          scrollbar-color: #a78bfa #f1eeff;
+        }
+
+        /* Remove button outlines */
+        .ant-btn:focus,
+        .ant-btn:active,
+        .ant-btn-text:focus,
+        .ant-btn-text:active,
+        button:focus,
+        button:active {
+          outline: none !important;
+          box-shadow: none !important;
+        }
+
         @media print {
           button, .ant-btn { display: none !important; }
-          .sider-modern, .ant-layout-header, .ant-layout-footer, .menu-modern { display: none !important; }
+          .sider-modern, .ant-layout-header, .ant-layout-footer, .menu-modern, .ant-layout-sider { display: none !important; }
           input::placeholder, textarea::placeholder { color: transparent; }
           body, div { color: #000 !important; }
           @page { size: A4; margin: 12mm; }
@@ -543,7 +676,7 @@ export default function BPODetail() {
         }
         .bpo-printable { box-shadow: 0 0 0 1px rgba(0,0,0,0.05); }
       `}</style>
-      </div>
+      </Content>
     </Layout>
   );
 }

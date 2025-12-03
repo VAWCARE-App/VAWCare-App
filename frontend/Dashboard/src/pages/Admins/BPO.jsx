@@ -13,6 +13,7 @@ import {
   Select,
   Card,
   Spin,
+  Grid,
 } from "antd";
 import {
   CheckCircleOutlined,
@@ -22,23 +23,31 @@ import {
   SaveOutlined,
   ArrowLeftOutlined,
   FileTextOutlined,
+  MenuOutlined,
 } from "@ant-design/icons";
 import { api, getUserType } from "../../lib/api";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
-const { Content } = Layout;
+const { Header, Content } = Layout;
 const { Option } = Select;
 
 // Brand (matches the rest of your pages)
-const BRAND_PRIMARY = "#7A5AF8";
-const BRAND_PAGE_BG = "#F6F3FF";
+const BRAND = {
+  violet: "#7A5AF8",
+  pink: "#e91e63",
+  pageBg: "linear-gradient(180deg, #faf9ff 0%, #f6f3ff 60%, #ffffff 100%)",
+  softBorder: "rgba(122,90,248,0.18)",
+};
 
 export default function BPO() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [messageApi, contextHolder] = message.useMessage();
+  const screens = Grid.useBreakpoint();
+  const isXs = !!screens.xs && !screens.sm;
+  
   React.useEffect(() => {
     const checkUser = async () => {
       const type = await getUserType(); // wait for the Promise
@@ -437,63 +446,149 @@ export default function BPO() {
     padding: 4,
   };
 
-  /*** LAYOUT with header like BPODetail ***/
+  /*** LAYOUT with sticky header ***/
   return (
-    <Layout style={{ width: "100%", background: BRAND_PAGE_BG, minHeight: "100vh" }}>
+    <Layout
+      style={{
+        minHeight: "100vh",
+        width: "100%",
+        background: BRAND.pageBg,
+        overflow: "visible",
+      }}
+    >
       {contextHolder}
-      <Content style={{ maxWidth: "100%", paddingTop: 32, paddingBottom: 32, paddingLeft: 16, paddingRight: 16 }}>
-        {/* Header bar (like BPODetail) */}
-        <Space align="center" style={{ marginBottom: 16, width: "100%", justifyContent: "space-between" }}>
-          <Space align="center">
+      {/* Sticky header */}
+      <Header
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
+          background: BRAND.pageBg,
+          borderBottom: `1px solid ${BRAND.softBorder}`,
+          display: "flex",
+          alignItems: "center",
+          paddingInline: screens.md ? 20 : 12,
+          height: screens.xs && !screens.sm ? 64 : 72,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
+          {/* sidebar toggle (visible only on small screens) */}
+          {!screens.md && (
+            <Button
+              type="text"
+              icon={<MenuOutlined />}
+              onClick={() => window.dispatchEvent(new Event("toggle-sider"))}
+              aria-label="Toggle sidebar"
+              style={{
+                width: screens.md ? 40 : 36,
+                height: screens.md ? 40 : 36,
+                minWidth: screens.md ? 40 : 36,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 10,
+                background: "#ffffffcc",
+                boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
+                padding: 0,
+                fontSize: 18,
+              }}
+            />
+          )}
+
+          {/* Back button for desktop */}
+          {screens.md && (
             <Button
               icon={<ArrowLeftOutlined />}
               onClick={() => navigate(-1)}
-              style={{ borderColor: BRAND_PRIMARY, color: BRAND_PRIMARY }}
+              style={{
+                borderColor: BRAND.violet,
+                color: BRAND.violet,
+                borderRadius: 10,
+              }}
             >
               Back
             </Button>
-            <Title level={3} style={{ margin: 0, color: BRAND_PRIMARY }}>
-              New BPO
+          )}
+
+          <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+            <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
+              {isXs ? "New BPO" : "Create New BPO"}
             </Title>
-          </Space>
+            {screens.md && (
+              <Text type="secondary" style={{ fontSize: 13 }}>
+                Fill in the details to create a Barangay Protection Order.
+              </Text>
+            )}
+          </div>
+        </div>
 
-          <Space>
+        <div style={{ display: "flex", gap: 8 }}>
+          {!screens.md && (
             <Button
-              icon={<DownloadOutlined />}
-              onClick={exportCurrent}
-              style={{ borderColor: BRAND_PRIMARY, color: BRAND_PRIMARY }}
-            >
-              Export
-            </Button>
-            <Button
-              type="primary"
-              icon={<SaveOutlined />}
-              onClick={submit}
-              disabled={loading}
-              loading={loading}
-              style={{ background: BRAND_PRIMARY, borderColor: BRAND_PRIMARY }}
-            >
-              {loading ? "Saving..." : "Save"}
-            </Button>
-          </Space>
-        </Space>
+              icon={<ArrowLeftOutlined />}
+              onClick={() => navigate(-1)}
+              style={{ borderColor: BRAND.violet, color: BRAND.violet }}
+            />
+          )}
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={exportCurrent}
+            style={{ borderColor: BRAND.violet, color: BRAND.violet }}
+          >
+            {screens.md ? "Export" : null}
+          </Button>
+          <Button
+            type="primary"
+            icon={<SaveOutlined />}
+            onClick={submit}
+            disabled={loading}
+            loading={loading}
+            style={{ background: BRAND.violet, borderColor: BRAND.violet }}
+          >
+            {screens.md ? (loading ? "Saving..." : "Save") : null}
+          </Button>
+        </div>
+      </Header>
 
-        <Divider />
-
+      <Content
+        style={{
+          padding: 12,
+          paddingTop: 12,
+          width: "100%",
+          minWidth: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          boxSizing: "border-box",
+        }}
+      >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "100%",
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+            paddingInline: screens.xs ? 6 : 12,
+            boxSizing: "border-box",
+          }}
+        >
         {/* Case Selection Card */}
         <Card
           style={{
             maxWidth: 900,
             margin: "0 auto 24px",
             background: "#fff",
-            borderRadius: 12,
-            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+            borderRadius: isXs ? 12 : 18,
+            borderColor: BRAND.softBorder,
+            boxShadow: "0 20px 46px rgba(122,90,248,0.06)",
           }}
+          bodyStyle={{ padding: isXs ? 12 : 20 }}
         >
           <Space direction="vertical" style={{ width: "100%" }} size="middle">
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <FileTextOutlined style={{ fontSize: 18, color: BRAND_PRIMARY }} />
-              <Title level={5} style={{ margin: 0, color: BRAND_PRIMARY }}>
+              <FileTextOutlined style={{ fontSize: 18, color: BRAND.violet }} />
+              <Title level={5} style={{ margin: 0, color: BRAND.violet }}>
                 Select a Case (Optional)
               </Title>
             </div>
@@ -874,9 +969,52 @@ export default function BPO() {
             </div>
           </div>
         </div>
+        </div>
 
         {/* print overrides (for export popup too) */}
         <style>{`
+          /* Custom scrollbar styling */
+          .ant-layout-content::-webkit-scrollbar,
+          .ant-table-body::-webkit-scrollbar,
+          .ant-modal-body::-webkit-scrollbar {
+            width: 6px;
+          }
+          .ant-layout-content::-webkit-scrollbar-track,
+          .ant-table-body::-webkit-scrollbar-track,
+          .ant-modal-body::-webkit-scrollbar-track {
+            background: #f1eeff;
+            border-radius: 3px;
+          }
+          .ant-layout-content::-webkit-scrollbar-thumb,
+          .ant-table-body::-webkit-scrollbar-thumb,
+          .ant-modal-body::-webkit-scrollbar-thumb {
+            background: #a78bfa;
+            border-radius: 3px;
+          }
+          .ant-layout-content::-webkit-scrollbar-thumb:hover,
+          .ant-table-body::-webkit-scrollbar-thumb:hover,
+          .ant-modal-body::-webkit-scrollbar-thumb:hover {
+            background: #8b5cf6;
+          }
+          /* Firefox */
+          .ant-layout-content,
+          .ant-table-body,
+          .ant-modal-body {
+            scrollbar-width: thin;
+            scrollbar-color: #a78bfa #f1eeff;
+          }
+
+          /* Remove button outlines */
+          .ant-btn:focus,
+          .ant-btn:active,
+          .ant-btn-text:focus,
+          .ant-btn-text:active,
+          button:focus,
+          button:active {
+            outline: none !important;
+            box-shadow: none !important;
+          }
+
           @media print {
             button, .ant-btn { display: none !important; }
             .sider-modern, .ant-layout-header, .ant-layout-footer, .menu-modern, .ant-layout-sider { display: none !important; }

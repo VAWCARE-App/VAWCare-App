@@ -1666,7 +1666,37 @@ export default function UserManagement() {
             font-size: 14px !important;
           }
           .ant-btn {
-            font-size: 14px !important;
+            font-size: 13px !important;
+            padding: 4px 12px !important;
+            height: 32px !important;
+            min-width: 32px !important;
+          }
+          .ant-btn-icon-only {
+            padding: 4px 8px !important;
+            width: 32px !important;
+          }
+          .ant-btn-sm {
+            font-size: 12px !important;
+            padding: 2px 8px !important;
+            height: 28px !important;
+          }
+          .ant-layout-header .ant-btn {
+            padding: 4px 8px !important;
+            height: 32px !important;
+          }
+          .ant-space-item .ant-btn {
+            white-space: nowrap !important;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .ant-btn {
+            font-size: 12px !important;
+            padding: 4px 10px !important;
+            height: 30px !important;
+          }
+          .ant-btn-icon-only {
+            width: 30px !important;
           }
         }
 
@@ -1780,6 +1810,33 @@ export default function UserManagement() {
         @keyframes slideIn {
           from { transform: translateY(8px); opacity: 0; }
           to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Custom Scrollbar - Optimized for Performance */
+        ::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+          background: rgba(241, 238, 255, 0.3);
+          border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+          background: rgba(167, 139, 250, 0.6);
+          border-radius: 10px;
+          will-change: background;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+          background: rgba(139, 92, 246, 0.8);
+        }
+
+        /* Firefox scrollbar */
+        * {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(167, 139, 250, 0.6) rgba(241, 238, 255, 0.3);
         }
       `}</style>
     </Layout>

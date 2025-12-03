@@ -1719,6 +1719,43 @@ export default function ReportManagement() {
           from { transform: translateY(8px); opacity: 0; }
           to { transform: translateY(0); opacity: 1; }
         }
+
+        /* Custom Scrollbar - Performance Optimized */
+        .ant-layout-content ::-webkit-scrollbar,
+        .ant-table-body ::-webkit-scrollbar,
+        .ant-modal-body ::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+        }
+
+        .ant-layout-content ::-webkit-scrollbar-track,
+        .ant-table-body ::-webkit-scrollbar-track,
+        .ant-modal-body ::-webkit-scrollbar-track {
+          background: rgba(241, 238, 255, 0.3);
+          border-radius: 10px;
+        }
+
+        .ant-layout-content ::-webkit-scrollbar-thumb,
+        .ant-table-body ::-webkit-scrollbar-thumb,
+        .ant-modal-body ::-webkit-scrollbar-thumb {
+          background: rgba(167, 139, 250, 0.6);
+          border-radius: 10px;
+          transform: translateZ(0);
+        }
+
+        .ant-layout-content ::-webkit-scrollbar-thumb:hover,
+        .ant-table-body ::-webkit-scrollbar-thumb:hover,
+        .ant-modal-body ::-webkit-scrollbar-thumb:hover {
+          background: rgba(139, 92, 246, 0.8);
+        }
+
+        /* Firefox scrollbar */
+        .ant-layout-content,
+        .ant-table-body,
+        .ant-modal-body {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(167, 139, 250, 0.6) rgba(241, 238, 255, 0.3);
+        }
       `}</style>
     </Layout>
   );

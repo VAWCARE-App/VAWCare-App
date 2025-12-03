@@ -948,7 +948,7 @@ export default function CaseManagement() {
       return;
     }
 
-    if (!selectedOfficer) {
+    if (exportMode === "officer" && !selectedOfficer) {
       message.warning("Please select an officer first");
       return;
     }
@@ -3210,71 +3210,59 @@ export default function CaseManagement() {
           box-shadow: 0 0 0 2px rgba(122,90,248,0.15) !important;
         }
 
-        /* Custom scrollbar styling for modal and case list */
-        .ant-modal-body::-webkit-scrollbar,
+        /* Custom Scrollbar - Ultra Optimized */
+        .ant-layout-content ::-webkit-scrollbar,
+        .ant-table-body ::-webkit-scrollbar,
+        .ant-modal-body ::-webkit-scrollbar,
         .ant-col::-webkit-scrollbar,
         .case-list-scroll::-webkit-scrollbar,
         div[style*="overflowY: auto"]::-webkit-scrollbar,
         div[style*="overflow-y: auto"]::-webkit-scrollbar {
-          width: 8px;
-          height: 8px;
+          width: 6px;
+          height: 6px;
         }
 
-        .ant-modal-body::-webkit-scrollbar-track,
+        .ant-layout-content ::-webkit-scrollbar-track,
+        .ant-table-body ::-webkit-scrollbar-track,
+        .ant-modal-body ::-webkit-scrollbar-track,
         .ant-col::-webkit-scrollbar-track,
         .case-list-scroll::-webkit-scrollbar-track,
         div[style*="overflowY: auto"]::-webkit-scrollbar-track,
         div[style*="overflow-y: auto"]::-webkit-scrollbar-track {
-          background: rgba(0, 0, 0, 0.03);
-          border-radius: 10px;
-          margin: 4px;
+          background: #f1eeff;
         }
 
-        .ant-modal-body::-webkit-scrollbar-thumb,
+        .ant-layout-content ::-webkit-scrollbar-thumb,
+        .ant-table-body ::-webkit-scrollbar-thumb,
+        .ant-modal-body ::-webkit-scrollbar-thumb,
         .ant-col::-webkit-scrollbar-thumb,
         .case-list-scroll::-webkit-scrollbar-thumb,
         div[style*="overflowY: auto"]::-webkit-scrollbar-thumb,
         div[style*="overflow-y: auto"]::-webkit-scrollbar-thumb {
-          background: ${BRAND.violet};
-          border-radius: 10px;
+          background: #a78bfa;
+          border-radius: 3px;
         }
 
-        .ant-modal-body::-webkit-scrollbar-thumb:hover,
+        .ant-layout-content ::-webkit-scrollbar-thumb:hover,
+        .ant-table-body ::-webkit-scrollbar-thumb:hover,
+        .ant-modal-body ::-webkit-scrollbar-thumb:hover,
         .ant-col::-webkit-scrollbar-thumb:hover,
         .case-list-scroll::-webkit-scrollbar-thumb:hover,
         div[style*="overflowY: auto"]::-webkit-scrollbar-thumb:hover,
         div[style*="overflow-y: auto"]::-webkit-scrollbar-thumb:hover {
-          background: #6a4ae0;
+          background: #8b5cf6;
         }
 
         /* Firefox scrollbar */
+        .ant-layout-content,
+        .ant-table-body,
         .ant-modal-body,
         .ant-col,
         .case-list-scroll,
         div[style*="overflowY: auto"],
         div[style*="overflow-y: auto"] {
           scrollbar-width: thin;
-          scrollbar-color: ${BRAND.violet} rgba(0, 0, 0, 0.03);
-        }
-
-        /* Smooth scrolling */
-        .ant-modal-body,
-        .ant-col,
-        .case-list-scroll,
-        div[style*="overflowY: auto"],
-        div[style*="overflow-y: auto"] {
-          scroll-behavior: smooth;
-        }
-
-        /* Hide scrollbar when not hovering on mobile */
-        @media (max-width: 768px) {
-          .ant-modal-body::-webkit-scrollbar,
-          .ant-col::-webkit-scrollbar,
-          .case-list-scroll::-webkit-scrollbar,
-          div[style*="overflowY: auto"]::-webkit-scrollbar,
-          div[style*="overflow-y: auto"]::-webkit-scrollbar {
-            width: 6px;
-          }
+          scrollbar-color: #a78bfa #f1eeff;
         }
       `}</style>
     </Layout>

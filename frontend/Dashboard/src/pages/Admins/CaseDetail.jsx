@@ -984,6 +984,42 @@ export default function CaseDetail() {
 
       {/* Styles */}
       <style>{`
+        /* Custom scrollbar styling */
+        .ant-layout-content::-webkit-scrollbar,
+        .ant-table-body::-webkit-scrollbar,
+        .ant-modal-body::-webkit-scrollbar,
+        .ant-card .ant-card-body > div[style*="overflowY: auto"]::-webkit-scrollbar {
+          width: 6px;
+        }
+        .ant-layout-content::-webkit-scrollbar-track,
+        .ant-table-body::-webkit-scrollbar-track,
+        .ant-modal-body::-webkit-scrollbar-track,
+        .ant-card .ant-card-body > div[style*="overflowY: auto"]::-webkit-scrollbar-track {
+          background: #f1eeff;
+          border-radius: 3px;
+        }
+        .ant-layout-content::-webkit-scrollbar-thumb,
+        .ant-table-body::-webkit-scrollbar-thumb,
+        .ant-modal-body::-webkit-scrollbar-thumb,
+        .ant-card .ant-card-body > div[style*="overflowY: auto"]::-webkit-scrollbar-thumb {
+          background: #a78bfa;
+          border-radius: 3px;
+        }
+        .ant-layout-content::-webkit-scrollbar-thumb:hover,
+        .ant-table-body::-webkit-scrollbar-thumb:hover,
+        .ant-modal-body::-webkit-scrollbar-thumb:hover,
+        .ant-card .ant-card-body > div[style*="overflowY: auto"]::-webkit-scrollbar-thumb:hover {
+          background: #8b5cf6;
+        }
+        /* Firefox */
+        .ant-layout-content,
+        .ant-table-body,
+        .ant-modal-body,
+        .ant-card .ant-card-body > div[style*="overflowY: auto"] {
+          scrollbar-width: thin;
+          scrollbar-color: #a78bfa #f1eeff;
+        }
+
         /* Remove button outlines */
         .ant-btn:focus,
         .ant-btn:active,
@@ -997,22 +1033,6 @@ export default function CaseDetail() {
 
         .hover-lift { transition: transform .18s ease, box-shadow .18s ease; }
         .hover-lift:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(16,24,40,.12); }
-
-        /* Custom scrollbar for history section */
-        .ant-card .ant-card-body > div[style*="overflowY: auto"]::-webkit-scrollbar {
-          width: 8px;
-        }
-        .ant-card .ant-card-body > div[style*="overflowY: auto"]::-webkit-scrollbar-track {
-          background: rgba(0, 0, 0, 0.03);
-          border-radius: 10px;
-        }
-        .ant-card .ant-card-body > div[style*="overflowY: auto"]::-webkit-scrollbar-thumb {
-          background: ${BRAND.violet};
-          border-radius: 10px;
-        }
-        .ant-card .ant-card-body > div[style*="overflowY: auto"]::-webkit-scrollbar-thumb:hover {
-          background: #6a4ae0;
-        }
 
         @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: translateY(0) } }

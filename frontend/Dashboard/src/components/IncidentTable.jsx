@@ -138,87 +138,177 @@ export default function IncidentTable({ cases = [], loading }) {
 
   return (
     <Card
-      title="Incident Type by Period"
+      title={
+        <span style={{ fontSize: isMobile ? 14 : 16, fontWeight: 600 }}>
+          Incident Type by Period
+        </span>
+      }
       extra={
+        isMobile ? null : ( // Move controls below title on mobile
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 10,
+              alignItems: "center",
+              justifyContent: "flex-end",
+            }}
+          >
+            {/* Granularity Toggle */}
+            <Segmented
+              options={modeOptions}
+              size="middle"
+              value={mode}
+              onChange={(val) => {
+                setMode(val);
+                setPeriod(val === "Half-Year" ? "first" : "Q1");
+              }}
+            />
+
+            {/* Period Toggle */}
+            {mode === "Half-Year" ? (
+              <Segmented
+                options={halfOptions}
+                size="middle"
+                value={period}
+                onChange={setPeriod}
+              />
+            ) : (
+              <Segmented
+                options={quarterOptions}
+                size="middle"
+                value={period}
+                onChange={setPeriod}
+              />
+            )}
+
+            {/* Download Buttons */}
+            <Space wrap size={8}>
+              <Button
+                onClick={downloadCSV}
+                size="middle"
+                icon={<DownloadOutlined />}
+              >
+                Download CSV
+              </Button>
+              <Button
+                onClick={downloadImage}
+                size="middle"
+                icon={<PictureOutlined />}
+              >
+                Download Image
+              </Button>
+              <Button
+                type="primary"
+                size="middle"
+                onClick={() => {
+                  const { summary, totalRow } = buildMonthlySummary(cases);
+                  generateAbuseReport(summary, totalRow);
+                }}
+              >
+                Download DOCX
+              </Button>
+            </Space>
+          </div>
+        )
+      }
+      style={{ borderRadius: isMobile ? 8 : 16 }}
+    >
+      {/* Mobile Controls - shown below title */}
+      {isMobile && (
         <div
           style={{
             display: "flex",
-            flexWrap: "wrap",
-            gap: isMobile ? 6 : 10,
-            alignItems: "center",
-            justifyContent: isMobile ? "flex-start" : "flex-end",
-            maxWidth: isMobile ? 320 : "100%", // prevent overflow on tiny screens
+            flexDirection: "column",
+            gap: 10,
+            marginBottom: 16,
+            paddingBottom: 16,
+            borderBottom: "1px solid #f0f0f0",
           }}
         >
-          {/* Granularity Toggle */}
-          <Segmented
-            options={modeOptions}
-            size={isMobile ? "small" : "middle"}
-            value={mode}
-            onChange={(val) => {
-              setMode(val);
-              setPeriod(val === "Half-Year" ? "first" : "Q1");
-            }}
-          />
-
-          {/* Period Toggle */}
-          {mode === "Half-Year" ? (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <Segmented
-              options={halfOptions}
-              size={isMobile ? "small" : "middle"}
-              value={period}
-              onChange={setPeriod}
+              options={modeOptions}
+              size="small"
+              value={mode}
+              onChange={(val) => {
+                setMode(val);
+                setPeriod(val === "Half-Year" ? "first" : "Q1");
+              }}
+              style={{ flex: 1, minWidth: 120 }}
             />
-          ) : (
-            <Segmented
-              options={quarterOptions}
-              size={isMobile ? "small" : "middle"}
-              value={period}
-              onChange={setPeriod}
-            />
-          )}
-
-          {/* Download Buttons */}
-          <Space wrap size={isMobile ? 4 : 8}>
+            {mode === "Half-Year" ? (
+              <Segmented
+                options={halfOptions}
+                size="small"
+                value={period}
+                onChange={setPeriod}
+                style={{ flex: 1, minWidth: 120 }}
+              />
+            ) : (
+              <Segmented
+                options={quarterOptions}
+                size="small"
+                value={period}
+                onChange={setPeriod}
+                style={{ flex: 1, minWidth: 120 }}
+              />
+            )}
+          </div>
+          <Space wrap size={4} style={{ width: "100%" }}>
             <Button
               onClick={downloadCSV}
-              size={isMobile ? "small" : "middle"}
+              size="small"
               icon={<DownloadOutlined />}
+              style={{ fontSize: 11 }}
             >
-              {!isMobile && "Download CSV"}
+              CSV
             </Button>
             <Button
               onClick={downloadImage}
-              size={isMobile ? "small" : "middle"}
+              size="small"
               icon={<PictureOutlined />}
+              style={{ fontSize: 11 }}
             >
-              {!isMobile && "Download Image"}
+              Image
             </Button>
             <Button
               type="primary"
-              size={isMobile ? "small" : "middle"}
+              size="small"
               onClick={() => {
                 const { summary, totalRow } = buildMonthlySummary(cases);
                 generateAbuseReport(summary, totalRow);
               }}
+              style={{ fontSize: 11 }}
             >
-              Download DOCX
+              DOCX
             </Button>
           </Space>
         </div>
-      }
-      style={{ borderRadius: 16 }}
-    >
+      )}
+    
       {loading ? (
         <Skeleton active />
       ) : (
-        <div style={{ overflowX: "auto" }} id="incident-table">
+        <div 
+          style={{ 
+            overflowX: "auto",
+            WebkitOverflowScrolling: "touch", // smooth scrolling on iOS
+            marginLeft: isMobile ? -16 : 0,
+            marginRight: isMobile ? -16 : 0,
+            paddingLeft: isMobile ? 16 : 0,
+            paddingRight: isMobile ? 16 : 0,
+          }} 
+          id="incident-table"
+        >
           <table
             style={{
               width: "100%",
               borderCollapse: "collapse",
               textAlign: "center",
               background: "#fff",
+              fontSize: isMobile ? 11 : 14,
+              minWidth: isMobile ? 600 : "auto", // ensure horizontal scroll on small screens
             }}
           >
             <thead>
@@ -226,8 +316,14 @@ export default function IncidentTable({ cases = [], loading }) {
                 <th
                   style={{
                     borderBottom: "1px solid #ddd",
-                    padding: 8,
+                    padding: isMobile ? "6px 4px" : 8,
                     textAlign: "left",
+                    position: "sticky",
+                    left: 0,
+                    backgroundColor: "#fff",
+                    zIndex: 1,
+                    whiteSpace: isMobile ? "nowrap" : "normal",
+                    fontSize: isMobile ? 11 : 14,
                   }}
                 >
                   Incident Type
@@ -235,24 +331,39 @@ export default function IncidentTable({ cases = [], loading }) {
                 {incidentData.labels.map((m) => (
                   <th
                     key={m}
-                    style={{ borderBottom: "1px solid #ddd", padding: 8 }}
+                    style={{ 
+                      borderBottom: "1px solid #ddd", 
+                      padding: isMobile ? "6px 4px" : 8,
+                      whiteSpace: isMobile ? "nowrap" : "normal",
+                      fontSize: isMobile ? 11 : 14,
+                    }}
                   >
                     {m}
                   </th>
                 ))}
-                <th style={{ borderBottom: "1px solid #ddd", padding: 8 }}>
+                <th style={{ 
+                  borderBottom: "1px solid #ddd", 
+                  padding: isMobile ? "6px 4px" : 8,
+                  fontSize: isMobile ? 11 : 14,
+                }}>
                   Total
                 </th>
               </tr>
             </thead>
             <tbody>
-              {incidentData.data.map((row) => (
+              {incidentData.data.map((row, idx) => (
                 <tr key={row.incidentType}>
                   <td
                     style={{
                       borderBottom: "1px solid #f0f0f0",
-                      padding: 8,
+                      padding: isMobile ? "6px 4px" : 8,
                       textAlign: "left",
+                      position: "sticky",
+                      left: 0,
+                      backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
+                      zIndex: 1,
+                      whiteSpace: isMobile ? "nowrap" : "normal",
+                      fontSize: isMobile ? 11 : 14,
                     }}
                   >
                     {row.incidentType}
@@ -262,7 +373,9 @@ export default function IncidentTable({ cases = [], loading }) {
                       key={i}
                       style={{
                         borderBottom: "1px solid #f0f0f0",
-                        padding: 8,
+                        padding: isMobile ? "6px 4px" : 8,
+                        backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
+                        fontSize: isMobile ? 11 : 14,
                       }}
                     >
                       {val}
@@ -271,8 +384,10 @@ export default function IncidentTable({ cases = [], loading }) {
                   <td
                     style={{
                       borderBottom: "1px solid #f0f0f0",
-                      padding: 8,
+                      padding: isMobile ? "6px 4px" : 8,
                       fontWeight: 600,
+                      backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
+                      fontSize: isMobile ? 11 : 14,
                     }}
                   >
                     {row.total}

@@ -751,6 +751,41 @@ export default function AlertsManagement() {
            .ant-table { font-size: 12px; }
            .ant-space { row-gap: 6px; }
          }
+
+         /* Custom Scrollbar - Ultra Optimized */
+         .ant-layout-content ::-webkit-scrollbar,
+         .ant-table-body ::-webkit-scrollbar,
+         .ant-modal-body ::-webkit-scrollbar {
+           width: 6px;
+           height: 6px;
+         }
+
+         .ant-layout-content ::-webkit-scrollbar-track,
+         .ant-table-body ::-webkit-scrollbar-track,
+         .ant-modal-body ::-webkit-scrollbar-track {
+           background: #f1eeff;
+         }
+
+         .ant-layout-content ::-webkit-scrollbar-thumb,
+         .ant-table-body ::-webkit-scrollbar-thumb,
+         .ant-modal-body ::-webkit-scrollbar-thumb {
+           background: #a78bfa;
+           border-radius: 3px;
+         }
+
+         .ant-layout-content ::-webkit-scrollbar-thumb:hover,
+         .ant-table-body ::-webkit-scrollbar-thumb:hover,
+         .ant-modal-body ::-webkit-scrollbar-thumb:hover {
+           background: #8b5cf6;
+         }
+
+         /* Firefox scrollbar */
+         .ant-layout-content,
+         .ant-table-body,
+         .ant-modal-body {
+           scrollbar-width: thin;
+           scrollbar-color: #a78bfa #f1eeff;
+         }
         
       `}</style>
     </Layout>

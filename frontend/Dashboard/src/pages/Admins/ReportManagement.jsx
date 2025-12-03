@@ -1157,7 +1157,25 @@ export default function ReportManagement() {
                   ) : (
                     <Button
                       size={isXs ? "small" : "middle"}
-                      onClick={() => setMode("view")}
+                      onClick={() => {
+                        // Reset form to original activeReport values
+                        let locationPurok = "";
+                        const location = activeReport?.location || "";
+                        if (location.startsWith("Purok")) {
+                          const parts = location.split(", ");
+                          locationPurok = parts[0];
+                        }
+                        form.setFieldsValue({
+                          incidentType: activeReport?.incidentType || "",
+                          locationPurok: locationPurok,
+                          locationAddress: "Bonfal Proper, Bayombong, Nueva Vizcaya",
+                          location: activeReport?.location || "",
+                          description: activeReport?.description || "",
+                          perpetrator: activeReport?.perpetrator || "",
+                          status: normalizeStatus(activeReport?.status),
+                        });
+                        setMode("view");
+                      }}
                     >
                       Cancel
                     </Button>
@@ -1392,9 +1410,6 @@ export default function ReportManagement() {
                               if (/(.)\1{2}/.test(strValue)) {
                                 return Promise.reject(new Error('Perpetrator name cannot contain repeated characters'));
                               }
-                              if (/(.{2,3})\1{2,}/.test(strValue)) {
-                                return Promise.reject(new Error('Perpetrator name cannot contain repeating patterns'));
-                              }
                               return Promise.resolve();
                             }
                           }
@@ -1421,9 +1436,6 @@ export default function ReportManagement() {
                               const strValue = String(value).trim();
                               if (/(.)\1{2}/.test(strValue)) {
                                 return Promise.reject(new Error('Description cannot contain repeated characters'));
-                              }
-                              if (/(.{2,3})\1{2,}/.test(strValue)) {
-                                return Promise.reject(new Error('Description cannot contain repeating patterns'));
                               }
                               return Promise.resolve();
                             }

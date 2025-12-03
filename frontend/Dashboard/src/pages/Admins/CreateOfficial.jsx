@@ -378,14 +378,6 @@ export default function CreateOfficial() {
                           if (/(.)\1{2}/.test(strValue)) {
                             return Promise.reject(new Error("First name cannot contain repeated characters"));
                           }
-                          if (/(.{2,3})\1{2,}/.test(strValue)) {
-                            return Promise.reject(new Error("First name appears to be gibberish"));
-                          }
-                          const letters = strValue.replace(/[^a-zA-Z]/g, '');
-                          const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
-                          if (letters.length > 3 && vowels.length / letters.length < 0.25) {
-                            return Promise.reject(new Error("First name appears to be gibberish"));
-                          }
                           return Promise.resolve();
                         },
                       },
@@ -432,14 +424,6 @@ export default function CreateOfficial() {
                           const strValue = String(value).trim();
                           if (/(.)\1{2}/.test(strValue)) {
                             return Promise.reject(new Error("Last name cannot contain repeated characters"));
-                          }
-                          if (/(.{2,3})\1{2,}/.test(strValue)) {
-                            return Promise.reject(new Error("Last name appears to be gibberish"));
-                          }
-                          const letters = strValue.replace(/[^a-zA-Z]/g, '');
-                          const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
-                          if (letters.length > 3 && vowels.length / letters.length < 0.25) {
-                            return Promise.reject(new Error("Last name appears to be gibberish"));
                           }
                           return Promise.resolve();
                         },

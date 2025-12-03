@@ -1293,7 +1293,20 @@ export default function UserManagement() {
                   ) : (
                     <Button
                       size={isXs ? "small" : "middle"}
-                      onClick={() => setMode("view")}
+                      onClick={() => {
+                        // Reset form to original activeUser values
+                        if (activeUser) {
+                          form.setFieldsValue({
+                            firstName: activeUser.firstName || "",
+                            lastName: activeUser.lastName || "",
+                            middleInitial: activeUser.middleInitial || "",
+                            role: activeUser.role || "",
+                            email: activeUser.email || "",
+                            phoneNumber: activeUser.phoneNumber || "",
+                          });
+                        }
+                        setMode("view");
+                      }}
                     >
                       Cancel
                     </Button>

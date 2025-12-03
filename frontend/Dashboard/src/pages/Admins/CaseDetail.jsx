@@ -645,7 +645,7 @@ export default function CaseDetail() {
                   <HistoryOutlined style={{ fontSize: 20, color: BRAND.violet }} />
                   <Title level={5} style={{ margin: 0, color: BRAND.violet }}>
                     Actions & Remarks Logs
-                  </Title> 
+                  </Title>
                 </Space>
                 <Button
                   type="primary"
@@ -1132,9 +1132,6 @@ export default function CaseDetail() {
                     if (/(.)\1{2}/.test(strValue)) {
                       return Promise.reject(new Error('Victim name cannot contain repeated characters'));
                     }
-                    if (/(.{2,3})\1{2,}/.test(strValue)) {
-                      return Promise.reject(new Error('Victim name cannot contain repeating patterns'));
-                    }
                     return Promise.resolve();
                   }
                 }
@@ -1172,9 +1169,6 @@ export default function CaseDetail() {
                     const strValue = String(value).trim();
                     if (/(.)\1{2}/.test(strValue)) {
                       return Promise.reject(new Error('Perpetrator name cannot contain repeated characters'));
-                    }
-                    if (/(.{2,3})\1{2,}/.test(strValue)) {
-                      return Promise.reject(new Error('Perpetrator name cannot contain repeating patterns'));
                     }
                     return Promise.resolve();
                   }
@@ -1302,9 +1296,6 @@ export default function CaseDetail() {
                     const strValue = String(value).trim();
                     if (/(.)\1{2}/.test(strValue)) {
                       return Promise.reject(new Error('Description cannot contain repeated characters'));
-                    }
-                    if (/(.{2,3})\1{2,}/.test(strValue)) {
-                      return Promise.reject(new Error('Description cannot contain repeating patterns'));
                     }
                     return Promise.resolve();
                   }

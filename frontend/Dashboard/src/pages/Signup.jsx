@@ -666,10 +666,6 @@ export default function Signup() {
                                   if (/(.)\1{2}/.test(strValue)) {
                                     return Promise.reject(new Error('Email cannot contain repeated characters'));
                                   }
-                                  // Check for repeating patterns
-                                  if (/(.{2,3})\1{2,}/.test(strValue)) {
-                                    return Promise.reject(new Error('Email appears to be gibberish'));
-                                  }
                                   return Promise.resolve();
                                 },
                               },
@@ -764,16 +760,6 @@ export default function Signup() {
                                 if (/(.)\1{2}/.test(strValue)) {
                                   return Promise.reject(new Error('First name cannot contain repeated characters'));
                                 }
-                                // Check for repeating patterns
-                                if (/(.{2,3})\1{2,}/.test(strValue)) {
-                                  return Promise.reject(new Error('First name appears to be gibberish'));
-                                }
-                                // Check vowel ratio
-                                const letters = strValue.replace(/[^a-zA-Z]/g, '');
-                                const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
-                                if (letters.length > 3 && vowels.length / letters.length < 0.25) {
-                                  return Promise.reject(new Error('First name appears to be gibberish'));
-                                }
                                 return Promise.resolve();
                               },
                             },
@@ -792,7 +778,7 @@ export default function Signup() {
                           label={<span style={{ fontSize: 14, fontWeight: 500 }}>Last Name</span>} 
                           rules={[
                             { required: true, message: "Please enter your last name" },
-                            { pattern: /^[a-zA-Z\s-]*$/, message: "Last name can only contain letters, spaces, and hyphens" },
+                            { pattern: /^[a-zA-Z\s.\-]*$/, message: "Last name can only contain letters, spaces, periods, and hyphens" },
                             {
                               validator: (_, value) => {
                                 if (!value) return Promise.resolve();
@@ -801,23 +787,13 @@ export default function Signup() {
                                 if (/(.)\1{2}/.test(strValue)) {
                                   return Promise.reject(new Error('Last name cannot contain repeated characters'));
                                 }
-                                // Check for repeating patterns
-                                if (/(.{2,3})\1{2,}/.test(strValue)) {
-                                  return Promise.reject(new Error('Last name appears to be gibberish'));
-                                }
-                                // Check vowel ratio
-                                const letters = strValue.replace(/[^a-zA-Z]/g, '');
-                                const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
-                                if (letters.length > 3 && vowels.length / letters.length < 0.25) {
-                                  return Promise.reject(new Error('Last name appears to be gibberish'));
-                                }
                                 return Promise.resolve();
                               },
                             },
                           ]}
                         >
                           <Input placeholder="Last name" size="large" onKeyPress={(e) => {
-                            if (!/^[a-zA-Z\s-]$/.test(e.key)) {
+                            if (!/^[a-zA-Z\s.\-]$/.test(e.key)) {
                               e.preventDefault();
                             }
                           }} />
@@ -910,7 +886,7 @@ export default function Signup() {
                           name="emergencyContactName" 
                           label={<span style={{ fontSize: 14, fontWeight: 500 }}>Contact Name</span>}
                           rules={[
-                            { pattern: /^[a-zA-Z\s-]*$/, message: "Contact name can only contain letters, spaces, and hyphens" },
+                            { pattern: /^[a-zA-Z\s.\-]*$/, message: "Contact name can only contain letters, spaces, periods, and hyphens" },
                             {
                               validator: (_, value) => {
                                 if (!value) return Promise.resolve();
@@ -919,23 +895,13 @@ export default function Signup() {
                                 if (/(.)\1{2}/.test(strValue)) {
                                   return Promise.reject(new Error('Contact name cannot contain repeated characters'));
                                 }
-                                // Check for repeating patterns
-                                if (/(.{2,3})\1{2,}/.test(strValue)) {
-                                  return Promise.reject(new Error('Contact name appears to be gibberish'));
-                                }
-                                // Check vowel ratio
-                                const letters = strValue.replace(/[^a-zA-Z]/g, '');
-                                const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
-                                if (letters.length > 3 && vowels.length / letters.length < 0.25) {
-                                  return Promise.reject(new Error('Contact name appears to be gibberish'));
-                                }
                                 return Promise.resolve();
                               },
                             },
                           ]}
                         >
                           <Input placeholder="Full name" size="large" onKeyPress={(e) => {
-                            if (!/^[a-zA-Z\s-]$/.test(e.key)) {
+                            if (!/^[a-zA-Z\s.\-]$/.test(e.key)) {
                               e.preventDefault();
                             }
                           }} />
@@ -946,7 +912,7 @@ export default function Signup() {
                           name="emergencyContactRelationship" 
                           label={<span style={{ fontSize: 14, fontWeight: 500 }}>Relationship</span>}
                           rules={[
-                            { pattern: /^[a-zA-Z\s-]*$/, message: "Relationship can only contain letters, spaces, and hyphens" },
+                            { pattern: /^[a-zA-Z\s.\-]*$/, message: "Relationship can only contain letters, spaces, periods, and hyphens" },
                             {
                               validator: (_, value) => {
                                 if (!value) return Promise.resolve();
@@ -955,23 +921,13 @@ export default function Signup() {
                                 if (/(.)\1{2}/.test(strValue)) {
                                   return Promise.reject(new Error('Relationship cannot contain repeated characters'));
                                 }
-                                // Check for repeating patterns
-                                if (/(.{2,3})\1{2,}/.test(strValue)) {
-                                  return Promise.reject(new Error('Relationship appears to be gibberish'));
-                                }
-                                // Check vowel ratio
-                                const letters = strValue.replace(/[^a-zA-Z]/g, '');
-                                const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
-                                if (letters.length > 3 && vowels.length / letters.length < 0.25) {
-                                  return Promise.reject(new Error('Relationship appears to be gibberish'));
-                                }
                                 return Promise.resolve();
                               },
                             },
                           ]}
                         >
                           <Input placeholder="e.g. Mother, Friend" size="large" onKeyPress={(e) => {
-                            if (!/^[a-zA-Z\s-]$/.test(e.key)) {
+                            if (!/^[a-zA-Z\s.\-]$/.test(e.key)) {
                               e.preventDefault();
                             }
                           }} />
@@ -1019,18 +975,8 @@ export default function Signup() {
                             if (!value) return Promise.resolve();
                             const strValue = String(value).trim();
                             // Check for repeated characters (3+ in a row)
-                            if (/(.)\\1\\1/.test(strValue)) {
+                            if (/(.)\1{2}/.test(strValue)) {
                               return Promise.reject(new Error('Contact address cannot contain repeated characters'));
-                            }
-                            // Check for repeating patterns (2-3 char sequences repeated)
-                            if (/(.{2,3})\\1{2,}/.test(strValue)) {
-                              return Promise.reject(new Error('Contact address appears to be gibberish'));
-                            }
-                            // Check vowel ratio (less than 25% vowels = likely gibberish)
-                            const letters = strValue.replace(/[^a-zA-Z]/g, '');
-                            const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
-                            if (letters.length > 4 && vowels.length / letters.length < 0.25) {
-                              return Promise.reject(new Error('Contact address appears to be gibberish'));
                             }
                             return Promise.resolve();
                           }

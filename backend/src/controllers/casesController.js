@@ -6,7 +6,7 @@ const IncidentReport = require('../models/IncidentReports');
 const dssService = require('../services/dssService');
 const { recordLog, extractKeyFields } = require('../middleware/logger');
 
-// Helper: validate text fields for repeated characters and gibberish
+// Helper: validate text fields for repeated characters only
 function validateDataQuality(value, fieldName) {
   if (!value) return null;
   const strValue = String(value).trim();
@@ -14,21 +14,6 @@ function validateDataQuality(value, fieldName) {
   // Check for repeated characters (3+ in a row)
   if (/(.)\1{2}/.test(strValue)) {
     return `${fieldName} cannot contain repeated characters`;
-  }
-  
-  // Check for repeating patterns (gibberish)
-  if (/(.{2,3})\1{2,}/.test(strValue)) {
-    return `${fieldName} appears to be gibberish`;
-  }
-  
-  // Check vowel ratio
-  const letters = strValue.replace(/[^a-zA-Z]/g, '');
-  const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
-  const isNameField = fieldName.toLowerCase().includes('name') || fieldName.toLowerCase().includes('officer');
-  const threshold = isNameField ? 3 : 10;
-  
-  if (letters.length > threshold && vowels.length / letters.length < 0.25) {
-    return `${fieldName} appears to be gibberish`;
   }
   
   return null;

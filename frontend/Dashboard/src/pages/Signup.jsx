@@ -630,16 +630,6 @@ export default function Signup() {
                               if (/(.)\1{2}/.test(strValue)) {
                                 return Promise.reject(new Error('Username cannot contain repeated characters'));
                               }
-                              // Check for repeating patterns (gibberish)
-                              if (/(.{2,3})\1{2,}/.test(strValue)) {
-                                return Promise.reject(new Error('Username appears to be gibberish'));
-                              }
-                              // Check vowel ratio
-                              const letters = strValue.replace(/[^a-zA-Z]/g, '');
-                              const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
-                              if (letters.length > 4 && vowels.length / letters.length < 0.25) {
-                                return Promise.reject(new Error('Username appears to be gibberish'));
-                              }
                               return Promise.resolve();
                             },
                           },

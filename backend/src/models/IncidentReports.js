@@ -25,28 +25,6 @@ const validatePerpetrator = function(v) {
     throw new Error('Perpetrator name cannot contain repeated characters');
   }
   
-  // Check for repeating patterns (gibberish like 'sdasdasda')
-  if (/(.{2,3})\1{2,}/.test(strValue)) {
-    throw new Error('Perpetrator name appears to be gibberish');
-  }
-  
-  // Only allow letters, spaces, hyphens, apostrophes, and periods
-  if (!/^[a-zA-Z\s\-'\.]+$/.test(strValue)) {
-    throw new Error('Perpetrator name can only contain letters, spaces, hyphens, apostrophes, and periods');
-  }
-  
-  // Check for gibberish patterns: too many consonants in a row
-  if (/[bcdfghjklmnpqrstvwxyz]{5,}/i.test(strValue)) {
-    throw new Error('Perpetrator name appears to contain an unusual pattern of characters');
-  }
-  
-  // Check vowel ratio: if less than 25% vowels, likely gibberish
-  const letters = strValue.replace(/[^a-zA-Z]/g, '');
-  const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
-  if (letters.length > 3 && vowels.length / letters.length < 0.25) {
-    throw new Error('Perpetrator name appears to be gibberish');
-  }
-  
   return true;
 };
 
@@ -61,33 +39,6 @@ const validateDescription = function(v) {
   // Check for repeated characters (3+ in a row)
   if (/(.)\1{2}/.test(strValue)) {
     throw new Error('Description cannot contain repeated characters');
-  }
-  
-  // Check for repeating patterns (gibberish like 'sdasdasda')
-  if (/(.{2,3})\1{2,}/.test(strValue)) {
-    throw new Error('Description appears to be gibberish');
-  }
-  
-  // Minimum 10 characters
-  if (strValue.length < 10) {
-    throw new Error('Description must be at least 10 characters long');
-  }
-  
-  // Must contain at least some letters
-  if (!/[a-zA-Z]/.test(strValue)) {
-    throw new Error('Description must contain letters');
-  }
-  
-  // Check for gibberish patterns: too many consonants in a row
-  if (/[bcdfghjklmnpqrstvwxyz]{5,}/i.test(strValue)) {
-    throw new Error('Description appears to contain an unusual pattern of characters');
-  }
-  
-  // Check vowel ratio: if less than 25% vowels, likely gibberish
-  const letters = strValue.replace(/[^a-zA-Z]/g, '');
-  const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
-  if (letters.length > 10 && vowels.length / letters.length < 0.25) {
-    throw new Error('Description appears to be gibberish');
   }
   
   return true;;;

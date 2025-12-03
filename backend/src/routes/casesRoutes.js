@@ -8,6 +8,7 @@ router.get('/:id', casesController.getCase);
 router.put('/:id', casesController.updateCase);
 router.delete('/:id', casesController.deleteCase);
 router.get('/:id/history', casesController.getCaseHistory);
+router.get('/:id/remarks', casesController.getCaseRemarks);
 router.post('/:id/remark', casesController.addCaseRemark);
 
 module.exports = router;

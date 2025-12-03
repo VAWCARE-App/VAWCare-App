@@ -400,7 +400,9 @@ exports.getCaseHistory = async (req, res, next) => {
 
 exports.addCaseRemark = async (req, res, next) => {
   try {
-    const SystemLog = require('../models/SystemLogs');
+    const Remark = require('../models/Remark');
+    const Admin = require('../models/Admin');
+    const BarangayOfficial = require('../models/BarangayOfficials');
     const id = req.params.id;
     const { remark } = req.body;
     
@@ -417,33 +419,94 @@ exports.addCaseRemark = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Case not found' });
     }
     
-    // Generate a unique log ID
-    const logID = `LOG-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // Generate a unique remark ID
+    const remarkID = `REM-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
-    // Determine actor info
-    const actorType = req.user?.role || 'official';
-    const actorId = req.user?.officialID || req.user?.adminID || null;
-    const actorBusinessId = req.user?.officialID || req.user?.adminID || 'Unknown';
+    // Get actor info from req.user (set by authMiddleware) or from custom headers (frontend fallback)
+    const actorType = req.user?.role || req.headers['x-actor-type'] || 'official';
+    let actorID = req.user?.adminID || req.user?.officialID || req.headers['x-actor-id'] || null;
     
-    // Create log entry
-    const logPayload = {
-      logID,
-      action: 'case_remark',
-      details: `Remark on case ${caseItem.caseID || id}: ${remark}`,
-      timestamp: new Date(),
-      ipAddress: req.ip || req.connection?.remoteAddress || '0.0.0.0',
-      actorBusinessId
-    };
+    // Debug logging
+    console.log('[addCaseRemark] Actor info:', {
+      'req.user': req.user ? { role: req.user.role, adminID: req.user.adminID, officialID: req.user.officialID } : null,
+      'headers': { 'x-actor-type': req.headers['x-actor-type'], 'x-actor-id': req.headers['x-actor-id'], 'x-actor-business-id': req.headers['x-actor-business-id'] },
+      resolved: { actorType, actorID }
+    });
     
-    if (actorType === 'admin' && actorId) {
-      logPayload.adminID = actorId;
-    } else if (actorType === 'official' && actorId) {
-      logPayload.officialID = actorId;
+    // Convert actorID string to ObjectId if it's a valid MongoDB ID string
+    if (actorID && typeof actorID === 'string' && mongoose.Types.ObjectId.isValid(actorID)) {
+      actorID = new mongoose.Types.ObjectId(actorID);
     }
     
-    await SystemLog.create(logPayload);
+    const actorBusinessId = req.user?.adminBusinessId || req.user?.officialBusinessId || req.headers['x-actor-business-id'] || 'Unknown';
+    
+    // Fetch the full name of the actor from the database
+    let actorName = 'Unknown';
+    if (actorID) {
+      if (actorType === 'admin') {
+        const admin = await Admin.findById(actorID).lean();
+        if (admin) {
+          actorName = `${admin.firstName} ${admin.middleInitial ? admin.middleInitial + ' ' : ''}${admin.lastName}`;
+        }
+      } else if (actorType === 'official') {
+        const official = await BarangayOfficial.findById(actorID).lean();
+        if (official) {
+          actorName = `${official.firstName} ${official.middleInitial ? official.middleInitial + ' ' : ''}${official.lastName}`;
+        }
+      }
+    }
+    
+    console.log('[addCaseRemark] Resolved actor name:', actorName);
+    
+    // Create remark entry in Remark collection (primary source of truth)
+    const remarkPayload = {
+      remarkID,
+      caseID: caseItem.caseID,
+      caseObjectId: caseItem._id,
+      content: remark.trim(),
+      actorType: actorType,
+      actorID: actorID,
+      actorName: actorName,
+      actorBusinessId: actorBusinessId,
+      ipAddress: req.ip || req.connection?.remoteAddress || '0.0.0.0',
+      createdAt: new Date()
+    };
+    
+    console.log('[addCaseRemark] Saving remarkPayload:', remarkPayload);
+    
+    // Save remark to Remark collection
+    await Remark.create(remarkPayload);
     
     return res.json({ success: true, message: 'Remark added successfully' });
+  } catch (err) {
+    console.error('[addCaseRemark] Error:', err);
+    next(err);
+  }
+};
+
+exports.getCaseRemarks = async (req, res, next) => {
+  try {
+    const Remark = require('../models/Remark');
+    const id = req.params.id;
+    
+    // Find case to get caseID
+    const query = mongoose.Types.ObjectId.isValid(id)
+      ? { $or: [{ caseID: id }, { _id: id }], deleted: { $ne: true } }
+      : { caseID: id, deleted: { $ne: true } };
+    const caseItem = await Cases.findOne(query).lean();
+    if (!caseItem) {
+      return res.status(404).json({ success: false, message: 'Case not found' });
+    }
+    
+    // Get all remarks for this case, sorted by newest first
+    const remarks = await Remark.find({ 
+      caseID: caseItem.caseID,
+      isDeleted: { $ne: true }
+    })
+    .sort({ createdAt: -1 })
+    .lean();
+    
+    return res.json({ success: true, data: remarks });
   } catch (err) {
     next(err);
   }

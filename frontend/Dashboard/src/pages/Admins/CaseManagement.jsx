@@ -1874,12 +1874,7 @@ export default function CaseManagement() {
                         return Promise.reject(new Error('Victim name cannot contain repeated characters'));
                       }
                       if (/(.{2,3})\1{2,}/.test(strValue)) {
-                        return Promise.reject(new Error('Victim name appears to be gibberish'));
-                      }
-                      const letters = strValue.replace(/[^a-zA-Z]/g, '');
-                      const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
-                      if (letters.length > 3 && vowels.length / letters.length < 0.25) {
-                        return Promise.reject(new Error('Victim name appears to be gibberish'));
+                        return Promise.reject(new Error('Victim name cannot contain repeating patterns'));
                       }
                       return Promise.resolve();
                     }
@@ -1953,12 +1948,7 @@ export default function CaseManagement() {
                         return Promise.reject(new Error('Description cannot contain repeated characters'));
                       }
                       if (/(.{2,3})\1{2,}/.test(strValue)) {
-                        return Promise.reject(new Error('Description appears to be gibberish'));
-                      }
-                      const letters = strValue.replace(/[^a-zA-Z]/g, '');
-                      const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
-                      if (letters.length > 10 && vowels.length / letters.length < 0.25) {
-                        return Promise.reject(new Error('Description appears to be gibberish'));
+                        return Promise.reject(new Error('Description cannot contain repeating patterns'));
                       }
                       return Promise.resolve();
                     }
@@ -1983,12 +1973,7 @@ export default function CaseManagement() {
                         return Promise.reject(new Error('Perpetrator name cannot contain repeated characters'));
                       }
                       if (/(.{2,3})\1{2,}/.test(strValue)) {
-                        return Promise.reject(new Error('Perpetrator name appears to be gibberish'));
-                      }
-                      const letters = strValue.replace(/[^a-zA-Z]/g, '');
-                      const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
-                      if (letters.length > 3 && vowels.length / letters.length < 0.25) {
-                        return Promise.reject(new Error('Perpetrator name appears to be gibberish'));
+                        return Promise.reject(new Error('Perpetrator name cannot contain repeating patterns'));
                       }
                       return Promise.resolve();
                     }
@@ -2232,12 +2217,7 @@ export default function CaseManagement() {
                             return Promise.reject(new Error('Victim name cannot contain repeated characters'));
                           }
                           if (/(.{2,3})\1{2,}/.test(strValue)) {
-                            return Promise.reject(new Error('Victim name appears to be gibberish'));
-                          }
-                          const letters = strValue.replace(/[^a-zA-Z]/g, '');
-                          const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
-                          if (letters.length > 3 && vowels.length / letters.length < 0.25) {
-                            return Promise.reject(new Error('Victim name appears to be gibberish'));
+                            return Promise.reject(new Error('Victim name cannot contain repeating patterns'));
                           }
                           return Promise.resolve();
                         }
@@ -2357,12 +2337,7 @@ export default function CaseManagement() {
                         return Promise.reject(new Error('Description cannot contain repeated characters'));
                       }
                       if (/(.{2,3})\1{2,}/.test(strValue)) {
-                        return Promise.reject(new Error('Description appears to be gibberish'));
-                      }
-                      const letters = strValue.replace(/[^a-zA-Z]/g, '');
-                      const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
-                      if (letters.length > 10 && vowels.length / letters.length < 0.25) {
-                        return Promise.reject(new Error('Description appears to be gibberish'));
+                        return Promise.reject(new Error('Description cannot contain repeating patterns'));
                       }
                       return Promise.resolve();
                     }

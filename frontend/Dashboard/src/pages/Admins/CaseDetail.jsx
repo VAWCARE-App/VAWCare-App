@@ -215,9 +215,34 @@ export default function CaseDetail() {
   const fetchHistory = async () => {
     try {
       setHistoryLoading(true);
-      const res = await api.get(`/api/cases/${id}/history`);
-      const logs = res?.data?.data || [];
-      setHistoryData(logs);
+      // Fetch both history logs and remarks
+      const [historyRes, remarksRes] = await Promise.all([
+        api.get(`/api/cases/${id}/history`),
+        api.get(`/api/cases/${id}/remarks`)
+      ]);
+      
+      const logs = historyRes?.data?.data || [];
+      const remarks = remarksRes?.data?.data || [];
+      
+      // Filter out case_remark from logs (we'll use the Remark collection data instead)
+      // This avoids duplicates since remarks are now stored only in Remark collection
+      const filteredLogs = logs.filter(log => log.action !== 'case_remark');
+      
+      // Merge remarks into history logs for unified display
+      const mergedHistory = [
+        ...filteredLogs,
+        ...remarks.map(remark => ({
+          ...remark,
+          action: 'case_remark',
+          timestamp: remark.createdAt,
+          details: remark.content // Use content as details for display
+        }))
+      ];
+      
+      // Sort all by timestamp, newest first
+      mergedHistory.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      
+      setHistoryData(mergedHistory);
     } catch (err) {
       console.error("Failed to load case history", err);
     } finally {
@@ -243,7 +268,20 @@ export default function CaseDetail() {
         const res = await api.get(`/api/cases/${id}`);
         const data = res?.data?.data || null;
         setCaseData(data);
-        form.setFieldsValue(data || {});
+        
+        // Parse location into purok and address components
+        let locationPurok = "";
+        const location = data?.location || "";
+        if (location.startsWith("Purok")) {
+          const parts = location.split(", ");
+          locationPurok = parts[0]; // e.g., "Purok 1"
+        }
+        
+        form.setFieldsValue({
+          ...data,
+          locationPurok: locationPurok,
+          locationAddress: "Bonfal Proper, Bayombong, Nueva Vizcaya",
+        });
       } catch {
         message.error("Failed to load case data");
       }
@@ -905,12 +943,7 @@ export default function CaseDetail() {
                       return Promise.reject(new Error('Victim name cannot contain repeated characters'));
                     }
                     if (/(.{2,3})\1{2,}/.test(strValue)) {
-                      return Promise.reject(new Error('Victim name appears to be gibberish'));
-                    }
-                    const letters = strValue.replace(/[^a-zA-Z]/g, '');
-                    const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
-                    if (letters.length > 3 && vowels.length / letters.length < 0.25) {
-                      return Promise.reject(new Error('Victim name appears to be gibberish'));
+                      return Promise.reject(new Error('Victim name cannot contain repeating patterns'));
                     }
                     return Promise.resolve();
                   }
@@ -951,12 +984,7 @@ export default function CaseDetail() {
                       return Promise.reject(new Error('Perpetrator name cannot contain repeated characters'));
                     }
                     if (/(.{2,3})\1{2,}/.test(strValue)) {
-                      return Promise.reject(new Error('Perpetrator name appears to be gibberish'));
-                    }
-                    const letters = strValue.replace(/[^a-zA-Z]/g, '');
-                    const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
-                    if (letters.length > 3 && vowels.length / letters.length < 0.25) {
-                      return Promise.reject(new Error('Perpetrator name appears to be gibberish'));
+                      return Promise.reject(new Error('Perpetrator name cannot contain repeating patterns'));
                     }
                     return Promise.resolve();
                   }
@@ -1086,12 +1114,7 @@ export default function CaseDetail() {
                       return Promise.reject(new Error('Description cannot contain repeated characters'));
                     }
                     if (/(.{2,3})\1{2,}/.test(strValue)) {
-                      return Promise.reject(new Error('Description appears to be gibberish'));
-                    }
-                    const letters = strValue.replace(/[^a-zA-Z]/g, '');
-                    const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
-                    if (letters.length > 10 && vowels.length / letters.length < 0.25) {
-                      return Promise.reject(new Error('Description appears to be gibberish'));
+                      return Promise.reject(new Error('Description cannot contain repeating patterns'));
                     }
                     return Promise.resolve();
                   }

@@ -465,25 +465,12 @@ export default function Report() {
                       
                       // Check for repeating patterns (gibberish like 'sdasdasda')
                       if (/(.{2,3})\1{2,}/.test(strValue)) {
-                        return Promise.reject(new Error('Perpetrator name appears to be gibberish'));
+                        return Promise.reject(new Error('Perpetrator name cannot contain repeating patterns'));
                       }
                       
                       // Only allow letters, spaces, hyphens, apostrophes, and periods
                       if (!/^[a-zA-Z\s\-'\.]*$/.test(strValue)) {
                         return Promise.reject(new Error('Perpetrator name can only contain letters, spaces, hyphens, apostrophes, and periods'));
-                      }
-                      
-                      // Check for gibberish patterns: too many consonants in a row
-                      if (/[bcdfghjklmnpqrstvwxyz]{5,}/i.test(strValue)) {
-                        return Promise.reject(new Error('Perpetrator name appears to contain an unusual pattern of characters'));
-                      }
-                      
-                      // Check vowel ratio: count vowels vs total letters
-                      const letters = strValue.replace(/[^a-zA-Z]/g, '');
-                      const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
-                      // If less than 25% vowels in the text, likely gibberish
-                      if (letters.length > 3 && vowels.length / letters.length < 0.25) {
-                        return Promise.reject(new Error('Perpetrator name appears to be gibberish'));
                       }
                       
                       return Promise.resolve();

@@ -2,6 +2,9 @@ import React, { useMemo, useState } from "react";
 import { Card, Button, Skeleton, Space, Segmented, Grid } from "antd";
 import { DownloadOutlined, PictureOutlined } from "@ant-design/icons";
 import html2canvas from "html2canvas";
+import { generateAbuseReport } from "../utils/generateAbuseReport";
+import { buildAbuseDocxTable } from "../utils/buildAbuseDocxTable";
+import { buildMonthlySummary } from "../utils/buildMonthlySummary";
 
 export default function IncidentTable({ cases = [], loading }) {
   const [mode, setMode] = useState("Half-Year"); // "Half-Year" | "Quarterly"
@@ -10,6 +13,7 @@ export default function IncidentTable({ cases = [], loading }) {
   const screens = Grid.useBreakpoint();
   const isMobile = !screens.md; // xs/sm => mobile
 
+  const { summary, totalRow } = buildMonthlySummary(cases);
   const monthLabels = [
     "Jan",
     "Feb",
@@ -115,20 +119,20 @@ export default function IncidentTable({ cases = [], loading }) {
   // responsive options for segmented controls
   const modeOptions = isMobile
     ? [
-        { label: "Half", value: "Half-Year" },
-        { label: "Qtr", value: "Quarterly" },
-      ]
+      { label: "Half", value: "Half-Year" },
+      { label: "Qtr", value: "Quarterly" },
+    ]
     : ["Half-Year", "Quarterly"];
 
   const halfOptions = isMobile
     ? [
-        { label: "1st", value: "first" },
-        { label: "2nd", value: "second" },
-      ]
+      { label: "1st", value: "first" },
+      { label: "2nd", value: "second" },
+    ]
     : [
-        { label: "1st Half", value: "first" },
-        { label: "2nd Half", value: "second" },
-      ];
+      { label: "1st Half", value: "first" },
+      { label: "2nd Half", value: "second" },
+    ];
 
   const quarterOptions = ["Q1", "Q2", "Q3", "Q4"];
 
@@ -189,6 +193,16 @@ export default function IncidentTable({ cases = [], loading }) {
               icon={<PictureOutlined />}
             >
               {!isMobile && "Download Image"}
+            </Button>
+            <Button
+              type="primary"
+              size={isMobile ? "small" : "middle"}
+              onClick={() => {
+                const { summary, totalRow } = buildMonthlySummary(cases);
+                generateAbuseReport(summary, totalRow);
+              }}
+            >
+              Download DOCX
             </Button>
           </Space>
         </div>

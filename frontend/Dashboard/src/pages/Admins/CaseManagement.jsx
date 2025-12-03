@@ -611,63 +611,87 @@ export default function CaseManagement() {
   };
 
   // Export all filtered cases to CSV
-  const handleExportAllCSV = () => {
+  const handleExportAllCSV = async () => {
     if (filteredCases.length === 0) {
       message.warning("No cases to export");
       return;
     }
 
-    const headers = [
-      "Case ID",
-      "Report ID",
-      "Victim Name",
-      "Victim Type",
-      "Incident Type",
-      "Description",
-      "Perpetrator",
-      "Location",
-      "Date Reported",
-      "Status",
-      "Assigned Officer",
-      "Risk Level",
-      "Created At"
-    ];
-
-    const csvRows = [headers.join(",")];
-
-    filteredCases.forEach(c => {
-      const row = [
-        c.caseID || "",
-        c.reportID || "",
-        `"${(c.victimName || "").replace(/"/g, '""')}"`,
-        c.victimType || "",
-        c.incidentType || "",
-        `"${(c.description || "").replace(/"/g, '""')}"`,
-        `"${(c.perpetrator || "").replace(/"/g, '""')}"`,
-        `"${(c.location || "").replace(/"/g, '""')}"`,
-        c.dateReported ? new Date(c.dateReported).toLocaleString() : "",
-        c.status || "",
-        `"${(c.assignedOfficer || "").replace(/"/g, '""')}"`,
-        c.riskLevel || "",
-        c.createdAt ? new Date(c.createdAt).toLocaleString() : ""
+    setExportLoading(true);
+    try {
+      const headers = [
+        "Case ID",
+        "Report ID",
+        "Victim Name",
+        "Victim Type",
+        "Incident Type",
+        "Description",
+        "Perpetrator",
+        "Location",
+        "Date Reported",
+        "Status",
+        "Assigned Officer",
+        "Risk Level",
+        "Created At",
+        "Remarks"
       ];
-      csvRows.push(row.join(","));
-    });
 
-    const csvContent = csvRows.join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    
-    const timestamp = new Date().toISOString().split('T')[0];
-    link.setAttribute("href", url);
-    link.setAttribute("download", `VAWCare_All_Cases_${timestamp}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      const csvRows = [headers.join(",")];
 
-    message.success(`Exported ${filteredCases.length} case(s) to CSV`);
+      for (const c of filteredCases) {
+        // Fetch remarks for this case
+        let remarksText = "";
+        try {
+          const remarksRes = await api.get(`/api/cases/${c.caseID}/remarks`);
+          const remarks = remarksRes?.data?.data || [];
+          if (remarks.length > 0) {
+            remarksText = remarks
+              .map(r => `[${r.actorName || 'System'} - ${r.createdAt ? new Date(r.createdAt).toLocaleString() : 'N/A'}]: ${r.content || ''}`)
+              .join(' | ');
+          }
+        } catch (err) {
+          console.warn('Failed to fetch remarks for', c.caseID, err);
+        }
+
+        const row = [
+          c.caseID || "",
+          c.reportID || "",
+          `"${(c.victimName || "").replace(/"/g, '""')}"`,
+          c.victimType || "",
+          c.incidentType || "",
+          `"${(c.description || "").replace(/"/g, '""')}"`,
+          `"${(c.perpetrator || "").replace(/"/g, '""')}"`,
+          `"${(c.location || "").replace(/"/g, '""')}"`,
+          c.dateReported ? new Date(c.dateReported).toLocaleString() : "",
+          c.status || "",
+          `"${(c.assignedOfficer || "").replace(/"/g, '""')}"`,
+          c.riskLevel || "",
+          c.createdAt ? new Date(c.createdAt).toLocaleString() : "",
+          `"${remarksText.replace(/"/g, '""')}"`
+        ];
+        csvRows.push(row.join(","));
+      }
+
+      const csvContent = csvRows.join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      
+      const timestamp = new Date().toISOString().split('T')[0];
+      link.setAttribute("href", url);
+      link.setAttribute("download", `VAWCare_All_Cases_${timestamp}.csv`);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      message.success(`Exported ${filteredCases.length} case(s) to CSV`);
+    } catch (err) {
+      console.error('CSV export error:', err);
+      message.error('Failed to export CSV. Please try again.');
+    } finally {
+      setExportLoading(false);
+    }
   };
 
   // Export cases for a specific officer with filters
@@ -1034,6 +1058,15 @@ export default function CaseManagement() {
         // Fetch DSS data
         const dssData = await fetchDSSForCase(caseData);
 
+        // Fetch remarks for this case
+        let remarks = [];
+        try {
+          const remarksRes = await api.get(`/api/cases/${caseId}/remarks`);
+          remarks = remarksRes?.data?.data || [];
+        } catch (err) {
+          console.warn('Failed to fetch remarks for', caseId, err);
+        }
+
         // Check if we need a new page
         if (yPosition > pageHeight - 60) {
           doc.addPage();
@@ -1184,6 +1217,45 @@ export default function CaseManagement() {
             doc.text(suggestionLines, margin + 8, yPosition + 2);
             yPosition += boxHeight + 5;
           }
+        }
+
+        // Remarks Section
+        if (remarks && remarks.length > 0) {
+          if (yPosition > pageHeight - 60) {
+            doc.addPage();
+            yPosition = margin;
+          }
+
+          doc.setFillColor(250, 247, 255);
+          doc.rect(margin, yPosition, pageWidth - 2 * margin, 8, 'F');
+          doc.setFontSize(11);
+          doc.setFont(undefined, 'bold');
+          doc.setTextColor(122, 90, 248);
+          doc.text('Remarks and Notes', margin + 5, yPosition + 6);
+          doc.setTextColor(0, 0, 0);
+          yPosition += 12;
+
+          remarks.forEach((remark, idx) => {
+            if (yPosition > pageHeight - 30) {
+              doc.addPage();
+              yPosition = margin;
+            }
+
+            // Remark header with timestamp
+            doc.setFontSize(9);
+            doc.setFont(undefined, 'bold');
+            const remarkDate = remark.createdAt ? new Date(remark.createdAt).toLocaleString() : 'N/A';
+            const remarkBy = remark.actorName || 'System';
+            doc.text(`${idx + 1}. ${remarkBy} (${remarkDate})`, margin + 5, yPosition);
+            yPosition += 5;
+
+            // Remark content
+            doc.setFont(undefined, 'normal');
+            doc.setFontSize(8);
+            const contentLines = doc.splitTextToSize(remark.content || '', pageWidth - 2 * margin - 15);
+            doc.text(contentLines, margin + 8, yPosition);
+            yPosition += contentLines.length * 4 + 3;
+          });
         }
 
         // Add spacing between cases

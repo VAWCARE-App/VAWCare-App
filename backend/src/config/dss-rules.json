@@ -21,7 +21,7 @@
       "params": {
         "predictedRisk": "Psychological",
         "riskLevel": "Medium",
-        "suggestion": "Child experiencing psychological abuse. Begin counseling support. Monitor school performance and behavior changes. Create support plan with guardians.",
+        "suggestion": "A child is experiencing emotional or mental harm. Start counseling. Watch for changes in school and behavior. Make a plan with the family to help.",
         "requiresImmediate": false
       }
     }
@@ -37,7 +37,7 @@
       "params": {
         "predictedRisk": "Psychological",
         "riskLevel": "Medium",
-        "suggestion": "Psychological abuse suspected — provide counseling resources and monitor for escalation.",
+        "suggestion": "Emotional or mental harm suspected. Provide counseling help. Watch for any changes in behavior or mood.",
         "requiresImmediate": false
       }
     }
@@ -53,7 +53,7 @@
       "params": {
         "predictedRisk": "Sexual",
         "riskLevel": "High",
-        "suggestion": "Sexual violence suspected — ensure safety and arrange medical/forensic examination where appropriate.",
+        "suggestion": "Sexual violence is suspected. Make sure the person is safe. Get medical help if needed.",
         "requiresImmediate": true
       }
     }
@@ -69,7 +69,7 @@
       "params": {
         "predictedRisk": "Physical",
         "riskLevel": "High",
-        "suggestion": "Physical harm suspected — arrange medical attention and safety planning.",
+        "suggestion": "Physical harm is suspected. Get medical help. Plan to keep the person safe.",
         "requiresImmediate": true
       }
     }
@@ -85,7 +85,7 @@
       "params": {
         "predictedRisk": "Economic",
         "riskLevel": "Medium",
-        "suggestion": "Economic abuse reported — connect to financial assistance and case management.",
+        "suggestion": "Financial abuse reported. Help connect the person to money assistance and support.",
         "requiresImmediate": false
       }
     }
@@ -101,7 +101,7 @@
         "params": {
           "predictedRisk": "Emergency",
           "riskLevel": "High",
-          "suggestion": "Emergency incident reported — immediate response required. Contact emergency services and prioritize victim safety.",
+          "suggestion": "This is an emergency. Call 911 or emergency services now. Keep the person safe.",
           "requiresImmediate": true
         }
       }
@@ -119,7 +119,7 @@
       "params": {
         "predictedRisk": "Sexual",
         "riskLevel": "High",
-        "suggestion": "OSEC (Online Sexual Exploitation of Children) case detected. Contact PNP Anti-Cybercrime Group immediately. Preserve digital evidence and ensure victim's online safety.",
+        "suggestion": "Child is being harmed online. Report this to police right away. Keep all messages and photos as proof.",
         "requiresImmediate": true
       }
     }
@@ -137,7 +137,7 @@
       "params": {
         "predictedRisk": "Sexual",
         "riskLevel": "High",
-        "suggestion": "URGENT: Repeat sexual abuse of child victim. Contact DSWD immediately for protective custody assessment. Notify PNP Women and Children Protection Center.",
+        "suggestion": "Child is being abused again and again. Tell the government office for children (DSWD) NOW. Tell the police also.",
         "requiresImmediate": true
       }
     }
@@ -154,7 +154,7 @@
       "params": {
     "predictedRisk": "Sexual",
   "riskLevel": "High",
-  "suggestion": "Child victim — high priority: ensure immediate safety, arrange medical/forensic exam, notify child protection and legal support.",
+        "suggestion": "A child is in very serious danger. Keep them safe right now. Get medical help. Get help from lawyers and child protection.",
   "requiresImmediate": true
       }
     }
@@ -171,7 +171,7 @@
       "params": {
         "predictedRisk": "Sexual",
         "riskLevel": "High",
-        "suggestion": "Possible human trafficking case. Contact IACAT (Inter-Agency Council Against Trafficking) hotline 1343. Coordinate with DSWD for victim protection.",
+        "suggestion": "This might be human trafficking. Call the hotline 1343 or tell the government office. Get protection help for the person.",
         "requiresImmediate": true
       }
     }
@@ -189,7 +189,7 @@
       "params": {
         "predictedRisk": "Physical",
         "riskLevel": "High",
-        "suggestion": "Domestic violence with injuries. Contact nearest VAWC Desk or Women's Desk. Consider Barangay Protection Order (BPO) or Temporary Protection Order (TPO).",
+        "suggestion": "A woman is being hurt at home. Go to the women's desk at the barangay. Get a protection order to keep her safe.",
         "requiresImmediate": true
       }
     }
@@ -206,7 +206,7 @@
       "params": {
         "predictedRisk": "Physical",
         "riskLevel": "High",
-        "suggestion": "Child abuse case - Contact local DSWD office and Barangay Council for the Protection of Children (BCPC). Ensure immediate medical attention if needed.",
+        "suggestion": "A child is being hurt. Tell the government office for children and the barangay council. Get medical help if needed.",
         "requiresImmediate": true
       }
     }
@@ -223,7 +223,7 @@
       "params": {
     "predictedRisk": "Psychological",
   "riskLevel": "Medium",
-  "suggestion": "PRIORITY: MH support and school coordination.\n1. Start regular counseling; provide coping tools to child/caregiver\n2. Home environment assessment via MSWDO\n3. Link with school guidance for monitoring\n4. Weekly check-ins for 4 weeks; adjust plan if symptoms worsen\n5. WCPD referral if threats/harassment present",
+        "suggestion": "Child needs mental health help. Start talking with a counselor. Check on them at home. Help them at school. Visit them every week. If there are threats, tell police.",
   "requiresImmediate": false
       }
     }
@@ -240,7 +240,7 @@
       "params": {
     "predictedRisk": "Economic",
   "riskLevel": "Medium",
-  "suggestion": "Child victim affected by economic abuse — prioritize basic needs and child protection measures.",
+  "suggestion": "A child is not getting enough money for basic needs. Help find food and other support. Protect the child.",
   "requiresImmediate": false
       }
     }
@@ -257,7 +257,7 @@
       "params": {
   "predictedRisk": "Sexual",
   "riskLevel": "High",
-  "suggestion": "Sexual incident involving an adult woman — immediate safety, medical/forensic exam and legal support recommended.",
+  "suggestion": "A woman was sexually hurt. Keep her safe. Get medical help. Get a lawyer to help her.",
   "requiresImmediate": true
       }
     }
@@ -274,7 +274,7 @@
       "params": {
   "predictedRisk": "Physical",
   "riskLevel": "High",
-  "suggestion": "Physical violence reported — prioritize medical attention and safety planning.",
+  "suggestion": "A woman is being hurt. Get her medical help. Make a plan to keep her safe.",
   "requiresImmediate": true
       }
     }
@@ -291,7 +291,7 @@
       "params": {
   "predictedRisk": "Psychological",
   "riskLevel": "Medium",
-  "suggestion": "Psychological harm for an adult woman — prioritize counseling and follow-up; escalate if symptoms worsen.",
+  "suggestion": "A woman is having emotional problems. Get her counseling help. Check on her and get help if things get worse.",
   "requiresImmediate": false
       }
     }
@@ -308,7 +308,7 @@
       "params": {
   "predictedRisk": "Economic",
   "riskLevel": "Medium",
-  "suggestion": "Economic abuse reported for an adult woman — connect to financial and social support services; monitor for escalation.",
+  "suggestion": "A woman has money problems because of abuse. Help her get money and social support. Watch if things get worse.",
   "requiresImmediate": false
       }
     }
@@ -323,7 +323,7 @@
       "type": "escalate-sexual",
       "params": {
         "predictedRisk": "Sexual",
-        "suggestion": "Escalate immediately: ensure safety, arrange medical/forensic exam, notify legal support.",
+        "suggestion": "Act now: Keep the person safe. Get medical help. Talk to a lawyer.",
         "requiresImmediate": true
       }
     }
@@ -341,7 +341,7 @@
       "type": "escalate-keyword",
       "params": {
         "predictedRisk": "Physical",
-        "suggestion": "Possible severe physical harm — urgent referral.",
+        "suggestion": "This sounds very serious. Get help from doctors and emergency services right now.",
         "requiresImmediate": true
       }
     }
@@ -357,7 +357,7 @@
       "type": "injury-escalate",
       "params": {
         "predictedRisk": "Physical",
-        "suggestion": "Arrange medical attention and document injuries.",
+        "suggestion": "Get medical help. Write down and take pictures of all injuries.",
         "requiresImmediate": true
       }
     }
@@ -372,7 +372,7 @@
       "type": "repeat-reports",
       "params": {
         "predictedRisk": "Psychological",
-        "suggestion": "Multiple reports — prioritize case worker follow-up.",
+        "suggestion": "This person has reported problems many times. Send someone to help check on them.",
         "requiresImmediate": false
       }
     }
@@ -388,7 +388,7 @@
       "type": "high-anonymous-reporting",
       "params": {
         "predictedRisk": "Psychological",
-        "suggestion": "High anonymous reporting detected — strengthen outreach and confidentiality measures; prioritize trust-building and safe reporting channels.",
+        "suggestion": "Many people are reporting anonymously. Build more trust. Make sure reports stay secret and safe.",
         "requiresImmediate": false
       }
     }
@@ -403,7 +403,7 @@
       "type": "stagnant-cases",
       "params": {
         "predictedRisk": "Psychological",
-        "suggestion": "There are stalled cases older than 14 days — review case assignments and resource bottlenecks; consider reallocation.",
+        "suggestion": "Some cases have been stuck for more than 2 weeks. Check what is happening and move them forward.",
         "requiresImmediate": false
       }
     }

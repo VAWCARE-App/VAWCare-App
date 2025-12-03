@@ -85,51 +85,51 @@ async function calculateRetractionProbability(victimId) {
     if (cancelledCases >= 3 && cancelledAlerts >= 3) {
       suggestion.hasRetractionPattern = true;
       suggestion.retractionRisk = 'High';
-      suggestion.suggestion = 'CRITICAL: Victim demonstrates a consistent pattern of both case and alert retractions. This strongly indicates potential external pressures or barriers preventing case progression. Immediate intervention recommended:\n\n' +
-        '1. Schedule urgent counseling session\n' +
-        '2. Assess potential safety concerns or external pressures\n' +
-        '3. Consider assigning a dedicated support officer\n' +
-        '4. Evaluate need for protective measures';
+      suggestion.suggestion = 'CRITICAL: This person keeps cancelling reports and alerts. Someone may be stopping them or forcing them not to report. Do something now:\n\n' +
+        '1. Talk to them in private\n' +
+        '2. Ask if someone is forcing them\n' +
+        '3. Give them extra help and protection\n' +
+        '4. Think about keeping them in a safe place';
     } else if (cancelledCases >= 3) {
       suggestion.hasRetractionPattern = true;
       suggestion.retractionRisk = 'High';
-      suggestion.suggestion = 'WARNING: Multiple case retractions detected. This pattern suggests serious underlying issues that need attention:\n\n' +
-        '1. Review case withdrawal reasons\n' +
-        '2. Assess potential intimidation or pressure\n' +
-        '3. Consider enhanced victim support services\n' +
-        '4. Schedule follow-up counseling sessions';
+      suggestion.suggestion = 'WARNING: This person keeps cancelling their case reports. This is a problem and needs to be fixed:\n\n' +
+        '1. Find out why they are cancelling\n' +
+        '2. Ask if someone is scaring them\n' +
+        '3. Give more help and support\n' +
+        '4. Talk to them to make sure they are okay';
     } else if (cancelledAlerts >= 3) {
       suggestion.hasRetractionPattern = true;
       suggestion.retractionRisk = 'High';
-      suggestion.suggestion = 'ALERT: Multiple emergency alerts have been cancelled. This could indicate:\n\n' +
-        '1. Possible coercion to cancel alerts\n' +
-        '2. Need for safe communication channels\n' +
-        '3. Review of emergency response procedures\n' +
-        '4. Safety planning assessment needed\n' +
-        '5. Check whether alerts were accidental or exploratory (for example, testing or "playing" with the alert feature). Verify circumstances before assuming coercion and escalating.';
+      suggestion.suggestion = 'ALERT: This person keeps cancelling emergency alerts. This could mean:\n\n' +
+        '1. Someone is forcing them to cancel\n' +
+        '2. They need a safe way to call for help\n' +
+        '3. Check how emergency calls are working\n' +
+        '4. Make a safety plan\n' +
+        '5. Check if they were just testing the alert or playing with it, then talk to them about it';
     } else if (cancelledCases >= 2 && cancelledAlerts >= 2) {
       suggestion.hasRetractionPattern = true;
       suggestion.retractionRisk = 'Medium';
-      suggestion.suggestion = 'CAUTION: Pattern of both case and alert cancellations observed. Recommended actions:\n\n' +
-        '1. Schedule support consultation\n' +
-        '2. Review case withdrawal reasons\n' +
-        '3. Assess victim support needs\n' +
-        '4. Consider preventive measures';
+      suggestion.suggestion = 'CAUTION: This person has cancelled both reports and alerts a few times. Check on them:\n\n' +
+        '1. Talk to them about what is happening\n' +
+        '2. Find out why they are cancelling\n' +
+        '3. Give them more help\n' +
+        '4. Think about extra protection';
     } else if (cancelledCases >= 2) {
       suggestion.hasRetractionPattern = true;
       suggestion.retractionRisk = 'Medium';
-      suggestion.suggestion = 'NOTE: Multiple case withdrawals observed. Consider:\n\n' +
-        '1. Follow-up consultation\n' +
-        '2. Review support services effectiveness\n' +
-        '3. Assess any barriers to case completion';
+      suggestion.suggestion = 'NOTE: This person cancelled a case two times. Follow up and ask what happened.\n\n' +
+        '1. Call them to check on them\n' +
+        '2. See if your help is actually working\n' +
+        '3. Ask if they need different help';
     } else if (cancelledAlerts >= 2) {
       suggestion.hasRetractionPattern = true;
       suggestion.retractionRisk = 'Medium';
-      suggestion.suggestion = 'NOTE: Multiple cancelled alerts detected. Recommended steps:\n\n' +
-        '1. Review alert cancellation reasons\n' +
-        '2. Verify alert system effectiveness\n' +
-        '3. Assess if additional support is needed\n' +
-        '4. Consider whether some cancellations were accidental or part of user experimentation/testing and confirm context before drawing conclusions.';
+      suggestion.suggestion = 'NOTE: This person cancelled emergency alerts two times. Check what happened:\n\n' +
+        '1. Find out why the alerts were cancelled\n' +
+        '2. Check if the alert system is working\n' +
+        '3. Ask if they need more help\n' +
+        '4. Check if it was an accident or them testing the system';
     }
 
     return suggestion;
@@ -1384,18 +1384,16 @@ async function suggestForCasesInsights(options = {}) {
             label: 'Increase in Cases',
             value: percent,
             type: 'warning',
-            message: `There has been a recent jump in cases (increase of ${deltaCount} ${percentBasis === 'monthly' ? 'cases month-over-month' : 'cases day-over-day'}; ${Math.round(percent)}%).${sampleNote}`,
-            message_tl: `May biglang pagtaas ng mga kaso (tumaas ng ${deltaCount} ${percentBasis === 'monthly' ? 'kaso buwan-sa-buwan' : 'kaso araw-sa-araw'}; ${Math.round(percent)}%).${sampleNote}`,
+            message: `There was a big jump in cases. ${deltaCount} more cases than usual (${Math.round(percent)}%).${sampleNote}`,
+            message_tl: `May maraming bagong kaso. Tumaas ng ${deltaCount} kasa.${sampleNote}`,
             details: { prevMonthCount, curMonthCount, percentBasis, deltaCount },
             recommendations: [
-              'Identify geographic or time-based hotspots and prioritize patrols/visits.',
-              'Temporarily increase staff presence in affected areas.',
-              'Coordinate with partner agencies if multiple cases point to the same issue.'
+              'Find where most cases are coming from.',
+              'Send more people to help in those areas.'
             ],
             recommendations_tl: [
-              'Tukuyin ang mga hotspot base sa lokasyon/oras at unahin ang outreach/patrol.',
-              'Pansamantalang dagdagan ang presensya ng staff sa mga apektadong lugar.',
-              'Makipag-coordinate sa mga partner agencies kung maraming kaso ang tumuturo sa parehong isyu.'
+              'Alamin kung saan nagmumula ang mga bagong kaso.',
+              'Magpadala ng mas maraming tao na tutulong.'
             ]
           });
         }
@@ -1413,13 +1411,13 @@ async function suggestForCasesInsights(options = {}) {
         label: 'Active Case Ratio',
         value: activeRatio,
         type: 'info',
-        message: `About ${Math.round(activeRatio)}% of cases are still open.${sampleNote}`,
-        message_tl: `Tinatayang ${Math.round(activeRatio)}% ng mga kaso ay nananatiling bukas.${sampleNote}`,
+        message: `About ${Math.round(activeRatio)}% of cases are still being worked on.${sampleNote}`,
+        message_tl: `Halos ${Math.round(activeRatio)}% ng mga kaso ay patuloy na ginagawa.${sampleNote}`,
         recommendations: [
-          'Review open cases and prioritize simple closures where possible.'
+          'Try to finish simple cases fast.'
         ],
         recommendations_tl: [
-          'Suriin ang mga bukas na kaso at unahin ang mabilis na pagsasara kung maaari.'
+          'Subukan tapusin ang mga madaling kaso.'
         ]
       });
     } else {
@@ -1427,17 +1425,17 @@ async function suggestForCasesInsights(options = {}) {
         label: 'Active Case Ratio',
         value: activeRatio,
         type: activeRatio > 50 ? 'error' : activeRatio > 25 ? 'warning' : 'success',
-        message: `About ${Math.round(activeRatio)}% of cases are still open. Try to close simple cases quickly and reassign difficult cases to experienced staff.`,
-        message_tl: `Tinatayang ${Math.round(activeRatio)}% ng mga kaso ay nananatiling bukas. Sikaping isara agad ang mga simpleng kaso at i-reassign ang mahihirap na kaso sa mga may karanasan.`,
+        message: `About ${Math.round(activeRatio)}% of cases are still open. Close easy cases fast. Give hard cases to experienced people.`,
+        message_tl: `Halos ${Math.round(activeRatio)}% ng mga kaso ay bukas pa. Tapusin ang madaling kaso. Bigyan ng experienced na tao ang mahihirap na kaso.`,
         recommendations: [
-          'Review open cases and mark low-complexity ones for quick closure.',
-          'Reassign complex cases to senior staff and set target resolution dates.',
-          'Use daily stand-ups to unblock stalled cases.'
+          'Mark easy cases to close quickly.',
+          'Give hard cases to experienced staff.',
+          'Have daily meetings to fix stuck cases.'
         ],
         recommendations_tl: [
-          'Suriin ang mga bukas na kaso at markahan ang mga simpleng kaso para mabilis na pagsasara.',
-          'I-reassign ang kumplikadong kaso sa senior staff at magtakda ng target na petsa ng resolusyon.',
-          'Gumamit ng araw-araw na stand-up para alisin ang mga hadlang sa mga naka-stall na kaso.'
+          'Markahan ang madaling kaso na mabilis tapusin.',
+          'Bigyan ng experienced staff ang mahihirap na kaso.',
+          'Araw-araw na meeting para sa mga stuck na kaso.'
         ]
       });
     }
@@ -1451,17 +1449,17 @@ async function suggestForCasesInsights(options = {}) {
         value: highRiskRate * 100,
         type: lowSample ? 'warning' : 'error',
         urgent: true,
-        message: `${Math.round(highRiskRate * 100)}% of cases are marked High risk.${sampleNote}`,
-        message_tl: `Tinatayang ${Math.round(highRiskRate * 100)}% ng mga kaso ay may markang High risk.${sampleNote}`,
+        message: `${Math.round(highRiskRate * 100)}% of cases are very dangerous.${sampleNote}`,
+        message_tl: `${Math.round(highRiskRate * 100)}% ng mga kaso ay napakalikas.${sampleNote}`,
         recommendations: [
-          'Immediately review and prioritize High-risk cases.',
-          'Assign protective measures and consider emergency referrals.',
-          'Ensure senior oversight for case plans.'
+          'Look at these dangerous cases right now.',
+          'Give them to the best people.',
+          'Make sure a leader checks them.'
         ],
         recommendations_tl: [
-          'Agad na suriin at unahin ang High-risk na mga kaso.',
-          'Magtalaga ng mga hakbang para sa proteksyon at isaalang-alang ang emergency referrals.',
-          'Siguraduhin ang senior oversight para sa mga plano ng kaso.'
+          'Tingnan ang mga delikadong na kaso ngayon.',
+          'Ibigay sa magagaling na tao.',
+          'Siguruhing may leader na sumusubaybay.'
         ]
       });
     }
@@ -1475,17 +1473,17 @@ async function suggestForCasesInsights(options = {}) {
       label: 'Stagnant Cases',
       value: stagnant,
       type: lowSample ? 'warning' : 'error',
-      message: `${stagnant} case(s) have had no progress for more than 14 days.${sampleNote}`,
-      message_tl: `${stagnant} kaso ang walang progreso nang higit sa 14 na araw.${sampleNote}`,
+      message: `${stagnant} case(s) have been stuck for more than 2 weeks.${sampleNote}`,
+      message_tl: `${stagnant} kaso ang stuck na ng mahigit 2 linggo.${sampleNote}`,
       recommendations: [
-        'Run a quick audit of all cases older than 14 days to identify blockers.',
-        'Reassign stalled cases to a fresh investigator with a 7-day action plan.',
-        'Escalate urgent stalled cases to supervisors for immediate review.'
+        'Find what is stopping these cases.',
+        'Assign them to someone new with a plan to finish them.',
+        'Tell your boss about the stuck cases.'
       ],
       recommendations_tl: [
-        'Gumawa ng mabilis na audit ng lahat ng kaso na higit sa 14 na araw upang tukuyin ang mga harang.',
-        'I-reassign ang mga naka-stall na kaso sa bagong imbestigador na may 7-araw na action plan.',
-        'I-escalate ang mga agarang naka-stall na kaso sa mga supervisor para sa agarang pagsusuri.'
+        'Alamin kung ano ang hadlang sa mga kaso.',
+        'Ibigay sa bagong tao na may plano.',
+        'Sabihin sa boss ang stuck cases.'
       ]
     });
 
@@ -1495,17 +1493,17 @@ async function suggestForCasesInsights(options = {}) {
       label: 'High Cancellation Rate',
       value: cancellationRate * 100,
       type: lowSample ? 'info' : 'warning',
-      message: `About ${Math.round(cancellationRate * 100)}% of cases were cancelled.${sampleNote}`,
-      message_tl: `Tinatayang ${Math.round(cancellationRate * 100)}% ng mga kaso ang kinansela.${sampleNote}`,
+      message: `A lot of cases were cancelled - about ${Math.round(cancellationRate * 100)}%.${sampleNote}`,
+      message_tl: `Maraming kaso ang kinansela - ${Math.round(cancellationRate * 100)}%.${sampleNote}`,
       recommendations: [
-        'Contact victims who cancelled to ask why and offer help (use gentle wording).',
-        'Check for patterns of cancellation (same area, same timeframe).',
-        'Ensure safe channels for victims to follow up without pressure.'
+        'Call people who cancelled and ask why.',
+        'Look for patterns - same place or same time?',
+        'Make safe ways for people to follow up.'
       ],
       recommendations_tl: [
-        'Makipag-ugnayan sa mga biktimang nag-cancel para alamin ang dahilan at mag-alok ng tulong (gamit ang maingat na pananalita).',
-        'Suriin ang mga pattern ng pagkansela (parehong lugar, parehong oras).',
-        'Siguraduhin ang ligtas na mga channel para sa mga biktima na mag-follow up nang walang presyon.'
+        'Tawagan ang mga tao na nag-cancel.',
+        'Tingnan kung may pattern - parehong lugar?',
+        'Gawing ligtas ang paraan para i-follow up.'
       ]
     });
 
@@ -1522,17 +1520,17 @@ async function suggestForCasesInsights(options = {}) {
         label: 'Predominant Incident Type',
         value: `${topType} — ${topCount} cases (${Math.round(pct)}% of total)`,
         type: pct > 40 ? 'warning' : 'info',
-        message: `Predominant incident: "${topType}" (${topCount} case${topCount !== 1 ? 's' : ''}, ${Math.round(pct)}% of total). Consider focused prevention and response for this type.`,
-        message_tl: `Pangunahing insidente: "${topType}" (${topCount} kaso${topCount !== 1 ? 's' : ''}, ${Math.round(pct)}% ng kabuuan). Isaalang-alang ang nakatuong pag-iwas at tugon para sa ganitong uri.`,
+        message: `Most cases are ${topType} (${topCount} cases, ${Math.round(pct)}%).`,
+        message_tl: `Karamihan ng kaso ay ${topType} (${topCount} cases).`,
         recommendations: [
-          `Focus prevention strategies on ${topType}.`,
-          `Develop specialized response protocols for ${topType} cases.`,
-          `Enhance support services related to ${topType}.`
+          `Work on stopping ${topType} cases.`,
+          `Train people to handle ${topType} cases better.`,
+          `Give better help for ${topType}.`
         ],
         recommendations_tl: [
-          `Ituon ang mga estratehiya sa pag-iwas para sa ${topType}.`,
-          `Gumawa ng espesyal na protocol para sa pagtugon sa mga ${topType} na kaso.`,
-          `Palakasin ang mga serbisyo ng suporta na may kinalaman sa ${topType}.`
+          `Magtrabaho para mahinto ang ${topType}.`,
+          `Turuan ng tao kung paano harapin ang ${topType}.`,
+          `Bigyan ng better help para sa ${topType}.`
         ]
       });
 
@@ -1543,15 +1541,15 @@ async function suggestForCasesInsights(options = {}) {
           label: 'Secondary Concern',
           value: `${secondType} — ${secondCount} case${secondCount !== 1 ? 's' : ''}`,
           type: 'info',
-          message: `Secondary concern: High prevalence of "${secondType}" (${secondCount} case${secondCount !== 1 ? 's' : ''}). Consider checking correlation with ${topType} cases.`,
-          message_tl: `Pangalawang alalahanin: Mataas ang bilang ng "${secondType}" (${secondCount} kaso${secondCount !== 1 ? 's' : ''}). Isaalang-alang ang pagsusuri ng kaugnayan sa mga ${topType} na kaso.`,
+          message: `Second most common: ${secondType} (${secondCount} case${secondCount !== 1 ? 's' : ''}). Check if ${secondType} and ${topType} are connected.`,
+          message_tl: `Ikalawa ang ${secondType} (${secondCount} case${secondCount !== 1 ? 's' : ''}). Tingnan kung connected.`,
           recommendations: [
-            `Investigate overlap or correlation between ${secondType} and ${topType} cases.`,
-            `Adjust outreach or training to address both ${topType} and ${secondType} where relevant.`
+            `Look for links between ${secondType} and ${topType}.`,
+            `Give training for both types of cases.`
           ],
           recommendations_tl: [
-            `Suriin ang pag-ookupa o kaugnayan ng ${secondType} at ${topType} na mga kaso.`,
-            `I-adjust ang outreach o pagsasanay upang tugunan ang parehong ${topType} at ${secondType} kung kinakailangan.`
+            `Tignan kung may link ang ${secondType} at ${topType}.`,
+            `Bigyan ng training para sa dalawang tipo.`
           ]
         });
       }
@@ -1571,29 +1569,27 @@ async function suggestForCasesInsights(options = {}) {
     }).length;
     const anonRate = anonCount / (total || 1);
 
-    if (anonCount > 0) {
-      const pct = Math.round(anonRate * 100);
-      const severityType = anonRate > 0.6 ? 'warning' : anonRate > 0.25 ? 'info' : 'success';
-      insights.push({
-        label: 'Anonymous Cases',
-        value: `${anonCount} (${pct}%)`,
-        type: severityType,
-        message: `There are ${anonCount} anonymous case${anonCount !== 1 ? 's' : ''} (${pct}% of total). These records lack an identified victim; ensure they are handled with appropriate confidentiality and low-barrier follow-up options.`,
-        message_tl: `Mayroong ${anonCount} anonymous na kaso (${pct}% ng kabuuan). Ang mga rekord na ito ay walang natukoy na biktima; siguraduhing maingat ang paghawak at mag-alok ng madaling paraan ng follow-up.`,
-        recommendations: [
-          'Flag anonymous cases for sensitive handling and low-barrier support.',
-          'Provide clear instructions for anonymous-to-identified follow-up (opt-in contact methods).',
-          'Monitor whether anonymous cases cluster by area or time to inform outreach.'
-        ],
-        recommendations_tl: [
-          'I-flag ang mga anonymous na kaso para sa maingat na paghawak at madaling suporta.',
-          'Magbigay ng malinaw na gabay para sa anonymous-to-identified follow-up (opsyonal na contact).',
-          'Subaybayan kung may pag-oorlap ang mga anonymous na kaso ayon sa lugar o oras para gabayan ang outreach.'
-        ]
-      });
-    }
-
-    // Child victim proportion
+      if (anonCount > 0) {
+        const pct = Math.round(anonRate * 100);
+        const severityType = anonRate > 0.6 ? 'warning' : anonRate > 0.25 ? 'info' : 'success';
+        insights.push({
+          label: 'Anonymous Cases',
+          value: `${anonCount} (${pct}%)`,
+          type: severityType,
+          message: `${anonCount} cases have no identified victim (${pct}% of total). Handle these carefully and make it easy to follow up.`,
+          message_tl: `${anonCount} kaso walang tukoy na biktima (${pct}%). Alagaan nang mabuti at gawing madali ang follow-up.`,
+          recommendations: [
+            'Handle these cases privately.',
+            'Make it easy for them to reach back out.',
+            'Look for patterns in location or timing.'
+          ],
+          recommendations_tl: [
+            'Alagaan ang mga kaso na ito nang private.',
+            'Gawing madali para sa kanila na mag-reach out.',
+            'Tignan kung may pattern sa lokasyon.'
+          ]
+        });
+      }    // Child victim proportion
     const childCount = docs.filter(d => (d.victimType || '').toString().toLowerCase().includes('child') || (d.victimID && d.victimID.victimType === 'child')).length;
     const childRate = childCount / (total || 1);
     if (childRate > 0.25) {
@@ -1601,17 +1597,17 @@ async function suggestForCasesInsights(options = {}) {
         label: 'Childrens Cases',
         value: childRate * 100,
         type: 'warning',
-        message: `Approximately ${Math.round(childRate * 100)}% of cases involve children. Prioritize child protection procedures.`,
-        message_tl: `Tinatayang ${Math.round(childRate * 100)}% ng mga kaso ay may kinalaman sa mga bata. Bigyang prayoridad ang mga proseso para sa proteksyon ng bata.`,
+        message: `${Math.round(childRate * 100)}% of cases are about children. Protect children first.`,
+        message_tl: `${Math.round(childRate * 100)}% ng mga kaso ay tungkol sa mga bata. Protektahan ang mga bata.`,
         recommendations: [
-          'Ensure child-friendly intake and immediate safety checks.',
-          'Assign child protection specialists to these cases.',
-          'Coordinate with DSWD/child protection services as needed.'
+          'Make sure children are safe from the start.',
+          'Get child protection experts to help.',
+          'Work with government child protection.'
         ],
         recommendations_tl: [
-          'Siguraduhin ang child-friendly intake at agarang safety checks.',
-          'Magtalaga ng mga espesyalista sa proteksyon ng bata sa mga kasong ito.',
-          'Makipag-ugnayan sa DSWD/child protection services kung kinakailangan.'
+          'Siguruhing safe ang mga bata simula simula.',
+          'Kunin ang child protection experts.',
+          'Magtrabaho sa government para sa protection.'
         ]
       });
     }
@@ -1635,17 +1631,17 @@ async function suggestForCasesInsights(options = {}) {
         label: 'Womens Cases',
         value: `${womanCount} (${pct}%)`,
         type: womanRate > 0.6 ? 'warning' : womanRate > 0.25 ? 'info' : 'success',
-        message: `There are ${womanCount} woman case${womanCount !== 1 ? 's' : ''} (${pct}% of total). Prioritize services and protections for women victims.`,
-        message_tl: `Mayroong ${womanCount} kaso na may kinalaman sa kababaihan (${pct}% ng kabuuan). Bigyang prayoridad ang mga serbisyo at proteksyon para sa mga biktimang babae.`,
+        message: `${womanCount} cases are about women (${pct}% of total). Give them good help and protection.`,
+        message_tl: `${womanCount} kaso ay tungkol sa kababaihan (${pct}%). Bigyan ng good help.`,
         recommendations: [
-          'Ensure service pathways and referrals are accessible for women victims.',
-          'Provide gender-sensitive counseling and legal support.',
-          'Monitor and prioritize resources for areas with high woman-case proportions.'
+          'Make services easy for women to find.',
+          'Give counseling and legal help.',
+          'Give more resources to areas with many women cases.'
         ],
         recommendations_tl: [
-          'Siguraduhin na accessible ang mga serbisyo at referral para sa mga biktimang babae.',
-          'Magbigay ng gender-sensitive na counseling at legal na suporta.',
-          'Subaybayan at unahin ang mga resources para sa mga lugar na may mataas na proporsyon ng kaso ng kababaihan.'
+          'Gawing madaling hanapin ang services para sa mga babae.',
+          'Bigyan ng tulong at legal help.',
+          'Magbigay ng resources sa lugar na maraming kaso.'
         ]
       });
     }
@@ -1738,14 +1734,12 @@ async function suggestForReportsInsights(options = {}) {
               message_tl: `May tumaas na mga ulat kumpara sa nakaraang buwan (${deltaCount} karagdagang ulat; +${Math.round(percent)}%).${sampleNote}`,
               details: { prevMonthCount, curMonthCount, deltaCount, percent },
               recommendations: [
-                'Identify geographic or time-based hotspots and prioritize patrols/visits.',
-                'Temporarily increase staff presence in affected areas.',
-                'Coordinate with partner agencies if multiple reports point to the same issue.'
+                'Find where new reports are coming from.',
+                'Send more people to check those areas.'
               ],
               recommendations_tl: [
-                'Tukuyin ang mga hotspot ayon sa lokasyon o oras at unahin ang mag patrol/pagbisita.',
-                'Pansamantalang dagdagan ang presensya ng staff sa mga apektadong lugar.',
-                'Makipag-coordinate sa mga partner agencies kung maraming ulat ang tumuturo sa parehong isyu.'
+                'Alamin kung saan galing ang mga bagong ulat.',
+                'Magpadala ng mas maraming tao na susubaybay.'
               ]
             });
           }
@@ -1765,14 +1759,14 @@ async function suggestForReportsInsights(options = {}) {
       message: `About ${Math.round(unresolvedRate * 100)}% of reports are still open or pending.${sampleNote}`,
       message_tl: `Tinatayang ${Math.round(unresolvedRate * 100)}% ng mga ulat ay bukas o naka-pending.${sampleNote}`,
       recommendations: [
-        'Create a rapid-response team to close high-priority reports.',
-        'Review and simplify the reporting-to-resolution workflow.',
-        'Set daily targets for clearing pending reports and track progress.'
+        'Make a team to finish reports fast.',
+        'Make the process simpler.',
+        'Set goals to finish reports every day.'
       ],
       recommendations_tl: [
-        'Gumawa ng rapid-response na grupo para isara ang  mataas na prioritying ulat.',
-        'Suriin at gawing mas simple ang workflow mula report hanggang resolusyon.',
-        'Magtakda ng araw-araw na target para linisin ang pending reports at subaybayan ang progreso.'
+        'Gumawa ng team para tapusin ang ulat.',
+        'Gawing simple ang proseso.',
+        'Magtakda ng araw-araw na goals.'
       ]
     });
     else if (unresolvedRate > 0.3) insights.push({
@@ -1782,14 +1776,14 @@ async function suggestForReportsInsights(options = {}) {
       message: `Around ${Math.round(unresolvedRate * 100)}% of reports are unresolved.${sampleNote}`,
       message_tl: `Tinatayang ${Math.round(unresolvedRate * 100)}% ng mga ulat ay hindi pa nareresolba.${sampleNote}`,
       recommendations: [
-        'Assign a case owner to each pending report.',
-        'Hold weekly case-review meetings to unblock difficult items.',
-        'Use simple templates to speed up initial assessments.'
+        'Give each report to one person.',
+        'Meet every week to fix stuck reports.',
+        'Use simple forms to make it faster.'
       ],
       recommendations_tl: [
-        'Magtatalaga ng may-ari para sa bawat pending report.',
-        'Mag-hold ng lingguhang case-review meetings upang alisin ang mga hadlang.',
-        'Gumamit ng simpleng template upang pabilisin ang paunang pagsusuri.'
+        'Bigyan ng isang tao ang bawat ulat.',
+        'Araw-araw na meeting para sa stuck.',
+        'Gumamit ng simple na form.'
       ]
     });
 
@@ -1803,14 +1797,14 @@ async function suggestForReportsInsights(options = {}) {
       message: `About ${Math.round(anonRate * 100)}% of reports are anonymous. Consider ways to build trust and encourage safer reporting.`,
       message_tl: `Tinatayang ${Math.round(anonRate * 100)}% ng mga ulat ay anonymous. Isaalang-alang ang mga paraan upang bumuo ng tiwala at hikayatin ang mas ligtas na pag-uulat.`,
       recommendations: [
-        'Develop outreach messages that stress confidentiality and support.',
-        'Offer anonymous reporting with an option to provide contact later.',
-        'Train staff to respond sensitively to anonymous reports to build trust.'
+        'Tell people their report is safe and secret.',
+        'Let them report without name first, then add name later.',
+        'Be kind to anonymous reports so people trust you.'
       ],
       recommendations_tl: [
-        'Gumawa ng outreach messages na binibigyang-diin ang pagiging kumpidensyal at suporta.',
-        'Mag-alok ng anonymous reporting na may opsyon na magbigay ng contact mamaya.',
-        'Sanayin ang staff na tumugon nang may sensitivity sa mga anonymous na ulat upang bumuo ng tiwala.'
+        'Sabihin safe at secret ang kanilang ulat.',
+        'Let them report walang name, tapos add name mamaya.',
+        'Maging kind sa anonymous reports.'
       ]
     });
 
@@ -1826,14 +1820,14 @@ async function suggestForReportsInsights(options = {}) {
       message: `${oldPending} report(s) have been pending for more than 7 days. These should be reviewed and acted on as soon as possible.`,
       message_tl: `Mayroong ${oldPending} ulat na naka-pending nang higit sa 7 araw. Dapat suriin at aksyunan agad ang mga ito.`,
       recommendations: [
-        'Create a task list for reports pending >7 days and assign owners.',
-        'Escalate the most urgent pending reports to supervisors.',
-        'Consider reassigning very old items to fresh reviewers.'
+        'Make a list of old reports and give each to one person.',
+        'Tell your boss about the oldest reports.',
+        'Give old reports to a new person to review.'
       ],
       recommendations_tl: [
-        'Gumawa ng task list para sa mga ulat na naka-pending nang higit sa 7 araw at magtalaga ng may-ari.',
-        'I-escalate ang pinaka-urgent na pending reports sa mga supervisor.',
-        'Isaalang-alang ang pag-reassign ng mga napakatandang item sa bagong reviewer.'
+        'Gumawa ng list ng old reports, bigyan ng tao.',
+        'Sabihin sa boss ang oldest reports.',
+        'Bigyan ng bagong tao ang old reports.'
       ]
     });
 
@@ -1853,12 +1847,12 @@ async function suggestForReportsInsights(options = {}) {
         message: `Predominant report type: "${topType}" (${topCount} report${topCount !== 1 ? 's' : ''}, ${Math.round(pct)}% of total). Consider focused outreach and response for this type.`,
         message_tl: `Pangunahing uri ng ulat: "${topType}" (${topCount} ulat${topCount !== 1 ? 's' : ''}, ${Math.round(pct)}% ng kabuuan). Isaalang-alang ang nakatuong outreach at tugon para sa ganitong uri.`,
         recommendations: [
-          `Train staff on ${topType} report handling and referral pathways.`,
-          'Coordinate prevention messaging targeted to this issue.'
+          `Teach people how to handle ${topType} reports.`,
+          'Tell the public about this problem.'
         ],
         recommendations_tl: [
-          `Sanayin ang mga staff sa pag-handle ng ${topType} na ulat at mga referral pathway.`,
-          'I-coordinate ang prevention messaging na naka-target sa isyung ito.'
+          `Turuan ng tao kung paano mag-report ng ${topType}.`,
+          'Sabihin sa publiko tungkol sa problema.'
         ]
       });
 
@@ -1872,12 +1866,12 @@ async function suggestForReportsInsights(options = {}) {
           message: `Secondary concern: high prevalence of "${secondType}" (${secondCount} report${secondCount !== 1 ? 's' : ''}). Consider checking correlation with ${topType} reports.`,
           message_tl: `Pangalawang alalahanin: mataas ang bilang ng "${secondType}" (${secondCount} ulat${secondCount !== 1 ? 's' : ''}). Isaalang-alang ang pagsusuri ng kaugnayan sa mga ${topType} na ulat.`,
           recommendations: [
-            `Investigate overlap or correlation between ${secondType} and ${topType} reports.`,
-            `Adjust outreach or training to address both ${topType} and ${secondType} where relevant.`
+            `Look for links between ${secondType} and ${topType}.`,
+            `Give training for both types.`
           ],
           recommendations_tl: [
-            `Suriin ang pag-oorlap o kaugnayan ng ${secondType} at ${topType} na mga ulat.`,
-            `I-adjust ang outreach o pagsasanay upang tugunan ang parehong ${topType} at ${secondType} kung kinakailangan.`
+            `Tingnan kung connected ang ${secondType} at ${topType}.`,
+            `Turuan ng dalawang uri.`
           ]
         });
       }
@@ -1913,12 +1907,12 @@ async function suggestForReportsInsights(options = {}) {
           message: `${repeaters} reporters submitted more than one report.`,
           message_tl: `${repeaters} nag-ulat ang higit sa isang ulat.`,
           recommendations: [
-            "Follow up with repeat reporters to gather more context.",
-            "Identify possible ongoing incidents that need urgent attention."
+            "Call them and ask what is happening.",
+            "Check if there is an ongoing problem."
           ],
           recommendations_tl: [
-            "Makipag-ugnayan sa mga paulit-ulit na nag-uulat upang makakuha ng higit na konteksto.",
-            "Tukuyin ang mga posibleng patuloy na insidente na nangangailangan ng agarang pansin."
+            "Tawagan at tanungin ano ang nangyayari.",
+            "Tingnan kung may patuloy na problema."
           ]
         });
       }
@@ -1950,12 +1944,12 @@ async function suggestForReportsInsights(options = {}) {
           message: `Many reports are submitted around ${start} (${Math.round((max / totalDocs) * 100)}%). Consider targeted monitoring.`,
           message_tl: `Maraming ulat ang isinusumite bandang ${start} (${Math.round((max / totalDocs) * 100)}%). Isaalang-alang ang nakatuong monitoring.`,
           recommendations: [
-            `Increase monitoring around ${start}–${end}.`,
-            'Check correlation with local events or shifts.'
+            `Add more people to watch during ${start}–${end}.`,
+            'Check what is causing this.'
           ],
           recommendations_tl: [
-            `Dagdagan ang monitoring bandang ${start}–${end}.`,
-            'Suriin ang kaugnayan sa mga lokal na kaganapan o shift.'
+            `Magdagdag ng tao na bantay bandang ${start}–${end}.`,
+            'Tignan kung ano ang dahilan.'
           ]
         });
       }

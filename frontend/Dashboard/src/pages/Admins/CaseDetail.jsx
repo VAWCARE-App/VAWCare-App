@@ -66,6 +66,7 @@ export default function CaseDetail() {
   const [historyData, setHistoryData] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [addRemarkOpen, setAddRemarkOpen] = useState(false);
+  const [viewAllRemarksOpen, setViewAllRemarksOpen] = useState(false);
   const [remarkForm] = Form.useForm();
 
   // PRINT TARGET
@@ -643,8 +644,8 @@ export default function CaseDetail() {
                 <Space>
                   <HistoryOutlined style={{ fontSize: 20, color: BRAND.violet }} />
                   <Title level={5} style={{ margin: 0, color: BRAND.violet }}>
-                    History of Remarks
-                  </Title>
+                    Actions & Remarks Logs
+                  </Title> 
                 </Space>
                 <Button
                   type="primary"
@@ -779,6 +780,107 @@ export default function CaseDetail() {
           )}
         </div>
 
+        {/* Remarks Section — Full Width and Presentable */}
+        {historyData.length > 0 && historyData.filter(log => log.action === 'case_remark').length > 0 && (
+          <Card
+            className="no-print hover-lift"
+            style={{
+              borderRadius: 16,
+              border: `1px solid ${BRAND.soft}`,
+              background:
+                "linear-gradient(145deg, rgba(255,255,255,.98), rgba(255,255,255,.94))",
+            }}
+            bodyStyle={{ padding: screens.xs ? 12 : 16 }}
+          >
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginBottom: 16,
+              flexWrap: 'wrap',
+              gap: 12
+            }}>
+              <Space>
+                <CommentOutlined style={{ fontSize: 20, color: BRAND.violet }} />
+                <Title level={5} style={{ margin: 0, color: BRAND.violet }}>
+                  Recent Remarks
+                </Title>
+              </Space>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {historyData.filter(log => log.action === 'case_remark').length} remark{historyData.filter(log => log.action === 'case_remark').length !== 1 ? 's' : ''}
+              </Text>
+            </div>
+
+            <div style={{ 
+              display: 'grid',
+              gridTemplateColumns: screens.lg ? 'repeat(3, 1fr)' : screens.md ? 'repeat(2, 1fr)' : '1fr',
+              gap: 12
+            }}>
+              {historyData
+                .filter(log => log.action === 'case_remark')
+                .slice(0, 3)
+                .map((remark, idx) => (
+                  <Card
+                    key={idx}
+                    size="small"
+                    style={{
+                      background: '#fff',
+                      borderRadius: 8,
+                      border: `1px solid ${BRAND.soft}`,
+                      height: '100%'
+                    }}
+                    bodyStyle={{ padding: screens.xs ? 10 : 12 }}
+                  >
+                    <Space direction="vertical" size={6} style={{ width: '100%' }}>
+                      <div>
+                        <div style={{ 
+                          fontWeight: 600, 
+                          color: BRAND.violet, 
+                          fontSize: screens.xs ? 12 : 13,
+                          marginBottom: 2
+                        }}>
+                          {remark.actorName}
+                        </div>
+                        <div style={{ 
+                          fontSize: 11, 
+                          color: '#999',
+                          marginBottom: 8
+                        }}>
+                          {new Date(remark.timestamp).toLocaleString()}
+                        </div>
+                      </div>
+                      <div style={{ 
+                        color: '#555', 
+                        whiteSpace: 'pre-wrap',
+                        fontSize: screens.xs ? 12 : 13,
+                        lineHeight: 1.5,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical'
+                      }}>
+                        {remark.details}
+                      </div>
+                    </Space>
+                  </Card>
+                ))}
+            </div>
+
+            {historyData.filter(log => log.action === 'case_remark').length > 3 && (
+              <div style={{ marginTop: 16, textAlign: 'center', paddingTop: 12, borderTop: `1px solid ${BRAND.soft}` }}>
+                <Button 
+                  type="link" 
+                  onClick={() => setViewAllRemarksOpen(true)}
+                  style={{ color: BRAND.violet, fontWeight: 600 }}
+                >
+                  View All Remarks ({historyData.filter(log => log.action === 'case_remark').length} total)
+                </Button>
+              </div>
+            )}
+          </Card>
+        )}
+
         {/* DSS Suggestion — hidden in print */}
         {(userType === "admin" || userType === "official") && (
           <Card
@@ -859,6 +961,94 @@ export default function CaseDetail() {
             />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* VIEW ALL REMARKS MODAL */}
+      <Modal
+        open={viewAllRemarksOpen}
+        onCancel={() => setViewAllRemarksOpen(false)}
+        footer={
+          <Button onClick={() => setViewAllRemarksOpen(false)}>
+            Close
+          </Button>
+        }
+        width={screens.md ? 700 : "96vw"}
+        centered
+        destroyOnClose
+        maskStyle={{ backdropFilter: "blur(2px)" }}
+        wrapClassName="case-edit-modal"
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <CommentOutlined style={{ fontSize: 22, color: BRAND.violet }} />
+            <div style={{ lineHeight: 1 }}>
+              <div style={{ fontWeight: 800 }}>All Remarks</div>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                View all remarks and notes for this case
+              </Text>
+            </div>
+          </div>
+        }
+      >
+        <div style={{ 
+          maxHeight: '70vh', 
+          overflowY: 'auto',
+          paddingRight: 8
+        }}>
+          {historyData
+            .filter(log => log.action === 'case_remark')
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+            .length === 0 ? (
+              <Empty description="No remarks found" style={{ marginTop: 40 }} />
+            ) : (
+              <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                {historyData
+                  .filter(log => log.action === 'case_remark')
+                  .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                  .map((remark, idx) => (
+                    <Card
+                      key={idx}
+                      size="small"
+                      style={{
+                        background: '#f9f9f9',
+                        borderRadius: 8,
+                        border: `1px solid ${BRAND.soft}`,
+                      }}
+                      bodyStyle={{ padding: 12 }}
+                    >
+                      <Space direction="vertical" size={6} style={{ width: '100%' }}>
+                        <div style={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: 8
+                        }}>
+                          <div style={{ 
+                            fontWeight: 600, 
+                            color: BRAND.violet, 
+                            fontSize: 14
+                          }}>
+                            {remark.actorName}
+                          </div>
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            {new Date(remark.timestamp).toLocaleString()}
+                          </Text>
+                        </div>
+                        <div style={{ 
+                          color: '#555', 
+                          whiteSpace: 'pre-wrap',
+                          fontSize: 13,
+                          lineHeight: 1.6,
+                          padding: '8px 0'
+                        }}>
+                          {remark.details}
+                        </div>
+                      </Space>
+                    </Card>
+                  ))}
+              </Space>
+            )}
+        </div>
       </Modal>
 
       {/* EDIT MODAL */}

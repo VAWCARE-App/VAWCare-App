@@ -464,37 +464,6 @@ export default function AdminSettings() {
       <Content>
           <div style={{ display: "flex", justifyContent: "center" }}>
       <style>{`
-        /* Custom scrollbar styling */
-        .ant-layout-content::-webkit-scrollbar,
-        .ant-table-body::-webkit-scrollbar,
-        .ant-modal-body::-webkit-scrollbar {
-          width: 6px;
-        }
-        .ant-layout-content::-webkit-scrollbar-track,
-        .ant-table-body::-webkit-scrollbar-track,
-        .ant-modal-body::-webkit-scrollbar-track {
-          background: #f1eeff;
-          border-radius: 3px;
-        }
-        .ant-layout-content::-webkit-scrollbar-thumb,
-        .ant-table-body::-webkit-scrollbar-thumb,
-        .ant-modal-body::-webkit-scrollbar-thumb {
-          background: #a78bfa;
-          border-radius: 3px;
-        }
-        .ant-layout-content::-webkit-scrollbar-thumb:hover,
-        .ant-table-body::-webkit-scrollbar-thumb:hover,
-        .ant-modal-body::-webkit-scrollbar-thumb:hover {
-          background: #8b5cf6;
-        }
-        /* Firefox */
-        .ant-layout-content,
-        .ant-table-body,
-        .ant-modal-body {
-          scrollbar-width: thin;
-          scrollbar-color: #a78bfa #f1eeff;
-        }
-
         /* Remove button outlines */
         .ant-btn:focus,
         .ant-btn:active,
@@ -699,7 +668,7 @@ export default function AdminSettings() {
 
           <Divider style={{ borderColor: "rgba(122,90,248,0.15)" }} />
 
-          <Form layout="vertical" form={form} onFinish={onSave} onValuesChange={handleFormValuesChange} validateTrigger={['onChange', 'onBlur']}>
+          <Form layout="vertical" form={form} onFinish={onSave} onValuesChange={handleFormValuesChange}>
             <Row gutter={[16, 12]}>
               <Col xs={24} md={12}>
                 <Form.Item name="adminID" label="Admin ID">
@@ -724,7 +693,7 @@ export default function AdminSettings() {
                       validator: (_, value) => {
                         if (!value) return Promise.resolve();
                         const strValue = String(value).trim();
-                        if (/(.)\1{2}/.test(strValue)) {
+                        if (/(.)\1\1/.test(strValue)) {
                           return Promise.reject(new Error('First name cannot contain repeated characters'));
                         }
                         if ((/(.{2,3})\1{2,}/.test(strValue))) {
@@ -740,7 +709,7 @@ export default function AdminSettings() {
                     }
                   ]}
                 >
-                  <Input prefix={<UserOutlined />} placeholder="First name" onChange={() => form.validateFields(['firstName'])} onKeyPress={(e) => {
+                  <Input prefix={<UserOutlined />} placeholder="First name" onKeyPress={(e) => {
                     if (!/^[a-zA-Z\s-]$/.test(e.key)) {
                       e.preventDefault();
                     }
@@ -759,7 +728,7 @@ export default function AdminSettings() {
                       validator: (_, value) => {
                         if (!value) return Promise.resolve();
                         const strValue = String(value).trim();
-                        if (/(.)\1{2}/.test(strValue)) {
+                        if (/(.)\1\1/.test(strValue)) {
                           return Promise.reject(new Error('Last name cannot contain repeated characters'));
                         }
                         if ((/(.{2,3})\1{2,}/.test(strValue))) {
@@ -775,7 +744,7 @@ export default function AdminSettings() {
                     }
                   ]}
                 >
-                  <Input prefix={<UserOutlined />} placeholder="Last name" onChange={() => form.validateFields(['lastName'])} onKeyPress={(e) => {
+                  <Input prefix={<UserOutlined />} placeholder="Last name" onKeyPress={(e) => {
                     if (!/^[a-zA-Z\s-]$/.test(e.key)) {
                       e.preventDefault();
                     }

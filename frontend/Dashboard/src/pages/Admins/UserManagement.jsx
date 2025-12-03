@@ -126,6 +126,32 @@ export default function UserManagement() {
   const [quickUpdateRole, setQuickUpdateRole] = useState(""); // "Barangay Captain" or "VAWC Chairman"
   const [quickUpdateForm] = Form.useForm();
 
+  // -------- Validation helper --------
+  const validateNameField = (fieldName, value) => {
+    if (!value || value.trim() === "") return null;
+    
+    const strValue = String(value).trim();
+    
+    // Check for 3+ repeated characters (e.g., "aaa", "bbb")
+    if (/(.)\1{2}/.test(strValue)) {
+      return `${fieldName} cannot contain repeated characters`;
+    }
+    
+    // Check for repeating patterns (gibberish) (e.g., "abab", "asdasd")
+    if (/(.{1,3})\1{1,}/.test(strValue)) {
+      return `${fieldName} appears to be gibberish`;
+    }
+    
+    // Check vowel ratio for names
+    const letters = strValue.replace(/[^a-zA-Z]/g, "");
+    const vowels = strValue.replace(/[^aeiouAEIOU]/g, "");
+    if (letters.length > 3 && vowels.length / letters.length < 0.25) {
+      return `${fieldName} appears to be gibberish`;
+    }
+    
+    return null;
+  };
+
   // Fetch users
   const fetchAllUsers = async () => {
     try {
@@ -1357,24 +1383,46 @@ export default function UserManagement() {
                   layout="vertical"
                   onFinish={handleUpdateUser}
                   disabled={mode === "view"}
+                  validateTrigger={['onChange', 'onBlur']}
                 >
                   <Row gutter={[10, 0]}>
                     <Col xs={24} md={12}>
                       <Form.Item
                         name="firstName"
                         label="First name"
-                        rules={[{ required: true }]}
+                        rules={[
+                          { required: true, message: "First name is required" },
+                          {
+                            validator: (_, value) => {
+                              const error = validateNameField("First name", value);
+                              return error ? Promise.reject(new Error(error)) : Promise.resolve();
+                            },
+                          },
+                        ]}
                       >
-                        <Input prefix={<UserOutlined />} />
+                        <Input 
+                          prefix={<UserOutlined />}
+                          onChange={() => form.validateFields(['firstName'])}
+                        />
                       </Form.Item>
                     </Col>
                     <Col xs={24} md={12}>
                       <Form.Item
                         name="lastName"
                         label="Last name"
-                        rules={[{ required: true }]}
+                        rules={[
+                          { required: true, message: "Last name is required" },
+                          {
+                            validator: (_, value) => {
+                              const error = validateNameField("Last name", value);
+                              return error ? Promise.reject(new Error(error)) : Promise.resolve();
+                            },
+                          },
+                        ]}
                       >
-                        <Input />
+                        <Input 
+                          onChange={() => form.validateFields(['lastName'])}
+                        />
                       </Form.Item>
                     </Col>
                     <Col xs={24} md={12}>
@@ -1444,7 +1492,24 @@ export default function UserManagement() {
 
                   {mode === "edit" && (
                     <div className="edit-footer-bar">
-                      <Button onClick={() => setMode("view")}>Cancel</Button>
+                      <Button 
+                        onClick={() => {
+                          // Reset form to original activeUser values
+                          if (activeUser) {
+                            form.setFieldsValue({
+                              firstName: activeUser.firstName || "",
+                              lastName: activeUser.lastName || "",
+                              middleInitial: activeUser.middleInitial || "",
+                              role: activeUser.role || "",
+                              email: activeUser.email || "",
+                              phoneNumber: activeUser.phoneNumber || "",
+                            });
+                          }
+                          setMode("view");
+                        }}
+                      >
+                        Cancel
+                      </Button>
                       <Button
                         type="primary"
                         htmlType="submit"

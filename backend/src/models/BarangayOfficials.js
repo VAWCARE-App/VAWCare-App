@@ -126,6 +126,11 @@ barangayOfficialSchema.add({
 
 // Pre-save middleware to hash password before saving
 barangayOfficialSchema.pre('save', async function(next) {
+    // Auto-uppercase middleInitial if provided
+    if (this.middleInitial) {
+        this.middleInitial = this.middleInitial.toUpperCase();
+    }
+
     if (!this.isModified('officialPassword')) return next();
 
     try {

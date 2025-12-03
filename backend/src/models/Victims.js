@@ -186,6 +186,11 @@ victimSchema.pre('validate', function (next) {
 // SINGLE pre-save middleware (MAIN FIX - removed duplicate that caused double hashing)
 victimSchema.pre('save', async function (next) {
     try {
+        // Auto-uppercase middleInitial if provided
+        if (this.middleInitial) {
+            this.middleInitial = this.middleInitial.toUpperCase();
+        }
+
         // Generate victimID if not set
         if (!this.victimID) {
             // Use a separate counter for anonymous accounts so we don't collide with existing VIC IDs

@@ -6,6 +6,34 @@ const IncidentReport = require('../models/IncidentReports');
 const dssService = require('../services/dssService');
 const { recordLog, extractKeyFields } = require('../middleware/logger');
 
+// Helper: validate text fields for repeated characters and gibberish
+function validateDataQuality(value, fieldName) {
+  if (!value) return null;
+  const strValue = String(value).trim();
+  
+  // Check for repeated characters (3+ in a row)
+  if (/(.)\1{2}/.test(strValue)) {
+    return `${fieldName} cannot contain repeated characters`;
+  }
+  
+  // Check for repeating patterns (gibberish)
+  if (/(.{2,3})\1{2,}/.test(strValue)) {
+    return `${fieldName} appears to be gibberish`;
+  }
+  
+  // Check vowel ratio
+  const letters = strValue.replace(/[^a-zA-Z]/g, '');
+  const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+  const isNameField = fieldName.toLowerCase().includes('name') || fieldName.toLowerCase().includes('officer');
+  const threshold = isNameField ? 3 : 10;
+  
+  if (letters.length > threshold && vowels.length / letters.length < 0.25) {
+    return `${fieldName} appears to be gibberish`;
+  }
+  
+  return null;
+}
+
 // Helper: map an incident type (or 4-class predictedRisk) to stored riskLevel
 function mapToStored(pred) {
   const p = (pred || '').toString().toLowerCase();
@@ -19,6 +47,23 @@ function mapToStored(pred) {
 exports.createCase = async (req, res, next) => {
   try {
     const payload = { ...(req.body || {}) };
+
+    // Validate data quality for key fields
+    const fieldsToValidate = [
+      { field: 'victimName', label: 'Victim name' },
+      { field: 'description', label: 'Description' },
+      { field: 'perpetrator', label: 'Perpetrator name' },
+      { field: 'assignedOfficer', label: 'Officer name' }
+    ];
+
+    for (const { field, label } of fieldsToValidate) {
+      if (payload[field]) {
+        const error = validateDataQuality(payload[field], label);
+        if (error) {
+          return res.status(400).json({ success: false, message: error });
+        }
+      }
+    }
 
     // If victimName wasn't provided by the client, try to resolve it from the report or victim record
     if (!payload.victimName || String(payload.victimName).trim() === '') {
@@ -187,6 +232,24 @@ exports.updateCase = async (req, res, next) => {
   try {
     const id = req.params.id;
     const updates = req.body;
+
+    // Validate data quality for key fields
+    const fieldsToValidate = [
+      { field: 'victimName', label: 'Victim name' },
+      { field: 'description', label: 'Description' },
+      { field: 'perpetrator', label: 'Perpetrator name' },
+      { field: 'assignedOfficer', label: 'Officer name' }
+    ];
+
+    for (const { field, label } of fieldsToValidate) {
+      if (updates[field]) {
+        const error = validateDataQuality(updates[field], label);
+        if (error) {
+          return res.status(400).json({ success: false, message: error });
+        }
+      }
+    }
+
     const query = mongoose.Types.ObjectId.isValid(id)
       ? { $or: [{ caseID: id }, { _id: id }], deleted: { $ne: true } }
       : { caseID: id, deleted: { $ne: true } };

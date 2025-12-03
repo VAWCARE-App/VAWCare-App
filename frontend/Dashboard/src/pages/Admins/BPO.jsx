@@ -82,6 +82,68 @@ export default function BPO() {
   const [cases, setCases] = useState([]);
   const [loadingCases, setLoadingCases] = useState(false);
   const [selectedCase, setSelectedCase] = useState(null);
+  const [validationErrors, setValidationErrors] = useState({});
+
+  // -------- Validation helper --------
+  const validateField = (fieldName, value) => {
+    if (!value || value.trim() === "") return null;
+    
+    const strValue = String(value).trim();
+    
+    // Get field label for error messages
+    const fieldLabels = {
+      respondent: "Respondent name",
+      applicant: "Applicant name",
+      statement: "Statement",
+      harmTo: "Name",
+      children: "Children names",
+      kagawadName: "Kagawad name",
+      address: "Address",
+    };
+    const fieldLabel = fieldLabels[fieldName] || fieldName;
+    
+    // Check for 3+ repeated characters (e.g., "aaa", "bbb")
+    if (/(.)\1{2}/.test(strValue)) {
+      return `${fieldLabel} cannot contain repeated characters`;
+    }
+    
+    // Check for repeating patterns (gibberish) (e.g., "abab", "xyzxyz", "asdasd")
+    if (/(.{1,3})\1{1,}/.test(strValue)) {
+      return `${fieldLabel} appears to be gibberish`;
+    }
+    
+    // Check vowel ratio for name fields (applicant, respondent, harmTo)
+    if (["applicant", "respondent", "harmTo", "kagawadName"].includes(fieldName)) {
+      const letters = strValue.replace(/[^a-zA-Z]/g, "");
+      const vowels = strValue.replace(/[^aeiouAEIOU]/g, "");
+      if (letters.length > 3 && vowels.length / letters.length < 0.25) {
+        return `${fieldLabel} appears to be gibberish`;
+      }
+    }
+    
+    // Check vowel ratio for statement field (10+ characters minimum)
+    if (fieldName === "statement") {
+      const letters = strValue.replace(/[^a-zA-Z]/g, "");
+      const vowels = strValue.replace(/[^aeiouAEIOU]/g, "");
+      if (letters.length >= 10 && vowels.length / letters.length < 0.25) {
+        return `${fieldLabel} appears to be gibberish`;
+      }
+    }
+    
+    return null;
+  };
+
+  const handleValidatedUpdate = (fieldName) => (e) => {
+    const v = e && e.target ? e.target.value : e;
+    const error = validateField(fieldName, v);
+    
+    setValidationErrors((prev) => ({
+      ...prev,
+      [fieldName]: error,
+    }));
+    
+    setForm((s) => ({ ...s, [fieldName]: v }));
+  };
 
   // -------- Fetch cases on mount --------
   useEffect(() => {
@@ -175,6 +237,8 @@ export default function BPO() {
       respondent: selectedCaseData.victimName || "",
       // Statement/description from the case
       statement: selectedCaseData.description || "",
+      // Address from case location
+      address: selectedCaseData.location || "",
       // Use incident type and other details to build more context
       harmTo: selectedCaseData.victimName ? selectedCaseData.victimName.split(" ")[0] : "",
       // Set applied on date to current date
@@ -210,6 +274,12 @@ export default function BPO() {
 
   // -------- save --------
   const submit = async () => {
+    // Check for validation errors
+    if (Object.values(validationErrors).some((err) => err !== null)) {
+      messageApi.error("Please fix validation errors before saving.");
+      return;
+    }
+    
     if (!form.respondent || !form.applicant) {
       messageApi.error(
         "Please fill in at least the respondent and applicant fields."
@@ -715,20 +785,38 @@ export default function BPO() {
               <Text strong>Name of Respondent: </Text>
               <Input
                 value={form.respondent}
-                onChange={update("respondent")}
-                style={{ ...underlineStyle, width: "68%" }}
+                onChange={handleValidatedUpdate("respondent")}
+                style={{ 
+                  ...underlineStyle, 
+                  width: "68%",
+                  borderColor: validationErrors.respondent ? "#ff4d4f" : undefined,
+                }}
                 placeholder="Respondent full name"
               />
+              {validationErrors.respondent && (
+                <div style={{ color: "#ff4d4f", fontSize: 12, marginTop: 4 }}>
+                  {validationErrors.respondent}
+                </div>
+              )}
             </div>
 
             <div style={{ marginBottom: 10 }}>
               <Text strong>Address: </Text>
               <Input
                 value={form.address}
-                onChange={update("address")}
-                style={{ ...underlineStyle, width: "75%" }}
+                onChange={handleValidatedUpdate("address")}
+                style={{ 
+                  ...underlineStyle, 
+                  width: "75%",
+                  borderColor: validationErrors.address ? "#ff4d4f" : undefined,
+                }}
                 placeholder="Respondent address"
               />
+              {validationErrors.address && (
+                <div style={{ color: "#ff4d4f", fontSize: 12, marginTop: 4 }}>
+                  {validationErrors.address}
+                </div>
+              )}
             </div>
 
             <Title level={3} style={{ textAlign: "center", marginTop: 8, marginBottom: 6 }}>
@@ -739,10 +827,19 @@ export default function BPO() {
               <Text strong>Applicant Name: </Text>
               <Input
                 value={form.applicant}
-                onChange={update("applicant")}
-                style={{ ...underlineStyle, width: 260 }}
+                onChange={handleValidatedUpdate("applicant")}
+                style={{ 
+                  ...underlineStyle, 
+                  width: 260,
+                  borderColor: validationErrors.applicant ? "#ff4d4f" : undefined,
+                }}
                 placeholder="Applicant"
               />
+              {validationErrors.applicant && (
+                <div style={{ color: "#ff4d4f", fontSize: 12, marginTop: 4 }}>
+                  {validationErrors.applicant}
+                </div>
+              )}
               <span style={{ marginLeft: 12 }}>applied for a BPO on</span>
               <DatePicker value={form.appliedOn} onChange={updateDate("appliedOn")} style={{ marginLeft: 8 }} />
               <span style={{ marginLeft: 8 }}>under oath stating that:</span>
@@ -752,17 +849,26 @@ export default function BPO() {
               <textarea
                 rows={3}
                 value={form.statement}
-                onChange={(e) => setForm((s) => ({ ...s, statement: e.target.value }))}
+                onChange={(e) => {
+                  const error = validateField("statement", e.target.value);
+                  setValidationErrors((prev) => ({ ...prev, statement: error }));
+                  setForm((s) => ({ ...s, statement: e.target.value }));
+                }}
                 placeholder="Statement / facts under oath…"
                 style={{
                   width: "100%",
                   padding: 8,
                   fontFamily: "'Times New Roman', Times, serif",
                   fontSize: 15,
-                  border: "1px solid #ccc",
+                  border: validationErrors.statement ? "2px solid #ff4d4f" : "1px solid #ccc",
                   resize: "vertical",
                 }}
               />
+              {validationErrors.statement && (
+                <div style={{ color: "#ff4d4f", fontSize: 12, marginTop: 4 }}>
+                  {validationErrors.statement}
+                </div>
+              )}
             </div>
 
             <div style={{ marginBottom: 8 }}>
@@ -774,17 +880,38 @@ export default function BPO() {
               </span>
               <Input
                 value={form.harmTo}
-                onChange={update("harmTo")}
-                style={{ ...underlineStyle, width: 120, marginLeft: 8, marginRight: 8 }}
+                onChange={handleValidatedUpdate("harmTo")}
+                style={{ 
+                  ...underlineStyle, 
+                  width: 120, 
+                  marginLeft: 8, 
+                  marginRight: 8,
+                  borderColor: validationErrors.harmTo ? "#ff4d4f" : undefined,
+                }}
                 placeholder="Her/His"
               />
+              {validationErrors.harmTo && (
+                <div style={{ color: "#ff4d4f", fontSize: 12, marginTop: 4 }}>
+                  {validationErrors.harmTo}
+                </div>
+              )}
               <span>and/or her child/children namely:</span>
               <Input
                 value={form.children}
-                onChange={update("children")}
-                style={{ ...underlineStyle, width: 360, marginLeft: 8 }}
+                onChange={handleValidatedUpdate("children")}
+                style={{ 
+                  ...underlineStyle, 
+                  width: 360, 
+                  marginLeft: 8,
+                  borderColor: validationErrors.children ? "#ff4d4f" : undefined,
+                }}
                 placeholder="Names of children"
               />
+              {validationErrors.children && (
+                <div style={{ color: "#ff4d4f", fontSize: 12, marginTop: 4 }}>
+                  {validationErrors.children}
+                </div>
+              )}
             </div>
 
             <div style={{ marginTop: 12 }}>
@@ -826,10 +953,20 @@ export default function BPO() {
                   <Text strong>Copy received by:</Text>
                   <Input
                     value={form.receivedBy}
-                    onChange={update("receivedBy")}
-                    style={{ ...underlineStyle, width: "100%", marginTop: 8 }}
+                    onChange={handleValidatedUpdate("receivedBy")}
+                    style={{ 
+                      ...underlineStyle, 
+                      width: "100%", 
+                      marginTop: 8,
+                      borderColor: validationErrors.receivedBy ? "#ff4d4f" : undefined,
+                    }}
                     placeholder="Printed name"
                   />
+                  {validationErrors.receivedBy && (
+                    <div style={{ color: "#ff4d4f", fontSize: 12, marginTop: 4 }}>
+                      {validationErrors.receivedBy}
+                    </div>
+                  )}
                   <div style={{ fontSize: 12, marginTop: 6 }}>
                     Signature over Printed Name
                   </div>
@@ -848,10 +985,20 @@ export default function BPO() {
                     <Text strong>Served by:</Text>
                     <Input
                       value={form.servedBy}
-                      onChange={update("servedBy")}
-                      style={{ ...underlineStyle, width: "100%", marginTop: 8 }}
+                      onChange={handleValidatedUpdate("servedBy")}
+                      style={{ 
+                        ...underlineStyle, 
+                        width: "100%", 
+                        marginTop: 8,
+                        borderColor: validationErrors.servedBy ? "#ff4d4f" : undefined,
+                      }}
                       placeholder="Printed name"
                     />
+                    {validationErrors.servedBy && (
+                      <div style={{ color: "#ff4d4f", fontSize: 12, marginTop: 4 }}>
+                        {validationErrors.servedBy}
+                      </div>
+                    )}
                     <div style={{ fontSize: 12, marginTop: 6 }}>
                       Signature over Printed Name
                     </div>

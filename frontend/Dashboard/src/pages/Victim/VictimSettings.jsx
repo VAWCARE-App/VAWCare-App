@@ -708,7 +708,7 @@ export default function VictimSettings() {
 
             <Divider style={{ borderColor: "rgba(122,90,248,0.15)" }} />
 
-            <Form layout="vertical" form={form} onFinish={onSave} onValuesChange={handleFormValuesChange}>
+            <Form layout="vertical" form={form} onFinish={onSave} validateTrigger={['onChange', 'onBlur']} onValuesChange={handleFormValuesChange}>
               <Row gutter={[16, 12]}>
                 <Col xs={24} md={12}>
                   <Form.Item
@@ -722,7 +722,7 @@ export default function VictimSettings() {
                         validator: (_, value) => {
                           if (!value) return Promise.resolve();
                           const strValue = String(value).trim();
-                          if (/(.)\1\1/.test(strValue)) {
+                          if (/(.)\1{2}/.test(strValue)) {
                             return Promise.reject(new Error('First name cannot contain repeated characters'));
                           }
                           if ((/(.{2,3})\1{2,}/.test(strValue))) {
@@ -757,7 +757,7 @@ export default function VictimSettings() {
                         validator: (_, value) => {
                           if (!value) return Promise.resolve();
                           const strValue = String(value).trim();
-                          if (/(.)\1\1/.test(strValue)) {
+                          if (/(.)\1{2}/.test(strValue)) {
                             return Promise.reject(new Error('Last name cannot contain repeated characters'));
                           }
                           if ((/(.{2,3})\1{2,}/.test(strValue))) {
@@ -828,7 +828,7 @@ export default function VictimSettings() {
                         validator: (_, value) => {
                           if (!value) return Promise.resolve();
                           const strValue = String(value).trim();
-                          if (/(.)\1\1/.test(strValue)) {
+                          if (/(.)\1{2}/.test(strValue)) {
                             return Promise.reject(new Error('Contact name cannot contain repeated characters'));
                           }
                           if ((/(.{2,3})\1{2,}/.test(strValue))) {
@@ -872,7 +872,7 @@ export default function VictimSettings() {
                         validator: (_, value) => {
                           if (!value) return Promise.resolve();
                           const strValue = String(value).trim();
-                          if (/(.)\1\1/.test(strValue)) {
+                          if (/(.)\1{2}/.test(strValue)) {
                             return Promise.reject(new Error('Relationship cannot contain repeated characters'));
                           }
                           if ((/(.{2,3})\1{2,}/.test(strValue))) {

@@ -1298,6 +1298,7 @@ export default function ReportManagement() {
                   form={form}
                   layout="vertical"
                   onFinish={handleUpdateReport}
+                  validateTrigger={['onChange', 'onBlur']}
                   disabled={mode === "view"}
                 >
                   <Row gutter={[10, 0]}>
@@ -1380,8 +1381,32 @@ export default function ReportManagement() {
                       <Input type="hidden" />
                     </Form.Item>
                     <Col xs={24}>
-                      <Form.Item name="perpetrator" label="Perpetrator">
+                      <Form.Item 
+                        name="perpetrator" 
+                        label="Perpetrator"
+                        rules={[
+                          {
+                            validator: (_, value) => {
+                              if (!value) return Promise.resolve();
+                              const strValue = String(value).trim();
+                              if (/(.)\1{2}/.test(strValue)) {
+                                return Promise.reject(new Error('Perpetrator name cannot contain repeated characters'));
+                              }
+                              if (/(.{2,3})\1{2,}/.test(strValue)) {
+                                return Promise.reject(new Error('Perpetrator name appears to be gibberish'));
+                              }
+                              const letters = strValue.replace(/[^a-zA-Z]/g, '');
+                              const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+                              if (letters.length > 3 && vowels.length / letters.length < 0.25) {
+                                return Promise.reject(new Error('Perpetrator name appears to be gibberish'));
+                              }
+                              return Promise.resolve();
+                            }
+                          }
+                        ]}
+                      >
                         <Input 
+                          onChange={() => form.validateFields(['perpetrator'])}
                           onKeyPress={(e) => {
                             if (/[0-9]/.test(e.key)) {
                               e.preventDefault();
@@ -1391,15 +1416,59 @@ export default function ReportManagement() {
                       </Form.Item>
                     </Col>
                     <Col xs={24}>
-                      <Form.Item name="description" label="Description">
-                        <Input.TextArea rows={4} />
+                      <Form.Item 
+                        name="description" 
+                        label="Description"
+                        rules={[
+                          {
+                            validator: (_, value) => {
+                              if (!value) return Promise.resolve();
+                              const strValue = String(value).trim();
+                              if (/(.)\1{2}/.test(strValue)) {
+                                return Promise.reject(new Error('Description cannot contain repeated characters'));
+                              }
+                              if (/(.{2,3})\1{2,}/.test(strValue)) {
+                                return Promise.reject(new Error('Description appears to be gibberish'));
+                              }
+                              const letters = strValue.replace(/[^a-zA-Z]/g, '');
+                              const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+                              if (letters.length > 10 && vowels.length / letters.length < 0.25) {
+                                return Promise.reject(new Error('Description appears to be gibberish'));
+                              }
+                              return Promise.resolve();
+                            }
+                          }
+                        ]}
+                      >
+                        <Input.TextArea 
+                          rows={4}
+                          onChange={() => form.validateFields(['description'])}
+                        />
                       </Form.Item>
                     </Col>
                   </Row>
 
                   {mode === "edit" && (
                     <div className="edit-footer-bar">
-                      <Button onClick={() => setMode("view")}>Cancel</Button>
+                      <Button onClick={() => {
+                        // Reset form to original activeReport values
+                        let locationPurok = "";
+                        const location = activeReport?.location || "";
+                        if (location.startsWith("Purok")) {
+                          const parts = location.split(", ");
+                          locationPurok = parts[0];
+                        }
+                        form.setFieldsValue({
+                          incidentType: activeReport?.incidentType || "",
+                          locationPurok: locationPurok,
+                          locationAddress: "Bonfal Proper, Bayombong, Nueva Vizcaya",
+                          location: activeReport?.location || "",
+                          description: activeReport?.description || "",
+                          perpetrator: activeReport?.perpetrator || "",
+                          status: normalizeStatus(activeReport?.status),
+                        });
+                        setMode("view");
+                      }}>Cancel</Button>
                       <Button
                         type="primary"
                         htmlType="submit"

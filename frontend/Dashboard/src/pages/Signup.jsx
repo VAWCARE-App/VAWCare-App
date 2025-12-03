@@ -530,6 +530,7 @@ export default function Signup() {
               form={form}
               layout="vertical"
               initialValues={{ victimAccount: "anonymous" }}
+              validateTrigger={['onChange', 'onBlur']}
               onValuesChange={(changedValues) => {
                 console.log("Form onValuesChange - changed values:", changedValues);
                 if (changedValues.victimAccount) {
@@ -626,7 +627,7 @@ export default function Signup() {
                               if (!value) return Promise.resolve();
                               const strValue = String(value).trim();
                               // Check for repeated characters (3+ in a row)
-                              if (/(.)\1{2,}/.test(strValue)) {
+                              if (/(.)\1{2}/.test(strValue)) {
                                 return Promise.reject(new Error('Username cannot contain repeated characters'));
                               }
                               // Check for repeating patterns (gibberish)
@@ -672,7 +673,7 @@ export default function Signup() {
                                   if (!value) return Promise.resolve();
                                   const strValue = String(value).trim();
                                   // Check for repeated characters
-                                  if (/(.)\1{2,}/.test(strValue)) {
+                                  if (/(.)\1{2}/.test(strValue)) {
                                     return Promise.reject(new Error('Email cannot contain repeated characters'));
                                   }
                                   // Check for repeating patterns
@@ -770,7 +771,7 @@ export default function Signup() {
                                 if (!value) return Promise.resolve();
                                 const strValue = String(value).trim();
                                 // Check for repeated characters (3+ in a row)
-                                if (/(.)\1{2,}/.test(strValue)) {
+                                if (/(.)\1{2}/.test(strValue)) {
                                   return Promise.reject(new Error('First name cannot contain repeated characters'));
                                 }
                                 // Check for repeating patterns
@@ -807,7 +808,7 @@ export default function Signup() {
                                 if (!value) return Promise.resolve();
                                 const strValue = String(value).trim();
                                 // Check for repeated characters (3+ in a row)
-                                if (/(.)\1{2,}/.test(strValue)) {
+                                if (/(.)\1{2}/.test(strValue)) {
                                   return Promise.reject(new Error('Last name cannot contain repeated characters'));
                                 }
                                 // Check for repeating patterns
@@ -925,7 +926,7 @@ export default function Signup() {
                                 if (!value) return Promise.resolve();
                                 const strValue = String(value).trim();
                                 // Check for repeated characters (3+ in a row)
-                                if (/(.)\1{2,}/.test(strValue)) {
+                                if (/(.)\1{2}/.test(strValue)) {
                                   return Promise.reject(new Error('Contact name cannot contain repeated characters'));
                                 }
                                 // Check for repeating patterns
@@ -961,7 +962,7 @@ export default function Signup() {
                                 if (!value) return Promise.resolve();
                                 const strValue = String(value).trim();
                                 // Check for repeated characters (3+ in a row)
-                                if (/(.)\1{2,}/.test(strValue)) {
+                                if (/(.)\1{2}/.test(strValue)) {
                                   return Promise.reject(new Error('Relationship cannot contain repeated characters'));
                                 }
                                 // Check for repeating patterns

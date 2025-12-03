@@ -840,6 +840,7 @@ export default function CaseDetail() {
           form={form}
           layout="vertical"
           style={{ marginTop: 4 }}
+          validateTrigger={['onChange', 'onBlur']}
           initialValues={{
             status: caseData?.status,
             riskLevel: caseData?.riskLevel,
@@ -863,8 +864,32 @@ export default function CaseDetail() {
               />
             </Form.Item>
 
-            <Form.Item name="victimName" label="Victim Name">
+            <Form.Item 
+              name="victimName" 
+              label="Victim Name"
+              rules={[
+                {
+                  validator: (_, value) => {
+                    if (!value) return Promise.resolve();
+                    const strValue = String(value).trim();
+                    if (/(.)\1{2}/.test(strValue)) {
+                      return Promise.reject(new Error('Victim name cannot contain repeated characters'));
+                    }
+                    if (/(.{2,3})\1{2,}/.test(strValue)) {
+                      return Promise.reject(new Error('Victim name appears to be gibberish'));
+                    }
+                    const letters = strValue.replace(/[^a-zA-Z]/g, '');
+                    const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+                    if (letters.length > 3 && vowels.length / letters.length < 0.25) {
+                      return Promise.reject(new Error('Victim name appears to be gibberish'));
+                    }
+                    return Promise.resolve();
+                  }
+                }
+              ]}
+            >
               <Input 
+                onChange={() => form.validateFields(['victimName'])}
                 onKeyPress={(e) => {
                   if (/[0-9]/.test(e.key)) {
                     e.preventDefault();
@@ -885,8 +910,32 @@ export default function CaseDetail() {
               />
             </Form.Item>
 
-            <Form.Item name="perpetrator" label="Perpetrator">
+            <Form.Item 
+              name="perpetrator" 
+              label="Perpetrator"
+              rules={[
+                {
+                  validator: (_, value) => {
+                    if (!value) return Promise.resolve();
+                    const strValue = String(value).trim();
+                    if (/(.)\1{2}/.test(strValue)) {
+                      return Promise.reject(new Error('Perpetrator name cannot contain repeated characters'));
+                    }
+                    if (/(.{2,3})\1{2,}/.test(strValue)) {
+                      return Promise.reject(new Error('Perpetrator name appears to be gibberish'));
+                    }
+                    const letters = strValue.replace(/[^a-zA-Z]/g, '');
+                    const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+                    if (letters.length > 3 && vowels.length / letters.length < 0.25) {
+                      return Promise.reject(new Error('Perpetrator name appears to be gibberish'));
+                    }
+                    return Promise.resolve();
+                  }
+                }
+              ]}
+            >
               <Input 
+                onChange={() => form.validateFields(['perpetrator'])}
                 onKeyPress={(e) => {
                   if (/[0-9]/.test(e.key)) {
                     e.preventDefault();
@@ -961,8 +1010,32 @@ export default function CaseDetail() {
               />
             </Form.Item>
 
-            <Form.Item name="assignedOfficer" label="Assigned Officer">
+            <Form.Item 
+              name="assignedOfficer" 
+              label="Assigned Officer"
+              rules={[
+                {
+                  validator: (_, value) => {
+                    if (!value) return Promise.resolve();
+                    const strValue = String(value).trim();
+                    if (/(.)\1{2}/.test(strValue)) {
+                      return Promise.reject(new Error('Officer name cannot contain repeated characters'));
+                    }
+                    if (/(.{2,3})\1{2,}/.test(strValue)) {
+                      return Promise.reject(new Error('Officer name appears to be gibberish'));
+                    }
+                    const letters = strValue.replace(/[^a-zA-Z]/g, '');
+                    const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+                    if (letters.length > 3 && vowels.length / letters.length < 0.25) {
+                      return Promise.reject(new Error('Officer name appears to be gibberish'));
+                    }
+                    return Promise.resolve();
+                  }
+                }
+              ]}
+            >
               <Input 
+                onChange={() => form.validateFields(['assignedOfficer'])}
                 onKeyPress={(e) => {
                   if (/[0-9]/.test(e.key)) {
                     e.preventDefault();
@@ -975,8 +1048,31 @@ export default function CaseDetail() {
               name="description"
               label="Description"
               style={{ gridColumn: "1 / -1" }}
+              rules={[
+                {
+                  validator: (_, value) => {
+                    if (!value) return Promise.resolve();
+                    const strValue = String(value).trim();
+                    if (/(.)\1{2}/.test(strValue)) {
+                      return Promise.reject(new Error('Description cannot contain repeated characters'));
+                    }
+                    if (/(.{2,3})\1{2,}/.test(strValue)) {
+                      return Promise.reject(new Error('Description appears to be gibberish'));
+                    }
+                    const letters = strValue.replace(/[^a-zA-Z]/g, '');
+                    const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+                    if (letters.length > 10 && vowels.length / letters.length < 0.25) {
+                      return Promise.reject(new Error('Description appears to be gibberish'));
+                    }
+                    return Promise.resolve();
+                  }
+                }
+              ]}
             >
-              <Input.TextArea rows={4} />
+              <Input.TextArea 
+                rows={4}
+                onChange={() => form.validateFields(['description'])}
+              />
             </Form.Item>
           </div>
         </Form>

@@ -87,6 +87,7 @@ export default function CreateOfficial() {
 
   const onFinish = async (values) => {
     try {
+      const purok = values.purok || "Purok 1";
       const payload = {
         officialID: values.officialID,
         officialEmail: values.email,
@@ -96,9 +97,7 @@ export default function CreateOfficial() {
         lastName: values.lastName,
         position: values.position,
         contactNumber: values.contactNumber,
-        barangay: values.barangay,
-        city: values.city,
-        province: values.province,
+        location: `${purok}, Bonfal Proper, Bayombong, Nueva Vizcaya`,
         photoData: avatar || undefined,
         photoMimeType: photoMimeType || undefined,
       };
@@ -282,6 +281,7 @@ export default function CreateOfficial() {
               form={form}
               layout="vertical"
               onFinish={onFinish}
+              validateTrigger={['onChange', 'onBlur']}
               style={{ marginTop: 6 }}
             >
               <Row gutter={[16, 0]}>
@@ -369,7 +369,27 @@ export default function CreateOfficial() {
                   <Form.Item
                     name="firstName"
                     label="First name*"
-                    rules={[{ required: true }]}
+                    rules={[
+                      { required: true, message: "First name is required" },
+                      {
+                        validator: (_, value) => {
+                          if (!value) return Promise.resolve();
+                          const strValue = String(value).trim();
+                          if (/(.)\1{2}/.test(strValue)) {
+                            return Promise.reject(new Error("First name cannot contain repeated characters"));
+                          }
+                          if (/(.{2,3})\1{2,}/.test(strValue)) {
+                            return Promise.reject(new Error("First name appears to be gibberish"));
+                          }
+                          const letters = strValue.replace(/[^a-zA-Z]/g, '');
+                          const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+                          if (letters.length > 3 && vowels.length / letters.length < 0.25) {
+                            return Promise.reject(new Error("First name appears to be gibberish"));
+                          }
+                          return Promise.resolve();
+                        },
+                      },
+                    ]}
                   >
                     <Input 
                       prefix={<UserOutlined />}
@@ -378,6 +398,7 @@ export default function CreateOfficial() {
                           e.preventDefault();
                         }
                       }}
+                      onChange={() => form.validateFields(['firstName'])}
                     />
                   </Form.Item>
                 </Col>
@@ -390,6 +411,12 @@ export default function CreateOfficial() {
                           e.preventDefault();
                         }
                       }}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value) {
+                          form.setFieldsValue({ middleInitial: value.toUpperCase() });
+                        }
+                      }}
                     />
                   </Form.Item>
                 </Col>
@@ -397,7 +424,27 @@ export default function CreateOfficial() {
                   <Form.Item
                     name="lastName"
                     label="Last name*"
-                    rules={[{ required: true }]}
+                    rules={[
+                      { required: true, message: "Last name is required" },
+                      {
+                        validator: (_, value) => {
+                          if (!value) return Promise.resolve();
+                          const strValue = String(value).trim();
+                          if (/(.)\1{2}/.test(strValue)) {
+                            return Promise.reject(new Error("Last name cannot contain repeated characters"));
+                          }
+                          if (/(.{2,3})\1{2,}/.test(strValue)) {
+                            return Promise.reject(new Error("Last name appears to be gibberish"));
+                          }
+                          const letters = strValue.replace(/[^a-zA-Z]/g, '');
+                          const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+                          if (letters.length > 3 && vowels.length / letters.length < 0.25) {
+                            return Promise.reject(new Error("Last name appears to be gibberish"));
+                          }
+                          return Promise.resolve();
+                        },
+                      },
+                    ]}
                   >
                     <Input 
                       onKeyPress={(e) => {
@@ -405,41 +452,37 @@ export default function CreateOfficial() {
                           e.preventDefault();
                         }
                       }}
+                      onChange={() => form.validateFields(['lastName'])}
                     />
                   </Form.Item>
                 </Col>
 
-                <Col xs={24} md={8}>
-                  <Form.Item name="barangay" label="Barangay / Unit*" rules={[{ required: true }]}>
-                    <Input 
-                      onKeyPress={(e) => {
-                        if (/[0-9]/.test(e.key)) {
-                          e.preventDefault();
-                        }
-                      }}
-                    />
+                <Col xs={24} sm={12} md={6}>
+                  <Form.Item name="purok" label="Purok*" rules={[{ required: true, message: "Please select a purok" }]}>
+                    <Select placeholder="Select purok">
+                      <Select.Option value="Purok 1">Purok 1</Select.Option>
+                      <Select.Option value="Purok 2">Purok 2</Select.Option>
+                      <Select.Option value="Purok 3">Purok 3</Select.Option>
+                      <Select.Option value="Purok 4">Purok 4</Select.Option>
+                      <Select.Option value="Purok 5">Purok 5</Select.Option>
+                      <Select.Option value="Purok 6">Purok 6</Select.Option>
+                      <Select.Option value="Purok 7">Purok 7</Select.Option>
+                    </Select>
                   </Form.Item>
                 </Col>
-                <Col xs={24} md={8}>
-                  <Form.Item name="city" label="City / Municipality">
-                    <Input 
-                      onKeyPress={(e) => {
-                        if (/[0-9]/.test(e.key)) {
-                          e.preventDefault();
-                        }
-                      }}
-                    />
+                <Col xs={24} sm={12} md={6}>
+                  <Form.Item name="barangay" label="Barangay / Unit" initialValue="Bonfal Proper">
+                    <Input disabled />
                   </Form.Item>
                 </Col>
-                <Col xs={24} md={8}>
-                  <Form.Item name="province" label="Province">
-                    <Input 
-                      onKeyPress={(e) => {
-                        if (/[0-9]/.test(e.key)) {
-                          e.preventDefault();
-                        }
-                      }}
-                    />
+                <Col xs={24} sm={12} md={6}>
+                  <Form.Item name="city" label="City / Municipality" initialValue="Bayombong">
+                    <Input disabled />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={12} md={6}>
+                  <Form.Item name="province" label="Province" initialValue="Nueva Vizcaya">
+                    <Input disabled />
                   </Form.Item>
                 </Col>
 

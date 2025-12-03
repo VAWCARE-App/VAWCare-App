@@ -361,6 +361,7 @@ export default function Report() {
             <Form
               form={form}
               layout="vertical"
+              validateTrigger={['onChange', 'onBlur']}
               onFinish={handleFinish}
             >
               <Row gutter={[16, 0]}>
@@ -458,7 +459,7 @@ export default function Report() {
                       const strValue = String(value).trim();
                       
                       // Check for repeated characters (3+ in a row)
-                      if (/(.)\1{2,}/.test(strValue)) {
+                      if (/(.)\1{2}/.test(strValue)) {
                         return Promise.reject(new Error('Perpetrator name cannot contain repeated characters'));
                       }
                       
@@ -516,7 +517,7 @@ export default function Report() {
                       const strValue = String(value).trim();
                       
                       // Check for repeated characters (3+ in a row)
-                      if (/(.)\1{2,}/.test(strValue)) {
+                      if (/(.)\1{2}/.test(strValue)) {
                         return Promise.reject(new Error('Description cannot contain repeated characters'));
                       }
                       

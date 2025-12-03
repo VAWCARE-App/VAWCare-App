@@ -784,7 +784,7 @@
 
             <Divider style={{ borderColor: "rgba(122,90,248,0.15)" }} />
 
-            <Form layout="vertical" form={form} onFinish={onSave} onValuesChange={handleFormValuesChange}>
+            <Form layout="vertical" form={form} onFinish={onSave} onValuesChange={handleFormValuesChange} validateTrigger={['onChange', 'onBlur']}>
               <Row gutter={[16, 12]}>
                 <Col xs={24} md={12}>
                   <Form.Item name="officialID" label="Official ID">
@@ -810,7 +810,7 @@
                         validator: (_, value) => {
                           if (!value) return Promise.resolve();
                           const strValue = String(value).trim();
-                          if (/(.)\1\1/.test(strValue)) {
+                          if (/(.)\1{2}/.test(strValue)) {
                             return Promise.reject(new Error('First name cannot contain repeated characters'));
                           }
                           if ((/(.{2,3})\1{2,}/.test(strValue))) {
@@ -826,7 +826,7 @@
                       }
                     ]}
                   >
-                    <Input prefix={<UserOutlined />} placeholder="First name" onKeyPress={(e) => {
+                    <Input prefix={<UserOutlined />} placeholder="First name" onChange={() => form.validateFields(['firstName'])} onKeyPress={(e) => {
                       if (!/^[a-zA-Z\s-]$/.test(e.key)) {
                         e.preventDefault();
                       }
@@ -846,7 +846,7 @@
                         validator: (_, value) => {
                           if (!value) return Promise.resolve();
                           const strValue = String(value).trim();
-                          if (/(.)\1\1/.test(strValue)) {
+                          if (/(.)\1{2}/.test(strValue)) {
                             return Promise.reject(new Error('Last name cannot contain repeated characters'));
                           }
                           if ((/(.{2,3})\1{2,}/.test(strValue))) {
@@ -862,7 +862,7 @@
                       }
                     ]}
                   >
-                    <Input prefix={<UserOutlined />} placeholder="Last name" onKeyPress={(e) => {
+                    <Input prefix={<UserOutlined />} placeholder="Last name" onChange={() => form.validateFields(['lastName'])} onKeyPress={(e) => {
                       if (!/^[a-zA-Z\s-]$/.test(e.key)) {
                         e.preventDefault();
                       }

@@ -114,6 +114,11 @@ export default function CaseManagement() {
     chip: "#fff0f7",
   };
 
+  const generateCaseID = () => {
+    const r = Math.floor(100 + Math.random() * 900);
+    addForm.setFieldsValue({ caseID: `CASE${r}` });
+  };
+
   const fetchAllCases = async () => {
     try {
       setLoading(true);
@@ -1821,14 +1826,35 @@ export default function CaseManagement() {
               }
             }}
           >
-            <Form form={form} layout="vertical">
+            <Form form={form} layout="vertical" validateTrigger={['onChange', 'onBlur']}>
               <Form.Item
                 name="victimName"
                 label="Victim Name"
-                rules={[{ required: true, message: "Victim Name is required" }]}
+                rules={[
+                  { required: true, message: "Victim Name is required" },
+                  {
+                    validator: (_, value) => {
+                      if (!value) return Promise.resolve();
+                      const strValue = String(value).trim();
+                      if (/(.)\1{2}/.test(strValue)) {
+                        return Promise.reject(new Error('Victim name cannot contain repeated characters'));
+                      }
+                      if (/(.{2,3})\1{2,}/.test(strValue)) {
+                        return Promise.reject(new Error('Victim name appears to be gibberish'));
+                      }
+                      const letters = strValue.replace(/[^a-zA-Z]/g, '');
+                      const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+                      if (letters.length > 3 && vowels.length / letters.length < 0.25) {
+                        return Promise.reject(new Error('Victim name appears to be gibberish'));
+                      }
+                      return Promise.resolve();
+                    }
+                  }
+                ]}
               >
                 <Input 
                   disabled={isViewMode}
+                  onChange={() => form.validateFields(['victimName'])}
                   onKeyPress={(e) => {
                     if (/[0-9]/.test(e.key)) {
                       e.preventDefault();
@@ -1881,12 +1907,63 @@ export default function CaseManagement() {
                 </Col>
               </Row>
               <Form.Item name="location" hidden><Input type="hidden" /></Form.Item>
-              <Form.Item name="description" label="Description">
-                <Input.TextArea rows={3} disabled={isViewMode} />
+              <Form.Item 
+                name="description" 
+                label="Description"
+                rules={[
+                  {
+                    validator: (_, value) => {
+                      if (!value) return Promise.resolve();
+                      const strValue = String(value).trim();
+                      if (/(.)\1{2}/.test(strValue)) {
+                        return Promise.reject(new Error('Description cannot contain repeated characters'));
+                      }
+                      if (/(.{2,3})\1{2,}/.test(strValue)) {
+                        return Promise.reject(new Error('Description appears to be gibberish'));
+                      }
+                      const letters = strValue.replace(/[^a-zA-Z]/g, '');
+                      const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+                      if (letters.length > 10 && vowels.length / letters.length < 0.25) {
+                        return Promise.reject(new Error('Description appears to be gibberish'));
+                      }
+                      return Promise.resolve();
+                    }
+                  }
+                ]}
+              >
+                <Input.TextArea 
+                  rows={3} 
+                  disabled={isViewMode}
+                  onChange={() => form.validateFields(['description'])}
+                />
               </Form.Item>
-              <Form.Item name="perpetrator" label="Perpetrator">
+              <Form.Item 
+                name="perpetrator" 
+                label="Perpetrator"
+                rules={[
+                  {
+                    validator: (_, value) => {
+                      if (!value) return Promise.resolve();
+                      const strValue = String(value).trim();
+                      if (/(.)\1{2}/.test(strValue)) {
+                        return Promise.reject(new Error('Perpetrator name cannot contain repeated characters'));
+                      }
+                      if (/(.{2,3})\1{2,}/.test(strValue)) {
+                        return Promise.reject(new Error('Perpetrator name appears to be gibberish'));
+                      }
+                      const letters = strValue.replace(/[^a-zA-Z]/g, '');
+                      const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+                      if (letters.length > 3 && vowels.length / letters.length < 0.25) {
+                        return Promise.reject(new Error('Perpetrator name appears to be gibberish'));
+                      }
+                      return Promise.resolve();
+                    }
+                  }
+                ]}
+              >
                 <Input 
                   disabled={isViewMode}
+                  onChange={() => form.validateFields(['perpetrator'])}
                   onKeyPress={(e) => {
                     if (/[0-9]/.test(e.key)) {
                       e.preventDefault();
@@ -1894,9 +1971,33 @@ export default function CaseManagement() {
                   }}
                 />
               </Form.Item>
-              <Form.Item name="assignedOfficer" label="Assigned Officer">
+              <Form.Item 
+                name="assignedOfficer" 
+                label="Assigned Officer"
+                rules={[
+                  {
+                    validator: (_, value) => {
+                      if (!value) return Promise.resolve();
+                      const strValue = String(value).trim();
+                      if (/(.)\1{2}/.test(strValue)) {
+                        return Promise.reject(new Error('Officer name cannot contain repeated characters'));
+                      }
+                      if (/(.{2,3})\1{2,}/.test(strValue)) {
+                        return Promise.reject(new Error('Officer name appears to be gibberish'));
+                      }
+                      const letters = strValue.replace(/[^a-zA-Z]/g, '');
+                      const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+                      if (letters.length > 3 && vowels.length / letters.length < 0.25) {
+                        return Promise.reject(new Error('Officer name appears to be gibberish'));
+                      }
+                      return Promise.resolve();
+                    }
+                  }
+                ]}
+              >
                 <Input 
                   disabled={isViewMode}
+                  onChange={() => form.validateFields(['assignedOfficer'])}
                   onKeyPress={(e) => {
                     if (/[0-9]/.test(e.key)) {
                       e.preventDefault();
@@ -1976,7 +2077,7 @@ export default function CaseManagement() {
               }
             }}
           >
-            <Form form={addForm} layout="vertical">
+            <Form form={addForm} layout="vertical" validateTrigger={['onChange', 'onBlur']}>
               {/* Report Selection Section */}
               <Card 
                 size="small" 
@@ -2046,6 +2147,15 @@ export default function CaseManagement() {
                     <Input 
                       placeholder="e.g., CASE001" 
                       size="large"
+                      suffix={
+                        <Button 
+                          type="primary" 
+                          onClick={generateCaseID} 
+                          style={{ width: 100, marginRight: -8, background: BRAND.violet }}
+                        >
+                          Generate
+                        </Button>
+                      }
                     />
                   </Form.Item>
                 </Col>
@@ -2079,11 +2189,32 @@ export default function CaseManagement() {
                   <Form.Item
                     name="victimName"
                     label={<Text strong>Victim Name</Text>}
-                    rules={[{ required: true, message: "Victim name is required" }]}
+                    rules={[
+                      { required: true, message: "Victim name is required" },
+                      {
+                        validator: (_, value) => {
+                          if (!value) return Promise.resolve();
+                          const strValue = String(value).trim();
+                          if (/(.)\1{2}/.test(strValue)) {
+                            return Promise.reject(new Error('Victim name cannot contain repeated characters'));
+                          }
+                          if (/(.{2,3})\1{2,}/.test(strValue)) {
+                            return Promise.reject(new Error('Victim name appears to be gibberish'));
+                          }
+                          const letters = strValue.replace(/[^a-zA-Z]/g, '');
+                          const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+                          if (letters.length > 3 && vowels.length / letters.length < 0.25) {
+                            return Promise.reject(new Error('Victim name appears to be gibberish'));
+                          }
+                          return Promise.resolve();
+                        }
+                      }
+                    ]}
                   >
                     <Input 
                       placeholder="Enter victim's full name" 
                       size="large"
+                      onChange={() => addForm.validateFields(['victimName'])}
                       onKeyPress={(e) => {
                         if (/[0-9]/.test(e.key)) {
                           e.preventDefault();
@@ -2183,12 +2314,33 @@ export default function CaseManagement() {
               <Form.Item
                 name="description"
                 label={<Text strong>Description</Text>}
-                rules={[{ required: true, message: "Description is required" }]}
+                rules={[
+                  { required: true, message: "Description is required" },
+                  {
+                    validator: (_, value) => {
+                      if (!value) return Promise.resolve();
+                      const strValue = String(value).trim();
+                      if (/(.)\1{2}/.test(strValue)) {
+                        return Promise.reject(new Error('Description cannot contain repeated characters'));
+                      }
+                      if (/(.{2,3})\1{2,}/.test(strValue)) {
+                        return Promise.reject(new Error('Description appears to be gibberish'));
+                      }
+                      const letters = strValue.replace(/[^a-zA-Z]/g, '');
+                      const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+                      if (letters.length > 10 && vowels.length / letters.length < 0.25) {
+                        return Promise.reject(new Error('Description appears to be gibberish'));
+                      }
+                      return Promise.resolve();
+                    }
+                  }
+                ]}
               >
                 <Input.TextArea 
                   rows={4} 
                   placeholder="Provide detailed description of the incident..."
                   style={{ borderRadius: 8 }}
+                  onChange={() => addForm.validateFields(['description'])}
                 />
               </Form.Item>
 
@@ -2198,10 +2350,31 @@ export default function CaseManagement() {
                   <Form.Item 
                     name="perpetrator" 
                     label={<Text strong>Perpetrator</Text>}
+                    rules={[
+                      {
+                        validator: (_, value) => {
+                          if (!value) return Promise.resolve();
+                          const strValue = String(value).trim();
+                          if (/(.)\1{2}/.test(strValue)) {
+                            return Promise.reject(new Error('Perpetrator name cannot contain repeated characters'));
+                          }
+                          if (/(.{2,3})\1{2,}/.test(strValue)) {
+                            return Promise.reject(new Error('Perpetrator name appears to be gibberish'));
+                          }
+                          const letters = strValue.replace(/[^a-zA-Z]/g, '');
+                          const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+                          if (letters.length > 3 && vowels.length / letters.length < 0.25) {
+                            return Promise.reject(new Error('Perpetrator name appears to be gibberish'));
+                          }
+                          return Promise.resolve();
+                        }
+                      }
+                    ]}
                   >
                     <Input 
                       placeholder="Enter perpetrator's name (if known)" 
                       size="large"
+                      onChange={() => addForm.validateFields(['perpetrator'])}
                       onKeyPress={(e) => {
                         if (/[0-9]/.test(e.key)) {
                           e.preventDefault();
@@ -2214,11 +2387,32 @@ export default function CaseManagement() {
                   <Form.Item
                     name="assignedOfficer"
                     label={<Text strong>Assigned Officer</Text>}
-                    rules={[{ required: true, message: "Assigned officer is required" }]}
+                    rules={[
+                      { required: true, message: "Assigned officer is required" },
+                      {
+                        validator: (_, value) => {
+                          if (!value) return Promise.resolve();
+                          const strValue = String(value).trim();
+                          if (/(.)\1{2}/.test(strValue)) {
+                            return Promise.reject(new Error('Officer name cannot contain repeated characters'));
+                          }
+                          if (/(.{2,3})\1{2,}/.test(strValue)) {
+                            return Promise.reject(new Error('Officer name appears to be gibberish'));
+                          }
+                          const letters = strValue.replace(/[^a-zA-Z]/g, '');
+                          const vowels = strValue.replace(/[^aeiouAEIOU]/g, '');
+                          if (letters.length > 3 && vowels.length / letters.length < 0.25) {
+                            return Promise.reject(new Error('Officer name appears to be gibberish'));
+                          }
+                          return Promise.resolve();
+                        }
+                      }
+                    ]}
                   >
                     <Input 
                       placeholder="Enter officer's name" 
                       size="large"
+                      onChange={() => addForm.validateFields(['assignedOfficer'])}
                       onKeyPress={(e) => {
                         if (/[0-9]/.test(e.key)) {
                           e.preventDefault();

@@ -96,6 +96,11 @@ adminSchema.methods.comparePassword = async function(candidatePassword) {
 
 // Pre-save middleware to hash password before saving
 adminSchema.pre('save', async function(next) {
+    // Auto-uppercase middleInitial if provided
+    if (this.middleInitial) {
+        this.middleInitial = this.middleInitial.toUpperCase();
+    }
+
     if (!this.isModified('adminPassword')) return next();
 
     try {

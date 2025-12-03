@@ -137,18 +137,6 @@ export default function UserManagement() {
       return `${fieldName} cannot contain repeated characters`;
     }
     
-    // Check for repeating patterns (gibberish) (e.g., "abab", "asdasd")
-    if (/(.{1,3})\1{1,}/.test(strValue)) {
-      return `${fieldName} appears to be gibberish`;
-    }
-    
-    // Check vowel ratio for names
-    const letters = strValue.replace(/[^a-zA-Z]/g, "");
-    const vowels = strValue.replace(/[^aeiouAEIOU]/g, "");
-    if (letters.length > 3 && vowels.length / letters.length < 0.25) {
-      return `${fieldName} appears to be gibberish`;
-    }
-    
     return null;
   };
 

@@ -107,29 +107,6 @@ export default function BPO() {
       return `${fieldLabel} cannot contain repeated characters`;
     }
     
-    // Check for repeating patterns (gibberish) (e.g., "abab", "xyzxyz", "asdasd")
-    if (/(.{1,3})\1{1,}/.test(strValue)) {
-      return `${fieldLabel} appears to be gibberish`;
-    }
-    
-    // Check vowel ratio for name fields (applicant, respondent, harmTo)
-    if (["applicant", "respondent", "harmTo", "kagawadName"].includes(fieldName)) {
-      const letters = strValue.replace(/[^a-zA-Z]/g, "");
-      const vowels = strValue.replace(/[^aeiouAEIOU]/g, "");
-      if (letters.length > 3 && vowels.length / letters.length < 0.25) {
-        return `${fieldLabel} appears to be gibberish`;
-      }
-    }
-    
-    // Check vowel ratio for statement field (10+ characters minimum)
-    if (fieldName === "statement") {
-      const letters = strValue.replace(/[^a-zA-Z]/g, "");
-      const vowels = strValue.replace(/[^aeiouAEIOU]/g, "");
-      if (letters.length >= 10 && vowels.length / letters.length < 0.25) {
-        return `${fieldLabel} appears to be gibberish`;
-      }
-    }
-    
     return null;
   };
 

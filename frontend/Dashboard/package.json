@@ -12,7 +12,10 @@
   "dependencies": {
     "antd": "^5.27.2",
     "axios": "^1.11.0",
+    "docx": "^9.5.1",
+    "docxtemplater": "^3.67.5",
     "event-source-polyfill": "^1.0.31",
+    "file-saver": "^2.0.5",
     "firebase": "^12.2.1",
     "framer-motion": "^12.23.22",
     "gsap": "^3.13.0",
@@ -21,6 +24,7 @@
     "jspdf-autotable": "^5.0.2",
     "leaflet": "^1.9.4",
     "motion": "^12.23.24",
+    "pizzip": "^3.2.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-fast-marquee": "^1.6.5",

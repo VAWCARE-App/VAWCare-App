@@ -154,6 +154,7 @@ export default function Signup() {
   const navigate = useNavigate();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("Creating your account...");
   const [accountType, setAccountType] = useState("anonymous");
   const [agreedToPrivacy, setAgreedToPrivacy] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
@@ -263,6 +264,7 @@ export default function Signup() {
         // Combine purok and address: if purok selected, prepend to default address
         const combinedAddress = payload.purok
           ? `${payload.purok}, Bonfal Proper, Bayombong, Nueva Vizcaya`
+
           : "Bonfal Proper, Bayombong, Nueva Vizcaya";
         victimData.address = combinedAddress;
         victimData.contactNumber = payload.contactNumber; // Required field
@@ -298,15 +300,18 @@ export default function Signup() {
       }
       
       console.log("Submitting victimData:", victimData);
+      setLoadingMessage("Creating your account...");
       const { data } = await api.post("/api/victims/register", victimData);
       if (data.success) {
         // Exchange custom token for ID token
         const customToken = data.data.token;
         console.log('Received custom token from register, exchanging for ID token...');
+        setLoadingMessage("Securing your session...");
         
         try {
           const idToken = await exchangeCustomTokenForIdToken(customToken);
           console.log('Successfully exchanged for ID token');
+          setLoadingMessage("Finalizing your account...");
           
           // Send ID token and user data to backend to set in HTTP-only cookies
           const userData = { ...data.data.victim, userType: "victim" };
@@ -381,6 +386,7 @@ export default function Signup() {
   const createAnonymousTicket = async () => {
     try {
       setLoading(true);
+      setLoadingMessage("Creating your account...");
       const { data } = await api.post("/api/victims/register", { victimAccount: "anonymous" });
       if (!data || !data.success) throw new Error(data?.message || "Failed to create account");
       const resp = data.data || {};
@@ -388,10 +394,12 @@ export default function Signup() {
       // Exchange custom token for ID token
       const customToken = resp.token;
       console.log('Received custom token from anonymous register, exchanging for ID token...');
+      setLoadingMessage("Securing your session...");
       
       try {
         const idToken = await exchangeCustomTokenForIdToken(customToken);
         console.log('Successfully exchanged for ID token');
+        setLoadingMessage("Finalizing your account...");
         
         // Send ID token and user data to backend to set in HTTP-only cookies
         const userData = { ...resp.victim, userType: "victim" };
@@ -683,10 +691,35 @@ export default function Signup() {
                             label={<span style={{ fontSize: 14, fontWeight: 500 }}>Password</span>}
                             rules={[
                               { required: true, message: "Please enter a password" },
-                              { min: 8, message: "Password must be at least 8 characters" },
+                              {
+                                validator: (_, value) => {
+                                  if (!value) return Promise.resolve();
+                                  
+                                  const errors = [];
+                                  
+                                  // Check length and number together
+                                  if (value.length < 8 || !/[0-9]/.test(value)) {
+                                    if (value.length < 8) errors.push("at least 8 characters");
+                                    if (!/[0-9]/.test(value)) errors.push("at least one number (0-9)");
+                                    return Promise.reject(new Error(`Password must contain ${errors.join(' and ')}`));
+                                  }
+                                  
+                                  // Firebase requires at least one uppercase, one lowercase, one number
+                                  const hasUppercase = /[A-Z]/.test(value);
+                                  const hasLowercase = /[a-z]/.test(value);
+                                  
+                                  if (!hasUppercase) {
+                                    return Promise.reject(new Error('Password must contain at least one uppercase letter (A-Z)'));
+                                  }
+                                  if (!hasLowercase) {
+                                    return Promise.reject(new Error('Password must contain at least one lowercase letter (a-z)'));
+                                  }
+                                  return Promise.resolve();
+                                },
+                              },
                             ]}
                           >
-                            <Input.Password placeholder="At least 8 characters" size="large" />
+                            <Input.Password placeholder="At least 8 characters with uppercase, lowercase, and number" size="large" />
                           </Form.Item>
                         </Col>
                         <Col xs={24} sm={12}>
@@ -1090,10 +1123,13 @@ export default function Signup() {
             </Stepper>
 
             {loading && !showSuccessModal && (
-              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 14 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', background: 'linear-gradient(135deg, #f0f5ff 0%, #fef0ff 100%)', borderRadius: 12, border: '1px solid rgba(82, 39, 255, 0.2)' }}>
                   <div className="vaw-spinner" aria-hidden></div>
-                  <div style={{ color: '#5227FF', fontWeight: 700 }}>Creating your account…</div>
+                  <div>
+                    <div style={{ color: '#5227FF', fontWeight: 700, fontSize: 14 }}>{loadingMessage}</div>
+                    <div style={{ color: '#7A5AF8', fontSize: 11, marginTop: 2, opacity: 0.8 }}>Please wait, this may take a few seconds</div>
+                  </div>
                 </div>
               </div>
             )}

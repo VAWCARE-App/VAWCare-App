@@ -644,7 +644,7 @@ export default function CaseDetail() {
                 <Space>
                   <HistoryOutlined style={{ fontSize: 20, color: BRAND.violet }} />
                   <Title level={5} style={{ margin: 0, color: BRAND.violet }}>
-                    Actions & Remarks Logs
+                    History of Remarks 
                   </Title>
                 </Space>
                 <Button
@@ -666,7 +666,7 @@ export default function CaseDetail() {
                 <div style={{ textAlign: 'center', padding: 40, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Spin tip="Loading history..." />
                 </div>
-              ) : historyData.length === 0 ? (
+              ) : historyData.filter(log => log.action === 'case_remark').length === 0 ? (
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Empty
                     image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -687,27 +687,19 @@ export default function CaseDetail() {
                 }}>
                   <Timeline
                     mode="right"
-                    items={historyData.map((log, idx) => {
+                    items={historyData.filter(log => log.action === 'case_remark').map((log, idx) => {
                       const actionColors = {
-                        'edit_case': 'blue',
-                        'view_case': 'green',
-                        'delete_case': 'red',
                         'case_remark': 'purple',
                       };
                       
                       const actionLabels = {
-                        'edit_case': 'Case Updated',
-                        'view_case': 'Case Viewed',
-                        'delete_case': 'Case Deleted',
                         'case_remark': 'Remark Added',
                       };
 
                       return {
                         color: actionColors[log.action] || 'gray',
-                        dot: log.action === 'case_remark' ? (
+                        dot: (
                           <CommentOutlined style={{ fontSize: 16 }} />
-                        ) : (
-                          <ClockCircleOutlined style={{ fontSize: 16 }} />
                         ),
                         children: (
                           <Card
@@ -716,7 +708,7 @@ export default function CaseDetail() {
                               background: '#fff',
                               borderRadius: 8,
                               border: `1px solid ${BRAND.soft}`,
-                              marginBottom: idx < historyData.length - 1 ? 12 : 0
+                              marginBottom: idx < historyData.filter(log => log.action === 'case_remark').length - 1 ? 12 : 0
                             }}
                             bodyStyle={{ padding: screens.xs ? 10 : 12 }}
                           >
@@ -779,107 +771,6 @@ export default function CaseDetail() {
             </Card>
           )}
         </div>
-
-        {/* Remarks Section — Full Width and Presentable */}
-        {historyData.length > 0 && historyData.filter(log => log.action === 'case_remark').length > 0 && (
-          <Card
-            className="no-print hover-lift"
-            style={{
-              borderRadius: 16,
-              border: `1px solid ${BRAND.soft}`,
-              background:
-                "linear-gradient(145deg, rgba(255,255,255,.98), rgba(255,255,255,.94))",
-            }}
-            bodyStyle={{ padding: screens.xs ? 12 : 16 }}
-          >
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              marginBottom: 16,
-              flexWrap: 'wrap',
-              gap: 12
-            }}>
-              <Space>
-                <CommentOutlined style={{ fontSize: 20, color: BRAND.violet }} />
-                <Title level={5} style={{ margin: 0, color: BRAND.violet }}>
-                  Recent Remarks
-                </Title>
-              </Space>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                {historyData.filter(log => log.action === 'case_remark').length} remark{historyData.filter(log => log.action === 'case_remark').length !== 1 ? 's' : ''}
-              </Text>
-            </div>
-
-            <div style={{ 
-              display: 'grid',
-              gridTemplateColumns: screens.lg ? 'repeat(3, 1fr)' : screens.md ? 'repeat(2, 1fr)' : '1fr',
-              gap: 12
-            }}>
-              {historyData
-                .filter(log => log.action === 'case_remark')
-                .slice(0, 3)
-                .map((remark, idx) => (
-                  <Card
-                    key={idx}
-                    size="small"
-                    style={{
-                      background: '#fff',
-                      borderRadius: 8,
-                      border: `1px solid ${BRAND.soft}`,
-                      height: '100%'
-                    }}
-                    bodyStyle={{ padding: screens.xs ? 10 : 12 }}
-                  >
-                    <Space direction="vertical" size={6} style={{ width: '100%' }}>
-                      <div>
-                        <div style={{ 
-                          fontWeight: 600, 
-                          color: BRAND.violet, 
-                          fontSize: screens.xs ? 12 : 13,
-                          marginBottom: 2
-                        }}>
-                          {remark.actorName}
-                        </div>
-                        <div style={{ 
-                          fontSize: 11, 
-                          color: '#999',
-                          marginBottom: 8
-                        }}>
-                          {new Date(remark.timestamp).toLocaleString()}
-                        </div>
-                      </div>
-                      <div style={{ 
-                        color: '#555', 
-                        whiteSpace: 'pre-wrap',
-                        fontSize: screens.xs ? 12 : 13,
-                        lineHeight: 1.5,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: 'vertical'
-                      }}>
-                        {remark.details}
-                      </div>
-                    </Space>
-                  </Card>
-                ))}
-            </div>
-
-            {historyData.filter(log => log.action === 'case_remark').length > 3 && (
-              <div style={{ marginTop: 16, textAlign: 'center', paddingTop: 12, borderTop: `1px solid ${BRAND.soft}` }}>
-                <Button 
-                  type="link" 
-                  onClick={() => setViewAllRemarksOpen(true)}
-                  style={{ color: BRAND.violet, fontWeight: 600 }}
-                >
-                  View All Remarks ({historyData.filter(log => log.action === 'case_remark').length} total)
-                </Button>
-              </div>
-            )}
-          </Card>
-        )}
 
         {/* DSS Suggestion — hidden in print */}
         {(userType === "admin" || userType === "official") && (
@@ -951,13 +842,24 @@ export default function CaseDetail() {
             label="Remark"
             rules={[
               { required: true, message: "Please enter a remark" },
-              { min: 10, message: "Remark must be at least 10 characters" }
+              { min: 10, message: "Remark must be at least 10 characters" },
+              {
+                validator: (_, value) => {
+                  if (!value) return Promise.resolve();
+                  const strValue = String(value).trim();
+                  if (/(.)\1{2}/.test(strValue)) {
+                    return Promise.reject(new Error('Remark cannot contain repeated characters'));
+                  }
+                  return Promise.resolve();
+                }
+              }
             ]}
           >
             <Input.TextArea
               rows={6}
               placeholder="Enter your remark or note about this case..."
               style={{ borderRadius: 8 }}
+              onChange={() => remarkForm.validateFields(['remark'])}
             />
           </Form.Item>
         </Form>

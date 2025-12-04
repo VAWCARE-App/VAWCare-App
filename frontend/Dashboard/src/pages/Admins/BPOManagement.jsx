@@ -47,6 +47,9 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { api, getUserType } from "../../lib/api";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
 
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;
@@ -128,6 +131,66 @@ export default function BPOManagement() {
   const tableWrapRef = useRef(null);
   const [tableY, setTableY] = useState(420);
 
+  // Export CSV
+  const exportCSV = () => {
+    if (!list.length) return;
+    const headers = ["BPO ID", "Control No", "Applicant", "Address", "Served By", "Date Issued", "Expiration Date", "Status"];
+    const rows = list.map(bpo => [
+      bpo.bpoID || bpo._id || "",
+      bpo.controlNO || "",
+      bpo.applicationName || "",
+      bpo.address || "",
+      bpo.servedBy || "",
+      bpo.dateIssued ? new Date(bpo.dateIssued).toLocaleDateString() : "",
+      bpo.expiryDate ? new Date(bpo.expiryDate).toLocaleDateString() : "",
+      bpo.status || "",
+    ]);
+
+    const csvContent =
+      [headers, ...rows].map(e => e.map(v => `"${v}"`).join(",")).join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute("download", `BPOs_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+
+  // Export PDF
+  const exportPDF = () => {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+
+    const title = "BPO Management Report";
+    doc.setFontSize(18);
+    doc.setTextColor("#333");
+    doc.text(title, doc.internal.pageSize.getWidth() / 2, 40, { align: "center" });
+
+    const headers = [["BPO ID", "Control No", "Applicant", "Address", "Served By", "Date Issued", "Expiration Date", "Status"]];
+    const rows = list.map(bpo => [
+      bpo.bpoID || bpo._id || "",
+      bpo.controlNO || "",
+      bpo.applicationName || "",
+      bpo.address || "",
+      bpo.servedBy || "",
+      bpo.dateIssued ? new Date(bpo.dateIssued).toLocaleDateString() : "",
+      bpo.expiryDate ? new Date(bpo.expiryDate).toLocaleDateString() : "",
+      bpo.status || "",
+    ]);
+
+    autoTable(doc, {
+      head: headers,
+      body: rows,
+      startY: 60, // leave space for title
+      styles: { fontSize: 10, cellPadding: 4 },
+      headStyles: { fillColor: [122, 90, 248] }, // brand violet
+    });
+
+    doc.save(`BPOs_${new Date().toISOString().slice(0, 10)}.pdf`);
+  };
+
   // ---------- Data ----------
   const fetchBPOs = async () => {
     setLoading(true);
@@ -136,6 +199,7 @@ export default function BPOManagement() {
         headers: { "Cache-Control": "no-cache" },
       });
       const data = res?.data?.data || [];
+      console.log("Fetched BPOs:", data);
       setList(
         data.map((d) => ({
           key: d._id || d.bpoID || Math.random().toString(36).slice(2),
@@ -602,6 +666,21 @@ export default function BPOManagement() {
             {screens.md ? "Add BPO" : null}
           </Button>
           <Button
+            type="default"
+            onClick={exportCSV}
+            style={{ borderColor: BRAND.violet, color: BRAND.violet }}
+          >
+            Export CSV
+          </Button>
+          <Button
+            type="default"
+            onClick={exportPDF}
+            style={{ borderColor: BRAND.violet, color: BRAND.violet }}
+          >
+            Export PDF
+          </Button>
+
+          <Button
             icon={<ReloadOutlined />}
             onClick={fetchBPOs}
             style={{ borderColor: BRAND.violet, color: BRAND.violet }}
@@ -658,7 +737,7 @@ export default function BPOManagement() {
                 </Text>
               </Space>
             </div>
-            
+
             <Row gutter={[screens.xs ? 8 : 16, screens.xs ? 8 : 16]}>
               {[
                 ["Total", kpis.total, BRAND.violet, <AppstoreOutlined key="i" />, "#f6f3ff", "#ffffff"],
@@ -667,9 +746,9 @@ export default function BPOManagement() {
                 ["Revoked", kpis.revoked, "#eb2f96", <ExclamationCircleOutlined key="i" />, "#fff0f6", "#ffffff"],
               ].map(([label, value, color, icon, gradStart, gradEnd], i) => (
                 <Col xs={12} sm={6} md={6} lg={6} key={i}>
-                  <Card 
-                    size="small" 
-                    style={{ 
+                  <Card
+                    size="small"
+                    style={{
                       borderRadius: 12,
                       border: `1px solid ${color === BRAND.violet ? BRAND.softBorder : `${color}33`}`,
                       background: `linear-gradient(135deg, ${gradStart}, ${gradEnd})`,
@@ -677,7 +756,7 @@ export default function BPOManagement() {
                       height: "100%",
                       minHeight: screens.xs ? 100 : 110
                     }}
-                    bodyStyle={{ 
+                    bodyStyle={{
                       padding: screens.xs ? "12px 8px" : "16px 12px",
                       height: "100%",
                       display: "flex",
@@ -690,9 +769,9 @@ export default function BPOManagement() {
                       <div style={{ fontSize: screens.xs ? 11 : 12, color: "#666", marginBottom: 4 }}>
                         {label}
                       </div>
-                      <div style={{ 
-                        fontSize: screens.xs ? 20 : 24, 
-                        fontWeight: 700, 
+                      <div style={{
+                        fontSize: screens.xs ? 20 : 24,
+                        fontWeight: 700,
                         color
                       }}>
                         {value}
@@ -728,11 +807,11 @@ export default function BPOManagement() {
               {/* Filter Row */}
               <div style={{
                 display: "grid",
-                gridTemplateColumns: isXs 
-                  ? "1fr 1fr" 
-                  : screens.sm && !screens.md 
-                  ? "1fr 1fr 1fr 1fr"
-                  : "repeat(4, 1fr)",
+                gridTemplateColumns: isXs
+                  ? "1fr 1fr"
+                  : screens.sm && !screens.md
+                    ? "1fr 1fr 1fr 1fr"
+                    : "repeat(4, 1fr)",
                 gap: isXs ? 8 : 10,
                 width: "100%",
               }}>
@@ -764,8 +843,8 @@ export default function BPOManagement() {
                 </Select>
 
                 <Dropdown overlay={colMenu} trigger={["click"]}>
-                  <Button 
-                    icon={<SettingOutlined />} 
+                  <Button
+                    icon={<SettingOutlined />}
                     style={{ width: "100%" }}
                     size={isXs ? "middle" : "large"}
                   >
@@ -879,14 +958,14 @@ export default function BPOManagement() {
           centered
           width={screens.lg ? 700 : "96vw"}
           footer={
-            <div style={{ 
-              display: "flex", 
-              flexDirection: isXs ? "column-reverse" : "row", 
-              justifyContent: "flex-end", 
-              gap: isXs ? 8 : 0 
+            <div style={{
+              display: "flex",
+              flexDirection: isXs ? "column-reverse" : "row",
+              justifyContent: "flex-end",
+              gap: isXs ? 8 : 0
             }}>
-              <Button 
-                key="skip" 
+              <Button
+                key="skip"
                 onClick={() => handleCaseSelect(false)}
                 style={{
                   width: isXs ? "100%" : "auto",
@@ -900,8 +979,8 @@ export default function BPOManagement() {
                 type="primary"
                 onClick={() => handleCaseSelect(true)}
                 disabled={!selectedCaseId}
-                style={{ 
-                  background: BRAND.violet, 
+                style={{
+                  background: BRAND.violet,
                   borderColor: BRAND.violet,
                   width: isXs ? "100%" : "auto",
                 }}
@@ -936,7 +1015,7 @@ export default function BPOManagement() {
               onChange={(e) => setCaseSearchText(e.target.value)}
               size="large"
             />
-            
+
             {loadingCases ? (
               <div style={{ textAlign: "center", padding: "40px 0" }}>
                 <Spin size="large" />
@@ -999,8 +1078,8 @@ export default function BPOManagement() {
                                 caseItem.status === "Open"
                                   ? "green"
                                   : caseItem.status === "Resolved"
-                                  ? "gray"
-                                  : "orange"
+                                    ? "gray"
+                                    : "orange"
                               }
                               style={{ margin: 0 }}
                             >
@@ -1112,8 +1191,8 @@ export default function BPOManagement() {
                   type="primary"
                   loading={statusSaving}
                   onClick={handleStatusSave}
-                  style={{ 
-                    background: BRAND.violet, 
+                  style={{
+                    background: BRAND.violet,
                     borderColor: BRAND.violet,
                     width: isXs ? "100%" : "auto",
                   }}

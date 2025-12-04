@@ -878,20 +878,38 @@ export default function BPOManagement() {
           onCancel={() => setCaseModalVisible(false)}
           centered
           width={screens.lg ? 700 : "96vw"}
-          footer={[
-            <Button key="skip" onClick={() => handleCaseSelect(false)}>
-              Skip & Create Blank BPO
-            </Button>,
-            <Button
-              key="select"
-              type="primary"
-              onClick={() => handleCaseSelect(true)}
-              disabled={!selectedCaseId}
-              style={{ background: BRAND.violet, borderColor: BRAND.violet }}
-            >
-              Continue with Selected Case
-            </Button>,
-          ]}
+          footer={
+            <div style={{ 
+              display: "flex", 
+              flexDirection: isXs ? "column-reverse" : "row", 
+              justifyContent: "flex-end", 
+              gap: isXs ? 8 : 0 
+            }}>
+              <Button 
+                key="skip" 
+                onClick={() => handleCaseSelect(false)}
+                style={{
+                  width: isXs ? "100%" : "auto",
+                  marginRight: isXs ? 0 : 8,
+                }}
+              >
+                Skip & Create Blank BPO
+              </Button>
+              <Button
+                key="select"
+                type="primary"
+                onClick={() => handleCaseSelect(true)}
+                disabled={!selectedCaseId}
+                style={{ 
+                  background: BRAND.violet, 
+                  borderColor: BRAND.violet,
+                  width: isXs ? "100%" : "auto",
+                }}
+              >
+                Continue with Selected Case
+              </Button>
+            </div>
+          }
           title={
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <Avatar
@@ -1075,6 +1093,7 @@ export default function BPOManagement() {
               <div
                 style={{
                   display: "flex",
+                  flexDirection: isXs ? "column-reverse" : "row",
                   justifyContent: "flex-end",
                   gap: 8,
                   marginTop: 4,
@@ -1085,6 +1104,7 @@ export default function BPOManagement() {
                     setStatusCardVisible(false);
                     setStatusEditing(null);
                   }}
+                  style={{ width: isXs ? "100%" : "auto" }}
                 >
                   Cancel
                 </Button>
@@ -1092,7 +1112,11 @@ export default function BPOManagement() {
                   type="primary"
                   loading={statusSaving}
                   onClick={handleStatusSave}
-                  style={{ background: BRAND.violet, borderColor: BRAND.violet }}
+                  style={{ 
+                    background: BRAND.violet, 
+                    borderColor: BRAND.violet,
+                    width: isXs ? "100%" : "auto",
+                  }}
                 >
                   Save
                 </Button>

@@ -569,18 +569,34 @@ export default function BPO() {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: isXs ? 6 : 8 }}>
           {!screens.md && (
             <Button
               icon={<ArrowLeftOutlined />}
               onClick={() => navigate(-1)}
-              style={{ borderColor: BRAND.violet, color: BRAND.violet }}
+              style={{ 
+                borderColor: BRAND.violet, 
+                color: BRAND.violet,
+                height: isXs ? 32 : 36,
+                minWidth: isXs ? 32 : 36,
+                padding: 0,
+                fontSize: isXs ? 14 : 16,
+                borderRadius: 8,
+              }}
             />
           )}
           <Button
             icon={<DownloadOutlined />}
             onClick={exportCurrent}
-            style={{ borderColor: BRAND.violet, color: BRAND.violet }}
+            style={{ 
+              borderColor: BRAND.violet, 
+              color: BRAND.violet,
+              height: isXs ? 32 : 36,
+              fontSize: isXs ? 13 : 14,
+              padding: isXs ? "0 10px" : "4px 15px",
+              borderRadius: isXs ? 8 : 10,
+              fontWeight: 600,
+            }}
           >
             {screens.md ? "Export" : null}
           </Button>
@@ -590,7 +606,15 @@ export default function BPO() {
             onClick={submit}
             disabled={loading}
             loading={loading}
-            style={{ background: BRAND.violet, borderColor: BRAND.violet }}
+            style={{ 
+              background: BRAND.violet, 
+              borderColor: BRAND.violet,
+              height: isXs ? 32 : 36,
+              fontSize: isXs ? 13 : 14,
+              padding: isXs ? "0 10px" : "4px 15px",
+              borderRadius: isXs ? 8 : 10,
+              fontWeight: 600,
+            }}
           >
             {screens.md ? (loading ? "Saving..." : "Save") : null}
           </Button>
@@ -711,8 +735,8 @@ export default function BPO() {
           className="bpo-printable"
           style={{
             maxWidth: 900,
-            margin: "18px auto",
-            padding: 28,
+            margin: isXs ? "12px auto" : "18px auto",
+            padding: isXs ? "16px 12px" : "28px",
             background: "#fff",
             fontFamily: "'Times New Roman', Times, serif",
             color: "#000",
@@ -736,20 +760,22 @@ export default function BPO() {
           <div
             style={{
               display: "flex",
+              flexDirection: isXs ? "column" : "row",
               justifyContent: "space-between",
-              alignItems: "center",
+              alignItems: isXs ? "flex-start" : "center",
               marginBottom: 6,
+              gap: isXs ? 6 : 0,
             }}
           >
             <div>
               <Text strong>VAWC FORM #4</Text>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: isXs ? "wrap" : "nowrap" }}>
               <Text>CONTROL NO.</Text>
               <Input
                 value={form.controlNo}
                 onChange={update("controlNo")}
-                style={{ ...underlineStyle, width: 160 }}
+                style={{ ...underlineStyle, width: isXs ? 120 : 160 }}
                 placeholder="CONTROL NO."
                 readOnly
                 disabled
@@ -765,7 +791,7 @@ export default function BPO() {
                 onChange={handleValidatedUpdate("respondent")}
                 style={{ 
                   ...underlineStyle, 
-                  width: "68%",
+                  width: isXs ? "100%" : "68%",
                   borderColor: validationErrors.respondent ? "#ff4d4f" : undefined,
                 }}
                 placeholder="Respondent full name"
@@ -784,7 +810,7 @@ export default function BPO() {
                 onChange={handleValidatedUpdate("address")}
                 style={{ 
                   ...underlineStyle, 
-                  width: "75%",
+                  width: isXs ? "100%" : "75%",
                   borderColor: validationErrors.address ? "#ff4d4f" : undefined,
                 }}
                 placeholder="Respondent address"
@@ -801,25 +827,30 @@ export default function BPO() {
             </Title>
 
             <div style={{ marginBottom: 12 }}>
-              <Text strong>Applicant Name: </Text>
-              <Input
-                value={form.applicant}
-                onChange={handleValidatedUpdate("applicant")}
-                style={{ 
-                  ...underlineStyle, 
-                  width: 260,
-                  borderColor: validationErrors.applicant ? "#ff4d4f" : undefined,
-                }}
-                placeholder="Applicant"
-              />
-              {validationErrors.applicant && (
-                <div style={{ color: "#ff4d4f", fontSize: 12, marginTop: 4 }}>
-                  {validationErrors.applicant}
-                </div>
-              )}
-              <span style={{ marginLeft: 12 }}>applied for a BPO on</span>
-              <DatePicker value={form.appliedOn} onChange={updateDate("appliedOn")} style={{ marginLeft: 8 }} />
-              <span style={{ marginLeft: 8 }}>under oath stating that:</span>
+              <div style={{ display: isXs ? "flex" : "inline", flexDirection: isXs ? "column" : "row", gap: isXs ? 6 : 0 }}>
+                <Text strong>Applicant Name: </Text>
+                <Input
+                  value={form.applicant}
+                  onChange={handleValidatedUpdate("applicant")}
+                  style={{ 
+                    ...underlineStyle, 
+                    width: isXs ? "100%" : 260,
+                    marginLeft: isXs ? 0 : undefined,
+                    borderColor: validationErrors.applicant ? "#ff4d4f" : undefined,
+                  }}
+                  placeholder="Applicant"
+                />
+                {validationErrors.applicant && (
+                  <div style={{ color: "#ff4d4f", fontSize: 12, marginTop: 4 }}>
+                    {validationErrors.applicant}
+                  </div>
+                )}
+              </div>
+              <div style={{ display: isXs ? "flex" : "inline", flexDirection: isXs ? "column" : "row", gap: isXs ? 6 : 0, marginTop: isXs ? 8 : 0 }}>
+                <span style={{ marginLeft: isXs ? 0 : 12 }}>applied for a BPO on</span>
+                <DatePicker value={form.appliedOn} onChange={updateDate("appliedOn")} style={{ marginLeft: isXs ? 0 : 8, width: isXs ? "100%" : "auto" }} />
+                <span style={{ marginLeft: isXs ? 0 : 8, marginTop: isXs ? 8 : 0 }}>under oath stating that:</span>
+              </div>
             </div>
 
             <div style={{ marginBottom: 12 }}>
@@ -849,46 +880,50 @@ export default function BPO() {
             </div>
 
             <div style={{ marginBottom: 8 }}>
-              <span>
-                After having heard the application and the witnesses and
-                evidence, the undersigned hereby issues this BPO ordering you to
-                immediately cease and desist from causing or threatening the
-                cause physical harm to{" "}
-              </span>
-              <Input
-                value={form.harmTo}
-                onChange={handleValidatedUpdate("harmTo")}
-                style={{ 
-                  ...underlineStyle, 
-                  width: 120, 
-                  marginLeft: 8, 
-                  marginRight: 8,
-                  borderColor: validationErrors.harmTo ? "#ff4d4f" : undefined,
-                }}
-                placeholder="Her/His"
-              />
-              {validationErrors.harmTo && (
-                <div style={{ color: "#ff4d4f", fontSize: 12, marginTop: 4 }}>
-                  {validationErrors.harmTo}
-                </div>
-              )}
-              <span>and/or her child/children namely:</span>
-              <Input
-                value={form.children}
-                onChange={handleValidatedUpdate("children")}
-                style={{ 
-                  ...underlineStyle, 
-                  width: 360, 
-                  marginLeft: 8,
-                  borderColor: validationErrors.children ? "#ff4d4f" : undefined,
-                }}
-                placeholder="Names of children"
-              />
-              {validationErrors.children && (
-                <div style={{ color: "#ff4d4f", fontSize: 12, marginTop: 4 }}>
-                  {validationErrors.children}
-                </div>
-              )}
+              <div style={{ display: isXs ? "flex" : "inline", flexDirection: isXs ? "column" : "row", gap: isXs ? 6 : 0 }}>
+                <span>
+                  After having heard the application and the witnesses and
+                  evidence, the undersigned hereby issues this BPO ordering you to
+                  immediately cease and desist from causing or threatening the
+                  cause physical harm to{" "}
+                </span>
+                <Input
+                  value={form.harmTo}
+                  onChange={handleValidatedUpdate("harmTo")}
+                  style={{ 
+                    ...underlineStyle, 
+                    width: isXs ? "100%" : 120, 
+                    marginLeft: isXs ? 0 : 8, 
+                    marginRight: isXs ? 0 : 8,
+                    borderColor: validationErrors.harmTo ? "#ff4d4f" : undefined,
+                  }}
+                  placeholder="Her/His"
+                />
+                {validationErrors.harmTo && (
+                  <div style={{ color: "#ff4d4f", fontSize: 12, marginTop: 4 }}>
+                    {validationErrors.harmTo}
+                  </div>
+                )}
+              </div>
+              <div style={{ display: isXs ? "flex" : "inline", flexDirection: isXs ? "column" : "row", gap: isXs ? 6 : 0, marginTop: isXs ? 8 : 0 }}>
+                <span>and/or her child/children namely:</span>
+                <Input
+                  value={form.children}
+                  onChange={handleValidatedUpdate("children")}
+                  style={{ 
+                    ...underlineStyle, 
+                    width: isXs ? "100%" : 360, 
+                    marginLeft: isXs ? 0 : 8,
+                    borderColor: validationErrors.children ? "#ff4d4f" : undefined,
+                  }}
+                  placeholder="Names of children"
+                />
+                {validationErrors.children && (
+                  <div style={{ color: "#ff4d4f", fontSize: 12, marginTop: 4 }}>
+                    {validationErrors.children}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div style={{ marginTop: 12 }}>
@@ -913,11 +948,12 @@ export default function BPO() {
               <div style={{ textAlign: "center" }}>
                 <div style={{ fontWeight: 700 }}>{form.pbName}</div>
                 <div>Punong Barangay</div>
-                <div style={{ marginTop: 8 }}>
+                <div style={{ marginTop: 8, display: isXs ? "flex" : "block", flexDirection: isXs ? "column" : "row", gap: isXs ? 6 : 0 }}>
                   <Text>Date Issued: </Text>
                   <DatePicker
                     value={form.dateIssued}
                     onChange={updateDate("dateIssued")}
+                    style={{ width: isXs ? "100%" : "auto" }}
                   />
                 </div>
               </div>
@@ -925,8 +961,8 @@ export default function BPO() {
 
             {/* Receipt / Served */}
             <div style={{ marginTop: 22, paddingTop: 12 }}>
-              <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                <div style={{ minWidth: 320 }}>
+              <div style={{ display: "flex", flexDirection: isXs ? "column" : "row", gap: 12, alignItems: "flex-start" }}>
+                <div style={{ minWidth: isXs ? "100%" : 320 }}>
                   <Text strong>Copy received by:</Text>
                   <Input
                     value={form.receivedBy}
@@ -954,6 +990,7 @@ export default function BPO() {
                       <DatePicker
                         value={form.dateReceived}
                         onChange={updateDate("dateReceived")}
+                        style={{ width: isXs ? "100%" : "auto" }}
                       />
                     </div>
                   </div>
@@ -1002,27 +1039,33 @@ export default function BPO() {
                   marginRight: "auto",
                 }}
               >
-                <Text>I hereby attest that Punong Barangay </Text>
-                <Input
-                  value={form.pbName}
-                  onChange={update("pbName")}
-                  style={{ ...underlineStyle, width: 260, marginLeft: 8, marginRight: 8 }}
-                />
-                was unavailable to act on
-                <DatePicker
-                  value={form.attestDate}
-                  onChange={updateDate("attestDate")}
-                  style={{ marginLeft: 8 }}
-                />{" "}
-                at
-                <TimePicker
-                  value={form.attestTime}
-                  onChange={updateTime}
-                  format="hh:mm A"
-                  use12Hours
-                  style={{ marginLeft: 8 }}
-                />{" "}
-                a.m./p.m. and issue such order.
+                <div style={{ display: isXs ? "flex" : "inline", flexDirection: isXs ? "column" : "row", gap: isXs ? 6 : 0 }}>
+                  <Text>I hereby attest that Punong Barangay </Text>
+                  <Input
+                    value={form.pbName}
+                    onChange={update("pbName")}
+                    style={{ ...underlineStyle, width: isXs ? "100%" : 260, marginLeft: isXs ? 0 : 8, marginRight: isXs ? 0 : 8 }}
+                  />
+                </div>
+                <div style={{ display: isXs ? "flex" : "inline", flexDirection: isXs ? "column" : "row", gap: isXs ? 6 : 0, marginTop: isXs ? 8 : 0 }}>
+                  <span>was unavailable to act on</span>
+                  <DatePicker
+                    value={form.attestDate}
+                    onChange={updateDate("attestDate")}
+                    style={{ marginLeft: isXs ? 0 : 8, width: isXs ? "100%" : "auto" }}
+                  />
+                </div>
+                <div style={{ display: isXs ? "flex" : "inline", flexDirection: isXs ? "column" : "row", gap: isXs ? 6 : 0, marginTop: isXs ? 8 : 0 }}>
+                  <span>at</span>
+                  <TimePicker
+                    value={form.attestTime}
+                    onChange={updateTime}
+                    format="hh:mm A"
+                    use12Hours
+                    style={{ marginLeft: isXs ? 0 : 8, width: isXs ? "100%" : "auto" }}
+                  />
+                  <span style={{ marginLeft: isXs ? 0 : 4 }}>a.m./p.m. and issue such order.</span>
+                </div>
               </div>
 
               {/* Saved banner */}
@@ -1070,11 +1113,12 @@ export default function BPO() {
                           {savedId}
                         </div>
                       </div>
-                      <div style={{ display: "flex", gap: 8 }}>
+                      <div style={{ display: "flex", flexDirection: isXs ? "column" : "row", gap: isXs ? 6 : 8 }}>
                         <Button
                           size="small"
                           onClick={() => copyIdToClipboard(savedId)}
                           icon={<CopyOutlined />}
+                          style={{ width: isXs ? "100%" : "auto" }}
                         >
                           Copy ID
                         </Button>
@@ -1082,6 +1126,7 @@ export default function BPO() {
                           size="small"
                           onClick={() => openBpoDetail(savedId)}
                           icon={<EyeOutlined />}
+                          style={{ width: isXs ? "100%" : "auto" }}
                         >
                           View
                         </Button>
@@ -1137,6 +1182,24 @@ export default function BPO() {
           button:active {
             outline: none !important;
             box-shadow: none !important;
+          }
+
+          /* Responsive adjustments for mobile */
+          @media (max-width: 576px) {
+            .ant-input-search,
+            .ant-input,
+            .ant-select-selector,
+            .ant-picker {
+              font-size: 14px !important;
+            }
+            
+            .ant-card-head-title {
+              font-size: 15px !important;
+            }
+            
+            .ant-typography {
+              font-size: 14px;
+            }
           }
 
           @media print {

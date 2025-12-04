@@ -1,5 +1,5 @@
 // src/pages/NotificationButton.jsx
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   Button,
   Drawer,
@@ -31,6 +31,7 @@ export default function NotificationButton() {
   const [connectionStatus, setConnectionStatus] = useState("Connecting...");
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [isHidden, setIsHidden] = useState(false);
 
   const drawerVisibleRef = useRef(drawerVisible);
   drawerVisibleRef.current = drawerVisible;
@@ -45,8 +46,12 @@ export default function NotificationButton() {
     if (!drawerVisible) {
       const unreadCount = notifications.filter(n => n.read === false).length;
       setUnread(unreadCount);
+      // Auto-show when new notification arrives
+      if (unreadCount > 0 && isHidden) {
+        setIsHidden(false);
+      }
     }
-  }, [notifications, drawerVisible]);
+  }, [notifications, drawerVisible, isHidden]);
 
   const getNotificationIcon = (type, typeRef) => {
     if (typeRef === 'Alert' || type === 'alert') return <AlertOutlined />;
@@ -56,26 +61,66 @@ export default function NotificationButton() {
 
   const showToast = (notif) => {
     const isAlert = notif.typeRef === 'Alert' || notif.type === 'alert';
+    const isReport = notif.typeRef === 'Report';
+    
+    // Get color based on notification type
+    const getTypeColor = () => {
+      if (isAlert) return { bg: '#fff2e8', border: '#ffbb96', icon: '#fa541c' };
+      if (isReport) return { bg: '#e6f7ff', border: '#91d5ff', icon: '#1890ff' };
+      return { bg: '#f6f3ff', border: '#d3adf7', icon: '#7A5AF8' };
+    };
+
+    const colors = getTypeColor();
+    const IconComponent = isAlert ? AlertOutlined : isReport ? FileTextOutlined : BellFilled;
     
     notifApi.open({
       message: (
-        <span style={{ fontSize: 15, fontWeight: 600 }}>
-          {notif.title || `New ${notif.typeRef || 'Notification'}`}
-        </span>
-      ),
-      description: (
-        <div style={{ fontSize: 13, color: '#595959' }}>
-          {notif.message || 'You have a new notification'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            background: `linear-gradient(135deg, ${colors.icon} 0%, ${colors.icon}dd 100%)`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: `0 4px 12px ${colors.icon}40`,
+          }}>
+            <IconComponent style={{ fontSize: 22, color: '#fff' }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ 
+              fontSize: 16, 
+              fontWeight: 700, 
+              color: '#1a1a1a',
+              marginBottom: 4,
+              letterSpacing: '-0.3px',
+            }}>
+              {notif.typeRef || 'New Notification'}
+            </div>
+            <div style={{ 
+              fontSize: 13, 
+              color: '#595959',
+              lineHeight: 1.5,
+            }}>
+              {notif.message || 'You have a new notification'}
+            </div>
+          </div>
         </div>
       ),
       placement: "topRight",
-      duration: 5,
-      icon: getNotificationIcon(notif.type, notif.typeRef),
+      duration: 6,
       style: {
-        borderRadius: 12,
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
-        background: '#fff',
+        borderRadius: 16,
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08)',
+        background: '#ffffff',
+        border: `2px solid ${colors.border}`,
+        padding: '18px 20px',
+        minWidth: 420,
+        maxWidth: 500,
       },
+      icon: null,
+      className: 'custom-notification-toast',
     });
   };
 
@@ -204,13 +249,30 @@ export default function NotificationButton() {
 
   const clearAll = async () => {
     try {
-      await fetch(`${api}/api/notifications/clear-all`, { 
+      // First try the clear-all endpoint
+      const response = await fetch(`${api}/api/notifications/clear-all`, { 
         method: "DELETE", 
         credentials: "include",
         headers: {
           "x-internal-key": import.meta.env.VITE_INTERNAL_API_KEY
         }
       });
+
+      // If clear-all endpoint doesn't work, delete each notification individually
+      if (!response.ok) {
+        const deletePromises = notifications.map(notif => {
+          const id = notif._id || notif.notificationID || notif.alertID;
+          return fetch(`${api}/api/notifications/${id}`, { 
+            method: "DELETE", 
+            credentials: "include",
+            headers: {
+              "x-internal-key": import.meta.env.VITE_INTERNAL_API_KEY
+            }
+          });
+        });
+        await Promise.all(deletePromises);
+      }
+
       setNotifications([]);
       setUnread(0);
     } catch (err) {
@@ -241,108 +303,200 @@ export default function NotificationButton() {
     <>
       {contextHolder}
       
-      {/* Modern Floating Notification Button */}
+      {/* Notification Button - Shows full or minimized */}
       {!drawerVisible && (
-        <div style={{ 
-          position: "fixed", 
-          bottom: 24, 
-          right: 24, 
-          zIndex: 9999,
-        }}>
-          <Badge 
-            count={unread} 
-            overflowCount={99} 
-            showZero={false}
-            style={{
-              animation: unread > 0 ? 'pulse 2s infinite' : 'none',
-            }}
-            styles={{
-              indicator: {
-                zIndex: 10,
-                boxShadow: '0 0 0 2px #fff, 0 2px 8px rgba(255, 77, 79, 0.4)',
-              }
-            }}
-          >
-            <div style={{
-              position: 'relative',
-              width: 64,
-              height: 64,
-            }}>
-              {/* Animated ring effect */}
-              {unread > 0 && (
-                <>
-                  <div style={{
-                    position: 'absolute',
-                    top: -4,
-                    left: -4,
-                    right: -4,
-                    bottom: -4,
-                    borderRadius: '50%',
-                    background: '#7A5AF8',
-                    opacity: 0.3,
-                    animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite',
-                  }} />
-                  <div style={{
-                    position: 'absolute',
-                    top: -2,
-                    left: -2,
-                    right: -2,
-                    bottom: -2,
-                    borderRadius: '50%',
-                    background: '#7A5AF8',
-                    opacity: 0.5,
-                    animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite 0.5s',
-                  }} />
-                </>
-              )}
-              <Button
-                type="primary"
-                shape="circle"
-                size="large"
-                icon={
-                  unread > 0 ? (
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}>
-                      <BellFilled style={{ fontSize: 18, marginBottom: 2 }} />
-                      <span style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        lineHeight: 1,
-                      }}>
-                        {unread > 99 ? '99+' : unread}
-                      </span>
-                    </div>
-                  ) : (
-                    <BellFilled style={{ fontSize: 22 }} />
-                  )
-                }
-                onClick={openDrawer}
+        <>
+          {isHidden ? (
+            // Minimized tab attached to edge
+            <div
+              style={{
+                position: "fixed",
+                top: "50%",
+                right: 0,
+                transform: "translateY(-50%)",
+                zIndex: 9999,
+              }}
+            >
+              <div
+                onClick={() => setIsHidden(false)}
                 style={{
-                  width: 64,
-                  height: 64,
-                  background: '#7A5AF8',
-                  border: 'none',
-                  boxShadow: '0 8px 24px rgba(122, 90, 248, 0.4), 0 4px 12px rgba(122, 90, 248, 0.3)',
+                  width: 48,
+                  height: 56,
+                  background: '#ffffff',
+                  border: '1px solid #e8e8e8',
+                  borderRight: 'none',
+                  borderTopLeftRadius: 12,
+                  borderBottomLeftRadius: 12,
+                  boxShadow: '-2px 2px 8px rgba(0, 0, 0, 0.08)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  position: 'relative',
-                  zIndex: 1,
+                  cursor: 'pointer',
+                  animation: 'slideInFromRight 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'scale(1.1) rotate(15deg)';
-                  e.currentTarget.style.boxShadow = '0 12px 32px rgba(122, 90, 248, 0.5), 0 6px 16px rgba(122, 90, 248, 0.4)';
+                  e.currentTarget.style.transform = 'translateX(-6px)';
+                  e.currentTarget.style.boxShadow = '-4px 4px 12px rgba(0, 0, 0, 0.12)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
-                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(122, 90, 248, 0.4), 0 4px 12px rgba(122, 90, 248, 0.3)';
+                  e.currentTarget.style.transform = 'translateX(0)';
+                  e.currentTarget.style.boxShadow = '-2px 2px 8px rgba(0, 0, 0, 0.08)';
+                }}
+              >
+                <BellOutlined style={{ fontSize: 20, color: '#8c8c8c' }} />
+              </div>
+            </div>
+          ) : (
+            // Full notification button with hide button
+            <div 
+              style={{ 
+                position: "fixed", 
+                bottom: 24, 
+                right: 24, 
+                zIndex: 9999,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+              }}
+              onMouseEnter={(e) => {
+                const hideBtn = e.currentTarget.querySelector('.hide-notif-btn');
+                if (hideBtn) hideBtn.style.opacity = '1';
+              }}
+              onMouseLeave={(e) => {
+                const hideBtn = e.currentTarget.querySelector('.hide-notif-btn');
+                if (hideBtn) hideBtn.style.opacity = '0';
+              }}
+            >
+              {/* Hide button */}
+              <Button
+                type="text"
+                icon={<CloseOutlined />}
+                onClick={() => setIsHidden(true)}
+                className="hide-notif-btn"
+                style={{
+                  width: 36,
+                  height: 36,
+                  background: '#ffffff',
+                  border: '1px solid #e8e8e8',
+                  borderRadius: 8,
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#8c8c8c',
+                  fontSize: 14,
+                  opacity: 0,
+                  transition: 'all 0.3s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#f5f5f5';
+                  e.currentTarget.style.borderColor = '#d9d9d9';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#ffffff';
+                  e.currentTarget.style.borderColor = '#e8e8e8';
                 }}
               />
+
+              {/* Notification button */}
+              <Badge 
+                count={unread} 
+                overflowCount={99} 
+                showZero={false}
+                style={{
+                  animation: unread > 0 ? 'pulse 2s infinite' : 'none',
+                }}
+                styles={{
+                  indicator: {
+                    zIndex: 10,
+                    boxShadow: '0 0 0 2px #fff, 0 2px 8px rgba(255, 77, 79, 0.4)',
+                  }
+                }}
+              >
+                <div style={{
+                  position: 'relative',
+                  width: 64,
+                  height: 64,
+                }}>
+                  {/* Animated ring effect */}
+                  {unread > 0 && (
+                    <>
+                      <div style={{
+                        position: 'absolute',
+                        top: -4,
+                        left: -4,
+                        right: -4,
+                        bottom: -4,
+                        borderRadius: '50%',
+                        background: '#7A5AF8',
+                        opacity: 0.3,
+                        animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite',
+                      }} />
+                      <div style={{
+                        position: 'absolute',
+                        top: -2,
+                        left: -2,
+                        right: -2,
+                        bottom: -2,
+                        borderRadius: '50%',
+                        background: '#7A5AF8',
+                        opacity: 0.5,
+                        animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite 0.5s',
+                      }} />
+                    </>
+                  )}
+                  <Button
+                    type="primary"
+                    shape="circle"
+                    size="large"
+                    icon={
+                      unread > 0 ? (
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}>
+                          <BellFilled style={{ fontSize: 18, marginBottom: 2 }} />
+                          <span style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            lineHeight: 1,
+                          }}>
+                            {unread > 99 ? '99+' : unread}
+                          </span>
+                        </div>
+                      ) : (
+                        <BellFilled style={{ fontSize: 22 }} />
+                      )
+                    }
+                    onClick={openDrawer}
+                    style={{
+                      width: 64,
+                      height: 64,
+                      background: '#7A5AF8',
+                      border: 'none',
+                      boxShadow: '0 8px 24px rgba(122, 90, 248, 0.4), 0 4px 12px rgba(122, 90, 248, 0.3)',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      position: 'relative',
+                      zIndex: 1,
+                      animation: unread > 0 ? 'pulse 2s infinite' : 'none',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.1) rotate(15deg)';
+                      e.currentTarget.style.boxShadow = '0 12px 32px rgba(122, 90, 248, 0.5), 0 6px 16px rgba(122, 90, 248, 0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(122, 90, 248, 0.4), 0 4px 12px rgba(122, 90, 248, 0.3)';
+                    }}
+                  />
+                </div>
+              </Badge>
             </div>
-          </Badge>
-        </div>
+          )}
+        </>
       )}
 
       {/* Modern Drawer */}
@@ -675,6 +829,17 @@ export default function NotificationButton() {
             transform: translateX(20px);
           }
           to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        @keyframes slideInFromRight {
+          0% {
+            opacity: 0;
+            transform: translateX(100%);
+          }
+          100% {
             opacity: 1;
             transform: translateX(0);
           }

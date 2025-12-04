@@ -36,11 +36,18 @@ export default function Report() {
   const [submitted, setSubmitted] = useState(false);
   const [siderWidth, setSiderWidth] = useState(0);
   const [formProgress, setFormProgress] = useState(0);
+  const [showOtherIncidentType, setShowOtherIncidentType] = useState(false);
 
   // Calculate form completion progress
   const updateProgress = () => {
     const values = form.getFieldsValue();
-    const fields = ['incidentType', 'location', 'dateReported', 'description'];
+    let fields = ['incidentType', 'location', 'dateReported', 'description'];
+    
+    // If "Others" is selected, include otherIncidentType in the required fields
+    if (values.incidentType === 'Others') {
+      fields = [...fields, 'otherIncidentType'];
+    }
+    
     const filled = fields.filter(field => values[field]).length;
     setFormProgress((filled / fields.length) * 100);
   };
@@ -96,7 +103,9 @@ export default function Report() {
         : "Bonfal Proper, Bayombong, Nueva Vizcaya";
 
       const payload = {
-        incidentType: values.incidentType,
+        incidentType: values.incidentType === 'Others' && values.otherIncidentType 
+          ? `Others: ${values.otherIncidentType}` 
+          : values.incidentType,
         description: values.description,
         perpetrator: values.perpetrator,
         location: combinedLocation,
@@ -375,6 +384,12 @@ export default function Report() {
                       placeholder="Select type" 
                       size="large"
                       style={{ borderRadius: 12 }}
+                      onChange={(value) => {
+                        setShowOtherIncidentType(value === 'Others');
+                        if (value !== 'Others') {
+                          form.setFieldsValue({ otherIncidentType: undefined });
+                        }
+                      }}
                     >
                       <Option value="Physical">🤕 Physical</Option>
                       <Option value="Sexual">💔 Sexual</Option>
@@ -384,6 +399,25 @@ export default function Report() {
                     </Select>
                   </Form.Item>
                 </Col>
+                {showOtherIncidentType && (
+                  <Col xs={24} md={12}>
+                    <Form.Item
+                      name="otherIncidentType"
+                      label={<Text strong>Specify Incident Type</Text>}
+                      rules={[
+                        { required: true, message: "Please specify the type of incident" },
+                        { min: 3, message: "Please provide at least 3 characters" }
+                      ]}
+                    >
+                      <Input
+                        placeholder="Please specify the incident type"
+                        size="large"
+                        style={{ borderRadius: 12 }}
+                        maxLength={100}
+                      />
+                    </Form.Item>
+                  </Col>
+                )}
               </Row>
 
               <Row gutter={[16, 0]}>
@@ -397,6 +431,12 @@ export default function Report() {
                       size="large"
                       style={{ borderRadius: 12 }}
                       allowClear
+                      onChange={(value) => {
+                        const location = value 
+                          ? `${value}, Bonfal Proper, Bayombong, Nueva Vizcaya` 
+                          : "Bonfal Proper, Bayombong, Nueva Vizcaya";
+                        form.setFieldsValue({ location });
+                      }}
                     >
                       <Option value="Purok 1">Purok 1</Option>
                       <Option value="Purok 2">Purok 2</Option>
@@ -423,7 +463,7 @@ export default function Report() {
                   </Form.Item>
                 </Col>
               </Row>
-              <Form.Item name="location" hidden>
+              <Form.Item name="location" hidden initialValue="Bonfal Proper, Bayombong, Nueva Vizcaya">
                 <Input type="hidden" />
               </Form.Item>
 

@@ -59,11 +59,16 @@ const incidentReportSchema = new mongoose.Schema({
     incidentType: {
         type: String,
         required: [true, 'Incident type is required'],
-        enum: {
-            values: ['Physical', 'Sexual', 'Psychological', 'Economic', 'Emergency'],
-            message: 'Please enter a valid incident type'
-        },
-        trim: true
+        trim: true,
+        validate: {
+            validator: function(v) {
+                if (!v) return false;
+                // Allow the predefined types or anything starting with "Others:"
+                const validTypes = ['Physical', 'Sexual', 'Psychological', 'Economic', 'Emergency'];
+                return validTypes.includes(v) || v.startsWith('Others:');
+            },
+            message: 'Please enter a valid incident type (Physical, Sexual, Psychological, Economic, Emergency, or Others)'
+        }
     },
     description: {
         type: String,

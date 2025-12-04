@@ -74,6 +74,7 @@ const Analytics = () => {
   const [overallData, setOverallData] = useState([]);
   const [perLocationData, setPerLocationData] = useState([]);
   const [mostCommonData, setMostCommonData] = useState([]);
+  const [mostCommonAbuse, setMostCommonAbuse] = useState(null);
 
   const [casesModalVisible, setCasesModalVisible] = useState(false);
   const [casesData, setCasesData] = useState([]);
@@ -108,7 +109,7 @@ const Analytics = () => {
       if (filterVictimType !== "all") {
         params.victimType = filterVictimType;
       }
-      
+
       const [overallRes, perLocRes, mostCommonRes] = await Promise.all([
         axios.get(`${API_BASE}/api/analytics/abuse-distribution`, {
           headers: { "x-internal-key": internalKey },
@@ -126,6 +127,14 @@ const Analytics = () => {
       setOverallData((overallRes.data.data || []).map(d => ({ name: d._id, value: d.count })));
       setPerLocationData(formatPerLocation(perLocRes.data.data || []));
       setMostCommonData(mostCommonRes.data.data || []);
+      const data = overallRes.data.data;
+      // Find the object with the highest count
+      const highest = data.reduce((max, item) =>
+        item.count > max.count ? item : max
+        , data[0]); // start with the first item
+
+      // Set it to state
+      setMostCommonAbuse(highest);
     } catch (err) {
       console.error(err);
       setError("Failed to load analytics data. Please try again.");
@@ -208,9 +217,15 @@ const Analytics = () => {
   const { overallFiltered, perLocationFiltered } = getFilteredChartData();
 
   // Filter table data based on Purok filter
-  const filteredTableData = filterPurok === "all" 
-    ? mostCommonData 
+  const filteredTableData = filterPurok === "all"
+    ? mostCommonData
     : mostCommonData.filter(d => d.location === filterPurok);
+
+  const sortedTableData = [...filteredTableData].sort((a, b) => {
+    const aNum = parseInt(a.location.replace(/\D/g, ""), 10); // extract number
+    const bNum = parseInt(b.location.replace(/\D/g, ""), 10);
+    return aNum - bNum;
+  });
 
   const fetchCasesByPurok = async (purok) => {
     try {
@@ -262,17 +277,17 @@ const Analytics = () => {
   const handleExportPDF = async () => {
     try {
       setExportLoading(true);
-      
+
       // Use the already filtered data from charts
       const { overallFiltered, perLocationFiltered } = getFilteredChartData();
-      
+
       // Filter mostCommonData based on selected filters
       let filteredMostCommonData = [...mostCommonData];
-      
+
       if (filterPurok !== "all") {
         filteredMostCommonData = filteredMostCommonData.filter(d => d.location === filterPurok);
       }
-      
+
       if (filterAbuseType !== "all") {
         filteredMostCommonData = filteredMostCommonData.filter(d => d.mostCommon === filterAbuseType);
       }
@@ -291,16 +306,16 @@ const Analytics = () => {
       // Header
       pdf.setFillColor(122, 90, 248);
       pdf.rect(0, 0, pageWidth, 35, 'F');
-      
+
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(22);
       pdf.setFont('helvetica', 'bold');
       pdf.text('VAW Care Analytics Report', pageWidth / 2, 15, { align: 'center' });
-      
+
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
       pdf.text(`Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, pageWidth / 2, 25, { align: 'center' });
-      
+
       yPos = 45;
 
       // Applied Filters Section
@@ -309,7 +324,7 @@ const Analytics = () => {
       pdf.setFont('helvetica', 'bold');
       pdf.text('Applied Filters', 14, yPos);
       yPos += 7;
-      
+
       pdf.setFontSize(9);
       pdf.setFont('helvetica', 'normal');
       pdf.text(`Purok: ${filterPurok === "all" ? "All Puroks" : filterPurok}`, 14, yPos);
@@ -324,28 +339,28 @@ const Analytics = () => {
       // Summary Statistics
       const totalCases = filteredOverallData.reduce((sum, d) => sum + d.value, 0);
       const totalPuroks = filteredMostCommonData.length;
-      
+
       pdf.setFillColor(250, 249, 255);
       pdf.rect(14, yPos, pageWidth - 28, 30, 'F');
       pdf.setDrawColor(122, 90, 248);
       pdf.setLineWidth(0.5);
       pdf.rect(14, yPos, pageWidth - 28, 30, 'S');
-      
+
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(122, 90, 248);
       pdf.text('Summary Statistics', 20, yPos + 8);
-      
+
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(0, 0, 0);
       pdf.text(`Total Cases: ${totalCases}`, 20, yPos + 16);
       pdf.text(`Puroks Analyzed: ${totalPuroks}`, 20, yPos + 23);
-      
+
       if (filteredMostCommonData.length > 0) {
         pdf.text(`Most Common Abuse: ${filteredMostCommonData[0]?.mostCommon || "N/A"}`, pageWidth / 2 + 10, yPos + 16);
       }
-      
+
       yPos += 40;
 
       // Overall Abuse Distribution Table
@@ -459,7 +474,7 @@ const Analytics = () => {
           const textLines = pdf.splitTextToSize(`${idx + 1}. ${desc}`, pageWidth - 35);
           const boxHeight = textLines.length * 5 + 6;
           pdf.rect(14, yPos, pageWidth - 28, boxHeight, 'F');
-          
+
           pdf.setTextColor(0, 0, 0);
           pdf.setFontSize(9);
           pdf.text(textLines, 18, yPos + 5);
@@ -484,9 +499,9 @@ const Analytics = () => {
       // Save the PDF
       const fileName = `VAWCare_Analytics_${filterPurok !== "all" ? filterPurok + "_" : ""}${new Date().toISOString().split('T')[0]}.pdf`;
       pdf.save(fileName);
-      
+
       setExportModalVisible(false);
-      
+
     } catch (error) {
       console.error("Error generating PDF:", error);
       alert("Failed to generate PDF. Please try again.");
@@ -584,7 +599,7 @@ const Analytics = () => {
             )}
           </div>
         </div>
-        
+
         <Space>
           {/* Refresh Button */}
           <Button
@@ -599,7 +614,7 @@ const Analytics = () => {
           >
             {isMdUp ? "Refresh" : null}
           </Button>
-          
+
           {/* Export Button */}
           <Button
             type="primary"
@@ -645,7 +660,7 @@ const Analytics = () => {
             <Card style={{ ...glassCard, textAlign: "center" }} hoverable>
               <Statistic
                 title={<Text type="secondary">Most Common Abuse</Text>}
-                value={mostCommonData[0]?.mostCommon || "N/A"}
+                value={mostCommonAbuse._id || "N/A"}
                 prefix={<FireOutlined style={{ color: "#FF4C4C" }} />}
                 valueStyle={{ color: "#FF4C4C", fontWeight: 700, fontSize: isXs ? 16 : 24 }}
               />
@@ -847,7 +862,7 @@ const Analytics = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredTableData.map((d, idx) => (
+                    {sortedTableData.map((d, idx) => (
                       <React.Fragment key={d.location}>
                         <tr
                           className="table-row-modern"
@@ -856,7 +871,7 @@ const Analytics = () => {
                             background: expandedPurok === d.location ? "#fafafa" : "#fff",
                           }}
                         >
-                          <td 
+                          <td
                             style={{ padding: "20px 20px", cursor: "pointer" }}
                             onClick={() => fetchCasesByPurok(d.location)}
                           >
@@ -932,17 +947,17 @@ const Analytics = () => {
                             </span>
                           </td>
                         </tr>
-                        
+
                         {/* Expanded Cases */}
                         {expandedPurok === d.location && purokCases[d.location] && (
                           <tr>
                             <td colSpan={3} style={{ padding: 0, background: "#fafafa" }}>
                               <div style={{ padding: "0 20px 20px 20px" }}>
                                 {/* AI Insights Section for Purok */}
-                                <div style={{ 
-                                  marginBottom: 16, 
-                                  padding: "16px", 
-                                  background: "#fff", 
+                                <div style={{
+                                  marginBottom: 16,
+                                  padding: "16px",
+                                  background: "#fff",
                                   borderRadius: 8,
                                   border: "1px solid #e5e7eb"
                                 }}>
@@ -969,7 +984,7 @@ const Analytics = () => {
                                       Generate Insights
                                     </Button>
                                   </div>
-                                  
+
                                   {descLoading && selectedPurok === d.location ? (
                                     <div style={{ textAlign: "center", padding: "12px 0" }}>
                                       <Spin size="small" tip="Analyzing cases..." />
@@ -1545,8 +1560,8 @@ const Analytics = () => {
         ]}
         width={isXs ? "95%" : 580}
         centered
-        bodyStyle={{ 
-          maxHeight: "calc(100vh - 250px)", 
+        bodyStyle={{
+          maxHeight: "calc(100vh - 250px)",
           overflowY: "auto",
           padding: "16px 24px"
         }}
@@ -1652,10 +1667,10 @@ const Analytics = () => {
               />
             )}
 
-            <div style={{ 
-              padding: 10, 
-              background: "#f6f3ff", 
-              borderRadius: 6, 
+            <div style={{
+              padding: 10,
+              background: "#f6f3ff",
+              borderRadius: 6,
               border: `1px dashed ${BRAND.violet}`,
               marginTop: 4
             }}>

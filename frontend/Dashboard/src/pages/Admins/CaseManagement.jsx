@@ -1596,13 +1596,26 @@ export default function CaseManagement() {
 
       <Content
         style={{
-          padding: screens.xs ? 8 : screens.sm ? 10 : 16,
-          display: "flex",
-          justifyContent: "center",
-          paddingBottom: "max(16px, env(safe-area-inset-bottom))",
+          width: "100%",
+          minWidth: 0,
+          overflow: "auto",
+          flex: 1,
+          boxSizing: "border-box",
         }}
       >
-        <div style={{ width: "100%", maxWidth: 1320 }}>
+        <div style={{
+          padding: isXs ? 8 : screens.sm ? 10 : 12,
+          width: "100%",
+          maxWidth: "100%",
+          margin: 0,
+          display: "flex",
+          flexDirection: "column",
+          gap: isXs ? 8 : 10,
+          paddingInline: isXs ? 4 : screens.sm ? 8 : 12,
+          transition: "width .25s ease",
+          boxSizing: "border-box",
+          minHeight: "100%",
+        }}>
           {/* Insights Card */}
           <Card
             bordered
@@ -1659,8 +1672,8 @@ export default function CaseManagement() {
               </Space>
             </div>
             
-            <Row gutter={[screens.xs ? 8 : 16, screens.xs ? 8 : 16]}>
-              <Col xs={12} sm={8} md={8} lg={4}>
+            <Row gutter={[isXs ? 8 : 16, isXs ? 8 : 16]}>
+              <Col xs={24} sm={24} md={24} lg={24} xl={24} style={{ display: 'flex', gap: isXs ? 8 : 16, flexWrap: isXs ? 'wrap' : 'nowrap', justifyContent: 'space-between' }}>
                 <Card 
                   size="small" 
                   style={{ 
@@ -1668,8 +1681,9 @@ export default function CaseManagement() {
                     border: `1px solid ${BRAND.soft}`,
                     background: "linear-gradient(135deg, #f6f3ff, #ffffff)",
                     textAlign: "center",
-                    height: "100%",
-                    minHeight: screens.xs ? 100 : 110
+                    flex: 1,
+                    minWidth: isXs ? 'calc(50% - 4px)' : 'auto',
+                    minHeight: isXs ? 100 : 110
                   }}
                   bodyStyle={{ 
                     padding: screens.xs ? "12px 8px" : "16px 12px",
@@ -1693,9 +1707,7 @@ export default function CaseManagement() {
                     </div>
                   </div>
                 </Card>
-              </Col>
-              
-              <Col xs={12} sm={8} md={8} lg={4}>
+                
                 <Card 
                   size="small" 
                   style={{ 
@@ -1703,8 +1715,9 @@ export default function CaseManagement() {
                     border: "1px solid rgba(250,173,20,0.2)",
                     background: "linear-gradient(135deg, #fffbf0, #ffffff)",
                     textAlign: "center",
-                    height: "100%",
-                    minHeight: screens.xs ? 100 : 110
+                    flex: 1,
+                    minWidth: isXs ? 'calc(50% - 4px)' : 'auto',
+                    minHeight: isXs ? 100 : 110
                   }}
                   bodyStyle={{ 
                     padding: screens.xs ? "12px 8px" : "16px 12px",
@@ -1728,9 +1741,7 @@ export default function CaseManagement() {
                     </div>
                   </div>
                 </Card>
-              </Col>
-              
-              <Col xs={12} sm={8} md={8} lg={4}>
+                
                 <Card 
                   size="small" 
                   style={{ 
@@ -1738,8 +1749,9 @@ export default function CaseManagement() {
                     border: "1px solid rgba(82,196,26,0.2)",
                     background: "linear-gradient(135deg, #f6ffed, #ffffff)",
                     textAlign: "center",
-                    height: "100%",
-                    minHeight: screens.xs ? 100 : 110
+                    flex: 1,
+                    minWidth: isXs ? 'calc(50% - 4px)' : 'auto',
+                    minHeight: isXs ? 100 : 110
                   }}
                   bodyStyle={{ 
                     padding: screens.xs ? "12px 8px" : "16px 12px",
@@ -1763,9 +1775,7 @@ export default function CaseManagement() {
                     </div>
                   </div>
                 </Card>
-              </Col>
-              
-              <Col xs={12} sm={8} md={8} lg={4}>
+                
                 <Card 
                   size="small" 
                   style={{ 
@@ -1773,8 +1783,9 @@ export default function CaseManagement() {
                     border: "1px solid rgba(255,77,79,0.2)",
                     background: "linear-gradient(135deg, #fff1f0, #ffffff)",
                     textAlign: "center",
-                    height: "100%",
-                    minHeight: screens.xs ? 100 : 110
+                    flex: 1,
+                    minWidth: isXs ? 'calc(50% - 4px)' : 'auto',
+                    minHeight: isXs ? 100 : 110
                   }}
                   bodyStyle={{ 
                     padding: screens.xs ? "12px 8px" : "16px 12px",
@@ -1798,9 +1809,7 @@ export default function CaseManagement() {
                     </div>
                   </div>
                 </Card>
-              </Col>
-              
-              <Col xs={12} sm={8} md={8} lg={4}>
+                
                 <Card 
                   size="small" 
                   style={{ 
@@ -1808,8 +1817,9 @@ export default function CaseManagement() {
                     border: `1px solid ${BRAND.soft}`,
                     background: "linear-gradient(135deg, #fff0f7, #ffffff)",
                     textAlign: "center",
-                    height: "100%",
-                    minHeight: screens.xs ? 100 : 110
+                    flex: 1,
+                    minWidth: isXs ? 'calc(50% - 4px)' : 'auto',
+                    minHeight: isXs ? 100 : 110
                   }}
                   bodyStyle={{ 
                     padding: screens.xs ? "12px 8px" : "16px 12px",
@@ -1837,9 +1847,7 @@ export default function CaseManagement() {
                     </div>
                   </div>
                 </Card>
-              </Col>
-              
-              <Col xs={12} sm={8} md={8} lg={4}>
+                
                 <Card 
                   size="small" 
                   style={{ 
@@ -1847,8 +1855,9 @@ export default function CaseManagement() {
                     border: `1px solid ${BRAND.soft}`,
                     background: "linear-gradient(135deg, #f0f9ff, #ffffff)",
                     textAlign: "center",
-                    height: "100%",
-                    minHeight: screens.xs ? 100 : 110
+                    flex: 1,
+                    minWidth: isXs ? 'calc(50% - 4px)' : 'auto',
+                    minHeight: isXs ? 100 : 110
                   }}
                   bodyStyle={{ 
                     padding: screens.xs ? "12px 8px" : "16px 12px",
@@ -1881,19 +1890,17 @@ export default function CaseManagement() {
           </Card>
 
         <Card
-          bordered
           style={{
-            width: "100%",
-            maxWidth: 1320,
-            borderRadius: screens.xs ? 12 : 18,
-            borderColor: BRAND.soft,
-            boxShadow: "0 20px 46px rgba(122,90,248,0.06)",
+            borderRadius: isXs ? 12 : 18,
+            border: `1px solid ${BRAND.soft}`,
+            boxShadow: "0 10px 26px rgba(16,24,40,0.06)",
+            padding: 0
           }}
-          bodyStyle={{ padding: screens.xs ? 8 : screens.sm ? 12 : 16 }}
         >
           {/* Custom header that stacks on mobile */}
           <div style={{
-            marginBottom: screens.xs ? 12 : 16,
+            padding: isXs ? "12px 12px 0" : screens.sm ? "16px 16px 0" : "20px 20px 0",
+            marginBottom: isXs ? 12 : 16,
             display: "flex",
             flexDirection: screens.xs ? "column" : "row",
             justifyContent: "space-between",
@@ -1947,16 +1954,18 @@ export default function CaseManagement() {
               pageSize: 10, 
               showSizeChanger: false,
               size: screens.xs ? 'small' : 'default',
-              position: ['bottomLeft']
+              position: ['bottomLeft'],
+              showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} cases`
             }}
             scroll={{
-              x: screens.xs ? 450 : 980,
+              x: "max-content",
               y: screens.xs ? 420 : screens.sm ? 460 : 520,
             }}
-            tableLayout="auto"
+            tableLayout={isMdUp ? "fixed" : "auto"}
             className="pretty-table"
             sortDirections={['descend']}
             size={screens.xs ? 'small' : 'middle'}
+            sticky
           />
 
           {/* Edit / View Modal (kept functional behavior) */}
@@ -3511,7 +3520,7 @@ export default function CaseManagement() {
           box-shadow: 0 0 0 2px rgba(122,90,248,0.15) !important;
         }
 
-        /* Custom Scrollbar - Ultra Optimized */
+        /* Custom Scrollbar - Auto-hide when not in use */
         .ant-layout-content ::-webkit-scrollbar,
         .ant-table-body ::-webkit-scrollbar,
         .ant-modal-body ::-webkit-scrollbar,
@@ -3530,7 +3539,7 @@ export default function CaseManagement() {
         .case-list-scroll::-webkit-scrollbar-track,
         div[style*="overflowY: auto"]::-webkit-scrollbar-track,
         div[style*="overflow-y: auto"]::-webkit-scrollbar-track {
-          background: #f1eeff;
+          background: transparent;
         }
 
         .ant-layout-content ::-webkit-scrollbar-thumb,
@@ -3540,8 +3549,20 @@ export default function CaseManagement() {
         .case-list-scroll::-webkit-scrollbar-thumb,
         div[style*="overflowY: auto"]::-webkit-scrollbar-thumb,
         div[style*="overflow-y: auto"]::-webkit-scrollbar-thumb {
-          background: #a78bfa;
+          background: transparent;
           border-radius: 3px;
+          transition: background 0.2s ease;
+        }
+
+        /* Show scrollbar on hover */
+        .ant-layout-content:hover ::-webkit-scrollbar-thumb,
+        .ant-table-body:hover ::-webkit-scrollbar-thumb,
+        .ant-modal-body:hover ::-webkit-scrollbar-thumb,
+        .ant-col:hover::-webkit-scrollbar-thumb,
+        .case-list-scroll:hover::-webkit-scrollbar-thumb,
+        div[style*="overflowY: auto"]:hover::-webkit-scrollbar-thumb,
+        div[style*="overflow-y: auto"]:hover::-webkit-scrollbar-thumb {
+          background: #a78bfa;
         }
 
         .ant-layout-content ::-webkit-scrollbar-thumb:hover,
@@ -3554,7 +3575,7 @@ export default function CaseManagement() {
           background: #8b5cf6;
         }
 
-        /* Firefox scrollbar */
+        /* Firefox scrollbar - auto-hide */
         .ant-layout-content,
         .ant-table-body,
         .ant-modal-body,
@@ -3563,6 +3584,16 @@ export default function CaseManagement() {
         div[style*="overflowY: auto"],
         div[style*="overflow-y: auto"] {
           scrollbar-width: thin;
+          scrollbar-color: transparent transparent;
+        }
+
+        .ant-layout-content:hover,
+        .ant-table-body:hover,
+        .ant-modal-body:hover,
+        .ant-col:hover,
+        .case-list-scroll:hover,
+        div[style*="overflowY: auto"]:hover,
+        div[style*="overflow-y: auto"]:hover {
           scrollbar-color: #a78bfa #f1eeff;
         }
       `}</style>

@@ -656,11 +656,20 @@ export default function UserManagement() {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: isXs ? 6 : 8, flexShrink: 0 }}>
           <Button
             icon={<ReloadOutlined />}
             onClick={fetchAllUsers}
-            style={{ borderColor: BRAND.violet, color: BRAND.violet }}
+            size={isXs ? "middle" : "middle"}
+            style={{ 
+              borderColor: BRAND.violet, 
+              color: BRAND.violet,
+              borderRadius: isXs ? 8 : 10,
+              height: isXs ? 32 : 36,
+              fontSize: isXs ? 13 : 14,
+              padding: isXs ? "0 8px" : "4px 15px",
+              fontWeight: 600
+            }}
           >
             {isMdUp ? "Refresh" : null}
           </Button>
@@ -668,7 +677,16 @@ export default function UserManagement() {
             icon={<DownloadOutlined />}
             onClick={exportCsv}
             type="primary"
-            style={{ background: BRAND.violet, borderColor: BRAND.violet }}
+            size={isXs ? "middle" : "middle"}
+            style={{ 
+              background: BRAND.violet, 
+              borderColor: BRAND.violet,
+              borderRadius: isXs ? 8 : 10,
+              height: isXs ? 32 : 36,
+              fontSize: isXs ? 13 : 14,
+              padding: isXs ? "0 8px" : "4px 15px",
+              fontWeight: 600
+            }}
           >
             {isMdUp ? "Export" : null}
           </Button>
@@ -1006,36 +1024,38 @@ export default function UserManagement() {
                 </Typography.Text>
               </div>
 
-              <Space
-                size={isXs ? 10 : 12}
-                wrap
+              <div
                 style={{
+                  display: "flex",
+                  gap: isXs ? 8 : 12,
                   width: isXs ? "100%" : "auto",
-                  justifyContent: isXs ? "stretch" : "flex-end",
+                  flexWrap: isXs ? "nowrap" : "wrap",
                 }}
               >
                 <Button
                   type="primary"
-                  size="large"
+                  size={isXs ? "middle" : "large"}
                   onClick={() => openQuickUpdate("Barangay Captain")}
                   style={{
                     background: `linear-gradient(135deg, ${BRAND.violet} 0%, #9b7dff 100%)`,
                     borderColor: "transparent",
-                    height: isXs ? 42 : 44,
+                    height: isXs ? 36 : 44,
                     fontWeight: 600,
-                    fontSize: isXs ? 13 : 14,
+                    fontSize: isXs ? 12 : 14,
                     boxShadow: `0 4px 12px ${BRAND.violet}30`,
-                    width: isXs ? "calc(50% - 5px)" : "auto",
+                    width: isXs ? "50%" : "auto",
                     minWidth: isXs ? 0 : 140,
-                    borderRadius: 10,
+                    borderRadius: isXs ? 8 : 10,
                     display: "flex",
                     alignItems: "center",
-                    gap: 6,
+                    justifyContent: "center",
+                    gap: isXs ? 4 : 6,
+                    padding: isXs ? "0 8px" : "4px 15px",
                   }}
                   icon={
                     <EditOutlined
                       style={{
-                        fontSize: isXs ? 14 : 15,
+                        fontSize: isXs ? 13 : 15,
                       }}
                     />
                   }
@@ -1044,33 +1064,35 @@ export default function UserManagement() {
                 </Button>
                 <Button
                   type="primary"
-                  size="large"
+                  size={isXs ? "middle" : "large"}
                   onClick={() => openQuickUpdate("VAWC Chairman")}
                   style={{
                     background: `linear-gradient(135deg, ${BRAND.green} 0%, #73d13d 100%)`,
                     borderColor: "transparent",
-                    height: isXs ? 42 : 44,
+                    height: isXs ? 36 : 44,
                     fontWeight: 600,
-                    fontSize: isXs ? 13 : 14,
+                    fontSize: isXs ? 12 : 14,
                     boxShadow: `0 4px 12px ${BRAND.green}30`,
-                    width: isXs ? "calc(50% - 5px)" : "auto",
+                    width: isXs ? "50%" : "auto",
                     minWidth: isXs ? 0 : 140,
-                    borderRadius: 10,
+                    borderRadius: isXs ? 8 : 10,
                     display: "flex",
                     alignItems: "center",
-                    gap: 6,
+                    justifyContent: "center",
+                    gap: isXs ? 4 : 6,
+                    padding: isXs ? "0 8px" : "4px 15px",
                   }}
                   icon={
                     <EditOutlined
                       style={{
-                        fontSize: isXs ? 14 : 15,
+                        fontSize: isXs ? 13 : 15,
                       }}
                     />
                   }
                 >
                   {isXs ? "Chairman" : "Update Chairman"}
                 </Button>
-              </Space>
+              </div>
             </div>
           </Card>
 
@@ -1730,39 +1752,6 @@ export default function UserManagement() {
           }
           .ant-picker {
             font-size: 14px !important;
-          }
-          .ant-btn {
-            font-size: 13px !important;
-            padding: 4px 12px !important;
-            height: 32px !important;
-            min-width: 32px !important;
-          }
-          .ant-btn-icon-only {
-            padding: 4px 8px !important;
-            width: 32px !important;
-          }
-          .ant-btn-sm {
-            font-size: 12px !important;
-            padding: 2px 8px !important;
-            height: 28px !important;
-          }
-          .ant-layout-header .ant-btn {
-            padding: 4px 8px !important;
-            height: 32px !important;
-          }
-          .ant-space-item .ant-btn {
-            white-space: nowrap !important;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .ant-btn {
-            font-size: 12px !important;
-            padding: 4px 10px !important;
-            height: 30px !important;
-          }
-          .ant-btn-icon-only {
-            width: 30px !important;
           }
         }
 

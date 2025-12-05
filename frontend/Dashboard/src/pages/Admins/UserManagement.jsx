@@ -39,6 +39,8 @@ import {
   HeartOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 
 const { Header, Content } = Layout;
 const { Search } = Input;
@@ -537,33 +539,125 @@ export default function UserManagement() {
     setQuickUpdateModalOpen(true);
   };
 
-  // Export CSV
-  const exportCsv = () => {
-    const rows = filteredUsers.map((u) => ({
-      Name: u.name,
-      Username: u.username,
-      Email: u.email,
-      Type: u.userType,
-      Role: u.role,
-      Status: u.status,
-      CreatedAt: u.createdAt ? new Date(u.createdAt).toISOString() : "",
-    }));
-    const header = "Name,Username,Email,Type,Role,Status,CreatedAt";
-    const body = rows
-      .map((r) =>
-        Object.values(r)
-          .map((v) => `"${String(v ?? "").replaceAll('"', '""')}"`)
-          .join(",")
-      )
-      .join("\n");
-    const csv = header + "\n" + body;
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "users.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+  // Export to Excel
+  const exportCsv = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Users");
+
+    let currentRow = 1;
+
+    // Add title
+    const titleRow = worksheet.addRow(["USER EXPORT SUMMARY"]);
+    titleRow.font = { bold: true, size: 16, color: { argb: "FFFFFFFF" } };
+    titleRow.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF7A5AF8" }
+    };
+    titleRow.alignment = { horizontal: "left", vertical: "center", wrapText: true };
+    titleRow.height = 35;
+    worksheet.mergeCells(`A${currentRow}:G${currentRow}`);
+    currentRow++;
+
+    // Add timestamp
+    const metaRow = worksheet.addRow([`Generated: ${new Date().toLocaleString()}`, "", "", "", "", "", ""]);
+    metaRow.font = { size: 11 };
+    metaRow.alignment = { horizontal: "left", vertical: "top", wrapText: true };
+    metaRow.height = 30;
+    currentRow++;
+
+    // Add spacer
+    worksheet.addRow([""]);
+    currentRow++;
+
+    // Calculate user type breakdown
+    const userTypeBreakdown = {};
+    filteredUsers.forEach(u => {
+      const type = u.userType || "Unknown";
+      userTypeBreakdown[type] = (userTypeBreakdown[type] || 0) + 1;
+    });
+
+    // Add total users with type breakdown on separate lines in the same cell
+    const sortedUserTypes = Object.entries(userTypeBreakdown).sort(([a], [b]) => a.localeCompare(b));
+    const typeBreakdownStr = sortedUserTypes.map(([type, count]) => `${type.toLowerCase()}: ${count}`).join("\n");
+    
+    const totalRow = worksheet.addRow([`Total Users: ${filteredUsers.length}`, typeBreakdownStr]);
+    totalRow.font = { size: 11, bold: true };
+    totalRow.alignment = { horizontal: "left", vertical: "top", wrapText: true };
+    totalRow.height = Math.max(sortedUserTypes.length * 18, 24);
+    totalRow.getCell(1).font = { bold: true, size: 11 };
+    totalRow.getCell(2).font = { size: 11 };
+    totalRow.getCell(2).alignment = { horizontal: "left", vertical: "top", wrapText: true };
+    // Don't merge - keep breakdown in column B only
+    currentRow++;
+
+    // Add spacer
+    worksheet.addRow([""]);
+    currentRow++;
+
+    // Define headers
+    const headers = ["Name", "Username", "Email", "Type", "Role", "Status", "Created At"];
+
+    // Add header row
+    const headerRow = worksheet.addRow(headers);
+    headerRow.font = { bold: true, size: 13, color: { argb: "FFFFFFFF" } };
+    headerRow.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF7A5AF8" }
+    };
+    headerRow.alignment = { horizontal: "center", vertical: "center", wrapText: true };
+    headerRow.height = 50;
+    headerRow.eachCell((cell) => {
+      cell.border = {
+        top: { style: "medium", color: { argb: "FF000000" } },
+        left: { style: "medium", color: { argb: "FF000000" } },
+        bottom: { style: "medium", color: { argb: "FF000000" } },
+        right: { style: "medium", color: { argb: "FF000000" } }
+      };
+    });
+    currentRow++;
+
+    // Sort users by type (alphabetically)
+    const sortedUsers = [...filteredUsers].sort((a, b) => {
+      const aType = (a.userType || "Unknown").toLowerCase();
+      const bType = (b.userType || "Unknown").toLowerCase();
+      return aType.localeCompare(bType);
+    });
+
+    // Add data rows
+    sortedUsers.forEach((u) => {
+      const rowData = [
+        u.name || "",
+        u.username || "",
+        u.email || "",
+        u.userType || "",
+        u.role || "",
+        u.status || "",
+        u.createdAt ? new Date(u.createdAt).toLocaleString() : ""
+      ];
+
+      const row = worksheet.addRow(rowData);
+      row.alignment = { horizontal: "left", vertical: "top", wrapText: true };
+      row.height = "auto";
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: "thin", color: { argb: "FFCCCCCC" } },
+          left: { style: "thin", color: { argb: "FFCCCCCC" } },
+          bottom: { style: "thin", color: { argb: "FFCCCCCC" } },
+          right: { style: "thin", color: { argb: "FFCCCCCC" } }
+        };
+      });
+    });
+
+    // Set column widths
+    const columnWidths = [25, 20, 30, 18, 15, 15, 25];
+    worksheet.columns = columnWidths.map(width => ({ width }));
+
+    // Generate and download
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    saveAs(blob, `Users_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const modalWidth = isXs

@@ -49,6 +49,8 @@ import { api, getUserType } from "../../lib/api";
 import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;
@@ -92,7 +94,7 @@ export default function CaseManagement() {
   // Combined Export modal
   const [exportModalVisible, setExportModalVisible] = useState(false);
   const [exportType, setExportType] = useState("csv"); // "csv" or "pdf"
-  const [exportMode, setExportMode] = useState("officer"); // "officer" or "victim"
+  const [exportMode, setExportMode] = useState("all"); // "all", "officer" or "victim"
   const [selectedOfficer, setSelectedOfficer] = useState("");
   const [selectedVictim, setSelectedVictim] = useState("");
   const [exportFilters, setExportFilters] = useState({
@@ -697,6 +699,352 @@ export default function CaseManagement() {
     });
   };
 
+  // Helper function to create formatted Excel file using ExcelJS
+  const createExcelFile = async (data, filename, includeRemarks = false, filterInfo = {}) => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Cases");
+
+    let currentRow = 1;
+
+    // Add title
+    const titleRow = worksheet.addRow(["CASES EXPORT SUMMARY"]);
+    titleRow.font = { bold: true, size: 16, color: { argb: "FFFFFFFF" } };
+    titleRow.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF7A5AF8" }
+    };
+    titleRow.alignment = { horizontal: "left", vertical: "top", wrapText: true };
+    titleRow.height = 35;
+    worksheet.mergeCells(`A${currentRow}:E${currentRow}`);
+    currentRow++;
+
+    // Calculate statistics for display
+    const lowRiskCount = data.filter(c => c.riskLevel?.toLowerCase() === "low").length;
+    const mediumRiskCount = data.filter(c => c.riskLevel?.toLowerCase() === "medium").length;
+    const highRiskCount = data.filter(c => c.riskLevel?.toLowerCase() === "high").length;
+
+    // Calculate status breakdown
+    const statuses = {};
+    data.forEach(c => {
+      const status = c.status || "Unknown";
+      statuses[status] = (statuses[status] || 0) + 1;
+    });
+
+    // Calculate incident type breakdown
+    const incidentTypes = {};
+    data.forEach(c => {
+      const type = c.incidentType || "Unknown";
+      incidentTypes[type] = (incidentTypes[type] || 0) + 1;
+    });
+
+    // Calculate incident subtype breakdown
+    const incidentSubtypes = {};
+    data.forEach(c => {
+      const subtype = c.incidentSubtype || "Uncategorized";
+      incidentSubtypes[subtype] = (incidentSubtypes[subtype] || 0) + 1;
+    });
+
+    // Calculate purok breakdown - extract purok number from location format
+    const puroks = {};
+    data.forEach(c => {
+      let purokName = "Unknown";
+      
+      // Extract purok from location (format: "Purok X, ...")
+      if (c.location) {
+        const purokMatch = c.location.match(/Purok\s+\d+/);
+        if (purokMatch) {
+          purokName = purokMatch[0];
+        } else {
+          purokName = c.location;
+        }
+      } else if (c.purok) {
+        purokName = c.purok;
+      }
+      
+      puroks[purokName] = (puroks[purokName] || 0) + 1;
+    });
+
+    // Add timestamp and export mode
+    const metaRow = worksheet.addRow([`Generated: ${new Date().toLocaleString()}`, "", `Export Mode: ${filterInfo.mode || "All Cases"}`, "", ""]);
+    metaRow.font = { size: 11 };
+    metaRow.alignment = { horizontal: "left", vertical: "top", wrapText: true };
+    metaRow.height = 30;
+    metaRow.getCell(1).alignment = { horizontal: "left", vertical: "top", wrapText: true };
+    metaRow.getCell(3).alignment = { horizontal: "left", vertical: "top", wrapText: true };
+    currentRow++;
+
+    // Add export statistics row
+    const statsRow = worksheet.addRow([`Total Cases: ${data.length}`, `Low: ${lowRiskCount}`, `Medium: ${mediumRiskCount}`, `High: ${highRiskCount}`, ""]);
+    statsRow.font = { size: 11 };
+    statsRow.alignment = { horizontal: "left", vertical: "top", wrapText: true };
+    statsRow.height = 24;
+    statsRow.getCell(1).font = { bold: true, size: 11 };
+    statsRow.getCell(2).font = { bold: true, size: 11, color: { argb: "FFFFFFFF" } };
+    statsRow.getCell(2).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF00B050" } };
+    statsRow.getCell(3).font = { bold: true, size: 11 };
+    statsRow.getCell(3).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFC000" } };
+    statsRow.getCell(4).font = { bold: true, size: 11, color: { argb: "FFFFFFFF" } };
+    statsRow.getCell(4).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFF0000" } };
+    currentRow++;
+
+    // Add status breakdown row
+    const statusBreakdown = Object.entries(statuses).map(([status, count]) => `${status}: ${count}`).join("\n");
+    const statusRow = worksheet.addRow(["Status Breakdown", statusBreakdown, "", "", ""]);
+    statusRow.font = { size: 10 };
+    statusRow.alignment = { horizontal: "left", vertical: "top", wrapText: true };
+    statusRow.height = Math.max(Object.keys(statuses).length * 18, 28);
+    statusRow.getCell(1).font = { bold: true, size: 10, color: { argb: "FF7A5AF8" } };
+    statusRow.getCell(2).alignment = { horizontal: "left", vertical: "top", wrapText: true };
+    worksheet.mergeCells(`B${currentRow}:C${currentRow}`);
+    currentRow++;
+
+    // Add incident type breakdown row - sorted by: Sexual, Physical, Psychological, Economic, Others
+    const incidentTypeOrder = { "sexual": 1, "physical": 2, "psychological": 3, "economic": 4 };
+    const sortedIncidentTypes = Object.entries(incidentTypes).sort(([a], [b]) => {
+      const aLower = a.toLowerCase();
+      const bLower = b.toLowerCase();
+      const aIsOthers = aLower.startsWith("others");
+      const bIsOthers = bLower.startsWith("others");
+      
+      if (aIsOthers && !bIsOthers) return 1;
+      if (!aIsOthers && bIsOthers) return -1;
+      
+      const aOrder = incidentTypeOrder[aLower] || 999;
+      const bOrder = incidentTypeOrder[bLower] || 999;
+      return aOrder - bOrder;
+    });
+    const incidentTypeBreakdown = sortedIncidentTypes.map(([type, count]) => `${type}: ${count}`).join("\n");
+    const incidentTypeRow = worksheet.addRow(["Incident Type Breakdown", incidentTypeBreakdown, "", "", ""]);
+    incidentTypeRow.font = { size: 10 };
+    incidentTypeRow.alignment = { horizontal: "left", vertical: "top", wrapText: true };
+    incidentTypeRow.height = Math.max(Object.keys(incidentTypes).length * 18, 28);
+    incidentTypeRow.getCell(1).font = { bold: true, size: 10, color: { argb: "FF7A5AF8" } };
+    incidentTypeRow.getCell(2).alignment = { horizontal: "left", vertical: "top", wrapText: true };
+    worksheet.mergeCells(`B${currentRow}:C${currentRow}`);
+    currentRow++;
+
+    // Add incident subtype breakdown row - sorted alphabetically, with "Others" at the end
+    const sortedSubtypes = Object.entries(incidentSubtypes).sort(([a], [b]) => {
+      const aIsOthers = a.toLowerCase().startsWith("others");
+      const bIsOthers = b.toLowerCase().startsWith("others");
+      if (aIsOthers && !bIsOthers) return 1;
+      if (!aIsOthers && bIsOthers) return -1;
+      return a.localeCompare(b);
+    });
+    const incidentSubtypeBreakdown = sortedSubtypes.map(([subtype, count]) => `${subtype}: ${count}`).join("\n");
+    const incidentSubtypeRow = worksheet.addRow(["Incident Subtype Breakdown", incidentSubtypeBreakdown, "", "", ""]);
+    incidentSubtypeRow.font = { size: 10 };
+    incidentSubtypeRow.alignment = { horizontal: "left", vertical: "top", wrapText: true };
+    incidentSubtypeRow.height = Math.max(Object.keys(incidentSubtypes).length * 18, 28);
+    incidentSubtypeRow.getCell(1).font = { bold: true, size: 10, color: { argb: "FF7A5AF8" } };
+    incidentSubtypeRow.getCell(2).alignment = { horizontal: "left", vertical: "top", wrapText: true };
+    worksheet.mergeCells(`B${currentRow}:C${currentRow}`);
+    currentRow++;
+
+    // Add purok breakdown row - sorted numerically, with non-purok entries at the end
+    const sortedPuroks = Object.entries(puroks).sort(([a], [b]) => {
+      const aMatch = a.match(/\d+/);
+      const bMatch = b.match(/\d+/);
+      const aNum = aMatch ? parseInt(aMatch[0]) : Infinity;
+      const bNum = bMatch ? parseInt(bMatch[0]) : Infinity;
+      if (aNum === Infinity && bNum === Infinity) return a.localeCompare(b);
+      return aNum - bNum;
+    });
+    const purokBreakdown = sortedPuroks.map(([purok, count]) => `${purok}: ${count}`).join("\n");
+    const purokRow = worksheet.addRow(["Purok Breakdown", purokBreakdown, "", "", ""]);
+    purokRow.font = { size: 10 };
+    purokRow.alignment = { horizontal: "left", vertical: "top", wrapText: true };
+    purokRow.height = Math.max(Object.keys(puroks).length * 18, 28);
+    purokRow.getCell(1).font = { bold: true, size: 10, color: { argb: "FF7A5AF8" } };
+    purokRow.getCell(2).alignment = { horizontal: "left", vertical: "top", wrapText: true };
+    worksheet.mergeCells(`B${currentRow}:C${currentRow}`);
+    currentRow++;
+
+    // Add filter information with proper formatting
+    worksheet.addRow([""]); // Spacer
+    currentRow++;
+
+    const filterTitleRow = worksheet.addRow(["FILTERS APPLIED", "", "", "", ""]);
+    filterTitleRow.font = { bold: true, size: 13, color: { argb: "FFFFFFFF" } };
+    filterTitleRow.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF9966FF" }
+    };
+    filterTitleRow.alignment = { horizontal: "left", vertical: "center", wrapText: true };
+    filterTitleRow.height = 30;
+    worksheet.mergeCells(`A${currentRow}:E${currentRow}`);
+    currentRow++;
+
+    // Add filter details with better spacing
+    const filterDetails = [
+      ["Export By", filterInfo.mode || "All Cases"],
+      filterInfo.officer ? ["Assigned Officer", filterInfo.officer] : null,
+      filterInfo.victim ? ["Victim Name", filterInfo.victim] : null,
+      filterInfo.purok ? ["Purok", filterInfo.purok] : null,
+      filterInfo.status ? ["Status", filterInfo.status] : null,
+      filterInfo.riskLevel ? ["Risk Level", filterInfo.riskLevel] : null,
+      filterInfo.incidentType ? ["Incident Type", filterInfo.incidentType] : null,
+      filterInfo.victimType ? ["Victim Type", filterInfo.victimType] : null,
+    ].filter(item => item !== null);
+
+    filterDetails.forEach((detail) => {
+      const detailRow = worksheet.addRow([detail[0], detail[1], "", "", ""]);
+      detailRow.font = { size: 11 };
+      detailRow.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFF0E6FF" }
+      };
+      detailRow.alignment = { horizontal: "left", vertical: "top", wrapText: true };
+      detailRow.height = 28;
+      detailRow.getCell(1).font = { bold: true, size: 11, color: { argb: "FF7A5AF8" } };
+      detailRow.getCell(1).alignment = { horizontal: "left", vertical: "top", wrapText: true };
+      detailRow.getCell(2).alignment = { horizontal: "left", vertical: "top", wrapText: true };
+      worksheet.mergeCells(`B${currentRow}:E${currentRow}`);
+      currentRow++;
+    });
+
+    // Add empty rows before data headers
+    worksheet.addRow(["", "", "", "", ""]);
+    currentRow++;
+    worksheet.addRow(["", "", "", "", ""]);
+    currentRow++;
+
+    // Define data headers
+    const headers = [
+      "Case ID",
+      "Report ID",
+      "Victim Name",
+      "Victim Type",
+      "Incident Type",
+      "Incident Subtype",
+      "Description",
+      "Perpetrator",
+      "Location",
+      "Date Reported",
+      "Status",
+      "Assigned Officer",
+      "Risk Level",
+      "Created At"
+    ];
+
+    if (includeRemarks) {
+      headers.push("Remarks");
+    }
+
+    // Add header row for data
+    const headerRow = worksheet.addRow(headers);
+
+    // Style header row with larger, bolder formatting
+    headerRow.font = { bold: true, size: 13, color: { argb: "FFFFFFFF" } };
+    headerRow.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF7A5AF8" }
+    };
+    headerRow.alignment = { horizontal: "center", vertical: "center", wrapText: true };
+    headerRow.height = 50;
+
+    // Add borders to header row
+    headerRow.eachCell((cell) => {
+      cell.border = {
+        top: { style: "medium", color: { argb: "FF000000" } },
+        left: { style: "medium", color: { argb: "FF000000" } },
+        bottom: { style: "medium", color: { argb: "FF000000" } },
+        right: { style: "medium", color: { argb: "FF000000" } }
+      };
+    });
+
+    // Add data rows - sorted by risk level (low, medium, high) then by incident type
+    const riskLevelOrder = { "low": 1, "medium": 2, "high": 3 };
+    const sortedData = [...data].sort((a, b) => {
+      const aRisk = (a.riskLevel?.toLowerCase() || "unknown");
+      const bRisk = (b.riskLevel?.toLowerCase() || "unknown");
+      const riskCompare = (riskLevelOrder[aRisk] || 999) - (riskLevelOrder[bRisk] || 999);
+      
+      if (riskCompare !== 0) {
+        return riskCompare;
+      }
+      
+      // If risk levels are the same, sort by incident type
+      const aIncidentType = (a.incidentType || "Unknown").toLowerCase();
+      const bIncidentType = (b.incidentType || "Unknown").toLowerCase();
+      return aIncidentType.localeCompare(bIncidentType);
+    });
+
+    sortedData.forEach((item) => {
+      const rowData = [
+        item.caseID || "",
+        item.reportID || "",
+        item.victimName || "",
+        item.victimType || "",
+        item.incidentType || "",
+        item.incidentSubtype || "Uncategorized",
+        item.description || "",
+        item.perpetrator || "",
+        item.location || "",
+        item.dateReported ? new Date(item.dateReported).toLocaleString() : "",
+        item.status || "",
+        item.assignedOfficer || "",
+        item.riskLevel || "",
+        item.createdAt ? new Date(item.createdAt).toLocaleString() : ""
+      ];
+
+      if (includeRemarks) {
+        rowData.push(item.remarks || "");
+      }
+
+      const row = worksheet.addRow(rowData);
+      row.alignment = { horizontal: "left", vertical: "top", wrapText: true };
+      
+      // Calculate height based on remarks content for better visibility
+      if (includeRemarks && item.remarks && item.remarks.length > 0) {
+        // Estimate height: roughly 1 line per 80 characters, minimum 40px per remark
+        const remarksLineCount = Math.ceil(item.remarks.length / 80);
+        const estimatedHeight = Math.max(remarksLineCount * 20, 60);
+        row.height = estimatedHeight;
+      } else {
+        row.height = "auto";
+      }
+      
+      row.font = { size: 10 };
+
+      // Add borders to data rows
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: "thin", color: { argb: "FFD3D3D3" } },
+          left: { style: "thin", color: { argb: "FFD3D3D3" } },
+          bottom: { style: "thin", color: { argb: "FFD3D3D3" } },
+          right: { style: "thin", color: { argb: "FFD3D3D3" } }
+        };
+        cell.alignment = { horizontal: "left", vertical: "top", wrapText: true };
+      });
+    });
+
+    // Set column widths after adding data
+    const columnWidths = [15, 15, 25, 18, 20, 22, 40, 25, 30, 20, 15, 22, 15, 20];
+    if (includeRemarks) columnWidths.push(80);
+    
+    worksheet.columns.forEach((column, index) => {
+      if (column && index < columnWidths.length) {
+        column.width = columnWidths[index];
+      }
+    });
+
+    // Freeze the header row (data headers, not summary)
+    const headerRowNum = currentRow - data.length;
+    worksheet.freezePane = `A${headerRowNum + 1}`;
+
+    // Generate and save file
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    });
+    saveAs(blob, filename);
+  };
+
   // Get unique incident types
   const getUniqueIncidentTypes = () => {
     const types = allCases
@@ -705,7 +1053,8 @@ export default function CaseManagement() {
     return [...new Set(types)].sort();
   };
 
-  // Export all filtered cases to CSV
+  // Export all filtered cases to Excel
+
   const handleExportAllCSV = async () => {
     if (filteredCases.length === 0) {
       message.warning("No cases to export");
@@ -714,24 +1063,7 @@ export default function CaseManagement() {
 
     setExportLoading(true);
     try {
-      const headers = [
-        "Case ID",
-        "Report ID",
-        "Victim Name",
-        "Victim Type",
-        "Incident Type",
-        "Description",
-        "Perpetrator",
-        "Location",
-        "Date Reported",
-        "Status",
-        "Assigned Officer",
-        "Risk Level",
-        "Created At",
-        "Remarks"
-      ];
-
-      const csvRows = [headers.join(",")];
+      const dataWithRemarks = [];
 
       for (const c of filteredCases) {
         // Fetch remarks for this case
@@ -742,55 +1074,35 @@ export default function CaseManagement() {
           if (remarks.length > 0) {
             remarksText = remarks
               .map(r => `[${r.actorName || 'System'} - ${r.createdAt ? new Date(r.createdAt).toLocaleString() : 'N/A'}]: ${r.content || ''}`)
-              .join(' | ');
+              .join('\n');
           }
         } catch (err) {
           console.warn('Failed to fetch remarks for', c.caseID, err);
         }
 
-        const row = [
-          c.caseID || "",
-          c.reportID || "",
-          `"${(c.victimName || "").replace(/"/g, '""')}"`,
-          c.victimType || "",
-          c.incidentType || "",
-          `"${(c.description || "").replace(/"/g, '""')}"`,
-          `"${(c.perpetrator || "").replace(/"/g, '""')}"`,
-          `"${(c.location || "").replace(/"/g, '""')}"`,
-          c.dateReported ? new Date(c.dateReported).toLocaleString() : "",
-          c.status || "",
-          `"${(c.assignedOfficer || "").replace(/"/g, '""')}"`,
-          c.riskLevel || "",
-          c.createdAt ? new Date(c.createdAt).toLocaleString() : "",
-          `"${remarksText.replace(/"/g, '""')}"`
-        ];
-        csvRows.push(row.join(","));
+        dataWithRemarks.push({
+          ...c,
+          remarks: remarksText
+        });
       }
 
-      const csvContent = csvRows.join("\n");
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const link = document.createElement("a");
-      const url = URL.createObjectURL(blob);
-      
       const timestamp = new Date().toISOString().split('T')[0];
-      link.setAttribute("href", url);
-      link.setAttribute("download", `VAWCare_All_Cases_${timestamp}.csv`);
-      link.style.visibility = "hidden";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const filterInfo = {
+        mode: "All Cases"
+      };
+      await createExcelFile(dataWithRemarks, `VAWCare_All_Cases_${timestamp}.xlsx`, true, filterInfo);
 
-      message.success(`Exported ${filteredCases.length} case(s) to CSV`);
+      message.success(`Exported ${filteredCases.length} case(s) to Excel`);
     } catch (err) {
-      console.error('CSV export error:', err);
-      message.error('Failed to export CSV. Please try again.');
+      console.error('Excel export error:', err);
+      message.error('Failed to export Excel. Please try again.');
     } finally {
       setExportLoading(false);
     }
   };
 
   // Export cases for a specific officer with filters
-  const handleExportOfficerCases = (officerName) => {
+  const handleExportOfficerCases = async (officerName) => {
     if (!officerName || officerName.trim() === "") {
       message.warning("Please select an officer");
       return;
@@ -843,63 +1155,52 @@ export default function CaseManagement() {
       return;
     }
 
-    // Convert to CSV
-    const headers = [
-      "Case ID",
-      "Report ID",
-      "Incident Type",
-      "Description",
-      "Perpetrator",
-      "Location",
-      "Date Reported",
-      "Status",
-      "Assigned Officer",
-      "Risk Level",
-      "Created At"
-    ];
+    // Fetch remarks for each case
+    const officerCasesWithRemarks = [];
+    for (const c of officerCases) {
+      let remarksText = "";
+      try {
+        const remarksRes = await api.get(`/api/cases/${c.caseID}/remarks`);
+        const remarks = remarksRes?.data?.data || [];
+        if (remarks.length > 0) {
+          remarksText = remarks
+            .map(r => `[${r.actorName || 'System'} - ${r.createdAt ? new Date(r.createdAt).toLocaleString() : 'N/A'}]: ${r.content || ''}`)
+            .join('\n');
+        }
+      } catch (err) {
+        console.warn('Failed to fetch remarks for', c.caseID, err);
+      }
+      officerCasesWithRemarks.push({
+        ...c,
+        remarks: remarksText
+      });
+    }
 
-    const csvRows = [headers.join(",")];
-
-    officerCases.forEach(c => {
-      const row = [
-        c.caseID || "",
-        c.reportID || "",
-        c.incidentType || "",
-        `"${(c.description || "").replace(/"/g, '""')}"`,
-        c.perpetrator || "",
-        c.location || "",
-        c.dateReported ? new Date(c.dateReported).toLocaleString() : "",
-        c.status || "",
-        c.assignedOfficer || "",
-        c.riskLevel || "",
-        c.createdAt ? new Date(c.createdAt).toLocaleString() : ""
-      ];
-      csvRows.push(row.join(","));
-    });
-
-    const csvContent = csvRows.join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    
     const sanitizedOfficerName = officerName.replace(/[^a-zA-Z0-9]/g, "_");
     const timestamp = new Date().toISOString().split('T')[0];
+    
+    // Create filter info object
+    const filterInfo = {
+      mode: "Assigned Officer",
+      officer: officerName,
+      victim: selectedVictim || null,
+      purok: exportFilters.purok || null,
+      status: exportFilters.status || null,
+      riskLevel: exportFilters.riskLevel || null,
+      incidentType: exportFilters.incidentType || null,
+      victimType: exportFilters.victimType || null
+    };
     
     // Create filename based on whether victim is also selected
     let filename;
     if (selectedVictim) {
       const sanitizedVictimName = selectedVictim.replace(/[^a-zA-Z0-9]/g, "_");
-      filename = `Cases_${sanitizedOfficerName}_Victim_${sanitizedVictimName}_${timestamp}.csv`;
+      filename = `Cases_${sanitizedOfficerName}_Victim_${sanitizedVictimName}_${timestamp}.xlsx`;
     } else {
-      filename = `Cases_${sanitizedOfficerName}_${timestamp}.csv`;
+      filename = `Cases_${sanitizedOfficerName}_${timestamp}.xlsx`;
     }
-    
-    link.setAttribute("href", url);
-    link.setAttribute("download", filename);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+
+    await createExcelFile(officerCasesWithRemarks, filename, true, filterInfo);
 
     const exportMessage = selectedVictim 
       ? `Exported ${officerCases.length} case(s) for ${officerName} handling ${selectedVictim}'s cases`
@@ -914,7 +1215,7 @@ export default function CaseManagement() {
   };
 
   // Export cases for a specific victim with filters
-  const handleExportVictimCases = (victimName) => {
+  const handleExportVictimCases = async (victimName) => {
     if (!victimName || victimName.trim() === "") {
       message.warning("Please select a victim");
       return;
@@ -960,57 +1261,44 @@ export default function CaseManagement() {
       return;
     }
 
-    // Convert to CSV
-    const headers = [
-      "Case ID",
-      "Report ID",
-      "Victim Name",
-      "Victim Type",
-      "Incident Type",
-      "Description",
-      "Perpetrator",
-      "Location",
-      "Date Reported",
-      "Status",
-      "Assigned Officer",
-      "Risk Level",
-      "Created At"
-    ];
+    // Fetch remarks for each case
+    const victimCasesWithRemarks = [];
+    for (const c of victimCases) {
+      let remarksText = "";
+      try {
+        const remarksRes = await api.get(`/api/cases/${c.caseID}/remarks`);
+        const remarks = remarksRes?.data?.data || [];
+        if (remarks.length > 0) {
+          remarksText = remarks
+            .map(r => `[${r.actorName || 'System'} - ${r.createdAt ? new Date(r.createdAt).toLocaleString() : 'N/A'}]: ${r.content || ''}`)
+            .join('\n');
+        }
+      } catch (err) {
+        console.warn('Failed to fetch remarks for', c.caseID, err);
+      }
+      victimCasesWithRemarks.push({
+        ...c,
+        remarks: remarksText
+      });
+    }
 
-    const csvRows = [headers.join(",")];
-
-    victimCases.forEach(c => {
-      const row = [
-        c.caseID || "",
-        c.reportID || "",
-        `"${(c.victimName || "").replace(/"/g, '""')}"`,
-        c.victimType || "",
-        c.incidentType || "",
-        `"${(c.description || "").replace(/"/g, '""')}"`,
-        `"${(c.perpetrator || "").replace(/"/g, '""')}"`,
-        `"${(c.location || "").replace(/"/g, '""')}"`,
-        c.dateReported ? new Date(c.dateReported).toLocaleString() : "",
-        c.status || "",
-        `"${(c.assignedOfficer || "").replace(/"/g, '""')}"`,
-        c.riskLevel || "",
-        c.createdAt ? new Date(c.createdAt).toLocaleString() : ""
-      ];
-      csvRows.push(row.join(","));
-    });
-
-    const csvContent = csvRows.join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    
+    // Generate Excel file
     const sanitizedVictimName = victimName.replace(/[^a-zA-Z0-9]/g, "_");
     const timestamp = new Date().toISOString().split('T')[0];
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Cases_Victim_${sanitizedVictimName}_${timestamp}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const filename = `Cases_Victim_${sanitizedVictimName}_${timestamp}.xlsx`;
+    
+    // Create filter info object
+    const filterInfo = {
+      mode: "Victim Name",
+      victim: victimName,
+      purok: exportFilters.purok || null,
+      status: exportFilters.status || null,
+      riskLevel: exportFilters.riskLevel || null,
+      incidentType: exportFilters.incidentType || null,
+      victimType: exportFilters.victimType || null
+    };
+    
+    await createExcelFile(victimCasesWithRemarks, filename, true, filterInfo);
 
     message.success(`Exported ${victimCases.length} case(s) for victim: ${victimName}`);
     setExportModalVisible(false);
@@ -2809,14 +3097,22 @@ export default function CaseManagement() {
             >
               Cancel
             </Button>,
-            (selectedOfficer || selectedVictim) && (
+            (exportMode === "all" || selectedOfficer || selectedVictim) && (
               <Button
                 key="export-csv"
                 icon={<DownloadOutlined />}
-                onClick={() => exportMode === "officer" ? handleExportOfficerCases(selectedOfficer) : handleExportVictimCases(selectedVictim)}
+                onClick={() => {
+                  if (exportMode === "all") {
+                    handleExportAllCSV();
+                  } else if (exportMode === "officer") {
+                    handleExportOfficerCases(selectedOfficer);
+                  } else {
+                    handleExportVictimCases(selectedVictim);
+                  }
+                }}
                 style={{ background: BRAND.violet, borderColor: BRAND.violet, color: '#fff' }}
               >
-                CSV ({getFilteredCaseCount()})
+                Excel ({exportMode === "all" ? filteredCases.length : getFilteredCaseCount()})
               </Button>
             ),
             (selectedOfficer || selectedVictim) && (
@@ -2893,6 +3189,11 @@ export default function CaseManagement() {
                       style={{ width: '100%' }}
                     >
                       <Space direction="vertical" style={{ width: '100%' }}>
+                        <Radio value="all" style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: exportMode === 'all' ? `2px solid ${BRAND.violet}` : '1px solid #d9d9d9', background: exportMode === 'all' ? BRAND.soft : '#fff' }}>
+                          <Text strong>All Cases</Text>
+                          <br />
+                          <Text type="secondary" style={{ fontSize: 12 }}>Export all cases (includes remarks)</Text>
+                        </Radio>
                         <Radio value="officer" style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: exportMode === 'officer' ? `2px solid ${BRAND.violet}` : '1px solid #d9d9d9', background: exportMode === 'officer' ? BRAND.soft : '#fff' }}>
                           <Text strong>Assigned Officer</Text>
                           <br />

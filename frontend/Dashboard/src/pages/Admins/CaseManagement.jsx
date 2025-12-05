@@ -71,6 +71,9 @@ export default function CaseManagement() {
   const [reportsList, setReportsList] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
   const [userType, setUserType] = useState(null);
+  const [addSubtypeOptions, setAddSubtypeOptions] = useState([]); // Track subtypes for add modal
+  const [editSubtypeOptions, setEditSubtypeOptions] = useState([]); // Track subtypes for edit modal
+  const [keywordMappings, setKeywordMappings] = useState({}); // Keyword mappings from API
   
   // Analytics/Insights state
   const [analyticsData, setAnalyticsData] = useState({
@@ -133,6 +136,7 @@ export default function CaseManagement() {
           victimName: c.victimName,
           victimType: c.victimType,
           incidentType: c.incidentType,
+          incidentSubtype: c.incidentSubtype,
           description: c.description,
           perpetrator: c.perpetrator,
           location: c.location,
@@ -175,9 +179,67 @@ export default function CaseManagement() {
     }
   };
 
+  const fetchKeywordMappings = async () => {
+    try {
+      const { data } = await api.get("/api/metadata/keyword-mappings");
+      if (data?.data) {
+        setKeywordMappings(data.data);
+      }
+    } catch (err) {
+      console.error("Error fetching keyword mappings", err);
+    }
+  };
+
+  const detectSubtypeFromDescription = (description, incidentType) => {
+    if (!description || !incidentType || Object.keys(keywordMappings).length === 0) {
+      return "Uncategorized";
+    }
+
+    const descLower = description.toLowerCase();
+
+    // Check each potential subtype for keywords
+    for (const subtype in keywordMappings) {
+      const keywords = keywordMappings[subtype];
+      if (!keywords) continue;
+
+      // Check English keywords
+      if (keywords.english) {
+        for (const keyword of keywords.english) {
+          if (descLower.includes(keyword.toLowerCase())) {
+            return subtype;
+          }
+        }
+      }
+
+      // Check Tagalog/Filipino keywords
+      if (keywords.tagalog) {
+        for (const keyword of keywords.tagalog) {
+          if (descLower.includes(keyword.toLowerCase())) {
+            return subtype;
+          }
+        }
+      }
+    }
+
+    return "Uncategorized";
+  };
+
+  const getSubtypesForIncident = (incidentType) => {
+    // Hardcoded mapping for subtypes per incident type
+    const subtypesMapping = {
+      Physical: ["Slapping", "Hitting", "Strangulation", "Threat with weapon", "Uncategorized"],
+      Sexual: ["Rape", "Attempted rape", "Molestation", "Coercion", "Uncategorized"],
+      Psychological: ["Verbal abuse", "Gaslighting", "Threats", "Stalking", "Uncategorized"],
+      Economic: ["Withholding support", "Employment restriction", "Financial manipulation", "Uncategorized"],
+      Others: ["Cyber harassment", "Theft involving minors", "Uncategorized"],
+    };
+    return subtypesMapping[incidentType] || ["Uncategorized"];
+  };
+
   useEffect(() => {
     fetchAllCases();
     fetchBarangayOfficials();
+    fetchKeywordMappings();
     
     const fetchUserType = async () => {
       try {
@@ -242,6 +304,9 @@ export default function CaseManagement() {
     addForm.resetFields();
     // ensure status defaults to Open for new cases
     addForm.setFieldsValue({ status: 'Open' });
+    // Initialize with Physical abuse subtypes as default, but leave incidentSubtype empty
+    const defaultSubtypes = getSubtypesForIncident('Physical');
+    setAddSubtypeOptions(defaultSubtypes);
     await fetchReports();
     await fetchBarangayOfficials();
   };
@@ -270,9 +335,17 @@ export default function CaseManagement() {
         locationPurok = parts[0]; // e.g., "Purok 1"
       }
 
+      // Update subtypes based on the selected report's incident type
+      const subtypes = getSubtypesForIncident(rep.incidentType);
+      setAddSubtypeOptions(subtypes);
+      
+      // Detect subtype from description
+      const detectedSubtype = detectSubtypeFromDescription(rep.description, rep.incidentType);
+      
       addForm.setFieldsValue({
         reportID: rep.reportID,
         incidentType: rep.incidentType,
+        incidentSubtype: detectedSubtype,
         description: rep.description,
         perpetrator: rep.perpetrator || "",
         locationPurok: locationPurok,
@@ -327,6 +400,7 @@ export default function CaseManagement() {
                 }${selectedReport.victim.lastName || ""}`.trim()
               : selectedReport.raw.victimID || ""),
           incidentType: selectedReport.incidentType,
+          incidentSubtype: vals.incidentSubtype || "Uncategorized",
           description: selectedReport.description,
           perpetrator: selectedReport.perpetrator || "",
           location: location,
@@ -344,6 +418,7 @@ export default function CaseManagement() {
           victimID: vals.victimID || null,
           victimName: vals.victimName,
           incidentType: vals.incidentType,
+          incidentSubtype: vals.incidentSubtype || "Uncategorized",
           description: vals.description,
           perpetrator: vals.perpetrator || "",
           location: location,
@@ -1323,6 +1398,12 @@ export default function CaseManagement() {
     },
     { title: "Incident Type", dataIndex: "incidentType", key: "incidentType" },
     {
+      title: "Incident Subtype",
+      dataIndex: "incidentSubtype",
+      key: "incidentSubtype",
+      render: (s) => s || <Text type="secondary">—</Text>,
+    },
+    {
       title: "Status",
       dataIndex: "status",
       key: "status",
@@ -2030,6 +2111,22 @@ export default function CaseManagement() {
               >
                 <Input disabled={isViewMode} />
               </Form.Item>
+              <Form.Item
+                name="incidentSubtype"
+                label="Incident Subtype"
+              >
+                <Select 
+                  placeholder="Select subtype (auto-detected from description)"
+                  disabled={isViewMode}
+                  allowClear
+                >
+                  {editSubtypeOptions.map((subtype) => (
+                    <Option key={subtype} value={subtype}>
+                      {subtype}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
               <Row gutter={12} style={{ width: "100%" }}>
                 <Col xs={24} md={12}>
                   <Form.Item 
@@ -2385,7 +2482,17 @@ export default function CaseManagement() {
                     label={<Text strong>Incident Type</Text>}
                     rules={[{ required: true, message: "Incident type is required" }]}
                   >
-                    <Select placeholder="Select incident type" size="large">
+                    <Select 
+                      placeholder="Select incident type" 
+                      size="large"
+                      onChange={(value) => {
+                        // Update available subtypes when incident type changes
+                        const subtypes = getSubtypesForIncident(value);
+                        setAddSubtypeOptions(subtypes);
+                        // Reset subtype to first available option
+                        addForm.setFieldsValue({ incidentSubtype: subtypes[0] });
+                      }}
+                    >
                       <Option value="Economic">Economic Abuse</Option>
                       <Option value="Psychological">Psychological Abuse</Option>
                       <Option value="Physical">Physical Abuse</Option>
@@ -2394,6 +2501,26 @@ export default function CaseManagement() {
                     </Select>
                   </Form.Item>
                 </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    name="incidentSubtype"
+                    label={<Text strong>Incident Subtype</Text>}
+                    help="Auto-detected from description or select manually"
+                  >
+                    <Select 
+                      placeholder="Select incident subtype" 
+                      size="large"
+                      options={addSubtypeOptions.map(subtype => ({
+                        value: subtype,
+                        label: subtype
+                      }))}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* Location Row */}
+              <Row gutter={16}>
                 <Col xs={24} md={12}>
                   <Form.Item 
                     name="locationPurok" 
@@ -2468,7 +2595,13 @@ export default function CaseManagement() {
                   rows={4} 
                   placeholder="Provide detailed description of the incident..."
                   style={{ borderRadius: 8 }}
-                  onChange={() => addForm.validateFields(['description'])}
+                  onChange={(e) => {
+                    addForm.validateFields(['description']);
+                    // Auto-detect subtype based on description
+                    const incidentType = addForm.getFieldValue('incidentType');
+                    const detectedSubtype = detectSubtypeFromDescription(e.target.value, incidentType);
+                    addForm.setFieldsValue({ incidentSubtype: detectedSubtype });
+                  }}
                 />
               </Form.Item>
 

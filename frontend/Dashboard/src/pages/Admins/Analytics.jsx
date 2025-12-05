@@ -75,6 +75,7 @@ const Analytics = () => {
   const [perLocationData, setPerLocationData] = useState([]);
   const [mostCommonData, setMostCommonData] = useState([]);
   const [mostCommonAbuse, setMostCommonAbuse] = useState(null);
+  const [mostCommonSubtype, setMostCommonSubtype] = useState(null);
 
   const [casesModalVisible, setCasesModalVisible] = useState(false);
   const [casesData, setCasesData] = useState([]);
@@ -110,7 +111,7 @@ const Analytics = () => {
         params.victimType = filterVictimType;
       }
 
-      const [overallRes, perLocRes, mostCommonRes] = await Promise.all([
+      const [overallRes, perLocRes, mostCommonRes, mostCommonSubtypeRes] = await Promise.all([
         axios.get(`${API_BASE}/api/analytics/abuse-distribution`, {
           headers: { "x-internal-key": internalKey },
           params
@@ -122,11 +123,16 @@ const Analytics = () => {
         axios.get(`${API_BASE}/api/analytics/most-common-per-location`, {
           headers: { "x-internal-key": internalKey },
           params
+        }),
+        axios.get(`${API_BASE}/api/analytics/most-common-subtype`, {
+          headers: { "x-internal-key": internalKey },
+          params
         })
       ]);
       setOverallData((overallRes.data.data || []).map(d => ({ name: d._id, value: d.count })));
       setPerLocationData(formatPerLocation(perLocRes.data.data || []));
       setMostCommonData(mostCommonRes.data.data || []);
+      setMostCommonSubtype(mostCommonSubtypeRes.data.data || null);
       const data = overallRes.data.data;
       // Find the object with the highest count
       const highest = data.reduce((max, item) =>
@@ -636,33 +642,43 @@ const Analytics = () => {
       <Content style={{ padding: isXs ? 12 : 24, paddingTop: 16 }}>
         {/* KPI Cards */}
         <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-          <Col xs={24} sm={12} md={8}>
+          <Col xs={12} sm={12} md={6}>
             <Card style={{ ...glassCard, textAlign: "center" }} hoverable>
               <Statistic
-                title={<Text type="secondary">{filterPurok === "all" ? "Total Cases" : `Cases in ${filterPurok}`}</Text>}
+                title={<Text type="secondary" style={{ fontSize: isXs ? 11 : 12 }}>{filterPurok === "all" ? "Total Cases" : `Cases in ${filterPurok}`}</Text>}
                 value={overallFiltered.reduce((sum, d) => sum + d.value, 0)}
                 prefix={<FundOutlined style={{ color: BRAND.violet }} />}
-                valueStyle={{ color: BRAND.violet, fontWeight: 700 }}
+                valueStyle={{ color: BRAND.violet, fontWeight: 700, fontSize: isXs ? 20 : 28 }}
               />
             </Card>
           </Col>
-          <Col xs={24} sm={12} md={8}>
+          <Col xs={12} sm={12} md={6}>
             <Card style={{ ...glassCard, textAlign: "center" }} hoverable>
               <Statistic
-                title={<Text type="secondary">{filterPurok === "all" ? "Total Puroks" : "Filtered Puroks"}</Text>}
+                title={<Text type="secondary" style={{ fontSize: isXs ? 11 : 12 }}>{filterPurok === "all" ? "Total Puroks" : "Filtered Puroks"}</Text>}
                 value={perLocationFiltered.length}
                 prefix={<EnvironmentOutlined style={{ color: "#00C49F" }} />}
-                valueStyle={{ color: "#00C49F", fontWeight: 700 }}
+                valueStyle={{ color: "#00C49F", fontWeight: 700, fontSize: isXs ? 20 : 28 }}
               />
             </Card>
           </Col>
-          <Col xs={24} sm={12} md={8}>
+          <Col xs={12} sm={12} md={6}>
             <Card style={{ ...glassCard, textAlign: "center" }} hoverable>
               <Statistic
-                title={<Text type="secondary">Most Common Abuse</Text>}
+                title={<Text type="secondary" style={{ fontSize: isXs ? 11 : 12 }}>Most Common Type</Text>}
                 value={mostCommonAbuse._id || "N/A"}
                 prefix={<FireOutlined style={{ color: "#FF4C4C" }} />}
                 valueStyle={{ color: "#FF4C4C", fontWeight: 700, fontSize: isXs ? 16 : 24 }}
+              />
+            </Card>
+          </Col>
+          <Col xs={12} sm={12} md={6}>
+            <Card style={{ ...glassCard, textAlign: "center" }} hoverable>
+              <Statistic
+                title={<Text type="secondary" style={{ fontSize: isXs ? 11 : 12 }}>Most Common Subtype</Text>}
+                value={mostCommonSubtype?.mostCommonSubtype || "N/A"}
+                prefix={<BulbOutlined style={{ color: "#FAAD14" }} />}
+                valueStyle={{ color: "#FAAD14", fontWeight: 700, fontSize: isXs ? 16 : 24 }}
               />
             </Card>
           </Col>
@@ -833,7 +849,19 @@ const Analytics = () => {
                         letterSpacing: "0.5px",
                         background: "#fafafa",
                       }}>
-                        Most Common
+                        Most Common Type
+                      </th>
+                      <th style={{
+                        padding: "16px 20px",
+                        textAlign: "left",
+                        fontWeight: 600,
+                        fontSize: 12,
+                        color: "#8b8b8b",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.5px",
+                        background: "#fafafa",
+                      }}>
+                        Most Common Subtype
                       </th>
                       <th style={{
                         padding: "16px 20px",
@@ -923,11 +951,33 @@ const Analytics = () => {
                               borderRadius: 6,
                               fontWeight: 500,
                               fontSize: 13,
-                              color: ABUSE_COLORS[d.mostCommon] || BRAND.violet,
-                              background: `${ABUSE_COLORS[d.mostCommon] || BRAND.violet}15`,
+                              color: ABUSE_COLORS[d.mostCommonIncidentType] || BRAND.violet,
+                              background: `${ABUSE_COLORS[d.mostCommonIncidentType] || BRAND.violet}15`,
                             }}>
-                              {d.mostCommon}
+                              {d.mostCommonIncidentType}
                             </span>
+                          </td>
+                          <td style={{ padding: "20px 20px" }}>
+                            <span style={{
+                              display: "inline-block",
+                              padding: "6px 12px",
+                              borderRadius: 6,
+                              fontWeight: 500,
+                              fontSize: 13,
+                              color: "#666",
+                              background: "#f0f0f0",
+                            }}>
+                              {d.mostCommonSubtype}
+                            </span>
+                            {d.subtypeCount > 0 && (
+                              <span style={{
+                                marginLeft: 8,
+                                fontSize: 12,
+                                color: "#999",
+                              }}>
+                                ({d.subtypeCount})
+                              </span>
+                            )}
                           </td>
                           <td style={{ padding: "20px 20px", textAlign: "center" }}>
                             <span style={{
@@ -943,7 +993,7 @@ const Analytics = () => {
                               background: BRAND.violet,
                               padding: "0 10px",
                             }}>
-                              {d.count}
+                              {d.incidentCount}
                             </span>
                           </td>
                         </tr>
@@ -951,26 +1001,32 @@ const Analytics = () => {
                         {/* Expanded Cases */}
                         {expandedPurok === d.location && purokCases[d.location] && (
                           <tr>
-                            <td colSpan={3} style={{ padding: 0, background: "#fafafa" }}>
-                              <div style={{ padding: "0 20px 20px 20px" }}>
+                            <td colSpan={5} style={{ padding: 0, background: "#fafafa" }}>
+                              <div style={{ padding: "20px" }}>
                                 {/* AI Insights Section for Purok */}
                                 <div style={{
-                                  marginBottom: 16,
-                                  padding: "16px",
+                                  marginBottom: 24,
+                                  padding: "20px",
                                   background: "#fff",
-                                  borderRadius: 8,
-                                  border: "1px solid #e5e7eb"
+                                  borderRadius: 12,
+                                  border: `2px solid ${BRAND.violet}20`,
+                                  boxShadow: "0 2px 8px rgba(122, 90, 248, 0.08)"
                                 }}>
-                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                      <BulbOutlined style={{ fontSize: 16, color: BRAND.violet }} />
-                                      <Text strong style={{ fontSize: 14, color: "#1a1a1a" }}>
-                                        AI Insights for {d.location}
-                                      </Text>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                      <BulbOutlined style={{ fontSize: 20, color: BRAND.violet }} />
+                                      <div>
+                                        <Text strong style={{ fontSize: 16, color: "#1a1a1a", display: "block", marginBottom: 4 }}>
+                                          AI Insights for {d.location}
+                                        </Text>
+                                        <Text type="secondary" style={{ fontSize: 12 }}>
+                                          Intelligent analysis of incident patterns
+                                        </Text>
+                                      </div>
                                     </div>
                                     <Button
                                       type="primary"
-                                      size="small"
+                                      size="large"
                                       loading={descLoading && selectedPurok === d.location}
                                       onClick={() => fetchDescriptions(selectedIncident, d.location)}
                                       icon={<BulbOutlined />}
@@ -978,26 +1034,27 @@ const Analytics = () => {
                                         background: BRAND.violet,
                                         borderColor: BRAND.violet,
                                         border: "none",
-                                        borderRadius: 6,
+                                        borderRadius: 8,
                                       }}
                                     >
-                                      Generate Insights
+                                      {descLoading && selectedPurok === d.location ? "Analyzing..." : "Generate Insights"}
                                     </Button>
                                   </div>
 
                                   {descLoading && selectedPurok === d.location ? (
-                                    <div style={{ textAlign: "center", padding: "12px 0" }}>
-                                      <Spin size="small" tip="Analyzing cases..." />
+                                    <div style={{ textAlign: "center", padding: "32px 0" }}>
+                                      <Spin size="large" tip="Analyzing cases..." />
                                     </div>
                                   ) : descriptions.length > 0 && selectedPurok === d.location ? (
                                     <div style={{
-                                      background: "#f8f9fa",
-                                      borderRadius: 6,
-                                      padding: 12,
+                                      background: "linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)",
+                                      borderRadius: 8,
+                                      padding: 16,
+                                      border: "1px solid #e5e7eb"
                                     }}>
-                                      <ul style={{ margin: 0, paddingLeft: 20 }}>
+                                      <ul style={{ margin: 0, paddingLeft: 24 }}>
                                         {descriptions.map((desc, idx) => (
-                                          <li key={idx} style={{ marginBottom: 6, fontSize: 12, lineHeight: 1.6 }}>
+                                          <li key={idx} style={{ marginBottom: 12, fontSize: 13, lineHeight: 1.8, color: "#374151" }}>
                                             <Text>{desc}</Text>
                                           </li>
                                         ))}
@@ -1005,12 +1062,14 @@ const Analytics = () => {
                                     </div>
                                   ) : (
                                     <div style={{
-                                      background: "#f8f9fa",
-                                      borderRadius: 6,
-                                      padding: 12,
+                                      background: "linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)",
+                                      borderRadius: 8,
+                                      padding: 24,
                                       textAlign: "center",
+                                      border: "1px dashed #d1d5db"
                                     }}>
-                                      <Text type="secondary" style={{ fontSize: 12 }}>
+                                      <BulbOutlined style={{ fontSize: 32, color: "#d1d5db", marginBottom: 12, display: "block" }} />
+                                      <Text type="secondary" style={{ fontSize: 13 }}>
                                         Click "Generate Insights" to get AI-powered analysis for all cases in {d.location}
                                       </Text>
                                     </div>
@@ -1039,6 +1098,16 @@ const Analytics = () => {
                                         textTransform: "uppercase",
                                       }}>
                                         Incident
+                                      </th>
+                                      <th style={{
+                                        padding: "12px 16px",
+                                        textAlign: "left",
+                                        fontWeight: 600,
+                                        fontSize: 11,
+                                        color: "#8b8b8b",
+                                        textTransform: "uppercase",
+                                      }}>
+                                        Subtype
                                       </th>
                                       <th style={{
                                         padding: "12px 16px",
@@ -1114,6 +1183,19 @@ const Analytics = () => {
                                             background: "rgba(122, 90, 248, 0.1)",
                                           }}>
                                             {caseItem.incidentType}
+                                          </span>
+                                        </td>
+                                        <td style={{ padding: "16px" }}>
+                                          <span style={{
+                                            display: "inline-block",
+                                            padding: "4px 10px",
+                                            borderRadius: 5,
+                                            fontWeight: 500,
+                                            fontSize: 12,
+                                            color: "#666",
+                                            background: "#f0f0f0",
+                                          }}>
+                                            {caseItem.incidentSubtype || "Uncategorized"}
                                           </span>
                                         </td>
                                         <td style={{ padding: "16px", fontSize: 13, color: "#4a4a4a" }}>

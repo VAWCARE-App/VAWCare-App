@@ -68,6 +68,7 @@ const alertRoutes = require('./routes/alertRoutes');
 const sseRoutes = require('./routes/sseRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const analyticsRoutes = require('./routes/analayticsRoutes');
+const incidentSubtypesRoutes = require('./routes/incidentSubtypesRoutes');
 
 // Notification routes
 app.use('/api/notifications', notificationRoutes);
@@ -89,6 +90,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/metadata', incidentSubtypesRoutes);
 
 // Health check - lightweight endpoint for manual connectivity tests
 app.get("/health", (req, res) => {

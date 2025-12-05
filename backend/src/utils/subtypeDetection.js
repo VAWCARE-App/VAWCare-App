@@ -738,6 +738,7 @@ const KEYWORD_MAPPING = {
  * Detect incident subtype from description
  * @param {string} description - The incident description
  * @param {string} incidentType - The incident type (Physical, Sexual, Psychological, Economic, Others)
+ *                                Can also be in format "Others: CustomText" for custom Others incidents
  * @returns {string} - The detected subtype or "Uncategorized"
  */
 function detectIncidentSubtype(description, incidentType) {
@@ -745,10 +746,24 @@ function detectIncidentSubtype(description, incidentType) {
     return "Uncategorized";
   }
 
+  // Extract base incident type (handle "Others: CustomText" format)
+  let baseIncidentType = incidentType;
+  let customOthersText = "";
+  
+  if (incidentType.includes(":")) {
+    const parts = incidentType.split(":");
+    baseIncidentType = parts[0].trim();
+    customOthersText = parts.slice(1).join(":").trim();
+  }
+
   const descLower = description.toLowerCase();
+  // Combine description with custom text for keyword matching
+  const searchText = customOthersText 
+    ? `${descLower} ${customOthersText.toLowerCase()}` 
+    : descLower;
 
   // Get valid subtypes for this incident type
-  const validSubtypes = SUBTYPES_MAPPING[incidentType] || [];
+  const validSubtypes = SUBTYPES_MAPPING[baseIncidentType] || [];
 
   // Check each potential subtype for keywords
   for (const subtype of validSubtypes) {
@@ -759,14 +774,14 @@ function detectIncidentSubtype(description, incidentType) {
 
     // Check English keywords
     for (const keyword of keywords.english) {
-      if (descLower.includes(keyword.toLowerCase())) {
+      if (searchText.includes(keyword.toLowerCase())) {
         return subtype;
       }
     }
 
     // Check Tagalog/Filipino keywords
     for (const keyword of keywords.tagalog) {
-      if (descLower.includes(keyword.toLowerCase())) {
+      if (searchText.includes(keyword.toLowerCase())) {
         return subtype;
       }
     }

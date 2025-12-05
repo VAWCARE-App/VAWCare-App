@@ -533,11 +533,16 @@ exports.getCaseRemarks = async (req, res, next) => {
 
 exports.getSubtypesForIncidentType = async (req, res, next) => {
   try {
-    const { incidentType } = req.params;
+    let { incidentType } = req.params;
     const { getSubtypesForType } = require('../utils/subtypeDetection');
     
     if (!incidentType) {
       return res.status(400).json({ success: false, message: 'Incident type is required' });
+    }
+    
+    // Extract base incident type (handle "Others: CustomText" format)
+    if (incidentType.includes(':')) {
+      incidentType = incidentType.split(':')[0].trim();
     }
     
     const subtypes = getSubtypesForType(incidentType);

@@ -200,7 +200,12 @@ export default function CaseDetail() {
         setSubtypes([]);
         return;
       }
-      const { data } = await api.get(`/api/cases/subtypes/${incidentType}`);
+      // Extract base incident type (handle "Others: CustomText" format)
+      let baseIncidentType = incidentType;
+      if (incidentType.includes(':')) {
+        baseIncidentType = incidentType.split(':')[0].trim();
+      }
+      const { data } = await api.get(`/api/cases/subtypes/${baseIncidentType}`);
       if (data.success && Array.isArray(data.data)) {
         setSubtypes(data.data);
       }
@@ -1094,7 +1099,7 @@ export default function CaseDetail() {
 
             <Form.Item name="incidentSubtype" label="Incident Subtype">
               <Select
-                placeholder="Select subtype (auto-detected from description)"
+                placeholder="Select subtype"
                 allowClear
                 options={subtypes.map((subtype) => ({
                   value: subtype,

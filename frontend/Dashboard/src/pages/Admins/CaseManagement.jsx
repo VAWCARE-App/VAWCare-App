@@ -195,7 +195,21 @@ export default function CaseManagement() {
       return "Uncategorized";
     }
 
+    // Extract base incident type (handle "Others: CustomText" format)
+    let baseIncidentType = incidentType;
+    let customOthersText = "";
+    
+    if (incidentType.includes(":")) {
+      const parts = incidentType.split(":");
+      baseIncidentType = parts[0].trim();
+      customOthersText = parts.slice(1).join(":").trim();
+    }
+
     const descLower = description.toLowerCase();
+    // Combine description with custom text for keyword matching
+    const searchText = customOthersText 
+      ? `${descLower} ${customOthersText.toLowerCase()}` 
+      : descLower;
 
     // Check each potential subtype for keywords
     for (const subtype in keywordMappings) {
@@ -205,7 +219,7 @@ export default function CaseManagement() {
       // Check English keywords
       if (keywords.english) {
         for (const keyword of keywords.english) {
-          if (descLower.includes(keyword.toLowerCase())) {
+          if (searchText.includes(keyword.toLowerCase())) {
             return subtype;
           }
         }
@@ -214,7 +228,7 @@ export default function CaseManagement() {
       // Check Tagalog/Filipino keywords
       if (keywords.tagalog) {
         for (const keyword of keywords.tagalog) {
-          if (descLower.includes(keyword.toLowerCase())) {
+          if (searchText.includes(keyword.toLowerCase())) {
             return subtype;
           }
         }
@@ -225,6 +239,12 @@ export default function CaseManagement() {
   };
 
   const getSubtypesForIncident = (incidentType) => {
+    // Extract base incident type (handle "Others: CustomText" format)
+    let baseIncidentType = incidentType;
+    if (incidentType && incidentType.includes(":")) {
+      baseIncidentType = incidentType.split(":")[0].trim();
+    }
+
     // Hardcoded mapping for subtypes per incident type
     const subtypesMapping = {
       Physical: ["Slapping", "Hitting", "Strangulation", "Threat with weapon", "Uncategorized"],
@@ -233,7 +253,7 @@ export default function CaseManagement() {
       Economic: ["Withholding support", "Employment restriction", "Financial manipulation", "Uncategorized"],
       Others: ["Cyber harassment", "Theft involving minors", "Uncategorized"],
     };
-    return subtypesMapping[incidentType] || ["Uncategorized"];
+    return subtypesMapping[baseIncidentType] || ["Uncategorized"];
   };
 
   useEffect(() => {
@@ -2508,8 +2528,8 @@ export default function CaseManagement() {
                     help="Auto-detected from description or select manually"
                   >
                     <Select 
-                      placeholder="Select incident subtype" 
-                      size="large"
+                      placeholder="Select subtype" 
+                      allowClear
                       options={addSubtypeOptions.map(subtype => ({
                         value: subtype,
                         label: subtype

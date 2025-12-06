@@ -44,6 +44,9 @@ import {
   FormOutlined,
   CloseCircleOutlined,
   FileTextOutlined,
+  DownloadOutlined,
+  FilePdfOutlined,
+  FileExcelOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { api, getUserType } from "../../lib/api";
@@ -121,6 +124,10 @@ export default function BPOManagement() {
   const [statusEditing, setStatusEditing] = useState(null);
   const [statusNew, setStatusNew] = useState("Active");
   const [statusSaving, setStatusSaving] = useState(false);
+
+  // Export modal state
+  const [exportModalVisible, setExportModalVisible] = useState(false);
+  const [exportType, setExportType] = useState("excel");
 
   // Case selection modal
   const [caseModalVisible, setCaseModalVisible] = useState(false);
@@ -786,18 +793,11 @@ export default function BPOManagement() {
             {screens.md ? "Add BPO" : null}
           </Button>
           <Button
-            type="default"
-            onClick={exportCSV}
+            icon={<DownloadOutlined />}
+            onClick={() => setExportModalVisible(true)}
             style={{ borderColor: BRAND.violet, color: BRAND.violet }}
           >
-            Export Excel
-          </Button>
-          <Button
-            type="default"
-            onClick={exportPDF}
-            style={{ borderColor: BRAND.violet, color: BRAND.violet }}
-          >
-            Export PDF
+            {screens.md ? "Export" : null}
           </Button>
 
           <Button
@@ -1430,6 +1430,94 @@ export default function BPOManagement() {
           .pretty-table .ant-table-wrapper { overflow-x: auto; }
         }
       `}</style>
+      {/* Export Modal */}
+      <Modal
+        title="Export BPOs"
+        open={exportModalVisible}
+        onCancel={() => {
+          setExportModalVisible(false);
+          setExportType("excel");
+        }}
+        footer={[
+          <Button
+            key="cancel"
+            onClick={() => {
+              setExportModalVisible(false);
+              setExportType("excel");
+            }}
+          >
+            Cancel
+          </Button>,
+          <Button
+            key="export"
+            type="primary"
+            icon={exportType === "excel" ? <FileExcelOutlined /> : <FilePdfOutlined />}
+            onClick={() => {
+              if (exportType === "excel") {
+                exportCSV();
+              } else {
+                exportPDF();
+              }
+              setExportModalVisible(false);
+              setExportType("excel");
+            }}
+            style={{ background: BRAND.violet, borderColor: BRAND.violet }}
+          >
+            Export as {exportType === "excel" ? "Excel" : "PDF"} ({list.length})
+          </Button>,
+        ]}
+        width={screens.xs ? "80vw" : screens.sm ? "65vw" : screens.md ? 450 : 500}
+        centered={true}
+        style={{
+          top: screens.xs ? 20 : 0,
+          paddingBottom: 0
+        }}
+      >
+        <div style={{ padding: "20px 0" }}>
+          <p style={{ marginBottom: 12, color: "#666" }}>
+            Choose an export format for your BPO data:
+          </p>
+          <Space direction="vertical" size={12} style={{ width: "100%" }}>
+            <Card
+              hoverable
+              onClick={() => setExportType("excel")}
+              style={{
+                borderColor: exportType === "excel" ? BRAND.violet : "#d9d9d9",
+                borderWidth: exportType === "excel" ? 2 : 1,
+                background: exportType === "excel" ? "rgba(122, 90, 248, 0.05)" : "#fff",
+                cursor: "pointer",
+              }}
+            >
+              <Space>
+                <FileExcelOutlined style={{ fontSize: 24, color: BRAND.violet }} />
+                <div>
+                  <div style={{ fontWeight: 700 }}>Export as Excel</div>
+                  <div style={{ fontSize: 12, color: "#999" }}>Professional spreadsheet format</div>
+                </div>
+              </Space>
+            </Card>
+            <Card
+              hoverable
+              onClick={() => setExportType("pdf")}
+              style={{
+                borderColor: exportType === "pdf" ? BRAND.violet : "#d9d9d9",
+                borderWidth: exportType === "pdf" ? 2 : 1,
+                background: exportType === "pdf" ? "rgba(122, 90, 248, 0.05)" : "#fff",
+                cursor: "pointer",
+              }}
+            >
+              <Space>
+                <FilePdfOutlined style={{ fontSize: 24, color: BRAND.violet }} />
+                <div>
+                  <div style={{ fontWeight: 700 }}>Export as PDF</div>
+                  <div style={{ fontSize: 12, color: "#999" }}>Portable document format</div>
+                </div>
+              </Space>
+            </Card>
+          </Space>
+        </div>
+      </Modal>
+
     </Layout>
   );
 }

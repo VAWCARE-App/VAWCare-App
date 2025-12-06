@@ -115,7 +115,7 @@ export default function BPOManagement() {
     applicationName: true,
     servedBy: true,
     status: true,
-    // actions removed
+    actions: true,
   });
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
 
@@ -592,7 +592,7 @@ export default function BPOManagement() {
         { text: "Revoked", value: "Revoked" },
       ],
       onFilter: (value, record) => record.status === value,
-      render: (s, r) => {
+      render: (s) => {
         const color =
           s === "Active"
             ? "green"
@@ -602,32 +602,57 @@ export default function BPOManagement() {
                 ? "magenta"
                 : "default";
         return (
-          <Space size={6}>
-            <Tag color={color} style={{ borderRadius: 999 }}>
-              {s || "Unknown"}
-            </Tag>
-            {/* quick edit — stop row navigation */}
-            {screens.md && (
-              <Tooltip title="Quick edit status">
-                <Button
-                  size="small"
-                  type="text"
-                  icon={<FormOutlined />}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setStatusEditing(r);
-                    setStatusNew(r.status || "Active");
-                    setStatusCardVisible(true);
-                  }}
-                  style={{ color: '#52c41a' }}
-                />
-              </Tooltip>
-            )}
-          </Space>
+          <Tag color={color} style={{ borderRadius: 999 }}>
+            {s || "Unknown"}
+          </Tag>
         );
       },
     },
-    // Actions column REMOVED
+    {
+      title: "Actions",
+      key: "actions",
+      width: 140,
+      align: "center",
+      fixed: "right",
+      render: (_, r) => (
+        <Space size={6}>
+          <Tooltip title="View">
+            <Button
+              type="text"
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/admin/bpo/${r.bpoID || r._id}`);
+              }}
+            />
+          </Tooltip>
+          <Tooltip title="Edit Status">
+            <Button
+              type="text"
+              size="small"
+              icon={<FormOutlined />}
+              onClick={(e) => {
+                e.stopPropagation();
+                setStatusEditing(r);
+                setStatusNew(r.status || "Active");
+                setStatusCardVisible(true);
+              }}
+              style={{ color: "#52c41a" }}
+            />
+          </Tooltip>
+          <Popconfirm title="Delete this BPO?" onConfirm={(e) => { e && e.stopPropagation(); handleDelete(r); }}>
+            <Button
+              type="text"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </Popconfirm>
+        </Space>
+      ),
+    },
   ];
   const columns = baseColumns.filter((c) => visibleCols[c.key ?? c.dataIndex]);
 
@@ -655,19 +680,21 @@ export default function BPOManagement() {
       }
     },
     {
-      title: "",
+      title: "Actions",
       key: "actions",
-      align: "right",
+      width: 120,
+      fixed: 'right',
+      align: "center",
       render: (_, r) => (
         <Space size={6}>
           <Tooltip title="View">
             <Button type="text" size="small" icon={<EyeOutlined />} onClick={(e) => { e.stopPropagation(); navigate(`/admin/bpo/${r.bpoID || r._id}`); }} />
           </Tooltip>
           <Tooltip title="Edit Status">
-            <Button type="text" size="small" icon={<EditOutlined />} onClick={(e) => { e.stopPropagation(); setStatusEditing(r); setStatusNew(r.status || 'Active'); setStatusCardVisible(true); }} style={{ color: '#52c41a' }} />
+            <Button type="text" size="small" icon={<FormOutlined />} onClick={(e) => { e.stopPropagation(); setStatusEditing(r); setStatusNew(r.status || 'Active'); setStatusCardVisible(true); }} style={{ color: '#52c41a' }} />
           </Tooltip>
           <Popconfirm title="Delete this BPO?" onConfirm={(e) => { e && e.stopPropagation(); handleDelete(r); }}>
-            <Button type="text" size="small" danger icon={<CloseCircleOutlined />} onClick={(e) => e.stopPropagation()} />
+            <Button type="text" size="small" danger icon={<DeleteOutlined />} onClick={(e) => e.stopPropagation()} />
           </Popconfirm>
         </Space>
       ),

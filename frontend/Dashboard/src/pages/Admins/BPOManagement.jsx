@@ -1490,7 +1490,7 @@ export default function BPOManagement() {
             }}
             style={{ background: BRAND.violet, borderColor: BRAND.violet }}
           >
-            Export as {exportType === "excel" ? "Excel" : "PDF"} ({list.length})
+            {exportType === "excel" ? "Excel" : "PDF"} ({list.length})
           </Button>,
         ]}
         width={screens.xs ? "80vw" : screens.sm ? "65vw" : screens.md ? 450 : 500}

@@ -770,8 +770,11 @@ export default function BPOManagement() {
           borderBottom: `1px solid ${BRAND.softBorder}`,
           display: "flex",
           alignItems: "center",
+          justifyContent: "space-between",
           paddingInline: screens.md ? 20 : 12,
-          height: screens.xs && !screens.sm ? 64 : 72,
+          paddingBlock: screens.xs ? 8 : 12,
+          height: screens.xs ? 64 : "auto",
+          lineHeight: 1.2,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
@@ -798,8 +801,19 @@ export default function BPOManagement() {
             />
           )}
 
-          <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-            <Title level={4} style={{ margin: 0, color: BRAND.violet }}>
+          <Space direction="vertical" size={0} style={{ minWidth: 0, overflow: "hidden" }}>
+            <Title 
+              level={5} 
+              style={{ 
+                margin: 0, 
+                color: BRAND.violet,
+                fontSize: isXs ? 14 : 18,
+                lineHeight: isXs ? 1.3 : 1.4,
+                whiteSpace: isXs ? "nowrap" : "normal",
+                overflow: "hidden",
+                textOverflow: "ellipsis"
+              }}
+            >
               BPO Management
             </Title>
             {screens.md && (
@@ -807,7 +821,7 @@ export default function BPOManagement() {
                 Track and manage Barangay Protection Orders efficiently.
               </Text>
             )}
-          </div>
+          </Space>
         </div>
 
         <div style={{ display: "flex", gap: 8 }}>

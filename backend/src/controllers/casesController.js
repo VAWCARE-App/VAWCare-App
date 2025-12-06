@@ -5,6 +5,7 @@ const Victim = require('../models/Victims');
 const IncidentReport = require('../models/IncidentReports');
 const dssService = require('../services/dssService');
 const { recordLog, extractKeyFields } = require('../middleware/logger');
+const { detectIncidentSubtype } = require('../utils/subtypeDetection');
 
 // Helper: validate text fields for repeated characters only
 function validateDataQuality(value, fieldName) {
@@ -155,6 +156,16 @@ exports.createCase = async (req, res, next) => {
       // ignore normalization failures and proceed (will be caught by validation)
     }
 
+    // Auto-detect incident subtype from description if not provided
+    if (!payload.incidentSubtype || payload.incidentSubtype.trim() === '') {
+      try {
+        payload.incidentSubtype = detectIncidentSubtype(payload.description, payload.incidentType);
+      } catch (e) {
+        console.warn('Failed to detect incident subtype', e?.message || e);
+        payload.incidentSubtype = 'Uncategorized';
+      }
+    }
+
     let created;
     try {
       created = await Cases.create(payload);
@@ -238,6 +249,29 @@ exports.updateCase = async (req, res, next) => {
     const query = mongoose.Types.ObjectId.isValid(id)
       ? { $or: [{ caseID: id }, { _id: id }], deleted: { $ne: true } }
       : { caseID: id, deleted: { $ne: true } };
+    
+    // Auto-detect incident subtype from description if description is being updated
+    if (updates && (updates.description || updates.incidentType)) {
+      try {
+        const existing = await Cases.findOne(query).lean();
+        if (existing) {
+          const description = updates.description || existing.description;
+          const incidentType = updates.incidentType || existing.incidentType;
+          
+          // If incidentType is being updated, auto-detect new subtype
+          if (updates.incidentType && !updates.incidentSubtype) {
+            updates.incidentSubtype = detectIncidentSubtype(description, incidentType);
+          }
+          // If only description is being updated, auto-detect subtype with existing incidentType
+          else if (updates.description && !updates.incidentSubtype) {
+            updates.incidentSubtype = detectIncidentSubtype(description, incidentType);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to auto-detect incident subtype during update', e?.message || e);
+      }
+    }
+    
     // If a manual riskLevel is provided in updates, compute a DSS suggestion reflecting that override
     if (updates && updates.riskLevel) {
       try {
@@ -492,6 +526,27 @@ exports.getCaseRemarks = async (req, res, next) => {
     .lean();
     
     return res.json({ success: true, data: remarks });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getSubtypesForIncidentType = async (req, res, next) => {
+  try {
+    let { incidentType } = req.params;
+    const { getSubtypesForType } = require('../utils/subtypeDetection');
+    
+    if (!incidentType) {
+      return res.status(400).json({ success: false, message: 'Incident type is required' });
+    }
+    
+    // Extract base incident type (handle "Others: CustomText" format)
+    if (incidentType.includes(':')) {
+      incidentType = incidentType.split(':')[0].trim();
+    }
+    
+    const subtypes = getSubtypesForType(incidentType);
+    return res.json({ success: true, data: subtypes });
   } catch (err) {
     next(err);
   }

@@ -61,8 +61,7 @@ module.exports = {
         }
     },
 
-    // Most common abuse per purok
-    // Most common abuse per purok (without AI)
+    // Most common abuse per purok with most common subtype
     getMostCommonPerLocation: async (req, res) => {
         try {
             const { victimType } = req.query;
@@ -70,6 +69,8 @@ module.exports = {
             if (victimType && victimType !== "all") {
                 matchStage.victimType = victimType;
             }
+
+            // Step 1: Get most common incident type per purok
             const data = await Cases.aggregate([
                 { $match: matchStage },
                 {
@@ -93,16 +94,77 @@ module.exports = {
                 }
             ]);
 
-            // Return WITHOUT AI reasons
-            const response = data.map(p => ({
-                location: p._id,
-                mostCommon: p.mostCommon,
-                count: p.count
+            // Step 2: For each purok, find the most common subtype
+            const response = await Promise.all(data.map(async (purokData) => {
+                const subtypeAgg = await Cases.aggregate([
+                    { $match: matchStage },
+                    {
+                        $addFields: {
+                            purok: { $arrayElemAt: [{ $split: ["$location", ","] }, 0] }
+                        }
+                    },
+                    {
+                        $match: {
+                            purok: purokData._id,
+                            incidentType: purokData.mostCommon
+                        }
+                    },
+                    {
+                        $group: {
+                            _id: "$incidentSubtype",
+                            count: { $sum: 1 }
+                        }
+                    },
+                    { $sort: { count: -1 } },
+                    { $limit: 1 }
+                ]);
+
+                const mostCommonSubtype = subtypeAgg.length > 0 ? subtypeAgg[0]._id : "Uncategorized";
+                const subtypeCount = subtypeAgg.length > 0 ? subtypeAgg[0].count : 0;
+
+                return {
+                    location: purokData._id,
+                    mostCommonIncidentType: purokData.mostCommon,
+                    incidentCount: purokData.count,
+                    mostCommonSubtype: mostCommonSubtype,
+                    subtypeCount: subtypeCount
+                };
             }));
 
             res.json({ success: true, data: response });
         } catch (err) {
             console.error("Error in getMostCommonPerLocation:", err);
+            res.status(500).json({ success: false, message: err.message });
+        }
+    },
+
+    // Get overall most common subtype
+    getMostCommonSubtype: async (req, res) => {
+        try {
+            const { victimType } = req.query;
+            const matchStage = { deleted: { $ne: true } };
+            if (victimType && victimType !== "all") {
+                matchStage.victimType = victimType;
+            }
+
+            const data = await Cases.aggregate([
+                { $match: matchStage },
+                {
+                    $group: {
+                        _id: "$incidentSubtype",
+                        count: { $sum: 1 }
+                    }
+                },
+                { $sort: { count: -1 } },
+                { $limit: 1 }
+            ]);
+
+            const mostCommon = data.length > 0 ? data[0]._id : "Uncategorized";
+            const count = data.length > 0 ? data[0].count : 0;
+
+            res.json({ success: true, data: { mostCommonSubtype: mostCommon, count } });
+        } catch (err) {
+            console.error("Error in getMostCommonSubtype:", err);
             res.status(500).json({ success: false, message: err.message });
         }
     },

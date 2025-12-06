@@ -49,6 +49,8 @@ import { useNavigate } from "react-router-dom";
 import { api, getUserType } from "../../lib/api";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 
 
 const { Header, Content } = Layout;
@@ -131,31 +133,149 @@ export default function BPOManagement() {
   const tableWrapRef = useRef(null);
   const [tableY, setTableY] = useState(420);
 
-  // Export CSV
-  const exportCSV = () => {
+  // Export Excel
+  const exportCSV = async () => {
     if (!list.length) return;
-    const headers = ["BPO ID", "Control No", "Applicant", "Address", "Served By", "Date Issued", "Expiration Date", "Status"];
-    const rows = list.map(bpo => [
-      bpo.bpoID || bpo._id || "",
-      bpo.controlNO || "",
-      bpo.applicationName || "",
-      bpo.address || "",
-      bpo.servedBy || "",
-      bpo.dateIssued ? new Date(bpo.dateIssued).toLocaleDateString() : "",
-      bpo.expiryDate ? new Date(bpo.expiryDate).toLocaleDateString() : "",
-      bpo.status || "",
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("BPOs");
+
+    const headerStyle = {
+      font: { bold: true, color: { argb: "FFFFFFFF" }, size: 13 },
+      fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FF7A5AF8" } },
+      alignment: { horizontal: "center", vertical: "center", wrapText: true },
+      border: {
+        top: { style: "thin", color: { argb: "FF000000" } },
+        left: { style: "thin", color: { argb: "FF000000" } },
+        bottom: { style: "thin", color: { argb: "FF000000" } },
+        right: { style: "thin", color: { argb: "FF000000" } },
+      },
+    };
+
+    const cellStyle = {
+      font: { size: 10 },
+      border: {
+        top: { style: "thin", color: { argb: "FFC0C0C0" } },
+        left: { style: "thin", color: { argb: "FFC0C0C0" } },
+        bottom: { style: "thin", color: { argb: "FFC0C0C0" } },
+        right: { style: "thin", color: { argb: "FFC0C0C0" } },
+      },
+      alignment: { wrapText: true, vertical: "top" },
+    };
+
+    // Add title row
+    const titleRow = worksheet.addRow(["BPO EXPORT SUMMARY"]);
+    titleRow.font = { bold: true, size: 14, color: { argb: "FFFFFFFF" } };
+    titleRow.getCell(1).alignment = { horizontal: "left", vertical: "center" };
+    titleRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF7A5AF8" } };
+    titleRow.height = 25;
+    worksheet.mergeCells(`A1:H1`);
+
+    // Add timestamp row
+    const now = new Date();
+    const dateStr = now.toLocaleDateString();
+    const timeStr = now.toLocaleTimeString();
+    const dateRow = worksheet.addRow([`Generated:\n${dateStr}\n${timeStr}`]);
+    dateRow.getCell(1).font = { bold: true, size: 10 };
+    dateRow.getCell(1).alignment = { horizontal: "left", vertical: "top", wrapText: true };
+    dateRow.height = 55;
+    // Don't merge - keep it in column A only to match Total BPOs row width
+
+    // Calculate status breakdown
+    const statusCounts = { Active: 0, Expired: 0, Revoked: 0, Other: 0 };
+    list.forEach((bpo) => {
+      const status = bpo.status || "Other";
+      if (statusCounts.hasOwnProperty(status)) {
+        statusCounts[status]++;
+      } else {
+        statusCounts.Other++;
+      }
+    });
+    const totalBPOs = list.length;
+
+    // Add statistics row
+    const statsRow = worksheet.addRow([
+      `Total BPOs: ${totalBPOs}`,
+      `Active: ${statusCounts.Active}\nExpired: ${statusCounts.Expired}\nRevoked: ${statusCounts.Revoked}`,
     ]);
+    statsRow.getCell(1).font = { bold: true, size: 11 };
+    statsRow.getCell(1).alignment = { horizontal: "left", vertical: "top" };
+    statsRow.getCell(2).font = { bold: true, size: 11 };
+    statsRow.getCell(2).alignment = { horizontal: "left", vertical: "top", wrapText: true };
+    statsRow.height = 65;
+    // Don't merge - keep breakdown in column B only
 
-    const csvContent =
-      [headers, ...rows].map(e => e.map(v => `"${v}"`).join(",")).join("\n");
+    // Empty row for spacing
+    worksheet.addRow([]);
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute("download", `BPOs_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Add headers
+    const headers = ["BPO ID", "Control No", "Applicant", "Address", "Served By", "Date Issued", "Expiration Date", "Status"];
+    const headerRow = worksheet.addRow(headers);
+    
+    // Style header row with full background coloring
+    headerRow.font = { bold: true, size: 13, color: { argb: "FFFFFFFF" } };
+    headerRow.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF7A5AF8" }
+    };
+    headerRow.alignment = { horizontal: "center", vertical: "center", wrapText: true };
+    headerRow.height = 50;
+    
+    // Add borders to all header cells
+    headerRow.eachCell((cell) => {
+      cell.border = {
+        top: { style: "medium", color: { argb: "FF000000" } },
+        left: { style: "medium", color: { argb: "FF000000" } },
+        bottom: { style: "medium", color: { argb: "FF000000" } },
+        right: { style: "medium", color: { argb: "FF000000" } }
+      };
+    });
+
+    // Add data rows sorted by status
+    const sortedList = [...list].sort((a, b) => {
+      const statusOrder = { Active: 0, Expired: 1, Revoked: 2 };
+      return (statusOrder[a.status] || 999) - (statusOrder[b.status] || 999);
+    });
+
+    sortedList.forEach((bpo) => {
+      const row = worksheet.addRow([
+        bpo.bpoID || bpo._id || "",
+        bpo.controlNO || "",
+        bpo.applicationName || "",
+        bpo.address || "",
+        bpo.servedBy || "",
+        bpo.dateIssued ? new Date(bpo.dateIssued).toLocaleDateString() : "",
+        bpo.expiryDate ? new Date(bpo.expiryDate).toLocaleDateString() : "",
+        bpo.status || "",
+      ]);
+      row.eachCell((cell) => {
+        Object.assign(cell, cellStyle);
+      });
+      row.height = Math.max(
+        (bpo.address || "").split("\n").length * 18,
+        50
+      );
+    });
+
+    // Set column widths
+    worksheet.columns = [
+      { width: 18 },
+      { width: 15 },
+      { width: 25 },
+      { width: 35 },
+      { width: 18 },
+      { width: 15 },
+      { width: 15 },
+      { width: 12 },
+    ];
+
+    // Generate and download
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    saveAs(blob, `BPOs_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
 
@@ -670,7 +790,7 @@ export default function BPOManagement() {
             onClick={exportCSV}
             style={{ borderColor: BRAND.violet, color: BRAND.violet }}
           >
-            Export CSV
+            Export Excel
           </Button>
           <Button
             type="default"

@@ -15,6 +15,7 @@
     "docx": "^9.5.1",
     "docxtemplater": "^3.67.5",
     "event-source-polyfill": "^1.0.31",
+    "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
     "firebase": "^12.2.1",
     "framer-motion": "^12.23.22",

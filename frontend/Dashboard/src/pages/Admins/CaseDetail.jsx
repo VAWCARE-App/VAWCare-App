@@ -61,6 +61,7 @@ export default function CaseDetail() {
   const [editOpen, setEditOpen] = useState(false);
   const [form] = Form.useForm();
   const [barangayOfficials, setBarangayOfficials] = useState([]);
+  const [subtypes, setSubtypes] = useState([]);
   
   // History/Remarks state
   const [historyData, setHistoryData] = useState([]);
@@ -192,6 +193,28 @@ export default function CaseDetail() {
   };
 
   // --- fetch barangay officials ---
+  // --- fetch subtypes for incident type ---
+  const fetchSubtypes = async (incidentType) => {
+    try {
+      if (!incidentType) {
+        setSubtypes([]);
+        return;
+      }
+      // Extract base incident type (handle "Others: CustomText" format)
+      let baseIncidentType = incidentType;
+      if (incidentType.includes(':')) {
+        baseIncidentType = incidentType.split(':')[0].trim();
+      }
+      const { data } = await api.get(`/api/cases/subtypes/${baseIncidentType}`);
+      if (data.success && Array.isArray(data.data)) {
+        setSubtypes(data.data);
+      }
+    } catch (err) {
+      console.error("Error fetching subtypes", err);
+      setSubtypes([]);
+    }
+  };
+
   const fetchBarangayOfficials = async () => {
     try {
       const { data } = await api.get("/api/admin/users");
@@ -269,6 +292,11 @@ export default function CaseDetail() {
         const res = await api.get(`/api/cases/${id}`);
         const data = res?.data?.data || null;
         setCaseData(data);
+        
+        // Fetch subtypes for the incident type
+        if (data?.incidentType) {
+          fetchSubtypes(data.incidentType);
+        }
         
         // Parse location into purok and address components
         let locationPurok = "";
@@ -593,6 +621,9 @@ export default function CaseDetail() {
                 </Descriptions.Item>
                 <Descriptions.Item label="Incident Type">
                   {caseData.incidentType}
+                </Descriptions.Item>
+                <Descriptions.Item label="Incident Subtype">
+                  {caseData.incidentSubtype || "Uncategorized"}
                 </Descriptions.Item>
                 <Descriptions.Item label="Perpetrator">
                   {caseData.perpetrator}
@@ -1058,6 +1089,22 @@ export default function CaseDetail() {
                   { value: "Economic", label: "Economic" },
                   { value: "Others", label: "Others" }
                 ]}
+                onChange={(value) => {
+                  fetchSubtypes(value);
+                  // Reset subtype when incident type changes
+                  form.setFieldsValue({ incidentSubtype: undefined });
+                }}
+              />
+            </Form.Item>
+
+            <Form.Item name="incidentSubtype" label="Incident Subtype">
+              <Select
+                placeholder="Select subtype"
+                allowClear
+                options={subtypes.map((subtype) => ({
+                  value: subtype,
+                  label: subtype,
+                }))}
               />
             </Form.Item>
 

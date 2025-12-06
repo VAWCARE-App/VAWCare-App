@@ -44,6 +44,12 @@ const CasesSchema = new mongoose.Schema({
 		required: [true, 'Incident type is required'],
 		trim: true,
 	},
+	incidentSubtype: {
+		type: String,
+		required: false,
+		default: 'Uncategorized',
+		trim: true,
+	},
 	description: {
 		type: String,
 		required: [true, 'Description is required'],

@@ -37,6 +37,8 @@ import {
   CheckCircleOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 
 const { Header, Content } = Layout;
 const { Search } = Input;
@@ -501,41 +503,167 @@ export default function ReportManagement() {
     [allReports]
   );
 
-  // === Export CSV (filtered view) ===
-  const exportCsv = () => {
-    const rows = filteredReports.map((r) => ({
-      ReportID: r.reportID,
-      VictimID: r.victimID
-        ? typeof r.victimID === "string"
-          ? r.victimID
-          : r.victimID.victimID || r.victimID._id || ""
-        : "",
-      IncidentType: r.incidentType || "",
-      Location: r.location || "",
-      Status: normalizeStatus(r.status) || "",
-      DateReported: r.dateReported ? new Date(r.dateReported).toISOString() : "",
-      CreatedAt: r.createdAt ? new Date(r.createdAt).toISOString() : "",
-      UpdatedAt: r.updatedAt ? new Date(r.updatedAt).toISOString() : "",
-      Perpetrator: r.perpetrator || "",
-      Description: (r.description || "").replaceAll("\n", " ").trim(),
-    }));
-    const header =
-      "ReportID,VictimID,IncidentType,Location,Status,DateReported,CreatedAt,UpdatedAt,Perpetrator,Description";
-    const body = rows
-      .map((row) =>
-        Object.values(row)
-          .map((v) => `"${String(v ?? "").replaceAll('"', '""')}"`)
-          .join(",")
-      )
-      .join("\n");
-    const csv = header + "\n" + body;
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "reports.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+  // === Export to Excel (filtered view) ===
+  const exportCsv = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Reports");
+
+    let currentRow = 1;
+
+    // Add title
+    const titleRow = worksheet.addRow(["REPORT EXPORT SUMMARY"]);
+    titleRow.font = { bold: true, size: 16, color: { argb: "FFFFFFFF" } };
+    titleRow.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF7A5AF8" }
+    };
+    titleRow.alignment = { horizontal: "left", vertical: "center", wrapText: true };
+    titleRow.height = 35;
+    worksheet.mergeCells(`A${currentRow}:J${currentRow}`);
+    currentRow++;
+
+    // Add timestamp
+    const metaRow = worksheet.addRow([`Generated: ${new Date().toLocaleString()}`, "", "", "", "", "", "", "", "", ""]);
+    metaRow.font = { size: 11 };
+    metaRow.alignment = { horizontal: "left", vertical: "top", wrapText: true };
+    metaRow.height = 30;
+    currentRow++;
+
+    // Add spacer
+    worksheet.addRow([""]);
+    currentRow++;
+
+    // Calculate incident type breakdown
+    const incidentTypeBreakdown = {};
+    filteredReports.forEach(r => {
+      const type = r.incidentType || "Unknown";
+      incidentTypeBreakdown[type] = (incidentTypeBreakdown[type] || 0) + 1;
+    });
+
+    // Calculate purok breakdown - only for Puroks 1-7
+    const purokBreakdown = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 };
+    filteredReports.forEach(r => {
+      if (r.location) {
+        const purokMatch = r.location.match(/Purok\s+(\d+)/);
+        if (purokMatch) {
+          const purokNum = parseInt(purokMatch[1]);
+          if (purokNum >= 1 && purokNum <= 7) {
+            purokBreakdown[purokNum] = (purokBreakdown[purokNum] || 0) + 1;
+          }
+        }
+      }
+    });
+
+    // Add incident type breakdown (sorted: Sexual, Physical, Psychological, Economic, Others)
+    const incidentTypeOrder = { "sexual": 1, "physical": 2, "psychological": 3, "economic": 4 };
+    const sortedIncidentTypes = Object.entries(incidentTypeBreakdown).sort(([a], [b]) => {
+      const aLower = a.toLowerCase();
+      const bLower = b.toLowerCase();
+      const aIsOthers = aLower.startsWith("others");
+      const bIsOthers = bLower.startsWith("others");
+      
+      if (aIsOthers && !bIsOthers) return 1;
+      if (!aIsOthers && bIsOthers) return -1;
+      
+      const aOrder = incidentTypeOrder[aLower] || 999;
+      const bOrder = incidentTypeOrder[bLower] || 999;
+      return aOrder - bOrder;
+    });
+    const incidentTypeBreakdownStr = sortedIncidentTypes.map(([type, count]) => `${type}: ${count}`).join("\n");
+    const purokBreakdownStr = Object.entries(purokBreakdown).map(([num, count]) => `Purok ${num}: ${count}`).join("\n");
+    
+    // Add total reports with incident type and purok breakdowns in two columns
+    const maxRows = Math.max(sortedIncidentTypes.length, 7);
+    const totalRow = worksheet.addRow([`Total Reports: ${filteredReports.length}`, incidentTypeBreakdownStr, "", "", "Purok Breakdown", purokBreakdownStr, "", "", "", ""]);
+    totalRow.font = { size: 11, bold: true };
+    totalRow.alignment = { horizontal: "left", vertical: "top", wrapText: true };
+    totalRow.height = Math.max(maxRows * 18, 24);
+    totalRow.getCell(1).font = { bold: true, size: 11 };
+    totalRow.getCell(2).font = { size: 11 };
+    totalRow.getCell(2).alignment = { horizontal: "left", vertical: "top", wrapText: true };
+    totalRow.getCell(5).font = { bold: true, size: 11 };
+    totalRow.getCell(6).font = { size: 11 };
+    totalRow.getCell(6).alignment = { horizontal: "left", vertical: "top", wrapText: true };
+    worksheet.mergeCells(`B${currentRow}:D${currentRow}`);
+    worksheet.mergeCells(`F${currentRow}:J${currentRow}`);
+    currentRow++;
+
+    // Add spacer
+    worksheet.addRow([""]);
+    currentRow++;
+    currentRow++;
+
+    // Add spacer
+    worksheet.addRow([""]);
+    currentRow++;
+
+    // Define headers
+    const headers = ["Report ID", "Victim ID", "Incident Type", "Location", "Status", "Date Reported", "Created At", "Updated At", "Perpetrator", "Description"];
+
+    // Add header row
+    const headerRow = worksheet.addRow(headers);
+    headerRow.font = { bold: true, size: 13, color: { argb: "FFFFFFFF" } };
+    headerRow.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF7A5AF8" }
+    };
+    headerRow.alignment = { horizontal: "center", vertical: "center", wrapText: true };
+    headerRow.height = 50;
+    headerRow.eachCell((cell) => {
+      cell.border = {
+        top: { style: "medium", color: { argb: "FF000000" } },
+        left: { style: "medium", color: { argb: "FF000000" } },
+        bottom: { style: "medium", color: { argb: "FF000000" } },
+        right: { style: "medium", color: { argb: "FF000000" } }
+      };
+    });
+    currentRow++;
+
+    // Sort reports by incident type (alphabetically)
+    const sortedReports = [...filteredReports].sort((a, b) => {
+      const aType = (a.incidentType || "Unknown").toLowerCase();
+      const bType = (b.incidentType || "Unknown").toLowerCase();
+      return aType.localeCompare(bType);
+    });
+
+    // Add data rows
+    sortedReports.forEach((r) => {
+      const rowData = [
+        r.reportID || "",
+        typeof r.victimID === "string" ? r.victimID : r.victimID?.victimID || r.victimID?._id || "",
+        r.incidentType || "",
+        r.location || "",
+        normalizeStatus(r.status) || "",
+        r.dateReported ? new Date(r.dateReported).toLocaleString() : "",
+        r.createdAt ? new Date(r.createdAt).toLocaleString() : "",
+        r.updatedAt ? new Date(r.updatedAt).toLocaleString() : "",
+        r.perpetrator || "",
+        (r.description || "").replaceAll("\n", " ").trim()
+      ];
+
+      const row = worksheet.addRow(rowData);
+      row.alignment = { horizontal: "left", vertical: "top", wrapText: true };
+      row.height = "auto";
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: "thin", color: { argb: "FFCCCCCC" } },
+          left: { style: "thin", color: { argb: "FFCCCCCC" } },
+          bottom: { style: "thin", color: { argb: "FFCCCCCC" } },
+          right: { style: "thin", color: { argb: "FFCCCCCC" } }
+        };
+      });
+    });
+
+    // Set column widths
+    const columnWidths = [15, 15, 20, 30, 15, 20, 20, 20, 25, 40];
+    worksheet.columns = columnWidths.map(width => ({ width }));
+
+    // Generate and download
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    saveAs(blob, `Reports_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const modalWidth = isXs

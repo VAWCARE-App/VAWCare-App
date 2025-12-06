@@ -73,6 +73,7 @@ export default function CaseManagement() {
   const [reportsList, setReportsList] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
   const [userType, setUserType] = useState(null);
+  const [currentUserName, setCurrentUserName] = useState("");
   const [addSubtypeOptions, setAddSubtypeOptions] = useState([]); // Track subtypes for add modal
   const [editSubtypeOptions, setEditSubtypeOptions] = useState([]); // Track subtypes for edit modal
   const [keywordMappings, setKeywordMappings] = useState({}); // Keyword mappings from API
@@ -102,7 +103,10 @@ export default function CaseManagement() {
     status: "",
     riskLevel: "",
     incidentType: "",
-    victimType: ""
+    victimType: "",
+    year: "",
+    month: "",
+    week: ""
   });
   const [selectedCases, setSelectedCases] = useState([]);
   const [exportLoading, setExportLoading] = useState(false);
@@ -272,7 +276,20 @@ export default function CaseManagement() {
         setUserType("user"); // fallback
       }
     };
+    
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await api.get('/api/auth/me');
+        const userName = response.data?.user?.name || response.data?.user?.email || "Unknown User";
+        setCurrentUserName(userName);
+      } catch (err) {
+        console.warn("Failed to fetch current user", err);
+        setCurrentUserName("Unknown User");
+      }
+    };
+    
     fetchUserType();
+    fetchCurrentUser();
   }, []);
 
   const fetchReports = async () => {
@@ -865,7 +882,7 @@ export default function CaseManagement() {
     worksheet.addRow([""]); // Spacer
     currentRow++;
 
-    const filterTitleRow = worksheet.addRow(["FILTERS APPLIED", "", "", "", ""]);
+    const filterTitleRow = worksheet.addRow(["ADDITIONAL INFORMATION", "", "", "", ""]);
     filterTitleRow.font = { bold: true, size: 13, color: { argb: "FFFFFFFF" } };
     filterTitleRow.fill = {
       type: "pattern",
@@ -879,9 +896,12 @@ export default function CaseManagement() {
 
     // Add filter details with better spacing
     const filterDetails = [
-      ["Export By", filterInfo.mode || "All Cases"],
+      filterInfo.mode ? ["Export By", filterInfo.mode] : null,
       filterInfo.officer ? ["Assigned Officer", filterInfo.officer] : null,
       filterInfo.victim ? ["Victim Name", filterInfo.victim] : null,
+      filterInfo.year ? ["Year", filterInfo.year] : null,
+      filterInfo.month ? ["Month", filterInfo.month] : null,
+      filterInfo.week ? ["Week", filterInfo.week] : null,
       filterInfo.purok ? ["Purok", filterInfo.purok] : null,
       filterInfo.status ? ["Status", filterInfo.status] : null,
       filterInfo.riskLevel ? ["Risk Level", filterInfo.riskLevel] : null,
@@ -1053,10 +1073,141 @@ export default function CaseManagement() {
     return [...new Set(types)].sort();
   };
 
+  // Get available years from all cases (excluding soft-deleted)
+  const getAvailableYears = () => {
+    let casesToCheck = allCases.filter(c => !c.deletedAt); // Exclude soft-deleted cases
+    
+    // Filter by officer if in officer mode
+    if (exportMode === "officer" && selectedOfficer) {
+      casesToCheck = casesToCheck.filter(
+        c => c.assignedOfficer && c.assignedOfficer.toLowerCase() === selectedOfficer.toLowerCase()
+      );
+      // If victim is also selected, filter by victim
+      if (selectedVictim) {
+        casesToCheck = casesToCheck.filter(
+          c => c.victimName && c.victimName.toLowerCase() === selectedVictim.toLowerCase()
+        );
+      }
+    }
+    // Filter by victim if in victim mode
+    else if (exportMode === "victim" && selectedVictim) {
+      casesToCheck = casesToCheck.filter(
+        c => c.victimName && c.victimName.toLowerCase() === selectedVictim.toLowerCase()
+      );
+    }
+    // For "all" mode, use all non-deleted cases
+    
+    const years = casesToCheck
+      .map(c => c.createdAt ? new Date(c.createdAt).getFullYear() : null)
+      .filter(y => y !== null);
+    return [...new Set(years)].sort((a, b) => b - a);
+  };
+
+  // Get available months for a specific year (excluding soft-deleted)
+  const getAvailableMonths = (year) => {
+    if (!year) return [];
+    let casesToCheck = allCases.filter(c => !c.deletedAt); // Exclude soft-deleted cases
+    
+    // Filter by officer if in officer mode
+    if (exportMode === "officer" && selectedOfficer) {
+      casesToCheck = casesToCheck.filter(
+        c => c.assignedOfficer && c.assignedOfficer.toLowerCase() === selectedOfficer.toLowerCase()
+      );
+      // If victim is also selected, filter by victim
+      if (selectedVictim) {
+        casesToCheck = casesToCheck.filter(
+          c => c.victimName && c.victimName.toLowerCase() === selectedVictim.toLowerCase()
+        );
+      }
+    }
+    // Filter by victim if in victim mode
+    else if (exportMode === "victim" && selectedVictim) {
+      casesToCheck = casesToCheck.filter(
+        c => c.victimName && c.victimName.toLowerCase() === selectedVictim.toLowerCase()
+      );
+    }
+    // For "all" mode, use all non-deleted cases
+    
+    const months = casesToCheck
+      .map(c => {
+        if (c.createdAt) {
+          const date = new Date(c.createdAt);
+          if (date.getFullYear() === parseInt(year)) {
+            return date.getMonth();
+          }
+        }
+        return null;
+      })
+      .filter(m => m !== null);
+    return [...new Set(months)].sort((a, b) => a - b);
+  };
+
+  // Get week numbers for a specific year and month (excluding soft-deleted)
+  const getAvailableWeeks = (year, month) => {
+    if (!year || !month) return [];
+    const weeks = new Set();
+    let casesToCheck = allCases
+      .filter(c => !c.deletedAt); // Exclude soft-deleted cases
+    
+    // Filter by officer if in officer mode
+    if (exportMode === "officer" && selectedOfficer) {
+      casesToCheck = casesToCheck.filter(
+        c => c.assignedOfficer && c.assignedOfficer.toLowerCase() === selectedOfficer.toLowerCase()
+      );
+      // If victim is also selected, filter by victim
+      if (selectedVictim) {
+        casesToCheck = casesToCheck.filter(
+          c => c.victimName && c.victimName.toLowerCase() === selectedVictim.toLowerCase()
+        );
+      }
+    }
+    // Filter by victim if in victim mode
+    else if (exportMode === "victim" && selectedVictim) {
+      casesToCheck = casesToCheck.filter(
+        c => c.victimName && c.victimName.toLowerCase() === selectedVictim.toLowerCase()
+      );
+    }
+    
+    casesToCheck.forEach(c => {
+      if (c.createdAt) {
+        const date = new Date(c.createdAt);
+        if (date.getFullYear() === parseInt(year) && date.getMonth() === parseInt(month)) {
+          // Calculate week of month
+          const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+          const weekOfMonth = Math.ceil((date.getDate() + firstDay.getDay()) / 7);
+          weeks.add(weekOfMonth);
+        }
+      }
+    });
+    return [...weeks].sort((a, b) => a - b);
+  };
+
   // Export all filtered cases to Excel
 
   const handleExportAllCSV = async () => {
-    if (filteredCases.length === 0) {
+    // Filter cases by date range if specified
+    let casesToExport = filteredCases;
+    
+    if (exportFilters.year) {
+      casesToExport = casesToExport.filter(c => {
+        if (!c.createdAt) return false;
+        const date = new Date(c.createdAt);
+        if (date.getFullYear() !== parseInt(exportFilters.year)) return false;
+        
+        if (exportFilters.month !== "") {
+          if (date.getMonth() !== parseInt(exportFilters.month)) return false;
+          
+          if (exportFilters.week !== "") {
+            const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+            const weekOfMonth = Math.ceil((date.getDate() + firstDay.getDay()) / 7);
+            if (weekOfMonth !== parseInt(exportFilters.week)) return false;
+          }
+        }
+        return true;
+      });
+    }
+    
+    if (casesToExport.length === 0) {
       message.warning("No cases to export");
       return;
     }
@@ -1065,7 +1216,7 @@ export default function CaseManagement() {
     try {
       const dataWithRemarks = [];
 
-      for (const c of filteredCases) {
+      for (const c of casesToExport) {
         // Fetch remarks for this case
         let remarksText = "";
         try {
@@ -1088,11 +1239,18 @@ export default function CaseManagement() {
 
       const timestamp = new Date().toISOString().split('T')[0];
       const filterInfo = {
-        mode: "All Cases"
+        year: exportFilters.year || "All Years",
+        month: exportFilters.month ? ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][parseInt(exportFilters.month)] : "All Months",
+        week: exportFilters.week ? `Week ${exportFilters.week}` : "All Weeks",
+        purok: exportFilters.purok || "All Puroks",
+        status: exportFilters.status || "All Statuses",
+        riskLevel: exportFilters.riskLevel || "All Risk Levels",
+        incidentType: exportFilters.incidentType || "All Incident Types",
+        victimType: exportFilters.victimType ? (exportFilters.victimType.charAt(0).toUpperCase() + exportFilters.victimType.slice(1)) : "All Victim Types"
       };
       await createExcelFile(dataWithRemarks, `VAWCare_All_Cases_${timestamp}.xlsx`, true, filterInfo);
 
-      message.success(`Exported ${filteredCases.length} case(s) to Excel`);
+      message.success(`Exported ${casesToExport.length} case(s) to Excel`);
     } catch (err) {
       console.error('Excel export error:', err);
       message.error('Failed to export Excel. Please try again.');
@@ -1108,9 +1266,11 @@ export default function CaseManagement() {
       return;
     }
 
-    let officerCases = allCases.filter(
-      c => c.assignedOfficer && c.assignedOfficer.toLowerCase() === officerName.toLowerCase()
-    );
+    let officerCases = allCases
+      .filter(c => !c.deletedAt) // Exclude soft-deleted cases
+      .filter(
+        c => c.assignedOfficer && c.assignedOfficer.toLowerCase() === officerName.toLowerCase()
+      );
 
     // If victim is also selected, filter by victim
     if (selectedVictim) {
@@ -1148,6 +1308,41 @@ export default function CaseManagement() {
       officerCases = officerCases.filter(c => 
         c.victimType && c.victimType.toLowerCase() === exportFilters.victimType.toLowerCase()
       );
+    }
+
+    // Date filtering
+    if (exportFilters.year) {
+      officerCases = officerCases.filter(c => {
+        if (!c.createdAt) return false;
+        const caseYear = new Date(c.createdAt).getFullYear();
+        return caseYear === parseInt(exportFilters.year);
+      });
+    }
+
+    if (exportFilters.month && exportFilters.year) {
+      officerCases = officerCases.filter(c => {
+        if (!c.createdAt) return false;
+        const caseDate = new Date(c.createdAt);
+        const caseYear = caseDate.getFullYear();
+        const caseMonth = caseDate.getMonth();
+        return caseYear === parseInt(exportFilters.year) && caseMonth === parseInt(exportFilters.month);
+      });
+    }
+
+    if (exportFilters.week && exportFilters.month && exportFilters.year) {
+      officerCases = officerCases.filter(c => {
+        if (!c.createdAt) return false;
+        const caseDate = new Date(c.createdAt);
+        const caseYear = caseDate.getFullYear();
+        const caseMonth = caseDate.getMonth();
+        const firstDay = new Date(caseYear, caseMonth, 1);
+        const weekOfMonth = Math.ceil((caseDate.getDate() + firstDay.getDay()) / 7);
+        return (
+          caseYear === parseInt(exportFilters.year) &&
+          caseMonth === parseInt(exportFilters.month) &&
+          weekOfMonth === parseInt(exportFilters.week)
+        );
+      });
     }
 
     if (officerCases.length === 0) {
@@ -1188,7 +1383,10 @@ export default function CaseManagement() {
       status: exportFilters.status || null,
       riskLevel: exportFilters.riskLevel || null,
       incidentType: exportFilters.incidentType || null,
-      victimType: exportFilters.victimType || null
+      victimType: exportFilters.victimType || null,
+      year: exportFilters.year || null,
+      month: exportFilters.month || null,
+      week: exportFilters.week || null
     };
     
     // Create filename based on whether victim is also selected
@@ -1209,7 +1407,7 @@ export default function CaseManagement() {
     setExportModalVisible(false);
     setSelectedOfficer("");
     setSelectedVictim("");
-    setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "", victimType: "" });
+    setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "", victimType: "", year: "", month: "", week: "" });
     setExportType("csv");
     setExportMode("officer");
   };
@@ -1221,9 +1419,11 @@ export default function CaseManagement() {
       return;
     }
 
-    let victimCases = allCases.filter(
-      c => c.victimName && c.victimName.toLowerCase() === victimName.toLowerCase()
-    );
+    let victimCases = allCases
+      .filter(c => !c.deletedAt) // Exclude soft-deleted cases
+      .filter(
+        c => c.victimName && c.victimName.toLowerCase() === victimName.toLowerCase()
+      );
 
     // Apply additional filters
     if (exportFilters.purok) {
@@ -1254,6 +1454,41 @@ export default function CaseManagement() {
       victimCases = victimCases.filter(c => 
         c.victimType && c.victimType.toLowerCase() === exportFilters.victimType.toLowerCase()
       );
+    }
+
+    // Date filtering
+    if (exportFilters.year) {
+      victimCases = victimCases.filter(c => {
+        if (!c.createdAt) return false;
+        const caseYear = new Date(c.createdAt).getFullYear();
+        return caseYear === parseInt(exportFilters.year);
+      });
+    }
+
+    if (exportFilters.month && exportFilters.year) {
+      victimCases = victimCases.filter(c => {
+        if (!c.createdAt) return false;
+        const caseDate = new Date(c.createdAt);
+        const caseYear = caseDate.getFullYear();
+        const caseMonth = caseDate.getMonth();
+        return caseYear === parseInt(exportFilters.year) && caseMonth === parseInt(exportFilters.month);
+      });
+    }
+
+    if (exportFilters.week && exportFilters.month && exportFilters.year) {
+      victimCases = victimCases.filter(c => {
+        if (!c.createdAt) return false;
+        const caseDate = new Date(c.createdAt);
+        const caseYear = caseDate.getFullYear();
+        const caseMonth = caseDate.getMonth();
+        const firstDay = new Date(caseYear, caseMonth, 1);
+        const weekOfMonth = Math.ceil((caseDate.getDate() + firstDay.getDay()) / 7);
+        return (
+          caseYear === parseInt(exportFilters.year) &&
+          caseMonth === parseInt(exportFilters.month) &&
+          weekOfMonth === parseInt(exportFilters.week)
+        );
+      });
     }
 
     if (victimCases.length === 0) {
@@ -1295,7 +1530,10 @@ export default function CaseManagement() {
       status: exportFilters.status || null,
       riskLevel: exportFilters.riskLevel || null,
       incidentType: exportFilters.incidentType || null,
-      victimType: exportFilters.victimType || null
+      victimType: exportFilters.victimType || null,
+      year: exportFilters.year || null,
+      month: exportFilters.month || null,
+      week: exportFilters.week || null
     };
     
     await createExcelFile(victimCasesWithRemarks, filename, true, filterInfo);
@@ -1304,9 +1542,35 @@ export default function CaseManagement() {
     setExportModalVisible(false);
     setSelectedOfficer("");
     setSelectedVictim("");
-    setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "", victimType: "" });
+    setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "", victimType: "", year: "", month: "", week: "" });
     setExportType("csv");
     setExportMode("officer");
+  };
+
+  // Get filtered case count including date filters for all modes
+  const getFilteredAllCasesCount = () => {
+    let casesToCount = filteredCases;
+    
+    if (exportFilters.year) {
+      casesToCount = casesToCount.filter(c => {
+        if (!c.createdAt) return false;
+        const date = new Date(c.createdAt);
+        if (date.getFullYear() !== parseInt(exportFilters.year)) return false;
+        
+        if (exportFilters.month !== "") {
+          if (date.getMonth() !== parseInt(exportFilters.month)) return false;
+          
+          if (exportFilters.week !== "") {
+            const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+            const weekOfMonth = Math.ceil((date.getDate() + firstDay.getDay()) / 7);
+            if (weekOfMonth !== parseInt(exportFilters.week)) return false;
+          }
+        }
+        return true;
+      });
+    }
+    
+    return casesToCount.length;
   };
 
   // Get filtered case count for preview
@@ -1315,9 +1579,11 @@ export default function CaseManagement() {
     
     if (exportMode === "officer") {
       if (!selectedOfficer) return 0;
-      cases = allCases.filter(
-        c => c.assignedOfficer && c.assignedOfficer.toLowerCase() === selectedOfficer.toLowerCase()
-      );
+      cases = allCases
+        .filter(c => !c.deletedAt) // Exclude soft-deleted cases
+        .filter(
+          c => c.assignedOfficer && c.assignedOfficer.toLowerCase() === selectedOfficer.toLowerCase()
+        );
       // If victim is also selected in officer mode, further filter by victim
       if (selectedVictim) {
         cases = cases.filter(
@@ -1326,9 +1592,11 @@ export default function CaseManagement() {
       }
     } else if (exportMode === "victim") {
       if (!selectedVictim) return 0;
-      cases = allCases.filter(
-        c => c.victimName && c.victimName.toLowerCase() === selectedVictim.toLowerCase()
-      );
+      cases = allCases
+        .filter(c => !c.deletedAt) // Exclude soft-deleted cases
+        .filter(
+          c => c.victimName && c.victimName.toLowerCase() === selectedVictim.toLowerCase()
+        );
     } else {
       return 0;
     }
@@ -1361,6 +1629,41 @@ export default function CaseManagement() {
       cases = cases.filter(c => 
         c.victimType && c.victimType.toLowerCase() === exportFilters.victimType.toLowerCase()
       );
+    }
+
+    // Date filtering
+    if (exportFilters.year) {
+      cases = cases.filter(c => {
+        if (!c.createdAt) return false;
+        const caseYear = new Date(c.createdAt).getFullYear();
+        return caseYear === parseInt(exportFilters.year);
+      });
+    }
+
+    if (exportFilters.month && exportFilters.year) {
+      cases = cases.filter(c => {
+        if (!c.createdAt) return false;
+        const caseDate = new Date(c.createdAt);
+        const caseYear = caseDate.getFullYear();
+        const caseMonth = caseDate.getMonth();
+        return caseYear === parseInt(exportFilters.year) && caseMonth === parseInt(exportFilters.month);
+      });
+    }
+
+    if (exportFilters.week && exportFilters.month && exportFilters.year) {
+      cases = cases.filter(c => {
+        if (!c.createdAt) return false;
+        const caseDate = new Date(c.createdAt);
+        const caseYear = caseDate.getFullYear();
+        const caseMonth = caseDate.getMonth();
+        const firstDay = new Date(caseYear, caseMonth, 1);
+        const weekOfMonth = Math.ceil((caseDate.getDate() + firstDay.getDay()) / 7);
+        return (
+          caseYear === parseInt(exportFilters.year) &&
+          caseMonth === parseInt(exportFilters.month) &&
+          weekOfMonth === parseInt(exportFilters.week)
+        );
+      });
     }
 
     return cases.length;
@@ -3078,7 +3381,7 @@ export default function CaseManagement() {
           onCancel={() => {
             setExportModalVisible(false);
             setSelectedOfficer("");
-            setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "" });
+            setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "", victimType: "", year: "", month: "", week: "" });
             setSelectedCases([]);
             setExportType("csv");
           }}
@@ -3089,7 +3392,7 @@ export default function CaseManagement() {
                 setExportModalVisible(false);
                 setSelectedOfficer("");
                 setSelectedVictim("");
-                setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "", victimType: "" });
+                setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "", victimType: "", year: "", month: "", week: "" });
                 setSelectedCases([]);
                 setExportType("csv");
                 setExportMode("officer");
@@ -3112,7 +3415,7 @@ export default function CaseManagement() {
                 }}
                 style={{ background: BRAND.violet, borderColor: BRAND.violet, color: '#fff' }}
               >
-                Excel ({exportMode === "all" ? filteredCases.length : getFilteredCaseCount()})
+                Excel ({exportMode === "all" ? getFilteredAllCasesCount() : getFilteredCaseCount()})
               </Button>
             ),
             (selectedOfficer || selectedVictim) && (
@@ -3183,7 +3486,7 @@ export default function CaseManagement() {
                         setExportMode(e.target.value);
                         setSelectedOfficer("");
                         setSelectedVictim("");
-                        setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "", victimType: "" });
+                        setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "", victimType: "", year: "", month: "", week: "" });
                         setSelectedCases([]);
                       }}
                       style={{ width: '100%' }}
@@ -3318,6 +3621,98 @@ export default function CaseManagement() {
                   </Form.Item>
                 )}
 
+                {/* Date Filters - Only for "All Cases" mode */}
+                {exportMode === "all" && (
+                  <>
+                    <Divider orientation="left" style={{ 
+                      color: BRAND.violet,
+                      margin: "12px 0 10px 0",
+                      fontSize: 14
+                    }}>
+                      Date Range Filters (Optional)
+                    </Divider>
+
+                    <Row gutter={[8, 8]}>
+                      <Col xs={24} sm={12}>
+                        <Form.Item
+                          label={<Text strong style={{ fontSize: 13 }}>Year</Text>}
+                          style={{ marginBottom: 8 }}
+                        >
+                          <Select
+                            placeholder="All Years"
+                            value={exportFilters.year}
+                            onChange={(val) => setExportFilters({ ...exportFilters, year: val, month: "", week: "" })}
+                            allowClear
+                            size="middle"
+                            style={{ width: "100%" }}
+                            options={[
+                              { value: "", label: "All Years" },
+                              ...getAvailableYears().map(year => ({
+                                value: year.toString(),
+                                label: year.toString(),
+                              }))
+                            ]}
+                          />
+                        </Form.Item>
+                      </Col>
+
+                      {exportFilters.year && (
+                        <Col xs={24} sm={12}>
+                          <Form.Item
+                            label={<Text strong style={{ fontSize: 13 }}>Month</Text>}
+                            style={{ marginBottom: 8 }}
+                          >
+                            <Select
+                              placeholder="All Months"
+                              value={exportFilters.month}
+                              onChange={(val) => setExportFilters({ ...exportFilters, month: val, week: "" })}
+                              allowClear
+                              size="middle"
+                              style={{ width: "100%" }}
+                              options={[
+                                { value: "", label: "All Months" },
+                                ...getAvailableMonths(exportFilters.year).map(monthIdx => {
+                                  const monthNames = ["January", "February", "March", "April", "May", "June",
+                                    "July", "August", "September", "October", "November", "December"];
+                                  return {
+                                    value: monthIdx.toString(),
+                                    label: monthNames[monthIdx],
+                                  };
+                                })
+                              ]}
+                            />
+                          </Form.Item>
+                        </Col>
+                      )}
+
+                      {exportFilters.year && exportFilters.month && (
+                        <Col xs={24} sm={12}>
+                          <Form.Item
+                            label={<Text strong style={{ fontSize: 13 }}>Week</Text>}
+                            style={{ marginBottom: 8 }}
+                          >
+                            <Select
+                              placeholder="All Weeks"
+                              value={exportFilters.week}
+                              onChange={(val) => setExportFilters({ ...exportFilters, week: val })}
+                              allowClear
+                              size="middle"
+                              style={{ width: "100%" }}
+                              options={[
+                                { value: "", label: "All Weeks" },
+                                ...getAvailableWeeks(exportFilters.year, exportFilters.month).map(weekNum => ({
+                                  value: weekNum.toString(),
+                                  label: `Week ${weekNum}`,
+                                }))
+                              ]}
+                            />
+                          </Form.Item>
+                        </Col>
+                      )}
+                    </Row>
+                  </>
+                )}
+
               {(selectedOfficer || selectedVictim) && (
                 <>
                   <Divider orientation="left" style={{ 
@@ -3449,9 +3844,86 @@ export default function CaseManagement() {
                     />
                   </Form.Item>
                 </Col>
+
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    label={<Text strong style={{ fontSize: 13 }}>Year</Text>}
+                    style={{ marginBottom: 8 }}
+                  >
+                    <Select
+                      placeholder="All Years"
+                      value={exportFilters.year}
+                      onChange={(val) => setExportFilters({ ...exportFilters, year: val, month: "", week: "" })}
+                      allowClear
+                      size="middle"
+                      style={{ width: "100%" }}
+                      options={[
+                        { value: "", label: "All Years" },
+                        ...getAvailableYears().map(year => ({
+                          value: year.toString(),
+                          label: year.toString(),
+                        }))
+                      ]}
+                    />
+                  </Form.Item>
+                </Col>
+
+                {exportFilters.year && (
+                  <Col xs={24} sm={12}>
+                    <Form.Item
+                      label={<Text strong style={{ fontSize: 13 }}>Month</Text>}
+                      style={{ marginBottom: 8 }}
+                    >
+                      <Select
+                        placeholder="All Months"
+                        value={exportFilters.month}
+                        onChange={(val) => setExportFilters({ ...exportFilters, month: val, week: "" })}
+                        allowClear
+                        size="middle"
+                        style={{ width: "100%" }}
+                        options={[
+                          { value: "", label: "All Months" },
+                          ...getAvailableMonths(exportFilters.year).map(monthIdx => {
+                            const monthNames = ["January", "February", "March", "April", "May", "June",
+                              "July", "August", "September", "October", "November", "December"];
+                            return {
+                              value: monthIdx.toString(),
+                              label: monthNames[monthIdx],
+                            };
+                          })
+                        ]}
+                      />
+                    </Form.Item>
+                  </Col>
+                )}
+
+                {exportFilters.year && exportFilters.month && (
+                  <Col xs={24} sm={12}>
+                    <Form.Item
+                      label={<Text strong style={{ fontSize: 13 }}>Week</Text>}
+                      style={{ marginBottom: 8 }}
+                    >
+                      <Select
+                        placeholder="All Weeks"
+                        value={exportFilters.week}
+                        onChange={(val) => setExportFilters({ ...exportFilters, week: val })}
+                        allowClear
+                        size="middle"
+                        style={{ width: "100%" }}
+                        options={[
+                          { value: "", label: "All Weeks" },
+                          ...getAvailableWeeks(exportFilters.year, exportFilters.month).map(weekNum => ({
+                            value: weekNum.toString(),
+                            label: `Week ${weekNum}`,
+                          }))
+                        ]}
+                      />
+                    </Form.Item>
+                  </Col>
+                )}
               </Row>
 
-              {(selectedOfficer || selectedVictim) && (
+              {((selectedOfficer || selectedVictim) || (exportMode === "all")) && (
                 <div style={{
                   background: "#f9f7ff",
                   border: `1px solid ${BRAND.soft}`,
@@ -3464,6 +3936,19 @@ export default function CaseManagement() {
                       Export Preview
                     </Text>
                     <Row gutter={[8, 4]}>
+                      {exportMode === "all" && (
+                        <>
+                          <Col span={12}>
+                            <Text type="secondary" style={{ fontSize: 13 }}>
+                              Mode:
+                            </Text>
+                          </Col>
+                          <Col span={12}>
+                            <Text strong style={{ fontSize: 13 }}>All Cases (Includes Remarks)</Text>
+                          </Col>
+                        </>
+                      )}
+
                       {exportMode === "officer" && (
                         <>
                           <Col span={12}>
@@ -3570,6 +4055,47 @@ export default function CaseManagement() {
                             <Text strong style={{ fontSize: 13 }}>
                               {exportFilters.victimType.charAt(0).toUpperCase() + exportFilters.victimType.slice(1)}
                             </Text>
+                          </Col>
+                        </>
+                      )}
+
+                      {exportFilters.year && (
+                        <>
+                          <Col span={12}>
+                            <Text type="secondary" style={{ fontSize: 13 }}>
+                              Year:
+                            </Text>
+                          </Col>
+                          <Col span={12}>
+                            <Text strong style={{ fontSize: 13 }}>{exportFilters.year}</Text>
+                          </Col>
+                        </>
+                      )}
+
+                      {exportFilters.month && (
+                        <>
+                          <Col span={12}>
+                            <Text type="secondary" style={{ fontSize: 13 }}>
+                              Month:
+                            </Text>
+                          </Col>
+                          <Col span={12}>
+                            <Text strong style={{ fontSize: 13 }}>
+                              {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][parseInt(exportFilters.month)]}
+                            </Text>
+                          </Col>
+                        </>
+                      )}
+
+                      {exportFilters.week && (
+                        <>
+                          <Col span={12}>
+                            <Text type="secondary" style={{ fontSize: 13 }}>
+                              Week:
+                            </Text>
+                          </Col>
+                          <Col span={12}>
+                            <Text strong style={{ fontSize: 13 }}>Week {exportFilters.week}</Text>
                           </Col>
                         </>
                       )}
@@ -3696,6 +4222,27 @@ export default function CaseManagement() {
                                 c.victimType && c.victimType.toLowerCase() === exportFilters.victimType.toLowerCase()
                               );
                             }
+
+                            // Apply date filters
+                            if (exportFilters.year) {
+                              casesToSelect = casesToSelect.filter(c => {
+                                if (!c.createdAt) return false;
+                                const date = new Date(c.createdAt);
+                                if (date.getFullYear() !== parseInt(exportFilters.year)) return false;
+                                
+                                if (exportFilters.month !== "") {
+                                  if (date.getMonth() !== parseInt(exportFilters.month)) return false;
+                                  
+                                  if (exportFilters.week !== "") {
+                                    const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+                                    const weekOfMonth = Math.ceil((date.getDate() + firstDay.getDay()) / 7);
+                                    if (weekOfMonth !== parseInt(exportFilters.week)) return false;
+                                  }
+                                }
+                                return true;
+                              });
+                            }
+                            
                             setSelectedCases(casesToSelect.map(c => c.caseID));
                           }}
                           style={{ borderRadius: 8, fontSize: screens.xs ? 11 : 13 }}
@@ -3786,6 +4333,26 @@ export default function CaseManagement() {
                             casesToShow = casesToShow.filter(c => 
                               c.victimType && c.victimType.toLowerCase() === exportFilters.victimType.toLowerCase()
                             );
+                          }
+
+                          // Apply date filters
+                          if (exportFilters.year) {
+                            casesToShow = casesToShow.filter(c => {
+                              if (!c.createdAt) return false;
+                              const date = new Date(c.createdAt);
+                              if (date.getFullYear() !== parseInt(exportFilters.year)) return false;
+                              
+                              if (exportFilters.month !== "") {
+                                if (date.getMonth() !== parseInt(exportFilters.month)) return false;
+                                
+                                if (exportFilters.week !== "") {
+                                  const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+                                  const weekOfMonth = Math.ceil((date.getDate() + firstDay.getDay()) / 7);
+                                  if (weekOfMonth !== parseInt(exportFilters.week)) return false;
+                                }
+                              }
+                              return true;
+                            });
                           }
 
                           return casesToShow.map((caseItem) => {

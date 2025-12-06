@@ -1375,6 +1375,7 @@ export default function CaseManagement() {
     const timestamp = new Date().toISOString().split('T')[0];
     
     // Create filter info object
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     const filterInfo = {
       mode: "Assigned Officer",
       officer: officerName,
@@ -1385,8 +1386,8 @@ export default function CaseManagement() {
       incidentType: exportFilters.incidentType || null,
       victimType: exportFilters.victimType || null,
       year: exportFilters.year || null,
-      month: exportFilters.month || null,
-      week: exportFilters.week || null
+      month: exportFilters.month ? monthNames[parseInt(exportFilters.month)] : null,
+      week: exportFilters.week ? `Week ${exportFilters.week}` : null
     };
     
     // Create filename based on whether victim is also selected
@@ -1523,6 +1524,7 @@ export default function CaseManagement() {
     const filename = `Cases_Victim_${sanitizedVictimName}_${timestamp}.xlsx`;
     
     // Create filter info object
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     const filterInfo = {
       mode: "Victim Name",
       victim: victimName,
@@ -1532,8 +1534,8 @@ export default function CaseManagement() {
       incidentType: exportFilters.incidentType || null,
       victimType: exportFilters.victimType || null,
       year: exportFilters.year || null,
-      month: exportFilters.month || null,
-      week: exportFilters.week || null
+      month: exportFilters.month ? monthNames[parseInt(exportFilters.month)] : null,
+      week: exportFilters.week ? `Week ${exportFilters.week}` : null
     };
     
     await createExcelFile(victimCasesWithRemarks, filename, true, filterInfo);

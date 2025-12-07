@@ -282,8 +282,10 @@ export default function UserManagement() {
       } else if (record.userType === "official") {
         payload = {
           firstName: values.firstName,
+          middleInitial: values.middleInitial,
           lastName: values.lastName,
           officialEmail: values.email,
+          phoneNumber: values.phoneNumber,
           position: values.role,
           status: values.status,
         };
@@ -505,7 +507,27 @@ export default function UserManagement() {
         return;
       }
 
-      // Update the official's position
+      // First, find and clear the current role holder
+      const currentRoleHolder = getCurrentRoleHolder(quickUpdateRole);
+      if (currentRoleHolder && currentRoleHolder.id !== newOfficialId) {
+        // Remove the role from the current holder and set to a default position
+        const clearPayload = {
+          firstName: currentRoleHolder.firstName,
+          middleInitial: currentRoleHolder.middleInitial,
+          lastName: currentRoleHolder.lastName,
+          officialEmail: currentRoleHolder.email,
+          phoneNumber: currentRoleHolder.phoneNumber,
+          position: "Official", // Set to default position instead of null
+          status: currentRoleHolder.status,
+        };
+
+        await api.put(
+          `/api/admin/officials/${currentRoleHolder.id}`,
+          clearPayload
+        );
+      }
+
+      // Update the new official's position
       const payload = {
         firstName: newOfficial.firstName,
         middleInitial: newOfficial.middleInitial,

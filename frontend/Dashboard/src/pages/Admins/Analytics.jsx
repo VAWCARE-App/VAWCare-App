@@ -695,7 +695,20 @@ const Analytics = () => {
                 </Text>
                 <Select
                   value={filterPurok}
-                  onChange={setFilterPurok}
+                  onChange={(value) => {
+                    setFilterPurok(value);
+                    if (value !== "all") {
+                      // Force expand the selected purok
+                      if (expandedPurok !== value) {
+                        fetchCasesByPurok(value);
+                      }
+                    } else {
+                      // Collapse when "All Puroks" is selected
+                      setExpandedPurok(null);
+                      setDetailPanelVisible(false);
+                      setSelectedCase(null);
+                    }
+                  }}
                   style={{ width: isXs ? 150 : 200 }}
                   placeholder="Select Purok"
                 >
@@ -828,10 +841,10 @@ const Analytics = () => {
                   <thead>
                     <tr style={{ borderBottom: "2px solid #f0f0f0" }}>
                       <th style={{
-                        padding: "16px 20px",
+                        padding: isXs ? "12px 8px" : "16px 20px",
                         textAlign: "left",
                         fontWeight: 600,
-                        fontSize: 12,
+                        fontSize: isXs ? 10 : 12,
                         color: "#8b8b8b",
                         textTransform: "uppercase",
                         letterSpacing: "0.5px",
@@ -840,34 +853,36 @@ const Analytics = () => {
                         Purok
                       </th>
                       <th style={{
-                        padding: "16px 20px",
+                        padding: isXs ? "12px 8px" : "16px 20px",
                         textAlign: "left",
                         fontWeight: 600,
-                        fontSize: 12,
+                        fontSize: isXs ? 10 : 12,
                         color: "#8b8b8b",
                         textTransform: "uppercase",
                         letterSpacing: "0.5px",
                         background: "#fafafa",
+                        display: isXs ? "none" : "table-cell",
                       }}>
                         Most Common Type
                       </th>
                       <th style={{
-                        padding: "16px 20px",
+                        padding: isXs ? "12px 8px" : "16px 20px",
                         textAlign: "left",
                         fontWeight: 600,
-                        fontSize: 12,
+                        fontSize: isXs ? 10 : 12,
                         color: "#8b8b8b",
                         textTransform: "uppercase",
                         letterSpacing: "0.5px",
                         background: "#fafafa",
+                        display: isXs ? "none" : "table-cell",
                       }}>
                         Most Common Subtype
                       </th>
                       <th style={{
-                        padding: "16px 20px",
+                        padding: isXs ? "12px 8px" : "16px 20px",
                         textAlign: "center",
                         fontWeight: 600,
-                        fontSize: 12,
+                        fontSize: isXs ? 10 : 12,
                         color: "#8b8b8b",
                         textTransform: "uppercase",
                         letterSpacing: "0.5px",
@@ -876,15 +891,15 @@ const Analytics = () => {
                         Total
                       </th>
                       <th style={{
-                        padding: "16px 20px",
+                        padding: isXs ? "12px 8px" : "16px 20px",
                         textAlign: "center",
                         fontWeight: 600,
-                        fontSize: 12,
+                        fontSize: isXs ? 10 : 12,
                         color: "#8b8b8b",
                         textTransform: "uppercase",
                         letterSpacing: "0.5px",
                         background: "#fafafa",
-                        width: "60px",
+                        width: isXs ? "40px" : "60px",
                       }}>
                       </th>
                     </tr>
@@ -900,12 +915,12 @@ const Analytics = () => {
                           }}
                         >
                           <td
-                            style={{ padding: "20px 20px", cursor: "pointer" }}
+                            style={{ padding: isXs ? "12px 8px" : "20px 20px", cursor: "pointer" }}
                             onClick={() => fetchCasesByPurok(d.location)}
                           >
-                            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: isXs ? 6 : 12 }}>
                               <div style={{
-                                display: "grid",
+                                display: isXs ? "none" : "grid",
                                 gridTemplateColumns: "repeat(2, 3px)",
                                 gridTemplateRows: "repeat(3, 3px)",
                                 gap: "3px",
@@ -923,28 +938,33 @@ const Analytics = () => {
                                 ))}
                               </div>
                               <div style={{
-                                width: 6,
-                                height: 40,
+                                width: isXs ? 4 : 6,
+                                height: isXs ? 30 : 40,
                                 borderRadius: 3,
                                 background: ABUSE_COLORS[d.mostCommon] || BRAND.violet,
                               }} />
                               <div>
                                 <div style={{
                                   fontWeight: 600,
-                                  fontSize: 14,
+                                  fontSize: isXs ? 12 : 14,
                                   color: "#1a1a1a",
                                 }}>
                                   {d.location}
                                 </div>
+                                {isXs && (
+                                  <div style={{ fontSize: 10, color: "#999", marginTop: 2 }}>
+                                    {d.mostCommonIncidentType}
+                                  </div>
+                                )}
                               </div>
                               {expandedPurok === d.location ? (
-                                <DownOutlined style={{ fontSize: 10, color: "#9ca3af", marginLeft: "auto" }} />
+                                <DownOutlined style={{ fontSize: isXs ? 8 : 10, color: "#9ca3af", marginLeft: "auto" }} />
                               ) : (
-                                <RightOutlined style={{ fontSize: 10, color: "#9ca3af", marginLeft: "auto" }} />
+                                <RightOutlined style={{ fontSize: isXs ? 8 : 10, color: "#9ca3af", marginLeft: "auto" }} />
                               )}
                             </div>
                           </td>
-                          <td style={{ padding: "20px 20px" }}>
+                          <td style={{ padding: isXs ? "12px 8px" : "20px 20px", display: isXs ? "none" : "table-cell" }}>
                             <span style={{
                               display: "inline-block",
                               padding: "6px 12px",
@@ -957,7 +977,7 @@ const Analytics = () => {
                               {d.mostCommonIncidentType}
                             </span>
                           </td>
-                          <td style={{ padding: "20px 20px" }}>
+                          <td style={{ padding: isXs ? "12px 8px" : "20px 20px", display: isXs ? "none" : "table-cell" }}>
                             <span style={{
                               display: "inline-block",
                               padding: "6px 12px",
@@ -979,19 +999,19 @@ const Analytics = () => {
                               </span>
                             )}
                           </td>
-                          <td style={{ padding: "20px 20px", textAlign: "center" }}>
+                          <td style={{ padding: isXs ? "12px 8px" : "20px 20px", textAlign: "center" }}>
                             <span style={{
                               display: "inline-flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              minWidth: 32,
-                              height: 32,
+                              minWidth: isXs ? 24 : 32,
+                              height: isXs ? 24 : 32,
                               borderRadius: 6,
                               fontWeight: 700,
-                              fontSize: 14,
+                              fontSize: isXs ? 11 : 14,
                               color: "#fff",
                               background: BRAND.violet,
-                              padding: "0 10px",
+                              padding: isXs ? "0 6px" : "0 10px",
                             }}>
                               {d.incidentCount}
                             </span>
@@ -1002,13 +1022,13 @@ const Analytics = () => {
                         {expandedPurok === d.location && purokCases[d.location] && (
                           <tr>
                             <td colSpan={5} style={{ padding: 0, background: "#fafafa" }}>
-                              <div style={{ padding: "20px" }}>
+                              <div style={{ padding: isXs ? "12px" : "20px" }}>
                                 {/* AI Insights Section for Purok */}
                                 <div style={{
-                                  marginBottom: 24,
-                                  padding: "20px",
+                                  marginBottom: isXs ? 16 : 24,
+                                  padding: isXs ? "12px" : "20px",
                                   background: "#fff",
-                                  borderRadius: 12,
+                                  borderRadius: isXs ? 8 : 12,
                                   border: `2px solid ${BRAND.violet}20`,
                                   boxShadow: "0 2px 8px rgba(122, 90, 248, 0.08)"
                                 }}>
@@ -1080,40 +1100,42 @@ const Analytics = () => {
                                   <thead>
                                     <tr style={{ borderBottom: "1px solid #e5e5e5" }}>
                                       <th style={{
-                                        padding: "12px 16px",
+                                        padding: isXs ? "8px" : "12px 16px",
                                         textAlign: "left",
                                         fontWeight: 600,
-                                        fontSize: 11,
+                                        fontSize: isXs ? 9 : 11,
                                         color: "#8b8b8b",
                                         textTransform: "uppercase",
                                       }}>
                                         Victim
                                       </th>
                                       <th style={{
-                                        padding: "12px 16px",
+                                        padding: isXs ? "8px" : "12px 16px",
                                         textAlign: "left",
                                         fontWeight: 600,
-                                        fontSize: 11,
+                                        fontSize: isXs ? 9 : 11,
                                         color: "#8b8b8b",
                                         textTransform: "uppercase",
+                                        display: isXs ? "none" : "table-cell",
                                       }}>
                                         Incident
                                       </th>
                                       <th style={{
-                                        padding: "12px 16px",
+                                        padding: isXs ? "8px" : "12px 16px",
                                         textAlign: "left",
                                         fontWeight: 600,
-                                        fontSize: 11,
+                                        fontSize: isXs ? 9 : 11,
                                         color: "#8b8b8b",
                                         textTransform: "uppercase",
+                                        display: isXs ? "none" : "table-cell",
                                       }}>
                                         Subtype
                                       </th>
                                       <th style={{
-                                        padding: "12px 16px",
+                                        padding: isXs ? "8px" : "12px 16px",
                                         textAlign: "left",
                                         fontWeight: 600,
-                                        fontSize: 11,
+                                        fontSize: isXs ? 9 : 11,
                                         color: "#8b8b8b",
                                         textTransform: "uppercase",
                                       }}>
@@ -1133,11 +1155,11 @@ const Analytics = () => {
                                           cursor: "pointer",
                                         }}
                                       >
-                                        <td style={{ padding: "16px" }}>
-                                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                        <td style={{ padding: isXs ? "8px" : "16px" }}>
+                                          <div style={{ display: "flex", alignItems: "center", gap: isXs ? 6 : 10 }}>
                                             <div style={{
-                                              width: 36,
-                                              height: 36,
+                                              width: isXs ? 28 : 36,
+                                              height: isXs ? 28 : 36,
                                               borderRadius: "50%",
                                               background: `linear-gradient(135deg, ${BRAND.violet}, ${BRAND.pink})`,
                                               display: "flex",
@@ -1145,20 +1167,20 @@ const Analytics = () => {
                                               justifyContent: "center",
                                               color: "#fff",
                                               fontWeight: 600,
-                                              fontSize: 14,
+                                              fontSize: isXs ? 11 : 14,
                                             }}>
                                               {caseItem.victimName?.charAt(0) || "V"}
                                             </div>
                                             <div style={{ flex: 1 }}>
-                                              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-                                                <span style={{ fontWeight: 600, fontSize: 13, color: "#1a1a1a" }}>
+                                              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2, flexWrap: "wrap" }}>
+                                                <span style={{ fontWeight: 600, fontSize: isXs ? 11 : 13, color: "#1a1a1a" }}>
                                                   {caseItem.victimName}
                                                 </span>
                                                 <span style={{
                                                   display: "inline-block",
                                                   padding: "2px 6px",
                                                   borderRadius: 3,
-                                                  fontSize: 10,
+                                                  fontSize: isXs ? 8 : 10,
                                                   fontWeight: 600,
                                                   color: caseItem.victimType === "woman" ? "#e91e63" : caseItem.victimType === "child" ? "#7A5AF8" : "#6b7280",
                                                   background: caseItem.victimType === "woman" ? "rgba(233, 30, 99, 0.1)" : caseItem.victimType === "child" ? "rgba(122, 90, 248, 0.1)" : "rgba(107, 114, 128, 0.1)",
@@ -1166,13 +1188,18 @@ const Analytics = () => {
                                                   {caseItem.victimType === "woman" ? "Woman" : caseItem.victimType === "child" ? "Child" : "Anonymous"}
                                                 </span>
                                               </div>
-                                              <div style={{ fontSize: 11, color: "#8b8b8b" }}>
+                                              <div style={{ fontSize: isXs ? 9 : 11, color: "#8b8b8b" }}>
                                                 Case #{caseItem.caseID}
                                               </div>
+                                              {isXs && (
+                                                <div style={{ fontSize: 9, color: "#666", marginTop: 2 }}>
+                                                  {caseItem.incidentType} - {caseItem.incidentSubtype || "Uncategorized"}
+                                                </div>
+                                              )}
                                             </div>
                                           </div>
                                         </td>
-                                        <td style={{ padding: "16px" }}>
+                                        <td style={{ padding: isXs ? "8px" : "16px", display: isXs ? "none" : "table-cell" }}>
                                           <span style={{
                                             display: "inline-block",
                                             padding: "4px 10px",
@@ -1185,7 +1212,7 @@ const Analytics = () => {
                                             {caseItem.incidentType}
                                           </span>
                                         </td>
-                                        <td style={{ padding: "16px" }}>
+                                        <td style={{ padding: isXs ? "8px" : "16px", display: isXs ? "none" : "table-cell" }}>
                                           <span style={{
                                             display: "inline-block",
                                             padding: "4px 10px",
@@ -1198,7 +1225,7 @@ const Analytics = () => {
                                             {caseItem.incidentSubtype || "Uncategorized"}
                                           </span>
                                         </td>
-                                        <td style={{ padding: "16px", fontSize: 13, color: "#4a4a4a" }}>
+                                        <td style={{ padding: isXs ? "8px" : "16px", fontSize: isXs ? 10 : 13, color: "#4a4a4a" }}>
                                           {caseItem.dateReported}
                                         </td>
                                       </tr>
@@ -1666,7 +1693,20 @@ const Analytics = () => {
               </Text>
               <Select
                 value={filterPurok}
-                onChange={setFilterPurok}
+                onChange={(value) => {
+                  setFilterPurok(value);
+                  if (value !== "all") {
+                    // Force expand the selected purok
+                    if (expandedPurok !== value) {
+                      fetchCasesByPurok(value);
+                    }
+                  } else {
+                    // Collapse when "All Puroks" is selected
+                    setExpandedPurok(null);
+                    setDetailPanelVisible(false);
+                    setSelectedCase(null);
+                  }
+                }}
                 style={{ width: "100%" }}
                 placeholder="Select Purok"
               >
@@ -1690,7 +1730,7 @@ const Analytics = () => {
                 placeholder="Select Abuse Type"
               >
                 <Option value="all">All Types</Option>
-                {Object.keys(ABUSE_COLORS).map(type => (
+                {Object.keys(ABUSE_COLORS).filter(type => type.includes('Abuse')).map(type => (
                   <Option key={type} value={type}>
                     {type}
                   </Option>

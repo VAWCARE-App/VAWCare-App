@@ -103,6 +103,7 @@ export default function CaseManagement() {
     status: "",
     riskLevel: "",
     incidentType: "",
+    subtype: "",
     victimType: "",
     year: "",
     month: "",
@@ -1304,6 +1305,12 @@ export default function CaseManagement() {
       );
     }
 
+    if (exportFilters.subtype) {
+      officerCases = officerCases.filter(c => 
+        c.subtype && c.subtype.toLowerCase() === exportFilters.subtype.toLowerCase()
+      );
+    }
+
     if (exportFilters.victimType) {
       officerCases = officerCases.filter(c => 
         c.victimType && c.victimType.toLowerCase() === exportFilters.victimType.toLowerCase()
@@ -1408,7 +1415,7 @@ export default function CaseManagement() {
     setExportModalVisible(false);
     setSelectedOfficer("");
     setSelectedVictim("");
-    setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "", victimType: "", year: "", month: "", week: "" });
+    setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "", subtype: "", victimType: "", year: "", month: "", week: "" });
     setExportType("csv");
     setExportMode("officer");
   };
@@ -1448,6 +1455,12 @@ export default function CaseManagement() {
     if (exportFilters.incidentType) {
       victimCases = victimCases.filter(c => 
         c.incidentType && c.incidentType.toLowerCase() === exportFilters.incidentType.toLowerCase()
+      );
+    }
+
+    if (exportFilters.subtype) {
+      victimCases = victimCases.filter(c => 
+        c.subtype && c.subtype.toLowerCase() === exportFilters.subtype.toLowerCase()
       );
     }
 
@@ -1544,7 +1557,7 @@ export default function CaseManagement() {
     setExportModalVisible(false);
     setSelectedOfficer("");
     setSelectedVictim("");
-    setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "", victimType: "", year: "", month: "", week: "" });
+    setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "", subtype: "", victimType: "", year: "", month: "", week: "" });
     setExportType("csv");
     setExportMode("officer");
   };
@@ -1624,6 +1637,12 @@ export default function CaseManagement() {
     if (exportFilters.incidentType) {
       cases = cases.filter(c => 
         c.incidentType && c.incidentType.toLowerCase() === exportFilters.incidentType.toLowerCase()
+      );
+    }
+
+    if (exportFilters.subtype) {
+      cases = cases.filter(c => 
+        c.subtype && c.subtype.toLowerCase() === exportFilters.subtype.toLowerCase()
       );
     }
 
@@ -3383,7 +3402,7 @@ export default function CaseManagement() {
           onCancel={() => {
             setExportModalVisible(false);
             setSelectedOfficer("");
-            setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "", victimType: "", year: "", month: "", week: "" });
+            setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "", subtype: "", victimType: "", year: "", month: "", week: "" });
             setSelectedCases([]);
             setExportType("csv");
           }}
@@ -3394,7 +3413,7 @@ export default function CaseManagement() {
                 setExportModalVisible(false);
                 setSelectedOfficer("");
                 setSelectedVictim("");
-                setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "", victimType: "", year: "", month: "", week: "" });
+                setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "", subtype: "", victimType: "", year: "", month: "", week: "" });
                 setSelectedCases([]);
                 setExportType("csv");
                 setExportMode("officer");
@@ -3443,9 +3462,9 @@ export default function CaseManagement() {
           styles={{
             body: { 
               padding: 0,
-              height: (selectedOfficer || selectedVictim) ? (screens.xs ? 'auto' : screens.sm ? '65vh' : '62vh') : 'auto',
-              maxHeight: (selectedOfficer || selectedVictim) ? (screens.xs ? '80vh' : screens.sm ? '65vh' : '62vh') : '40vh',
-              overflow: screens.xs && (selectedOfficer || selectedVictim) ? 'auto' : 'hidden'
+              maxHeight: '70vh',
+              overflowY: 'auto',
+              overflowX: 'hidden'
             },
             mask: {
               backdropFilter: 'blur(4px)'
@@ -3455,32 +3474,27 @@ export default function CaseManagement() {
         >
           <div style={{ 
             display: 'flex',
-            flexDirection: 'column',
-            height: (selectedOfficer || selectedVictim) ? (screens.xs ? 'auto' : screens.sm ? '65vh' : '62vh') : 'auto',
-            maxHeight: (selectedOfficer || selectedVictim) ? (screens.xs ? 'none' : screens.sm ? '65vh' : '62vh') : '40vh'
+            flexDirection: 'column'
           }}>
             {/* Side-by-side layout */}
             <Row gutter={screens.xs ? 0 : 16} style={{ 
-              flex: 1,
-              overflow: 'hidden',
               margin: 0,
               flexDirection: screens.xs && (selectedOfficer || selectedVictim) ? 'column' : 'row'
             }}>
               {/* Left side - Selection & Filters */}
               <Col xs={24} md={(selectedOfficer || selectedVictim) ? 10 : 24} style={{
-                height: 'auto',
-                overflowY: screens.xs ? 'visible' : 'auto',
-                padding: screens.xs ? '12px 16px' : screens.sm ? '14px 12px' : '18px 20px',
-                maxHeight: screens.xs ? 'none' : '100%',
+                padding: screens.xs ? '12px 16px' : screens.sm ? '14px 12px' : '16px 20px',
                 borderRight: screens.xs ? 'none' : (selectedOfficer || selectedVictim) ? `1px solid ${BRAND.soft}` : 'none',
-                flexShrink: 0
+                display: 'flex',
+                flexDirection: 'column',
+                minHeight: 0
               }}>
                 <Form layout="vertical">
                 {/* Export Mode Radio Selection - Show all options initially, only selected when officer/victim is chosen */}
                 {!(selectedOfficer || selectedVictim) ? (
                   <Form.Item
                     label={<Text strong style={{ fontSize: 15 }}>Export Cases By</Text>}
-                    style={{ marginBottom: 16 }}
+                    style={{ marginBottom: 12 }}
                   >
                     <Radio.Group 
                       value={exportMode} 
@@ -3488,23 +3502,23 @@ export default function CaseManagement() {
                         setExportMode(e.target.value);
                         setSelectedOfficer("");
                         setSelectedVictim("");
-                        setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "", victimType: "", year: "", month: "", week: "" });
+                        setExportFilters({ purok: "", status: "", riskLevel: "", incidentType: "", subtype: "", victimType: "", year: "", month: "", week: "" });
                         setSelectedCases([]);
                       }}
                       style={{ width: '100%' }}
                     >
-                      <Space direction="vertical" style={{ width: '100%' }}>
-                        <Radio value="all" style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: exportMode === 'all' ? `2px solid ${BRAND.violet}` : '1px solid #d9d9d9', background: exportMode === 'all' ? BRAND.soft : '#fff' }}>
+                      <Space direction="vertical" style={{ width: '100%' }} size={8}>
+                        <Radio value="all" style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: exportMode === 'all' ? `2px solid ${BRAND.violet}` : '1px solid #d9d9d9', background: exportMode === 'all' ? BRAND.soft : '#fff' }}>
                           <Text strong>All Cases</Text>
                           <br />
                           <Text type="secondary" style={{ fontSize: 12 }}>Export all cases (includes remarks)</Text>
                         </Radio>
-                        <Radio value="officer" style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: exportMode === 'officer' ? `2px solid ${BRAND.violet}` : '1px solid #d9d9d9', background: exportMode === 'officer' ? BRAND.soft : '#fff' }}>
+                        <Radio value="officer" style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: exportMode === 'officer' ? `2px solid ${BRAND.violet}` : '1px solid #d9d9d9', background: exportMode === 'officer' ? BRAND.soft : '#fff' }}>
                           <Text strong>Assigned Officer</Text>
                           <br />
                           <Text type="secondary" style={{ fontSize: 12 }}>Export cases assigned to a specific officer</Text>
                         </Radio>
-                        <Radio value="victim" style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: exportMode === 'victim' ? `2px solid ${BRAND.violet}` : '1px solid #d9d9d9', background: exportMode === 'victim' ? BRAND.soft : '#fff' }}>
+                        <Radio value="victim" style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: exportMode === 'victim' ? `2px solid ${BRAND.violet}` : '1px solid #d9d9d9', background: exportMode === 'victim' ? BRAND.soft : '#fff' }}>
                           <Text strong>Victim Name</Text>
                           <br />
                           <Text type="secondary" style={{ fontSize: 12 }}>Export all cases for a specific victim</Text>
@@ -3513,8 +3527,8 @@ export default function CaseManagement() {
                     </Radio.Group>
                   </Form.Item>
                 ) : (
-                  <div style={{ marginBottom: 16 }}>
-                    <Text strong style={{ fontSize: 15, display: 'block', marginBottom: 8 }}>Export Cases By</Text>
+                  <div style={{ marginBottom: 12 }}>
+                    <Text strong style={{ fontSize: 15, display: 'block', marginBottom: 6 }}>Export Cases By</Text>
                     <div style={{
                       padding: '12px 16px',
                       borderRadius: 8,
@@ -3628,22 +3642,23 @@ export default function CaseManagement() {
                   <>
                     <Divider orientation="left" style={{ 
                       color: BRAND.violet,
-                      margin: "12px 0 10px 0",
+                      margin: "8px 0 8px 0",
                       fontSize: 14
                     }}>
                       Date Range Filters (Optional)
                     </Divider>
 
                     <Row gutter={[8, 8]}>
-                      <Col xs={24} sm={12}>
+                      <Col xs={24}>
                         <Form.Item
-                          label={<Text strong style={{ fontSize: 13 }}>Year</Text>}
+                          label={<Text strong style={{ fontSize: 15 }}>Year</Text>}
                           style={{ marginBottom: 8 }}
+                          help={<Text type="secondary" style={{ fontSize: 12 }}>Filter cases by specific year</Text>}
                         >
                           <Select
                             placeholder="All Years"
                             value={exportFilters.year}
-                            onChange={(val) => setExportFilters({ ...exportFilters, year: val, month: "", week: "" })}
+                            onChange={(val) => setExportFilters({ ...exportFilters, year: val })}
                             allowClear
                             size="middle"
                             style={{ width: "100%" }}
@@ -3658,59 +3673,55 @@ export default function CaseManagement() {
                         </Form.Item>
                       </Col>
 
-                      {exportFilters.year && (
-                        <Col xs={24} sm={12}>
-                          <Form.Item
-                            label={<Text strong style={{ fontSize: 13 }}>Month</Text>}
-                            style={{ marginBottom: 8 }}
-                          >
-                            <Select
-                              placeholder="All Months"
-                              value={exportFilters.month}
-                              onChange={(val) => setExportFilters({ ...exportFilters, month: val, week: "" })}
-                              allowClear
-                              size="middle"
-                              style={{ width: "100%" }}
-                              options={[
-                                { value: "", label: "All Months" },
-                                ...getAvailableMonths(exportFilters.year).map(monthIdx => {
-                                  const monthNames = ["January", "February", "March", "April", "May", "June",
-                                    "July", "August", "September", "October", "November", "December"];
-                                  return {
-                                    value: monthIdx.toString(),
-                                    label: monthNames[monthIdx],
-                                  };
-                                })
-                              ]}
-                            />
-                          </Form.Item>
-                        </Col>
-                      )}
+                      <Col xs={24}>
+                        <Form.Item
+                          label={<Text strong style={{ fontSize: 15 }}>Month</Text>}
+                          style={{ marginBottom: 8 }}
+                          help={<Text type="secondary" style={{ fontSize: 12 }}>Filter cases by specific month (optionally with year)</Text>}
+                        >
+                          <Select
+                            placeholder="All Months"
+                            value={exportFilters.month}
+                            onChange={(val) => setExportFilters({ ...exportFilters, month: val })}
+                            allowClear
+                            size="middle"
+                            style={{ width: "100%" }}
+                            options={[
+                              { value: "", label: "All Months" },
+                              ...["January", "February", "March", "April", "May", "June",
+                                "July", "August", "September", "October", "November", "December"].map((name, idx) => ({
+                                value: idx.toString(),
+                                label: name,
+                              }))
+                            ]}
+                          />
+                        </Form.Item>
+                      </Col>
 
-                      {exportFilters.year && exportFilters.month && (
-                        <Col xs={24} sm={12}>
-                          <Form.Item
-                            label={<Text strong style={{ fontSize: 13 }}>Week</Text>}
-                            style={{ marginBottom: 8 }}
-                          >
-                            <Select
-                              placeholder="All Weeks"
-                              value={exportFilters.week}
-                              onChange={(val) => setExportFilters({ ...exportFilters, week: val })}
-                              allowClear
-                              size="middle"
-                              style={{ width: "100%" }}
-                              options={[
-                                { value: "", label: "All Weeks" },
-                                ...getAvailableWeeks(exportFilters.year, exportFilters.month).map(weekNum => ({
-                                  value: weekNum.toString(),
-                                  label: `Week ${weekNum}`,
-                                }))
-                              ]}
-                            />
-                          </Form.Item>
-                        </Col>
-                      )}
+                      <Col xs={24}>
+                        <Form.Item
+                          label={<Text strong style={{ fontSize: 15 }}>Week of Month</Text>}
+                          style={{ marginBottom: 8 }}
+                          help={<Text type="secondary" style={{ fontSize: 12 }}>Filter cases by week number (1-5) within month</Text>}
+                        >
+                          <Select
+                            placeholder="All Weeks"
+                            value={exportFilters.week}
+                            onChange={(val) => setExportFilters({ ...exportFilters, week: val })}
+                            allowClear
+                            size="middle"
+                            style={{ width: "100%" }}
+                            options={[
+                              { value: "", label: "All Weeks" },
+                              { value: "1", label: "Week 1" },
+                              { value: "2", label: "Week 2" },
+                              { value: "3", label: "Week 3" },
+                              { value: "4", label: "Week 4" },
+                              { value: "5", label: "Week 5" },
+                            ]}
+                          />
+                        </Form.Item>
+                      </Col>
                     </Row>
                   </>
                 )}
@@ -3807,7 +3818,9 @@ export default function CaseManagement() {
                       showSearch
                       placeholder="All Incident Types"
                       value={exportFilters.incidentType}
-                      onChange={(val) => setExportFilters({ ...exportFilters, incidentType: val })}
+                      onChange={(val) => {
+                        setExportFilters({ ...exportFilters, incidentType: val, subtype: "" });
+                      }}
                       allowClear
                       size="middle"
                       style={{ width: "100%" }}
@@ -3824,6 +3837,35 @@ export default function CaseManagement() {
                     />
                   </Form.Item>
                 </Col>
+
+                {exportFilters.incidentType && (
+                  <Col xs={24}>
+                    <Form.Item
+                      label={<Text strong style={{ fontSize: 13 }}>Subtype</Text>}
+                      style={{ marginBottom: 8 }}
+                    >
+                      <Select
+                        showSearch
+                        placeholder="All Subtypes"
+                        value={exportFilters.subtype}
+                        onChange={(val) => setExportFilters({ ...exportFilters, subtype: val })}
+                        allowClear
+                        size="middle"
+                        style={{ width: "100%" }}
+                        filterOption={(input, option) =>
+                          (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                        }
+                        options={[
+                          { value: "", label: "All Subtypes" },
+                          ...getSubtypesForIncident(exportFilters.incidentType).map(subtype => ({
+                            value: subtype,
+                            label: subtype,
+                          }))
+                        ]}
+                      />
+                    </Form.Item>
+                  </Col>
+                )}
 
                 <Col xs={24} sm={12}>
                   <Form.Item
@@ -4128,21 +4170,17 @@ export default function CaseManagement() {
               {/* Right side - Case List (shown when officer or victim selected) */}
               {(selectedOfficer || selectedVictim) && (
                 <Col xs={24} md={14} style={{
-                  height: screens.xs ? 'auto' : '100%',
                   display: 'flex',
                   flexDirection: 'column',
-                  padding: screens.xs ? '12px 16px 16px 16px' : screens.sm ? '14px 12px' : '18px 20px',
-                  overflow: 'hidden',
+                  padding: screens.xs ? '12px 16px 16px 16px' : screens.sm ? '14px 12px' : '16px 20px',
                   borderTop: screens.xs ? `2px solid ${BRAND.soft}` : 'none',
-                  marginTop: screens.xs ? 8 : 0,
-                  minHeight: screens.xs ? 300 : 0
+                  marginTop: screens.xs ? 8 : 0
                 }}>
                   <div style={{
                     background: '#fafafa',
                     borderRadius: screens.xs ? 8 : 12,
                     padding: screens.xs ? 12 : 16,
-                    height: screens.xs ? 'auto' : '100%',
-                    maxHeight: screens.xs ? 'none' : '100%',
+                    height: '100%',
                     display: 'flex',
                     flexDirection: 'column',
                     border: `2px solid ${BRAND.soft}`,
@@ -4274,8 +4312,7 @@ export default function CaseManagement() {
                         overflowY: 'auto',
                         overflowX: 'hidden',
                         padding: '4px 8px 16px 4px',
-                        minHeight: screens.xs ? 200 : 300,
-                        maxHeight: screens.xs ? 400 : 480
+                        minHeight: 0
                       }}
                     >
                       {getFilteredCaseCount() === 0 ? (

@@ -83,6 +83,7 @@ export default function BPO() {
   const [loadingCases, setLoadingCases] = useState(false);
   const [selectedCase, setSelectedCase] = useState(null);
   const [validationErrors, setValidationErrors] = useState({});
+  const [officials, setOfficials] = useState([]);
 
   // -------- Validation helper --------
   const validateField = (fieldName, value) => {
@@ -122,9 +123,10 @@ export default function BPO() {
     setForm((s) => ({ ...s, [fieldName]: v }));
   };
 
-  // -------- Fetch cases on mount --------
+  // -------- Fetch cases and officials on mount --------
   useEffect(() => {
     fetchCases();
+    fetchOfficials();
     generateControlNumber();
   }, []);
 
@@ -150,6 +152,47 @@ export default function BPO() {
       messageApi.error("Failed to load cases");
     } finally {
       setLoadingCases(false);
+    }
+  };
+
+  // -------- Fetch officials and auto-fill positions --------
+  const fetchOfficials = async () => {
+    try {
+      const res = await api.get("/api/admin/officials", {
+        headers: { "Cache-Control": "no-cache" },
+      });
+      const data = res?.data?.data || [];
+      setOfficials(data);
+      
+      // Find Barangay Captain and VAWC Chairman
+      const captain = data.find(
+        (official) => 
+          official.position === "Barangay Captain" && 
+          official.status === "approved" && 
+          !official.isDeleted
+      );
+      const chairman = data.find(
+        (official) => 
+          official.position === "VAWC Chairman" && 
+          official.status === "approved" && 
+          !official.isDeleted
+      );
+      
+      // Auto-fill the form with official names
+      if (captain || chairman) {
+        setForm((prevForm) => ({
+          ...prevForm,
+          pbName: captain 
+            ? `${captain.firstName}${captain.middleInitial ? ' ' + captain.middleInitial + '.' : ''} ${captain.lastName}`.toUpperCase()
+            : prevForm.pbName,
+          kagawadName: chairman 
+            ? `${chairman.firstName}${chairman.middleInitial ? ' ' + chairman.middleInitial + '.' : ''} ${chairman.lastName}`.toUpperCase()
+            : prevForm.kagawadName,
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to fetch officials", err);
+      // Don't show error message to user, just use default values
     }
   };
 
@@ -1065,6 +1108,34 @@ export default function BPO() {
                     style={{ marginLeft: isXs ? 0 : 8, width: isXs ? "100%" : "auto" }}
                   />
                   <span style={{ marginLeft: isXs ? 0 : 4 }}>a.m./p.m. and issue such order.</span>
+                </div>
+              </div>
+
+              {/* Barangay Kagawad Signature */}
+              <div
+                style={{
+                  marginTop: 18,
+                  display: "flex",
+                  justifyContent: "flex-end",
+                }}
+              >
+                <div style={{ width: isXs ? "100%" : 260, textAlign: "center" }}>
+                  <Input
+                    value={form.kagawadName}
+                    onChange={handleValidatedUpdate("kagawadName")}
+                    style={{ 
+                      ...underlineStyle, 
+                      width: "100%",
+                      borderColor: validationErrors.kagawadName ? "#ff4d4f" : undefined,
+                    }}
+                    placeholder="VAWC Chairman name"
+                  />
+                  {validationErrors.kagawadName && (
+                    <div style={{ color: "#ff4d4f", fontSize: 12, marginTop: 4 }}>
+                      {validationErrors.kagawadName}
+                    </div>
+                  )}
+                  <div style={{ marginTop: 6, fontSize: 12 }}>Barangay Kagawad</div>
                 </div>
               </div>
 

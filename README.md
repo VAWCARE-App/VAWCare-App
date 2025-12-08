@@ -68,6 +68,7 @@ It provides a **confidential**, **accessible**, and **community-driven** digital
 | Ethan Jericho B. Salvador    | UI/UX Designer           |
 | Kevin Klein V. Ananayo       | Backend Developer        |
 | Desierre A. Lacerona         | Research / Documentation |
+| Andreev Abellera             | Honorary Team Member     |
 
 ## License
 

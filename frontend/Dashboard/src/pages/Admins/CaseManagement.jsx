@@ -3653,12 +3653,12 @@ export default function CaseManagement() {
                         <Form.Item
                           label={<Text strong style={{ fontSize: 15 }}>Year</Text>}
                           style={{ marginBottom: 8 }}
-                          help={<Text type="secondary" style={{ fontSize: 12 }}>Filter cases by specific year</Text>}
+                          help={<Text type="secondary" style={{ fontSize: 12 }}>Available years: {getAvailableYears().length > 0 ? getAvailableYears().join(", ") : "No years available"}</Text>}
                         >
                           <Select
                             placeholder="All Years"
                             value={exportFilters.year}
-                            onChange={(val) => setExportFilters({ ...exportFilters, year: val })}
+                            onChange={(val) => setExportFilters({ ...exportFilters, year: val, month: "", week: "" })}
                             allowClear
                             size="middle"
                             style={{ width: "100%" }}
@@ -3673,55 +3673,61 @@ export default function CaseManagement() {
                         </Form.Item>
                       </Col>
 
-                      <Col xs={24}>
-                        <Form.Item
-                          label={<Text strong style={{ fontSize: 15 }}>Month</Text>}
-                          style={{ marginBottom: 8 }}
-                          help={<Text type="secondary" style={{ fontSize: 12 }}>Filter cases by specific month (optionally with year)</Text>}
-                        >
-                          <Select
-                            placeholder="All Months"
-                            value={exportFilters.month}
-                            onChange={(val) => setExportFilters({ ...exportFilters, month: val })}
-                            allowClear
-                            size="middle"
-                            style={{ width: "100%" }}
-                            options={[
-                              { value: "", label: "All Months" },
-                              ...["January", "February", "March", "April", "May", "June",
-                                "July", "August", "September", "October", "November", "December"].map((name, idx) => ({
-                                value: idx.toString(),
-                                label: name,
-                              }))
-                            ]}
-                          />
-                        </Form.Item>
-                      </Col>
+                      {exportFilters.year && (
+                        <Col xs={24}>
+                          <Form.Item
+                            label={<Text strong style={{ fontSize: 15 }}>Month</Text>}
+                            style={{ marginBottom: 8 }}
+                            help={<Text type="secondary" style={{ fontSize: 12 }}>Available months for {exportFilters.year}: {getAvailableMonths(exportFilters.year).length > 0 ? getAvailableMonths(exportFilters.year).map(m => ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][m]).join(", ") : "No months available"}</Text>}
+                          >
+                            <Select
+                              placeholder="All Months"
+                              value={exportFilters.month}
+                              onChange={(val) => setExportFilters({ ...exportFilters, month: val, week: "" })}
+                              allowClear
+                              size="middle"
+                              style={{ width: "100%" }}
+                              options={[
+                                { value: "", label: "All Months" },
+                                ...getAvailableMonths(exportFilters.year).map(monthIdx => {
+                                  const monthNames = ["January", "February", "March", "April", "May", "June",
+                                    "July", "August", "September", "October", "November", "December"];
+                                  return {
+                                    value: monthIdx.toString(),
+                                    label: monthNames[monthIdx],
+                                  };
+                                })
+                              ]}
+                            />
+                          </Form.Item>
+                        </Col>
+                      )}
 
-                      <Col xs={24}>
-                        <Form.Item
-                          label={<Text strong style={{ fontSize: 15 }}>Week of Month</Text>}
-                          style={{ marginBottom: 8 }}
-                          help={<Text type="secondary" style={{ fontSize: 12 }}>Filter cases by week number (1-5) within month</Text>}
-                        >
-                          <Select
-                            placeholder="All Weeks"
-                            value={exportFilters.week}
-                            onChange={(val) => setExportFilters({ ...exportFilters, week: val })}
-                            allowClear
-                            size="middle"
-                            style={{ width: "100%" }}
-                            options={[
-                              { value: "", label: "All Weeks" },
-                              { value: "1", label: "Week 1" },
-                              { value: "2", label: "Week 2" },
-                              { value: "3", label: "Week 3" },
-                              { value: "4", label: "Week 4" },
-                              { value: "5", label: "Week 5" },
-                            ]}
-                          />
-                        </Form.Item>
-                      </Col>
+                      {exportFilters.year && exportFilters.month && (
+                        <Col xs={24}>
+                          <Form.Item
+                            label={<Text strong style={{ fontSize: 15 }}>Week of Month</Text>}
+                            style={{ marginBottom: 8 }}
+                            help={<Text type="secondary" style={{ fontSize: 12 }}>Available weeks: {getAvailableWeeks(exportFilters.year, exportFilters.month).length > 0 ? getAvailableWeeks(exportFilters.year, exportFilters.month).map(w => `Week ${w}`).join(", ") : "No weeks available"}</Text>}
+                          >
+                            <Select
+                              placeholder="All Weeks"
+                              value={exportFilters.week}
+                              onChange={(val) => setExportFilters({ ...exportFilters, week: val })}
+                              allowClear
+                              size="middle"
+                              style={{ width: "100%" }}
+                              options={[
+                                { value: "", label: "All Weeks" },
+                                ...getAvailableWeeks(exportFilters.year, exportFilters.month).map(weekNum => ({
+                                  value: weekNum.toString(),
+                                  label: `Week ${weekNum}`,
+                                }))
+                              ]}
+                            />
+                          </Form.Item>
+                        </Col>
+                      )}
                     </Row>
                   </>
                 )}

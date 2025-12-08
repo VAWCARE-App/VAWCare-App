@@ -897,7 +897,7 @@ export default function CaseManagement() {
 
     // Add filter details with better spacing
     const filterDetails = [
-      filterInfo.mode ? ["Export By", filterInfo.mode] : null,
+      filterInfo.mode ? [filterInfo.mode === "Victim" ? "Exported For" : "Exported By", filterInfo.mode] : null,
       filterInfo.officer ? ["Assigned Officer", filterInfo.officer] : null,
       filterInfo.victim ? ["Victim Name", filterInfo.victim] : null,
       filterInfo.year ? ["Year", filterInfo.year] : null,
@@ -1539,7 +1539,7 @@ export default function CaseManagement() {
     // Create filter info object
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     const filterInfo = {
-      mode: "Victim Name",
+      mode: "Victim",
       victim: victimName,
       purok: exportFilters.purok || null,
       status: exportFilters.status || null,

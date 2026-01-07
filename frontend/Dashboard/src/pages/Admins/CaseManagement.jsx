@@ -450,6 +450,9 @@ export default function CaseManagement() {
           riskLevel:
             typeof vals.riskLevel === "undefined" ? undefined : vals.riskLevel || "Low",
           victimType: vals.victimType || selectedReport.victim?.victimType || "anonymous",
+          ...(vals.victimBirthdate ? { victimBirthdate: vals.victimBirthdate.toISOString() } : {}),
+          ...(vals.victimAge ? { victimAge: vals.victimAge } : {}),
+          ...(vals.victimGender ? { victimGender: vals.victimGender } : {}),
         };
       } else {
         payload = {
@@ -468,6 +471,9 @@ export default function CaseManagement() {
           riskLevel:
             typeof vals.riskLevel === "undefined" ? undefined : vals.riskLevel || "Low",
           victimType: vals.victimType || "anonymous",
+          ...(vals.victimBirthdate ? { victimBirthdate: vals.victimBirthdate.toISOString() } : {}),
+          ...(vals.victimAge ? { victimAge: vals.victimAge } : {}),
+          ...(vals.victimGender ? { victimGender: vals.victimGender } : {}),
         };
       }
 
@@ -3101,6 +3107,52 @@ export default function CaseManagement() {
                   </Form.Item>
                 </Col>
               </Row>
+
+              {/* Child-specific fields - only show when victimType is 'child' */}
+              {addForm.getFieldValue('victimType') === 'child' && (
+                <Row gutter={16}>
+                  <Col xs={24} md={8}>
+                    <Form.Item 
+                      name="victimBirthdate" 
+                      label={<Text strong>Birthdate</Text>}
+                    >
+                      <DatePicker 
+                        placeholder="Select birthdate" 
+                        size="large"
+                        disabledDate={(current) => {
+                          // Disable future dates
+                          return current && current > dayjs().endOf('day');
+                        }}
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={8}>
+                    <Form.Item 
+                      name="victimAge" 
+                      label={<Text strong>Age</Text>}
+                    >
+                      <Input 
+                        type="number" 
+                        placeholder="Age" 
+                        size="large"
+                        min={0}
+                        max={150}
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={8}>
+                    <Form.Item 
+                      name="victimGender" 
+                      label={<Text strong>Gender</Text>}
+                    >
+                      <Select placeholder="Select gender" size="large" allowClear>
+                        <Option value="male">Male</Option>
+                        <Option value="female">Female</Option>
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                </Row>
+              )}
 
               <Divider orientation="left" style={{ color: BRAND.violet }}>
                 Incident Details

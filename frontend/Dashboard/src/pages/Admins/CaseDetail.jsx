@@ -22,6 +22,7 @@ import {
   Timeline,
   Empty,
   Spin,
+  DatePicker,
 } from "antd";
 import {
   PrinterOutlined,
@@ -35,6 +36,7 @@ import {
   CommentOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
+import dayjs from "dayjs";
 import { api, getUserType } from "../../lib/api";
 import DssSuggestion from "../../components/DssSuggestion";
 import { useReactToPrint } from "react-to-print";
@@ -342,10 +344,12 @@ export default function CaseDetail() {
       const selectedOfficer = barangayOfficials.find(o => o.id === assignedOfficerId);
       const assignedOfficerName = selectedOfficer ? selectedOfficer.name : values.assignedOfficer;
       
+      // Convert birthdate from dayjs to ISO string if it exists
       const payload = {
         ...values,
         location: location,
         assignedOfficer: assignedOfficerName,
+        ...(values.victimBirthdate ? { victimBirthdate: values.victimBirthdate.toISOString() } : {}),
       };
       const res = await api.put(`/api/cases/${id}`, payload);
       const updated = res?.data?.data;
@@ -476,6 +480,8 @@ export default function CaseDetail() {
                   ...caseData,
                   locationPurok: locationPurok,
                   locationAddress: "Bonfal Proper, Bayombong, Nueva Vizcaya",
+                  // Convert ISO birthdate to dayjs if it exists
+                  victimBirthdate: caseData.victimBirthdate ? dayjs(caseData.victimBirthdate) : undefined,
                 });
                 setEditOpen(true);
               }}
@@ -619,6 +625,23 @@ export default function CaseDetail() {
                 <Descriptions.Item label="Victim">
                   {caseData.victimName}
                 </Descriptions.Item>
+                {caseData.victimType === 'child' && (
+                  <>
+                    <Descriptions.Item label="Birthdate">
+                      {caseData.victimBirthdate 
+                        ? new Date(caseData.victimBirthdate).toLocaleDateString()
+                        : 'N/A'}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Age">
+                      {caseData.victimAge || 'N/A'}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Gender">
+                      {caseData.victimGender
+                        ? caseData.victimGender.charAt(0).toUpperCase() + caseData.victimGender.slice(1)
+                        : 'N/A'}
+                    </Descriptions.Item>
+                  </>
+                )}
                 <Descriptions.Item label="Incident Type">
                   {caseData.incidentType}
                 </Descriptions.Item>
@@ -1199,6 +1222,52 @@ export default function CaseDetail() {
                 onChange={(v) => form.setFieldsValue({ riskLevel: v })}
               />
             </Form.Item>
+
+            {/* Child-specific fields - only show when victimType is 'child' */}
+            {form.getFieldValue('victimType') === 'child' && (
+              <>
+                <Form.Item 
+                  name="victimBirthdate" 
+                  label="Birthdate"
+                >
+                  <DatePicker 
+                    placeholder="Select birthdate" 
+                    disabled={!editOpen}
+                    disabledDate={(current) => {
+                      // Disable future dates
+                      return current && current > dayjs().endOf('day');
+                    }}
+                  />
+                </Form.Item>
+
+                <Form.Item 
+                  name="victimAge" 
+                  label="Age"
+                >
+                  <Input 
+                    type="number" 
+                    placeholder="Age" 
+                    disabled={!editOpen}
+                    min={0}
+                    max={150}
+                  />
+                </Form.Item>
+
+                <Form.Item 
+                  name="victimGender" 
+                  label="Gender"
+                >
+                  <Select 
+                    placeholder="Select gender" 
+                    disabled={!editOpen}
+                    allowClear
+                  >
+                    <Select.Option value="male">Male</Select.Option>
+                    <Select.Option value="female">Female</Select.Option>
+                  </Select>
+                </Form.Item>
+              </>
+            )}
 
             <Form.Item 
               name="assignedOfficer" 

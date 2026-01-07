@@ -39,6 +39,22 @@ const CasesSchema = new mongoose.Schema({
 		default: 'anonymous',
 		trim: true,
 	},
+	victimBirthdate: {
+		type: Date,
+		required: false,
+	},
+	victimAge: {
+		type: Number,
+		required: false,
+		min: 0,
+		max: 150,
+	},
+	victimGender: {
+		type: String,
+		enum: ['male', 'female'],
+		required: false,
+		trim: true,
+	},
 	incidentType: {
 		type: String,
 		required: [true, 'Incident type is required'],

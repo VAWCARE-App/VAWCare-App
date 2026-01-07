@@ -1801,6 +1801,11 @@ export default function CaseManagement() {
           ['Report ID', caseData.reportID || 'N/A'],
           ['Victim Type', caseData.victimType ? caseData.victimType.charAt(0).toUpperCase() + caseData.victimType.slice(1) : 'N/A'],
           ['Victim Name', caseData.victimName || 'N/A'],
+          ...(caseData.victimType === 'child' ? [
+            ['Birthdate', caseData.victimBirthdate ? new Date(caseData.victimBirthdate).toLocaleDateString() : 'N/A'],
+            ['Age', caseData.victimAge ? String(caseData.victimAge) : 'N/A'],
+            ['Gender', caseData.victimGender ? caseData.victimGender.charAt(0).toUpperCase() + caseData.victimGender.slice(1) : 'N/A']
+          ] : []),
           ['Incident Type', caseData.incidentType || 'N/A'],
           ['Perpetrator', caseData.perpetrator || 'N/A'],
           ['Location', caseData.location || 'N/A'],

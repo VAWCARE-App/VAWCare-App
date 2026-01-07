@@ -1801,9 +1801,9 @@ export default function CaseManagement() {
           ['Report ID', caseData.reportID || 'N/A'],
           ['Victim Type', caseData.victimType ? caseData.victimType.charAt(0).toUpperCase() + caseData.victimType.slice(1) : 'N/A'],
           ['Victim Name', caseData.victimName || 'N/A'],
+          ['Birthdate', caseData.victimBirthdate ? new Date(caseData.victimBirthdate).toLocaleDateString() : 'N/A'],
+          ['Age', caseData.victimAge ? String(caseData.victimAge) : 'N/A'],
           ...(caseData.victimType === 'child' ? [
-            ['Birthdate', caseData.victimBirthdate ? new Date(caseData.victimBirthdate).toLocaleDateString() : 'N/A'],
-            ['Age', caseData.victimAge ? String(caseData.victimAge) : 'N/A'],
             ['Gender', caseData.victimGender ? caseData.victimGender.charAt(0).toUpperCase() + caseData.victimGender.slice(1) : 'N/A']
           ] : []),
           ['Incident Type', caseData.incidentType || 'N/A'],
@@ -3113,39 +3113,43 @@ export default function CaseManagement() {
                 </Col>
               </Row>
 
-              {/* Child-specific fields - only show when victimType is 'child' */}
+              {/* Birthdate and Age fields - show for all victim types */}
+              <Row gutter={16}>
+                <Col xs={24} md={12}>
+                  <Form.Item 
+                    name="victimBirthdate" 
+                    label={<Text strong>Birthdate</Text>}
+                  >
+                    <DatePicker 
+                      placeholder="Select birthdate" 
+                      size="large"
+                      disabledDate={(current) => {
+                        // Disable future dates
+                        return current && current > dayjs().endOf('day');
+                      }}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item 
+                    name="victimAge" 
+                    label={<Text strong>Age</Text>}
+                  >
+                    <Input 
+                      type="number" 
+                      placeholder="Age" 
+                      size="large"
+                      min={0}
+                      max={150}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* Gender field - only show for children */}
               {addForm.getFieldValue('victimType') === 'child' && (
                 <Row gutter={16}>
-                  <Col xs={24} md={8}>
-                    <Form.Item 
-                      name="victimBirthdate" 
-                      label={<Text strong>Birthdate</Text>}
-                    >
-                      <DatePicker 
-                        placeholder="Select birthdate" 
-                        size="large"
-                        disabledDate={(current) => {
-                          // Disable future dates
-                          return current && current > dayjs().endOf('day');
-                        }}
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} md={8}>
-                    <Form.Item 
-                      name="victimAge" 
-                      label={<Text strong>Age</Text>}
-                    >
-                      <Input 
-                        type="number" 
-                        placeholder="Age" 
-                        size="large"
-                        min={0}
-                        max={150}
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} md={8}>
+                  <Col xs={24} md={12}>
                     <Form.Item 
                       name="victimGender" 
                       label={<Text strong>Gender</Text>}

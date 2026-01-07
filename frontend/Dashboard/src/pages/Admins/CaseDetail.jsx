@@ -625,22 +625,20 @@ export default function CaseDetail() {
                 <Descriptions.Item label="Victim">
                   {caseData.victimName}
                 </Descriptions.Item>
+                <Descriptions.Item label="Birthdate">
+                  {caseData.victimBirthdate 
+                    ? new Date(caseData.victimBirthdate).toLocaleDateString()
+                    : 'N/A'}
+                </Descriptions.Item>
+                <Descriptions.Item label="Age">
+                  {caseData.victimAge || 'N/A'}
+                </Descriptions.Item>
                 {caseData.victimType === 'child' && (
-                  <>
-                    <Descriptions.Item label="Birthdate">
-                      {caseData.victimBirthdate 
-                        ? new Date(caseData.victimBirthdate).toLocaleDateString()
-                        : 'N/A'}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Age">
-                      {caseData.victimAge || 'N/A'}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Gender">
-                      {caseData.victimGender
-                        ? caseData.victimGender.charAt(0).toUpperCase() + caseData.victimGender.slice(1)
-                        : 'N/A'}
-                    </Descriptions.Item>
-                  </>
+                  <Descriptions.Item label="Gender">
+                    {caseData.victimGender
+                      ? caseData.victimGender.charAt(0).toUpperCase() + caseData.victimGender.slice(1)
+                      : 'N/A'}
+                  </Descriptions.Item>
                 )}
                 <Descriptions.Item label="Incident Type">
                   {caseData.incidentType}
@@ -1223,50 +1221,49 @@ export default function CaseDetail() {
               />
             </Form.Item>
 
-            {/* Child-specific fields - only show when victimType is 'child' */}
+            {/* Birthdate and Age fields - show for all victim types */}
+            <Form.Item 
+              name="victimBirthdate" 
+              label="Birthdate"
+            >
+              <DatePicker 
+                placeholder="Select birthdate" 
+                disabled={!editOpen}
+                disabledDate={(current) => {
+                  // Disable future dates
+                  return current && current > dayjs().endOf('day');
+                }}
+              />
+            </Form.Item>
+
+            <Form.Item 
+              name="victimAge" 
+              label="Age"
+            >
+              <Input 
+                type="number" 
+                placeholder="Age" 
+                disabled={!editOpen}
+                min={0}
+                max={150}
+              />
+            </Form.Item>
+
+            {/* Gender field - only show when victimType is 'child' */}
             {form.getFieldValue('victimType') === 'child' && (
-              <>
-                <Form.Item 
-                  name="victimBirthdate" 
-                  label="Birthdate"
-                >
-                  <DatePicker 
-                    placeholder="Select birthdate" 
-                    disabled={!editOpen}
-                    disabledDate={(current) => {
-                      // Disable future dates
-                      return current && current > dayjs().endOf('day');
-                    }}
-                  />
-                </Form.Item>
-
-                <Form.Item 
-                  name="victimAge" 
-                  label="Age"
-                >
-                  <Input 
-                    type="number" 
-                    placeholder="Age" 
-                    disabled={!editOpen}
-                    min={0}
-                    max={150}
-                  />
-                </Form.Item>
-
-                <Form.Item 
-                  name="victimGender" 
-                  label="Gender"
-                >
-                  <Select 
-                    placeholder="Select gender" 
-                    disabled={!editOpen}
+              <Form.Item 
+                name="victimGender" 
+                label="Gender"
+              >
+                <Select 
+                  placeholder="Select gender" 
+                  disabled={!editOpen}
                     allowClear
                   >
                     <Select.Option value="male">Male</Select.Option>
                     <Select.Option value="female">Female</Select.Option>
                   </Select>
                 </Form.Item>
-              </>
             )}
 
             <Form.Item 

@@ -51,6 +51,27 @@ const BRAND = {
   soft: "rgba(122,90,248,0.18)",
 };
 
+// Calculate age from birthdate
+const calculateAge = (birthdate) => {
+  if (!birthdate) return null;
+  
+  const today = dayjs();
+  const birth = dayjs(birthdate);
+  
+  if (!birth.isValid()) return null;
+  
+  // Calculate age using year subtraction
+  let age = today.year() - birth.year();
+  
+  // Check if birthday has occurred this year
+  const birthdayThisYear = birth.set('year', today.year());
+  if (today.isBefore(birthdayThisYear)) {
+    age--;
+  }
+  
+  return age < 0 ? null : age;
+};
+
 export default function CaseDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -1228,10 +1249,17 @@ export default function CaseDetail() {
             >
               <DatePicker 
                 placeholder="Select birthdate" 
-                disabled={!editOpen}
                 disabledDate={(current) => {
                   // Disable future dates
                   return current && current > dayjs().endOf('day');
+                }}
+                onChange={(date) => {
+                  if (date) {
+                    const age = calculateAge(date);
+                    form.setFieldsValue({ victimAge: age });
+                  } else {
+                    form.setFieldsValue({ victimAge: undefined });
+                  }
                 }}
               />
             </Form.Item>
@@ -1243,7 +1271,6 @@ export default function CaseDetail() {
               <Input 
                 type="number" 
                 placeholder="Age" 
-                disabled={!editOpen}
                 min={0}
                 max={150}
               />

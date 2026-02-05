@@ -125,6 +125,27 @@ export default function CaseManagement() {
     chip: "#fff0f7",
   };
 
+  // Calculate age from birthdate
+  const calculateAge = (birthdate) => {
+    if (!birthdate) return null;
+    
+    const today = dayjs();
+    const birth = dayjs(birthdate);
+    
+    if (!birth.isValid()) return null;
+    
+    // Calculate age using year subtraction
+    let age = today.year() - birth.year();
+    
+    // Check if birthday has occurred this year
+    const birthdayThisYear = birth.set('year', today.year());
+    if (today.isBefore(birthdayThisYear)) {
+      age--;
+    }
+    
+    return age < 0 ? null : age;
+  };
+
   const generateCaseID = () => {
     const r = Math.floor(100 + Math.random() * 900);
     addForm.setFieldsValue({ caseID: `CASE${r}` });
@@ -3126,6 +3147,14 @@ export default function CaseManagement() {
                       disabledDate={(current) => {
                         // Disable future dates
                         return current && current > dayjs().endOf('day');
+                      }}
+                      onChange={(date) => {
+                        if (date) {
+                          const age = calculateAge(date);
+                          addForm.setFieldsValue({ victimAge: age });
+                        } else {
+                          addForm.setFieldsValue({ victimAge: undefined });
+                        }
                       }}
                     />
                   </Form.Item>

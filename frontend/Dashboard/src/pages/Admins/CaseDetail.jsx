@@ -299,54 +299,51 @@ export default function CaseDetail() {
 
   // --- load case ---
   useEffect(() => {
-    const fetchUserType = async () => {
+    // run initialization in sequence and only open edit modal after data loaded
+    const init = async () => {
       try {
         const type = await getUserType();
         setUserType(type);
       } catch (err) {
         console.error("Failed to get user type", err);
-        setUserType("user"); // fallback
+        setUserType("user");
       }
-    };
-    fetchUserType();
 
-    const fetchCase = async () => {
+      // fetch officials first (used when populating assignedOfficer)
+      try { await fetchBarangayOfficials(); } catch (e) { /* ignore */ }
+
+      // fetch case and populate form
       try {
         const res = await api.get(`/api/cases/${id}`);
         const data = res?.data?.data || null;
         setCaseData(data);
-        
-        // Fetch subtypes for the incident type
-        if (data?.incidentType) {
-          fetchSubtypes(data.incidentType);
-        }
-        
-        // Parse location into purok and address components
+        if (data?.incidentType) fetchSubtypes(data.incidentType);
         let locationPurok = "";
-        const location = data?.location || "";
-        if (location.startsWith("Purok")) {
-          const parts = location.split(", ");
-          locationPurok = parts[0]; // e.g., "Purok 1"
+        const locationText = data?.location || "";
+        if (locationText.startsWith("Purok")) {
+          const parts = locationText.split(", ");
+          locationPurok = parts[0];
         }
-        
         form.setFieldsValue({
           ...data,
-          locationPurok: locationPurok,
+          locationPurok,
           locationAddress: "Bonfal Proper, Bayombong, Nueva Vizcaya",
+          victimBirthdate: data?.victimBirthdate ? dayjs(data.victimBirthdate) : undefined,
         });
-      } catch {
+      } catch (err) {
         message.error("Failed to load case data");
       }
-    };
-    fetchCase();
-    fetchHistory();
-    fetchBarangayOfficials();
 
-    // URL ?edit=true opens the modal
-    try {
-      const qp = new URLSearchParams(location.search);
-      if (qp.get("edit") === "true") setEditOpen(true);
-    } catch { }
+      // fetch history
+      try { await fetchHistory(); } catch (e) { /* ignore */ }
+
+      // open edit modal only after data is loaded
+      try {
+        const qp = new URLSearchParams(location.search);
+        if (qp.get("edit") === "true") setEditOpen(true);
+      } catch {}
+    };
+    init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
